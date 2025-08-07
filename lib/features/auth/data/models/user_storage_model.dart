@@ -5,6 +5,7 @@ class UserStorageModel {
   final String location;
   final String name;
   final String token;
+  final DateTime loginTime;
 
   UserStorageModel({
     required this.email,
@@ -13,6 +14,7 @@ class UserStorageModel {
     required this.location,
     required this.name,
     required this.token,
+    required this.loginTime,
   });
 
   factory UserStorageModel.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,9 @@ class UserStorageModel {
       location: json['location'] ?? '',
       name: json['name'] ?? '',
       token: json['token'] ?? '',
+      loginTime: json['login_time'] != null
+          ? DateTime.parse(json['login_time'])
+          : DateTime.now(),
     );
   }
 
@@ -34,6 +39,7 @@ class UserStorageModel {
       'location': location,
       'name': name,
       'token': token,
+      'login_time': loginTime.toIso8601String(),
     };
   }
 
@@ -48,6 +54,7 @@ class UserStorageModel {
       location: record['location'] ?? '',
       name: record['name'] ?? '',
       token: token,
+      loginTime: DateTime.now(),
     );
   }
 }

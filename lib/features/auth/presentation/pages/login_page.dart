@@ -172,7 +172,39 @@ class LoginPage extends StatelessWidget {
                       BlocListener<AuthBloc, AuthState>(
                         listener: (context, state) {
                           if (state is AuthAuthenticated) {
-                            Navigator.pushReplacementNamed(context, '/landing');
+                            // Show success message before navigating
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle,
+                                      color: Colors.white,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Login successful! You will stay logged in for 24 hours.',
+                                        style: TextStyle(fontSize: 14),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor: Colors.green.shade600,
+                                duration: const Duration(seconds: 3),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            );
+                            // Navigate after a short delay to show the message
+                            Future.delayed(const Duration(seconds: 1), () {
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/landing',
+                              );
+                            });
                           }
                         },
                         child: BlocBuilder<AuthBloc, AuthState>(

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/usecases/login.dart';
 import '../../domain/usecases/signup.dart';
 import '../../data/services/user_storage_service.dart';
+import '../../domain/entities/user.dart';
 
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -60,6 +61,28 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LogoutEvent>((event, emit) async {
       await UserStorageService.clearUserData();
       emit(AuthInitial());
+    });
+
+    on<CheckExistingLoginEvent>((event, emit) async {
+      emit(AuthLoading());
+      final isLoggedIn = await UserStorageService.isLoggedIn();
+      if (isLoggedIn) {
+        final userData = await UserStorageService.getUserData();
+        if (userData != null) {
+          final user = User(
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            farmName: userData.farmName,
+            location: userData.location,
+          );
+          emit(AuthAuthenticated(user));
+        } else {
+          emit(AuthInitial());
+        }
+      } else {
+        emit(AuthInitial());
+      }
     });
   }
 }

@@ -36,3 +36,5 @@ class SignupEvent extends AuthEvent {
 class ResetAuthState extends AuthEvent {}
 
 class LogoutEvent extends AuthEvent {}
+
+class CheckExistingLoginEvent extends AuthEvent {}

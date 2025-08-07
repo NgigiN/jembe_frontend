@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/pages/login_page.dart';
+import 'features/auth/presentation/pages/splash_page.dart';
 import 'features/farm/presentation/bloc/farm_bloc.dart';
 import 'features/farm/presentation/bloc/farm_event.dart';
 import 'features/farm/presentation/bloc/analysis_bloc.dart';
@@ -32,7 +33,8 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(primarySwatch: Colors.green, useMaterial3: true),
         initialRoute: '/',
         routes: {
-          '/': (context) => LoginPage(),
+          '/': (context) => const SplashPage(),
+          '/login': (context) => LoginPage(),
           '/landing': (context) => LandingPage(),
         },
       ),

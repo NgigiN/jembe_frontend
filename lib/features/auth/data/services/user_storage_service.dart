@@ -50,10 +50,37 @@ class UserStorageService {
     return prefs.getString(_userIdKey);
   }
 
-  // Check if user is logged in
+  // Check if user is logged in and session is valid (24 hours)
   static Future<bool> isLoggedIn() async {
-    final token = await getToken();
-    return token != null && token.isNotEmpty;
+    final user = await getUserData();
+    if (user == null || user.token.isEmpty) {
+      return false;
+    }
+
+    // Check if login was within the last 24 hours
+    final now = DateTime.now();
+    final loginTime = user.loginTime;
+    final difference = now.difference(loginTime);
+
+    // Session expires after 24 hours
+    if (difference.inHours >= 24) {
+      await clearUserData();
+      return false;
+    }
+
+    return true;
+  }
+
+  // Get session remaining time in hours
+  static Future<int> getSessionRemainingHours() async {
+    final user = await getUserData();
+    if (user == null) return 0;
+
+    final now = DateTime.now();
+    final difference = now.difference(user.loginTime);
+    final remainingHours = 24 - difference.inHours;
+
+    return remainingHours > 0 ? remainingHours : 0;
   }
 
   // Clear all user data (logout)
@@ -75,6 +102,7 @@ class UserStorageService {
         location: field == 'location' ? value : user.location,
         name: field == 'name' ? value : user.name,
         token: field == 'token' ? value : user.token,
+        loginTime: user.loginTime,
       );
       await saveUserData(updatedUser);
     }
