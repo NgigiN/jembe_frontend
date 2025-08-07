@@ -1,0 +1,74 @@
+import 'package:dartz/dartz.dart';
+import '../../../../core/error/failures.dart';
+import '../../../../core/error/exceptions.dart';
+import '../../domain/entities/land.dart';
+import '../../domain/repositories/land_repository.dart';
+import '../datasources/land_remote_data_source.dart';
+import '../models/land_model.dart';
+
+class LandRepositoryImpl implements LandRepository {
+  final LandRemoteDataSource remoteDataSource;
+
+  LandRepositoryImpl({required this.remoteDataSource});
+
+  @override
+  Future<Either<Failure, List<Land>>> getLands() async {
+    try {
+      final lands = await remoteDataSource.getLands();
+      return Right(lands);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Land>> addLand(Land land) async {
+    try {
+      // Use the create factory method to convert Land entity to LandModel
+      final landModel = LandModel.create(
+        userId: land.userId,
+        name: land.name,
+        size: land.size,
+        location: land.location,
+        soilType: land.soilType,
+      );
+
+      final result = await remoteDataSource.addLand(landModel);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Land>> updateLand(Land land) async {
+    try {
+      // Convert Land entity to LandModel
+      final landModel = LandModel(
+        id: land.id,
+        userId: land.userId,
+        name: land.name,
+        size: land.size,
+        location: land.location,
+        soilType: land.soilType,
+        createdAt: land.createdAt,
+        updatedAt: land.updatedAt,
+      );
+
+      final result = await remoteDataSource.updateLand(landModel);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteLand(String id) async {
+    try {
+      await remoteDataSource.deleteLand(id);
+      return const Right(null);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    }
+  }
+}
