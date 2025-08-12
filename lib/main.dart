@@ -7,10 +7,15 @@ import 'features/farm/presentation/bloc/farm_bloc.dart';
 import 'features/farm/presentation/bloc/farm_event.dart';
 import 'features/farm/presentation/bloc/analysis_bloc.dart';
 import 'features/farm/presentation/pages/landing_page.dart';
+import 'core/config/app_config.dart';
 import 'injection_container.dart' as di;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize environment configuration
+  AppConfig.initialize();
+
   await di.init();
   runApp(MyApp());
 }

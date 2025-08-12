@@ -46,7 +46,7 @@ class _SessionInfoWidgetState extends State<SessionInfoWidget> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'You will stay logged in for ${_remainingHours} more hour${_remainingHours == 1 ? '' : 's'}',
+              'You will stay logged in for $_remainingHours more hour${_remainingHours == 1 ? '' : 's'}',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.blue[700],

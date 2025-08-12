@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../auth/data/services/user_storage_service.dart';
+import '../../../../core/config/app_config.dart';
 
 class FarmDataService {
-  static const String baseUrl = 'http://127.0.0.1:8090';
+  static String get baseUrl => AppConfig.baseUrl;
 
   static Future<String?> _getToken() async {
     return await UserStorageService.getToken();

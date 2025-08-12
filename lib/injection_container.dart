@@ -1,5 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
+import 'core/config/app_config.dart';
 import 'features/auth/data/datasources/auth_remote_data_source.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/domain/repositories/auth_repository.dart';
@@ -119,47 +120,27 @@ Future<void> init() async {
 
   // Data Sources
   sl.registerLazySingleton<AuthRemoteDataSource>(
-    () => AuthRemoteDataSourceImpl(
-      client: sl(),
-      baseUrl: 'http://127.0.0.1:8090',
-    ),
-  ); // Replace with your PocketBase URL
+    () => AuthRemoteDataSourceImpl(client: sl(), baseUrl: AppConfig.baseUrl),
+  );
   sl.registerLazySingleton<FarmRemoteDataSource>(
-    () => FarmRemoteDataSourceImpl(
-      client: sl(),
-      baseUrl: 'http://127.0.0.1:8090',
-    ),
-  ); // Replace with your PocketBase URL
+    () => FarmRemoteDataSourceImpl(client: sl(), baseUrl: AppConfig.baseUrl),
+  );
   sl.registerLazySingleton<LandRemoteDataSource>(
-    () => LandRemoteDataSourceImpl(
-      client: sl(),
-      baseUrl: 'http://127.0.0.1:8090',
-    ),
-  ); // Replace with your PocketBase URL
+    () => LandRemoteDataSourceImpl(client: sl(), baseUrl: AppConfig.baseUrl),
+  );
   sl.registerLazySingleton<CropRemoteDataSource>(
-    () => CropRemoteDataSourceImpl(
-      client: sl(),
-      baseUrl: 'http://127.0.0.1:8090',
-    ),
-  ); // Replace with your PocketBase URL
+    () => CropRemoteDataSourceImpl(client: sl(), baseUrl: AppConfig.baseUrl),
+  );
   sl.registerLazySingleton<SeasonRemoteDataSource>(
-    () => SeasonRemoteDataSourceImpl(
-      client: sl(),
-      baseUrl: 'http://127.0.0.1:8090',
-    ),
-  ); // Replace with your PocketBase URL
+    () => SeasonRemoteDataSourceImpl(client: sl(), baseUrl: AppConfig.baseUrl),
+  );
   sl.registerLazySingleton<ActivityRemoteDataSource>(
-    () => ActivityRemoteDataSourceImpl(
-      client: sl(),
-      baseUrl: 'http://127.0.0.1:8090',
-    ),
-  ); // Replace with your PocketBase URL
+    () =>
+        ActivityRemoteDataSourceImpl(client: sl(), baseUrl: AppConfig.baseUrl),
+  );
   sl.registerLazySingleton<InputRemoteDataSource>(
-    () => InputRemoteDataSourceImpl(
-      client: sl(),
-      baseUrl: 'http://127.0.0.1:8090',
-    ),
-  ); // Replace with your PocketBase URL
+    () => InputRemoteDataSourceImpl(client: sl(), baseUrl: AppConfig.baseUrl),
+  );
   sl.registerLazySingleton<AnalysisRemoteDataSource>(
     () => AnalysisRemoteDataSourceImpl(),
   );
