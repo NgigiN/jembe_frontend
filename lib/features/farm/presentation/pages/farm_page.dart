@@ -154,7 +154,7 @@ class FarmPage extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [backgroundColor, backgroundColor.withOpacity(0.7)],
+              colors: [backgroundColor, backgroundColor.withValues(alpha: 0.7)],
             ),
           ),
           child: Column(
@@ -163,7 +163,7 @@ class FarmPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, size: 32, color: iconColor),

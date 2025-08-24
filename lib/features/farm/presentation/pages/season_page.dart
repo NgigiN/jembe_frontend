@@ -4,7 +4,7 @@ import '../bloc/farm_bloc.dart';
 import '../bloc/farm_event.dart';
 import '../bloc/farm_state.dart';
 import '../../domain/entities/season.dart';
-import '../../data/models/season_model.dart';
+// Removed unused import
 import '../../data/services/farm_data_service.dart';
 import '../../../auth/data/utils/user_utils.dart';
 
@@ -423,14 +423,7 @@ class _SeasonPageState extends State<SeasonPage> {
                         return;
                       }
 
-                      final season = SeasonModel.create(
-                        userId: userId,
-                        name: nameController.text.trim(),
-                        cropId: selectedCropId!,
-                        landId: selectedLandId!,
-                        startDate: selectedStartDate!,
-                        endDate: selectedEndDate,
-                      );
+                      // Removed unused variable
 
                       context.read<FarmBloc>().add(
                         AddSeasonEvent(

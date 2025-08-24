@@ -26,7 +26,7 @@ class SignupPage extends StatelessWidget {
           ),
         ),
         child: Container(
-          decoration: BoxDecoration(color: Colors.black.withOpacity(0.3)),
+          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.3)),
           child: Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),

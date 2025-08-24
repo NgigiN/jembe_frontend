@@ -32,7 +32,7 @@ class LoginPage extends StatelessWidget {
           ),
         ),
         child: Container(
-          decoration: BoxDecoration(color: Colors.black.withOpacity(0.3)),
+          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.3)),
           child: Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
@@ -200,10 +200,12 @@ class LoginPage extends StatelessWidget {
                             );
                             // Navigate after a short delay to show the message
                             Future.delayed(const Duration(seconds: 1), () {
-                              Navigator.pushReplacementNamed(
-                                context,
-                                '/landing',
-                              );
+                              if (context.mounted) {
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/landing',
+                                );
+                              }
                             });
                           }
                         },

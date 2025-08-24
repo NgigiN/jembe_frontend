@@ -4,7 +4,7 @@ import '../bloc/farm_bloc.dart';
 import '../bloc/farm_event.dart';
 import '../bloc/farm_state.dart';
 import '../../domain/entities/crop.dart';
-import '../../data/models/crop_model.dart';
+// Removed unused import
 import '../../../auth/data/utils/user_utils.dart';
 
 class CropPage extends StatefulWidget {
@@ -269,13 +269,7 @@ class _CropPageState extends State<CropPage> {
                       return;
                     }
 
-                    final crop = CropModel.create(
-                      userId: userId,
-                      name: nameController.text.trim(),
-                      variety: varietyController.text.trim().isEmpty
-                          ? null
-                          : varietyController.text.trim(),
-                    );
+                    // Removed unused variable
 
                     context.read<FarmBloc>().add(
                       AddCropEvent(

@@ -196,7 +196,6 @@ class _ActivityPageState extends State<ActivityPage> {
     final detailsController = TextEditingController();
     DateTime? selectedDate;
     String? selectedSeasonId;
-    String? selectedSeasonName;
 
     // Predefined activity types based on PocketBase schema
     final activityTypes = [
@@ -280,9 +279,6 @@ class _ActivityPageState extends State<ActivityPage> {
                           onChanged: (value) {
                             setState(() {
                               selectedSeasonId = value;
-                              selectedSeasonName = seasons.firstWhere(
-                                (s) => s['id'] == value,
-                              )['name'];
                             });
                           },
                         ),
@@ -456,7 +452,6 @@ class _ActivityPageState extends State<ActivityPage> {
     );
     DateTime? selectedDate = activity.date;
     String? selectedSeasonId = activity.seasonId;
-    String? selectedSeasonName;
     String? selectedType = activity.type;
 
     // Predefined activity types based on PocketBase schema
@@ -488,11 +483,6 @@ class _ActivityPageState extends State<ActivityPage> {
       );
       return;
     }
-
-    // Set initial values for display
-    selectedSeasonName = seasons.firstWhere(
-      (s) => s['id'] == selectedSeasonId,
-    )['name'];
 
     showModalBottomSheet(
       context: context,
@@ -546,9 +536,6 @@ class _ActivityPageState extends State<ActivityPage> {
                           onChanged: (value) {
                             setState(() {
                               selectedSeasonId = value;
-                              selectedSeasonName = seasons.firstWhere(
-                                (s) => s['id'] == value,
-                              )['name'];
                             });
                           },
                         ),

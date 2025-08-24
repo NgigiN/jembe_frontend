@@ -4,7 +4,7 @@ import '../bloc/farm_bloc.dart';
 import '../bloc/farm_event.dart';
 import '../bloc/farm_state.dart';
 import '../../domain/entities/input.dart';
-import '../../data/models/input_model.dart';
+// Removed unused import
 import '../../data/services/farm_data_service.dart';
 
 class InputPage extends StatefulWidget {
@@ -410,18 +410,7 @@ class _InputPageState extends State<InputPage> {
                         return;
                       }
 
-                      final input = InputModel.create(
-                        seasonId: selectedSeasonId!,
-                        type: typeController.text.trim(),
-                        quantity: double.tryParse(
-                          quantityController.text.trim(),
-                        ),
-                        cost: cost,
-                        date: selectedDate!,
-                        notes: notesController.text.trim().isEmpty
-                            ? null
-                            : notesController.text.trim(),
-                      );
+                      // Removed unused variable
 
                       context.read<FarmBloc>().add(
                         AddInputEvent(

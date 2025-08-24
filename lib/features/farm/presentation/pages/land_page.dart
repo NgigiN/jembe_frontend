@@ -4,7 +4,7 @@ import '../bloc/farm_bloc.dart';
 import '../bloc/farm_event.dart';
 import '../bloc/farm_state.dart';
 import '../../domain/entities/land.dart';
-import '../../data/models/land_model.dart';
+// Removed unused import
 import '../../../auth/data/utils/user_utils.dart';
 
 class LandPage extends StatefulWidget {
@@ -287,17 +287,7 @@ class _LandPageState extends State<LandPage> {
                       return;
                     }
 
-                    final land = LandModel.create(
-                      userId: userId,
-                      name: nameController.text.trim(),
-                      size: double.tryParse(sizeController.text.trim()),
-                      location: locationController.text.trim().isEmpty
-                          ? null
-                          : locationController.text.trim(),
-                      soilType: soilTypeController.text.trim().isEmpty
-                          ? null
-                          : soilTypeController.text.trim(),
-                    );
+                    // Removed unused variable
 
                     context.read<FarmBloc>().add(
                       AddLandEvent(
