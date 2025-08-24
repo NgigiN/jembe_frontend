@@ -230,6 +230,8 @@ class SignupPage extends StatelessWidget {
                                 }
                               },
                             );
+                            // Reset auth state after handling success
+                            context.read<AuthBloc>().add(ResetAuthState());
                           }
                         },
                         child: BlocBuilder<AuthBloc, AuthState>(

@@ -15,43 +15,56 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc({required this.login, required this.signup}) : super(AuthInitial()) {
     on<LoginEvent>((event, emit) async {
       emit(AuthLoading());
-      final result = await login(
-        LoginParams(email: event.email, password: event.password),
-      );
-      await result.fold((failure) async => emit(AuthError('Login failed')), (
-        user,
-      ) async {
-        emit(AuthAuthenticated(user));
-      });
+      try {
+        final result = await login(
+          LoginParams(email: event.email, password: event.password),
+        );
+        await result.fold(
+          (failure) async {
+            String message = 'Login failed';
+            if (failure is ServerFailure && failure.errorMessage != null) {
+              message = failure.errorMessage!;
+            }
+            emit(AuthError(message));
+          },
+          (user) async {
+            emit(AuthAuthenticated(user));
+          },
+        );
+      } catch (e) {
+        emit(AuthError('Login failed: ${e.toString()}'));
+      }
     });
 
     on<SignupEvent>((event, emit) async {
       emit(AuthLoading());
-      final result = await signup(
-        SignupParams(
-          email: event.email,
-          password: event.password,
-          name: event.name,
-          farmName: event.farmName,
-          location: event.location,
-        ),
-      );
-      await result.fold(
-        (failure) async {
-          // Try to extract a message from the failure if possible
-          String message = 'Signup failed';
-          if (failure is ServerFailure && failure.errorMessage != null) {
-            message = failure.errorMessage!;
-          }
-          emit(AuthError(message));
-        },
-        (user) async {
-          emit(SignupSuccess());
-          // Reset state after a short delay to clear any lingering states
-          await Future.delayed(const Duration(milliseconds: 100));
-          emit(AuthInitial());
-        },
-      );
+      try {
+        final result = await signup(
+          SignupParams(
+            email: event.email,
+            password: event.password,
+            name: event.name,
+            farmName: event.farmName,
+            location: event.location,
+          ),
+        );
+        await result.fold(
+          (failure) async {
+            // Try to extract a message from the failure if possible
+            String message = 'Signup failed';
+            if (failure is ServerFailure && failure.errorMessage != null) {
+              message = failure.errorMessage!;
+            }
+            emit(AuthError(message));
+          },
+          (user) async {
+            // Emit success and let the UI handle the navigation
+            emit(SignupSuccess());
+          },
+        );
+      } catch (e) {
+        emit(AuthError('Signup failed: ${e.toString()}'));
+      }
     });
 
     on<ResetAuthState>((event, emit) {
