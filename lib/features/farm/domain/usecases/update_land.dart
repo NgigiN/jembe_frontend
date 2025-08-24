@@ -2,22 +2,21 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../entities/land.dart';
-import '../repositories/farm_repository.dart';
+import '../repositories/land_repository.dart';
 
 class UpdateLand implements UseCase<Land, UpdateLandParams> {
-  final FarmRepository repository;
+  final LandRepository repository;
 
   UpdateLand(this.repository);
 
   @override
   Future<Either<Failure, Land>> call(UpdateLandParams params) async {
-    return await repository.updateLand(params.id, params.name);
+    return await repository.updateLand(params.land);
   }
 }
 
 class UpdateLandParams {
-  final String id;
-  final String name;
+  final Land land;
 
-  UpdateLandParams({required this.id, required this.name});
+  UpdateLandParams({required this.land});
 }

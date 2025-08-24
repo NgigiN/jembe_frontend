@@ -40,6 +40,15 @@ import 'features/farm/domain/usecases/get_inputs.dart';
 import 'features/farm/domain/usecases/get_lands.dart';
 import 'features/farm/domain/usecases/get_seasons.dart';
 import 'features/farm/domain/usecases/update_land.dart';
+import 'features/farm/domain/usecases/delete_land.dart';
+import 'features/farm/domain/usecases/update_crop.dart';
+import 'features/farm/domain/usecases/delete_crop.dart';
+import 'features/farm/domain/usecases/update_season.dart';
+import 'features/farm/domain/usecases/delete_season.dart';
+import 'features/farm/domain/usecases/update_activity.dart';
+import 'features/farm/domain/usecases/delete_activity.dart';
+import 'features/farm/domain/usecases/update_input.dart';
+import 'features/farm/domain/usecases/delete_input.dart';
 import 'features/farm/domain/usecases/get_total_costs_by_season.dart';
 import 'features/farm/domain/usecases/get_cost_breakdown.dart';
 import 'features/farm/domain/usecases/get_annual_cost_summary.dart';
@@ -56,14 +65,23 @@ Future<void> init() async {
       getLands: sl(),
       addLand: sl(),
       updateLand: sl(),
+      deleteLand: sl(),
       getCrops: sl(),
       addCrop: sl(),
+      updateCrop: sl(),
+      deleteCrop: sl(),
       getSeasons: sl(),
       addSeason: sl(),
+      updateSeason: sl(),
+      deleteSeason: sl(),
       getActivities: sl(),
       addActivity: sl(),
+      updateActivity: sl(),
+      deleteActivity: sl(),
       getInputs: sl(),
       addInput: sl(),
+      updateInput: sl(),
+      deleteInput: sl(),
     ),
   );
   sl.registerFactory(
@@ -80,14 +98,23 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetLands(sl()));
   sl.registerLazySingleton(() => AddLand(sl()));
   sl.registerLazySingleton(() => UpdateLand(sl()));
+  sl.registerLazySingleton(() => DeleteLand(sl()));
   sl.registerLazySingleton(() => GetCrops(sl()));
   sl.registerLazySingleton(() => AddCrop(sl()));
+  sl.registerLazySingleton(() => UpdateCrop(sl()));
+  sl.registerLazySingleton(() => DeleteCrop(sl()));
   sl.registerLazySingleton(() => GetSeasons(sl()));
   sl.registerLazySingleton(() => AddSeason(sl()));
+  sl.registerLazySingleton(() => UpdateSeason(sl()));
+  sl.registerLazySingleton(() => DeleteSeason(sl()));
   sl.registerLazySingleton(() => GetActivities(sl()));
   sl.registerLazySingleton(() => AddActivity(sl()));
+  sl.registerLazySingleton(() => UpdateActivity(sl()));
+  sl.registerLazySingleton(() => DeleteActivity(sl()));
   sl.registerLazySingleton(() => GetInputs(sl()));
   sl.registerLazySingleton(() => AddInput(sl()));
+  sl.registerLazySingleton(() => UpdateInput(sl()));
+  sl.registerLazySingleton(() => DeleteInput(sl()));
   sl.registerLazySingleton(() => GetTotalCostsBySeason(sl()));
   sl.registerLazySingleton(() => GetCostBreakdown(sl()));
   sl.registerLazySingleton(() => GetAnnualCostSummary(sl()));

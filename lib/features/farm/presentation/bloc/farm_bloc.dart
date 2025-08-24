@@ -8,14 +8,23 @@ import '../../domain/entities/input.dart';
 import '../../domain/usecases/add_land.dart';
 import '../../domain/usecases/get_lands.dart';
 import '../../domain/usecases/update_land.dart';
+import '../../domain/usecases/delete_land.dart';
 import '../../domain/usecases/add_crop.dart';
 import '../../domain/usecases/get_crops.dart';
+import '../../domain/usecases/update_crop.dart';
+import '../../domain/usecases/delete_crop.dart';
 import '../../domain/usecases/add_season.dart';
 import '../../domain/usecases/get_seasons.dart';
+import '../../domain/usecases/update_season.dart';
+import '../../domain/usecases/delete_season.dart';
 import '../../domain/usecases/add_activity.dart';
 import '../../domain/usecases/get_activities.dart';
+import '../../domain/usecases/update_activity.dart';
+import '../../domain/usecases/delete_activity.dart';
 import '../../domain/usecases/add_input.dart';
 import '../../domain/usecases/get_inputs.dart';
+import '../../domain/usecases/update_input.dart';
+import '../../domain/usecases/delete_input.dart';
 import '../../../auth/data/utils/user_utils.dart';
 
 import 'farm_event.dart';
@@ -25,27 +34,45 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
   final GetLands getLands;
   final AddLand addLand;
   final UpdateLand updateLand;
+  final DeleteLand deleteLand;
   final GetCrops getCrops;
   final AddCrop addCrop;
+  final UpdateCrop updateCrop;
+  final DeleteCrop deleteCrop;
   final GetSeasons getSeasons;
   final AddSeason addSeason;
+  final UpdateSeason updateSeason;
+  final DeleteSeason deleteSeason;
   final GetActivities getActivities;
   final AddActivity addActivity;
+  final UpdateActivity updateActivity;
+  final DeleteActivity deleteActivity;
   final GetInputs getInputs;
   final AddInput addInput;
+  final UpdateInput updateInput;
+  final DeleteInput deleteInput;
 
   FarmBloc({
     required this.getLands,
     required this.addLand,
     required this.updateLand,
+    required this.deleteLand,
     required this.getCrops,
     required this.addCrop,
+    required this.updateCrop,
+    required this.deleteCrop,
     required this.getSeasons,
     required this.addSeason,
+    required this.updateSeason,
+    required this.deleteSeason,
     required this.getActivities,
     required this.addActivity,
+    required this.updateActivity,
+    required this.deleteActivity,
     required this.getInputs,
     required this.addInput,
+    required this.updateInput,
+    required this.deleteInput,
   }) : super(FarmInitial()) {
     on<GetLandsEvent>((event, emit) async {
       emit(FarmLoading());
@@ -107,29 +134,6 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: currentInputs,
-          ),
-        );
-      });
-    });
-
-    on<UpdateLandEvent>((event, emit) async {
-      emit(FarmLoading());
-      final result = await updateLand(
-        UpdateLandParams(id: event.id, name: event.name),
-      );
-      result.fold((failure) => emit(FarmError('Failed to update land')), (
-        land,
-      ) {
-        final updatedLands = state.lands
-            .map((l) => l.id == land.id ? land : l)
-            .toList();
-        emit(
-          FarmLoaded(
-            lands: updatedLands,
-            crops: state.crops,
-            seasons: state.seasons,
-            activities: state.activities,
-            inputs: state.inputs,
           ),
         );
       });
@@ -304,7 +308,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         seasonId: event.seasonId,
         type: event.type,
         date: DateTime.parse(event.date),
-        cost: 0.0, // Default cost, can be updated later
+        cost: event.cost,
         details: event.details,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -384,6 +388,350 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       ) {
         final updatedInputs = List<Input>.from(currentInputs)..add(newInput);
 
+        emit(
+          FarmLoaded(
+            lands: currentLands,
+            crops: currentCrops,
+            seasons: currentSeasons,
+            activities: currentActivities,
+            inputs: updatedInputs,
+          ),
+        );
+      });
+    });
+
+    // Update event handlers
+    on<UpdateLandEvent>((event, emit) async {
+      final currentState = state;
+      final currentLands = currentState.lands;
+      final currentCrops = currentState.crops;
+      final currentSeasons = currentState.seasons;
+      final currentActivities = currentState.activities;
+      final currentInputs = currentState.inputs;
+
+      emit(FarmLoading());
+
+      final land = Land(
+        id: event.id,
+        userId: currentLands.firstWhere((l) => l.id == event.id).userId,
+        name: event.name,
+        size: double.tryParse(event.size),
+        location: event.location.isEmpty ? null : event.location,
+        soilType: event.soilType.isEmpty ? null : event.soilType,
+        createdAt: currentLands.firstWhere((l) => l.id == event.id).createdAt,
+        updatedAt: DateTime.now(),
+      );
+
+      final result = await updateLand(UpdateLandParams(land: land));
+      result.fold((failure) => emit(FarmError('Failed to update land')), (
+        updatedLand,
+      ) {
+        final updatedLands = currentLands
+            .map((l) => l.id == event.id ? updatedLand : l)
+            .toList();
+        emit(
+          FarmLoaded(
+            lands: updatedLands,
+            crops: currentCrops,
+            seasons: currentSeasons,
+            activities: currentActivities,
+            inputs: currentInputs,
+          ),
+        );
+      });
+    });
+
+    on<DeleteLandEvent>((event, emit) async {
+      final currentState = state;
+      final currentLands = currentState.lands;
+      final currentCrops = currentState.crops;
+      final currentSeasons = currentState.seasons;
+      final currentActivities = currentState.activities;
+      final currentInputs = currentState.inputs;
+
+      emit(FarmLoading());
+
+      final result = await deleteLand(DeleteLandParams(id: event.id));
+      result.fold((failure) => emit(FarmError('Failed to delete land')), (_) {
+        final updatedLands = currentLands
+            .where((l) => l.id != event.id)
+            .toList();
+        emit(
+          FarmLoaded(
+            lands: updatedLands,
+            crops: currentCrops,
+            seasons: currentSeasons,
+            activities: currentActivities,
+            inputs: currentInputs,
+          ),
+        );
+      });
+    });
+
+    on<UpdateCropEvent>((event, emit) async {
+      final currentState = state;
+      final currentLands = currentState.lands;
+      final currentCrops = currentState.crops;
+      final currentSeasons = currentState.seasons;
+      final currentActivities = currentState.activities;
+      final currentInputs = currentState.inputs;
+
+      emit(FarmLoading());
+
+      final crop = Crop(
+        id: event.id,
+        userId: currentCrops.firstWhere((c) => c.id == event.id).userId,
+        name: event.name,
+        variety: event.variety.isEmpty ? null : event.variety,
+        createdAt: currentCrops.firstWhere((c) => c.id == event.id).createdAt,
+        updatedAt: DateTime.now(),
+      );
+
+      final result = await updateCrop(UpdateCropParams(crop: crop));
+      result.fold((failure) => emit(FarmError('Failed to update crop')), (
+        updatedCrop,
+      ) {
+        final updatedCrops = currentCrops
+            .map((c) => c.id == event.id ? updatedCrop : c)
+            .toList();
+        emit(
+          FarmLoaded(
+            lands: currentLands,
+            crops: updatedCrops,
+            seasons: currentSeasons,
+            activities: currentActivities,
+            inputs: currentInputs,
+          ),
+        );
+      });
+    });
+
+    on<DeleteCropEvent>((event, emit) async {
+      final currentState = state;
+      final currentLands = currentState.lands;
+      final currentCrops = currentState.crops;
+      final currentSeasons = currentState.seasons;
+      final currentActivities = currentState.activities;
+      final currentInputs = currentState.inputs;
+
+      emit(FarmLoading());
+
+      final result = await deleteCrop(DeleteCropParams(id: event.id));
+      result.fold((failure) => emit(FarmError('Failed to delete crop')), (_) {
+        final updatedCrops = currentCrops
+            .where((c) => c.id != event.id)
+            .toList();
+        emit(
+          FarmLoaded(
+            lands: currentLands,
+            crops: updatedCrops,
+            seasons: currentSeasons,
+            activities: currentActivities,
+            inputs: currentInputs,
+          ),
+        );
+      });
+    });
+
+    on<UpdateSeasonEvent>((event, emit) async {
+      final currentState = state;
+      final currentLands = currentState.lands;
+      final currentCrops = currentState.crops;
+      final currentSeasons = currentState.seasons;
+      final currentActivities = currentState.activities;
+      final currentInputs = currentState.inputs;
+
+      emit(FarmLoading());
+
+      final season = Season(
+        id: event.id,
+        userId: currentSeasons.firstWhere((s) => s.id == event.id).userId,
+        name: event.name,
+        landId: event.landId,
+        cropId: event.cropId,
+        startDate: DateTime.parse(event.startDate),
+        endDate: event.endDate.isNotEmpty
+            ? DateTime.parse(event.endDate)
+            : null,
+        createdAt: currentSeasons.firstWhere((s) => s.id == event.id).createdAt,
+        updatedAt: DateTime.now(),
+      );
+
+      final result = await updateSeason(UpdateSeasonParams(season: season));
+      result.fold((failure) => emit(FarmError('Failed to update season')), (
+        updatedSeason,
+      ) {
+        final updatedSeasons = currentSeasons
+            .map((s) => s.id == event.id ? updatedSeason : s)
+            .toList();
+        emit(
+          FarmLoaded(
+            lands: currentLands,
+            crops: currentCrops,
+            seasons: updatedSeasons,
+            activities: currentActivities,
+            inputs: currentInputs,
+          ),
+        );
+      });
+    });
+
+    on<DeleteSeasonEvent>((event, emit) async {
+      final currentState = state;
+      final currentLands = currentState.lands;
+      final currentCrops = currentState.crops;
+      final currentSeasons = currentState.seasons;
+      final currentActivities = currentState.activities;
+      final currentInputs = currentState.inputs;
+
+      emit(FarmLoading());
+
+      final result = await deleteSeason(DeleteSeasonParams(id: event.id));
+      result.fold((failure) => emit(FarmError('Failed to delete season')), (_) {
+        final updatedSeasons = currentSeasons
+            .where((s) => s.id != event.id)
+            .toList();
+        emit(
+          FarmLoaded(
+            lands: currentLands,
+            crops: currentCrops,
+            seasons: updatedSeasons,
+            activities: currentActivities,
+            inputs: currentInputs,
+          ),
+        );
+      });
+    });
+
+    on<UpdateActivityEvent>((event, emit) async {
+      final currentState = state;
+      final currentLands = currentState.lands;
+      final currentCrops = currentState.crops;
+      final currentSeasons = currentState.seasons;
+      final currentActivities = currentState.activities;
+      final currentInputs = currentState.inputs;
+
+      emit(FarmLoading());
+
+      final activity = Activity(
+        id: event.id,
+        seasonId: event.seasonId,
+        type: event.type,
+        date: DateTime.parse(event.date),
+        cost: event.cost,
+        details: event.details,
+        createdAt: currentActivities
+            .firstWhere((a) => a.id == event.id)
+            .createdAt,
+        updatedAt: DateTime.now(),
+      );
+
+      final result = await updateActivity(
+        UpdateActivityParams(activity: activity),
+      );
+      result.fold((failure) => emit(FarmError('Failed to update activity')), (
+        updatedActivity,
+      ) {
+        final updatedActivities = currentActivities
+            .map((a) => a.id == event.id ? updatedActivity : a)
+            .toList();
+        emit(
+          FarmLoaded(
+            lands: currentLands,
+            crops: currentCrops,
+            seasons: currentSeasons,
+            activities: updatedActivities,
+            inputs: currentInputs,
+          ),
+        );
+      });
+    });
+
+    on<DeleteActivityEvent>((event, emit) async {
+      final currentState = state;
+      final currentLands = currentState.lands;
+      final currentCrops = currentState.crops;
+      final currentSeasons = currentState.seasons;
+      final currentActivities = currentState.activities;
+      final currentInputs = currentState.inputs;
+
+      emit(FarmLoading());
+
+      final result = await deleteActivity(DeleteActivityParams(id: event.id));
+      result.fold((failure) => emit(FarmError('Failed to delete activity')), (
+        _,
+      ) {
+        final updatedActivities = currentActivities
+            .where((a) => a.id != event.id)
+            .toList();
+        emit(
+          FarmLoaded(
+            lands: currentLands,
+            crops: currentCrops,
+            seasons: currentSeasons,
+            activities: updatedActivities,
+            inputs: currentInputs,
+          ),
+        );
+      });
+    });
+
+    on<UpdateInputEvent>((event, emit) async {
+      final currentState = state;
+      final currentLands = currentState.lands;
+      final currentCrops = currentState.crops;
+      final currentSeasons = currentState.seasons;
+      final currentActivities = currentState.activities;
+      final currentInputs = currentState.inputs;
+
+      emit(FarmLoading());
+
+      final input = Input(
+        id: event.id,
+        seasonId: event.seasonId,
+        type: event.type,
+        quantity: event.quantity,
+        cost: event.cost,
+        date: DateTime.parse(event.date),
+        notes: event.notes,
+        createdAt: currentInputs.firstWhere((i) => i.id == event.id).createdAt,
+        updatedAt: DateTime.now(),
+      );
+
+      final result = await updateInput(UpdateInputParams(input: input));
+      result.fold((failure) => emit(FarmError('Failed to update input')), (
+        updatedInput,
+      ) {
+        final updatedInputs = currentInputs
+            .map((i) => i.id == event.id ? updatedInput : i)
+            .toList();
+        emit(
+          FarmLoaded(
+            lands: currentLands,
+            crops: currentCrops,
+            seasons: currentSeasons,
+            activities: currentActivities,
+            inputs: updatedInputs,
+          ),
+        );
+      });
+    });
+
+    on<DeleteInputEvent>((event, emit) async {
+      final currentState = state;
+      final currentLands = currentState.lands;
+      final currentCrops = currentState.crops;
+      final currentSeasons = currentState.seasons;
+      final currentActivities = currentState.activities;
+      final currentInputs = currentState.inputs;
+
+      emit(FarmLoading());
+
+      final result = await deleteInput(DeleteInputParams(id: event.id));
+      result.fold((failure) => emit(FarmError('Failed to delete input')), (_) {
+        final updatedInputs = currentInputs
+            .where((i) => i.id != event.id)
+            .toList();
         emit(
           FarmLoaded(
             lands: currentLands,

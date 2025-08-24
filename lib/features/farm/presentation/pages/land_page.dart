@@ -334,16 +334,166 @@ class _LandPageState extends State<LandPage> {
   }
 
   void _showEditLandDialog(BuildContext context, Land land) {
-    // TODO: Implement edit functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Edit functionality coming soon')),
+    final nameController = TextEditingController(text: land.name);
+    final sizeController = TextEditingController(
+      text: land.size?.toString() ?? '',
+    );
+    final locationController = TextEditingController(text: land.location ?? '');
+    final soilTypeController = TextEditingController(text: land.soilType ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Edit Land',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Land Name *',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: sizeController,
+                        decoration: const InputDecoration(
+                          labelText: 'Size (Acres)',
+                          border: OutlineInputBorder(),
+                          hintText: 'Enter land size in acres',
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: locationController,
+                        decoration: const InputDecoration(
+                          labelText: 'Location',
+                          border: OutlineInputBorder(),
+                          hintText: 'Enter land location (optional)',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: soilTypeController,
+                        decoration: const InputDecoration(
+                          labelText: 'Soil Type',
+                          border: OutlineInputBorder(),
+                          hintText: 'Enter soil type (optional)',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (nameController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Land name is required'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+
+                    context.read<FarmBloc>().add(
+                      UpdateLandEvent(
+                        land.id,
+                        nameController.text.trim(),
+                        soilTypeController.text.trim().isEmpty
+                            ? ''
+                            : soilTypeController.text.trim(),
+                        locationController.text.trim().isEmpty
+                            ? ''
+                            : locationController.text.trim(),
+                        sizeController.text.trim().isEmpty
+                            ? '0'
+                            : sizeController.text.trim(),
+                      ),
+                    );
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade600,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text(
+                    'Update Land',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   void _showDeleteConfirmation(BuildContext context, Land land) {
-    // TODO: Implement delete functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Delete functionality coming soon')),
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Land'),
+          content: Text(
+            'Are you sure you want to delete "${land.name}"${land.location != null ? ' (${land.location})' : ''}? This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.read<FarmBloc>().add(DeleteLandEvent(land.id));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${land.name} deleted successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

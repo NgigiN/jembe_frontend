@@ -466,17 +466,298 @@ class _SeasonPageState extends State<SeasonPage> {
     );
   }
 
-  void _showEditSeasonDialog(BuildContext context, Season season) {
-    // TODO: Implement edit functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Edit functionality coming soon')),
+  void _showEditSeasonDialog(BuildContext context, Season season) async {
+    final nameController = TextEditingController(text: season.name);
+    DateTime? selectedStartDate = season.startDate;
+    DateTime? selectedEndDate = season.endDate;
+    String? selectedCropId = season.cropId;
+    String? selectedLandId = season.landId;
+    String? selectedCropName;
+    String? selectedLandName;
+
+    // Fetch lands and crops for dropdowns
+    final lands = await FarmDataService.getLandsForDropdown();
+    final crops = await FarmDataService.getCropsForDropdown();
+
+    if (lands.isEmpty || crops.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No lands or crops available for editing'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Set initial values for display
+    selectedCropName = crops.firstWhere(
+      (c) => c['id'] == selectedCropId,
+    )['name'];
+    selectedLandName = lands.firstWhere(
+      (l) => l['id'] == selectedLandId,
+    )['name'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Container(
+          height: MediaQuery.of(context).size.height * 0.9,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Edit Season',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Season Name *',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: selectedCropId,
+                          decoration: const InputDecoration(
+                            labelText: 'Select Crop *',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: crops.map((crop) {
+                            final displayName =
+                                crop['variety'] != null &&
+                                    crop['variety'].isNotEmpty
+                                ? '${crop['name']} (${crop['variety']})'
+                                : crop['name'];
+                            return DropdownMenuItem<String>(
+                              value: crop['id'] as String,
+                              child: Text(displayName),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedCropId = value;
+                              selectedCropName = crops.firstWhere(
+                                (c) => c['id'] == value,
+                              )['name'];
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: selectedLandId,
+                          decoration: const InputDecoration(
+                            labelText: 'Select Land *',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: lands.map((land) {
+                            final displayName =
+                                land['location'] != null &&
+                                    land['location'].isNotEmpty
+                                ? '${land['name']} (${land['location']})'
+                                : land['name'];
+                            return DropdownMenuItem<String>(
+                              value: land['id'] as String,
+                              child: Text(displayName),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedLandId = value;
+                              selectedLandName = lands.firstWhere(
+                                (l) => l['id'] == value,
+                              )['name'];
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        ListTile(
+                          title: const Text('Start Date *'),
+                          subtitle: Text(
+                            selectedStartDate != null
+                                ? _formatDate(selectedStartDate!)
+                                : 'Select start date',
+                          ),
+                          trailing: const Icon(Icons.calendar_today),
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: selectedStartDate ?? DateTime.now(),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2030),
+                            );
+                            if (date != null) {
+                              setState(() {
+                                selectedStartDate = date;
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        ListTile(
+                          title: const Text('End Date (Optional)'),
+                          subtitle: Text(
+                            selectedEndDate != null
+                                ? _formatDate(selectedEndDate!)
+                                : 'Select end date (optional)',
+                          ),
+                          trailing: const Icon(Icons.calendar_today),
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate:
+                                  selectedEndDate ??
+                                  selectedStartDate ??
+                                  DateTime.now(),
+                              firstDate: selectedStartDate ?? DateTime(2020),
+                              lastDate: DateTime(2030),
+                            );
+                            if (date != null) {
+                              setState(() {
+                                selectedEndDate = date;
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (nameController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Season name is required'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (selectedCropId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please select a crop'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (selectedLandId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please select a land'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (selectedStartDate == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please select a start date'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      context.read<FarmBloc>().add(
+                        UpdateSeasonEvent(
+                          season.id,
+                          nameController.text.trim(),
+                          selectedLandId!,
+                          selectedCropId!,
+                          selectedStartDate!.toIso8601String(),
+                          selectedEndDate?.toIso8601String() ?? '',
+                        ),
+                      );
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Text(
+                      'Update Season',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
   void _showDeleteConfirmation(BuildContext context, Season season) {
-    // TODO: Implement delete functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Delete functionality coming soon')),
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Season'),
+          content: Text(
+            'Are you sure you want to delete "${season.name}"? This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.read<FarmBloc>().add(DeleteSeasonEvent(season.id));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${season.name} deleted successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -420,6 +420,7 @@ class _ActivityPageState extends State<ActivityPage> {
                           detailsController.text.trim().isEmpty
                               ? ''
                               : detailsController.text.trim(),
+                          cost,
                         ),
                       );
                       Navigator.pop(context);
@@ -446,17 +447,297 @@ class _ActivityPageState extends State<ActivityPage> {
     );
   }
 
-  void _showEditActivityDialog(BuildContext context, Activity activity) {
-    // TODO: Implement edit functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Edit functionality coming soon')),
+  void _showEditActivityDialog(BuildContext context, Activity activity) async {
+    final descriptionController = TextEditingController(
+      text: activity.details ?? '',
+    );
+    final costController = TextEditingController(
+      text: activity.cost.toString(),
+    );
+    DateTime? selectedDate = activity.date;
+    String? selectedSeasonId = activity.seasonId;
+    String? selectedSeasonName;
+    String? selectedType = activity.type;
+
+    // Predefined activity types based on PocketBase schema
+    final activityTypes = [
+      'Planting',
+      'Nursery Preparation',
+      'Watering',
+      'Fertilizing',
+      'Weeding',
+      'Pest Control',
+      'Harvesting',
+      'Drying',
+      'Milling',
+      'Storage',
+      'Transport',
+      'Maintenance',
+      'Other',
+    ];
+
+    // Fetch seasons for dropdown
+    final seasons = await FarmDataService.getSeasonsForDropdown();
+
+    if (seasons.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No seasons available for editing'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Set initial values for display
+    selectedSeasonName = seasons.firstWhere(
+      (s) => s['id'] == selectedSeasonId,
+    )['name'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Container(
+          height: MediaQuery.of(context).size.height * 0.8,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Edit Activity',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        DropdownButtonFormField<String>(
+                          value: selectedSeasonId,
+                          decoration: const InputDecoration(
+                            labelText: 'Select Season *',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: seasons.map((season) {
+                            return DropdownMenuItem<String>(
+                              value: season['id'] as String,
+                              child: Text(season['name']),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedSeasonId = value;
+                              selectedSeasonName = seasons.firstWhere(
+                                (s) => s['id'] == value,
+                              )['name'];
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: selectedType,
+                          decoration: const InputDecoration(
+                            labelText: 'Activity Type *',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: activityTypes.map((type) {
+                            return DropdownMenuItem<String>(
+                              value: type,
+                              child: Text(type),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedType = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: descriptionController,
+                          decoration: const InputDecoration(
+                            labelText: 'Description',
+                            border: OutlineInputBorder(),
+                            hintText: 'Enter activity description (optional)',
+                          ),
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: costController,
+                          decoration: const InputDecoration(
+                            labelText: 'Cost',
+                            border: OutlineInputBorder(),
+                            prefixText: '\$ ',
+                            hintText: '0.00',
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                        const SizedBox(height: 16),
+                        ListTile(
+                          title: const Text('Date *'),
+                          subtitle: Text(
+                            selectedDate != null
+                                ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
+                                : 'Select date',
+                          ),
+                          trailing: const Icon(Icons.calendar_today),
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: selectedDate ?? DateTime.now(),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2030),
+                            );
+                            if (date != null) {
+                              setState(() {
+                                selectedDate = date;
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (selectedSeasonId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please select a season'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (selectedType == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please select an activity type'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (selectedDate == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please select a date'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      final cost =
+                          double.tryParse(costController.text.trim()) ?? 0.0;
+                      if (cost < 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Cost cannot be negative'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      context.read<FarmBloc>().add(
+                        UpdateActivityEvent(
+                          activity.id,
+                          descriptionController.text.trim().isEmpty
+                              ? ''
+                              : descriptionController.text.trim(),
+                          selectedSeasonId!,
+                          selectedType!,
+                          selectedDate!.toIso8601String(),
+                          descriptionController.text.trim().isEmpty
+                              ? ''
+                              : descriptionController.text.trim(),
+                          cost,
+                        ),
+                      );
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Text(
+                      'Update Activity',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
   void _showDeleteConfirmation(BuildContext context, Activity activity) {
-    // TODO: Implement delete functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Delete functionality coming soon')),
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Activity'),
+          content: Text(
+            'Are you sure you want to delete this ${activity.type.toLowerCase()} activity? This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.read<FarmBloc>().add(DeleteActivityEvent(activity.id));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '${activity.type} activity deleted successfully',
+                    ),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

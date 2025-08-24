@@ -31,6 +31,14 @@ class UpdateLandEvent extends FarmEvent {
   List<Object> get props => [id, name, soilType, location, size];
 }
 
+class DeleteLandEvent extends FarmEvent {
+  final String id;
+  DeleteLandEvent(this.id);
+
+  @override
+  List<Object> get props => [id];
+}
+
 class AddCropEvent extends FarmEvent {
   final String name;
   final String variety;
@@ -51,6 +59,14 @@ class UpdateCropEvent extends FarmEvent {
 
   @override
   List<Object> get props => [id, name, variety];
+}
+
+class DeleteCropEvent extends FarmEvent {
+  final String id;
+  DeleteCropEvent(this.id);
+
+  @override
+  List<Object> get props => [id];
 }
 
 class GetSeasonsEvent extends FarmEvent {}
@@ -75,6 +91,34 @@ class AddSeasonEvent extends FarmEvent {
   List<Object> get props => [name, landId, cropId, startDate, endDate, userId];
 }
 
+class UpdateSeasonEvent extends FarmEvent {
+  final String id;
+  final String name;
+  final String landId;
+  final String cropId;
+  final String startDate;
+  final String endDate;
+  UpdateSeasonEvent(
+    this.id,
+    this.name,
+    this.landId,
+    this.cropId,
+    this.startDate,
+    this.endDate,
+  );
+
+  @override
+  List<Object> get props => [id, name, landId, cropId, startDate, endDate];
+}
+
+class DeleteSeasonEvent extends FarmEvent {
+  final String id;
+  DeleteSeasonEvent(this.id);
+
+  @override
+  List<Object> get props => [id];
+}
+
 class GetActivitiesEvent extends FarmEvent {}
 
 class AddActivityEvent extends FarmEvent {
@@ -83,16 +127,56 @@ class AddActivityEvent extends FarmEvent {
   final String type;
   final String date;
   final String details;
+  final double cost;
   AddActivityEvent(
     this.description,
     this.seasonId,
     this.type,
     this.date,
     this.details,
+    this.cost,
   );
 
   @override
-  List<Object> get props => [description, seasonId, type, date, details];
+  List<Object> get props => [description, seasonId, type, date, details, cost];
+}
+
+class UpdateActivityEvent extends FarmEvent {
+  final String id;
+  final String description;
+  final String seasonId;
+  final String type;
+  final String date;
+  final String details;
+  final double cost;
+  UpdateActivityEvent(
+    this.id,
+    this.description,
+    this.seasonId,
+    this.type,
+    this.date,
+    this.details,
+    this.cost,
+  );
+
+  @override
+  List<Object> get props => [
+    id,
+    description,
+    seasonId,
+    type,
+    date,
+    details,
+    cost,
+  ];
+}
+
+class DeleteActivityEvent extends FarmEvent {
+  final String id;
+  DeleteActivityEvent(this.id);
+
+  @override
+  List<Object> get props => [id];
 }
 
 class GetActivitiesBySeasonEvent extends FarmEvent {}
@@ -124,4 +208,42 @@ class AddInputEvent extends FarmEvent {
     date,
     notes ?? '',
   ];
+}
+
+class UpdateInputEvent extends FarmEvent {
+  final String id;
+  final String seasonId;
+  final String type;
+  final double? quantity;
+  final double cost;
+  final String date;
+  final String? notes;
+  UpdateInputEvent(
+    this.id,
+    this.seasonId,
+    this.type,
+    this.quantity,
+    this.cost,
+    this.date,
+    this.notes,
+  );
+
+  @override
+  List<Object> get props => [
+    id,
+    seasonId,
+    type,
+    quantity ?? 0.0,
+    cost,
+    date,
+    notes ?? '',
+  ];
+}
+
+class DeleteInputEvent extends FarmEvent {
+  final String id;
+  DeleteInputEvent(this.id);
+
+  @override
+  List<Object> get props => [id];
 }
