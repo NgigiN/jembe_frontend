@@ -192,7 +192,6 @@ class _InputPageState extends State<InputPage> {
     DateTime? selectedDate;
     String? selectedSeasonId;
     String? selectedSeasonName;
-    String? selectedLandId;
 
     // Predefined input types based on PocketBase schema
     final inputTypes = [
@@ -210,14 +209,13 @@ class _InputPageState extends State<InputPage> {
       'Other',
     ];
 
-    // Fetch seasons and lands for dropdowns
+    // Fetch seasons for dropdowns
     final seasons = await FarmDataService.getSeasonsForDropdown();
-    final lands = await FarmDataService.getLandsForDropdown();
 
-    if (seasons.isEmpty || lands.isEmpty) {
+    if (seasons.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please add at least one season and one land first'),
+          content: Text('Please add at least one season first'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -279,30 +277,6 @@ class _InputPageState extends State<InputPage> {
                               selectedSeasonName = seasons.firstWhere(
                                 (s) => s['id'] == value,
                               )['name'];
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          initialValue: selectedLandId,
-                          decoration: const InputDecoration(
-                            labelText: 'Select Land *',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: lands.map((land) {
-                            final displayName =
-                                land['location'] != null &&
-                                    land['location'].isNotEmpty
-                                ? '${land['name']} (${land['location']})'
-                                : land['name'];
-                            return DropdownMenuItem<String>(
-                              value: land['id'] as String,
-                              child: Text(displayName),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedLandId = value;
                             });
                           },
                         ),
@@ -394,16 +368,6 @@ class _InputPageState extends State<InputPage> {
                         return;
                       }
 
-                      if (selectedLandId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a land'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
                       if (typeController.text.trim().isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -449,8 +413,9 @@ class _InputPageState extends State<InputPage> {
 
                       context.read<FarmBloc>().add(
                         AddInputEvent(
+                          'plant',
                           selectedSeasonId!,
-                          selectedLandId!,
+                          null,
                           typeController.text.trim(),
                           double.tryParse(quantityController.text.trim()),
                           cost,
@@ -492,8 +457,9 @@ class _InputPageState extends State<InputPage> {
     final costController = TextEditingController(text: input.cost.toString());
     final notesController = TextEditingController(text: input.notes ?? '');
     DateTime? selectedDate = input.date;
-    String? selectedSeasonId = input.seasonId;
-    String? selectedLandId = input.landId.isEmpty ? null : input.landId;
+    String? selectedSeasonId = input.sourceType == 'plant'
+        ? input.sourceId
+        : '';
     String? selectedSeasonName;
 
     // Predefined input types based on PocketBase schema
@@ -597,30 +563,6 @@ class _InputPageState extends State<InputPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          initialValue: selectedLandId,
-                          decoration: const InputDecoration(
-                            labelText: 'Select Land *',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: lands.map((land) {
-                            final displayName =
-                                land['location'] != null &&
-                                    land['location'].isNotEmpty
-                                ? '${land['name']} (${land['location']})'
-                                : land['name'];
-                            return DropdownMenuItem<String>(
-                              value: land['id'] as String,
-                              child: Text(displayName),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedLandId = value;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
                           initialValue: typeController.text,
                           decoration: const InputDecoration(
                             labelText: 'Input Type *',
@@ -712,15 +654,6 @@ class _InputPageState extends State<InputPage> {
                       }
 
                       // Temporarily disable land validation for existing data
-                      if (selectedLandId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a land'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
 
                       if (typeController.text.trim().isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -766,8 +699,9 @@ class _InputPageState extends State<InputPage> {
                       context.read<FarmBloc>().add(
                         UpdateInputEvent(
                           input.id,
+                          'plant',
                           selectedSeasonId!,
-                          selectedLandId ?? '',
+                          null,
                           typeController.text.trim(),
                           double.tryParse(quantityController.text.trim()),
                           cost,

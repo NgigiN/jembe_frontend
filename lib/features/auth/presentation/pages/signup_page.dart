@@ -160,7 +160,8 @@ class SignupPage extends StatelessWidget {
                               SignupEvent(
                                 email: emailController.text,
                                 password: passwordController.text,
-                                name: nameController.text,
+                                firstName: nameController.text,
+                                lastName: nameController.text,
                                 farmName: farmNameController.text,
                                 location: locationController.text,
                               ),

@@ -215,7 +215,7 @@ class TotalCostsBySeasonPage extends StatelessWidget {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Crop: ${cost.cropName}'),
+                        Text('Plant: ${cost.cropName}'),
                         Text('Land: ${cost.landName}'),
                         Text('Farm: ${cost.farmName}'),
                         Text(
@@ -293,7 +293,7 @@ class CostBreakdownPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Season: ${breakdown.seasonName}'),
-                        Text('Crop: ${breakdown.cropName}'),
+                        Text('Plant: ${breakdown.cropName}'),
                         Text('Land: ${breakdown.landName}'),
                         Text(
                           'Percentage: ${breakdown.percentage.toStringAsFixed(1)}%',
@@ -369,7 +369,7 @@ class AnnualSummaryPage extends StatelessWidget {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Crop: ${summary.cropName}'),
+                        Text('Plant: ${summary.cropName}'),
                         Text('Land: ${summary.landName}'),
                         Text('Farm: ${summary.farmName}'),
                       ],

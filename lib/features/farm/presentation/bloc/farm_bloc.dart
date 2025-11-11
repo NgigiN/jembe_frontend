@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../domain/entities/land.dart';
-import '../../domain/entities/crop.dart';
+import '../../domain/entities/plant.dart';
 import '../../domain/entities/season.dart';
 import '../../domain/entities/activity.dart';
 import '../../domain/entities/input.dart';
@@ -9,10 +9,10 @@ import '../../domain/usecases/add_land.dart';
 import '../../domain/usecases/get_lands.dart';
 import '../../domain/usecases/update_land.dart';
 import '../../domain/usecases/delete_land.dart';
-import '../../domain/usecases/add_crop.dart';
-import '../../domain/usecases/get_crops.dart';
-import '../../domain/usecases/update_crop.dart';
-import '../../domain/usecases/delete_crop.dart';
+import '../../domain/usecases/add_plant.dart';
+import '../../domain/usecases/get_plants.dart';
+import '../../domain/usecases/update_plant.dart';
+import '../../domain/usecases/delete_plant.dart';
 import '../../domain/usecases/add_season.dart';
 import '../../domain/usecases/get_seasons.dart';
 import '../../domain/usecases/update_season.dart';
@@ -35,10 +35,10 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
   final AddLand addLand;
   final UpdateLand updateLand;
   final DeleteLand deleteLand;
-  final GetCrops getCrops;
-  final AddCrop addCrop;
-  final UpdateCrop updateCrop;
-  final DeleteCrop deleteCrop;
+  final GetPlants getPlants;
+  final AddPlant addPlant;
+  final UpdatePlant updatePlant;
+  final DeletePlant deletePlant;
   final GetSeasons getSeasons;
   final AddSeason addSeason;
   final UpdateSeason updateSeason;
@@ -57,10 +57,10 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
     required this.addLand,
     required this.updateLand,
     required this.deleteLand,
-    required this.getCrops,
-    required this.addCrop,
-    required this.updateCrop,
-    required this.deleteCrop,
+    required this.getPlants,
+    required this.addPlant,
+    required this.updatePlant,
+    required this.deletePlant,
     required this.getSeasons,
     required this.addSeason,
     required this.updateSeason,
@@ -82,7 +82,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         (lands) => emit(
           FarmLoaded(
             lands: lands,
-            crops: state.crops,
+            plants: state.plants,
             seasons: state.seasons,
             activities: state.activities,
             inputs: state.inputs,
@@ -95,7 +95,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       // Capture current state BEFORE emitting FarmLoading
       final currentState = state;
       final currentLands = currentState.lands;
-      final currentCrops = currentState.crops;
+      final currentPlants = currentState.plants;
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
@@ -130,7 +130,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         emit(
           FarmLoaded(
             lands: updatedLands,
-            crops: currentCrops,
+            plants: currentPlants,
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: currentInputs,
@@ -139,16 +139,16 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       });
     });
 
-    // Crop event handlers
-    on<GetCropsEvent>((event, emit) async {
+    // Plant event handlers
+    on<GetPlantsEvent>((event, emit) async {
       emit(FarmLoading());
-      final result = await getCrops(NoParams());
+      final result = await getPlants(NoParams());
       result.fold(
-        (failure) => emit(FarmError('Failed to load crops')),
-        (crops) => emit(
+        (failure) => emit(FarmError('Failed to load plants')),
+        (plants) => emit(
           FarmLoaded(
             lands: state.lands,
-            crops: crops,
+            plants: plants,
             seasons: state.seasons,
             activities: state.activities,
             inputs: state.inputs,
@@ -157,11 +157,11 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       );
     });
 
-    on<AddCropEvent>((event, emit) async {
+    on<AddPlantEvent>((event, emit) async {
       // Capture current state BEFORE emitting FarmLoading
       final currentState = state;
       final currentLands = currentState.lands;
-      final currentCrops = currentState.crops;
+      final currentPlants = currentState.plants;
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
@@ -175,9 +175,9 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         return;
       }
 
-      // Create a Crop object from the event parameters
-      final crop = Crop(
-        id: '', // Will be set by the server
+      // Create a Plant object from the event parameters
+      final plant = Plant(
+        id: '',
         userId: userId,
         name: event.name,
         variety: event.variety,
@@ -185,16 +185,16 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         updatedAt: DateTime.now(),
       );
 
-      final result = await addCrop(AddCropParams(crop: crop));
-      result.fold((failure) => emit(FarmError('Failed to add crop')), (
-        newCrop,
+      final result = await addPlant(AddPlantParams(plant: plant));
+      result.fold((failure) => emit(FarmError('Failed to add plant')), (
+        newPlant,
       ) {
-        final updatedCrops = List<Crop>.from(currentCrops)..add(newCrop);
+        final updatedPlants = List<Plant>.from(currentPlants)..add(newPlant);
 
         emit(
           FarmLoaded(
             lands: currentLands,
-            crops: updatedCrops,
+            plants: updatedPlants,
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: currentInputs,
@@ -212,7 +212,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         (seasons) => emit(
           FarmLoaded(
             lands: state.lands,
-            crops: state.crops,
+            plants: state.plants,
             seasons: seasons,
             activities: state.activities,
             inputs: state.inputs,
@@ -225,7 +225,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       // Capture current state BEFORE emitting FarmLoading
       final currentState = state;
       final currentLands = currentState.lands;
-      final currentCrops = currentState.crops;
+      final currentPlants = currentState.plants;
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
@@ -245,7 +245,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         userId: userId,
         name: event.name,
         landId: event.landId,
-        cropId: event.cropId,
+        plantId: event.plantId,
         startDate: DateTime.parse(event.startDate),
         endDate: event.endDate.isNotEmpty
             ? DateTime.parse(event.endDate)
@@ -264,7 +264,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         emit(
           FarmLoaded(
             lands: currentLands,
-            crops: currentCrops,
+            plants: currentPlants,
             seasons: updatedSeasons,
             activities: currentActivities,
             inputs: currentInputs,
@@ -282,7 +282,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         (activities) => emit(
           FarmLoaded(
             lands: state.lands,
-            crops: state.crops,
+            plants: state.plants,
             seasons: state.seasons,
             activities: activities,
             inputs: state.inputs,
@@ -295,7 +295,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       // Capture current state BEFORE emitting FarmLoading
       final currentState = state;
       final currentLands = currentState.lands;
-      final currentCrops = currentState.crops;
+      final currentPlants = currentState.plants;
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
@@ -304,13 +304,15 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
 
       // Create an Activity object from the event parameters
       final activity = Activity(
-        id: '', // Will be set by the server
-        seasonId: event.seasonId,
-        landId: event.landId,
+        id: '',
+        sourceType: event.sourceType,
+        sourceId: event.sourceId,
+        animalId: event.animalId,
         type: event.type,
         date: DateTime.parse(event.date),
         cost: event.cost,
         details: event.details,
+        notes: event.notes,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -325,7 +327,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         emit(
           FarmLoaded(
             lands: currentLands,
-            crops: currentCrops,
+            plants: currentPlants,
             seasons: currentSeasons,
             activities: updatedActivities,
             inputs: currentInputs,
@@ -343,7 +345,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         (inputs) => emit(
           FarmLoaded(
             lands: state.lands,
-            crops: state.crops,
+            plants: state.plants,
             seasons: state.seasons,
             activities: state.activities,
             inputs: inputs,
@@ -356,7 +358,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       // Capture current state BEFORE emitting FarmLoading
       final currentState = state;
       final currentLands = currentState.lands;
-      final currentCrops = currentState.crops;
+      final currentPlants = currentState.plants;
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
@@ -372,9 +374,10 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
 
       // Create an Input object from the event parameters
       final input = Input(
-        id: '', // Will be set by the server
-        seasonId: event.seasonId,
-        landId: event.landId,
+        id: '',
+        sourceType: event.sourceType,
+        sourceId: event.sourceId,
+        animalId: event.animalId,
         type: event.type,
         quantity: event.quantity,
         cost: event.cost,
@@ -393,7 +396,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         emit(
           FarmLoaded(
             lands: currentLands,
-            crops: currentCrops,
+            plants: currentPlants,
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: updatedInputs,
@@ -406,7 +409,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
     on<UpdateLandEvent>((event, emit) async {
       final currentState = state;
       final currentLands = currentState.lands;
-      final currentCrops = currentState.crops;
+      final currentPlants = currentState.plants;
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
@@ -434,7 +437,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         emit(
           FarmLoaded(
             lands: updatedLands,
-            crops: currentCrops,
+            plants: currentPlants,
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: currentInputs,
@@ -446,7 +449,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
     on<DeleteLandEvent>((event, emit) async {
       final currentState = state;
       final currentLands = currentState.lands;
-      final currentCrops = currentState.crops;
+      final currentPlants = currentState.plants;
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
@@ -461,7 +464,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         emit(
           FarmLoaded(
             lands: updatedLands,
-            crops: currentCrops,
+            plants: currentPlants,
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: currentInputs,
@@ -470,36 +473,36 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       });
     });
 
-    on<UpdateCropEvent>((event, emit) async {
+    on<UpdatePlantEvent>((event, emit) async {
       final currentState = state;
       final currentLands = currentState.lands;
-      final currentCrops = currentState.crops;
+      final currentPlants = currentState.plants;
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
 
       emit(FarmLoading());
 
-      final crop = Crop(
+      final plant = Plant(
         id: event.id,
-        userId: currentCrops.firstWhere((c) => c.id == event.id).userId,
+        userId: currentPlants.firstWhere((p) => p.id == event.id).userId,
         name: event.name,
         variety: event.variety.isEmpty ? null : event.variety,
-        createdAt: currentCrops.firstWhere((c) => c.id == event.id).createdAt,
+        createdAt: currentPlants.firstWhere((p) => p.id == event.id).createdAt,
         updatedAt: DateTime.now(),
       );
 
-      final result = await updateCrop(UpdateCropParams(crop: crop));
-      result.fold((failure) => emit(FarmError('Failed to update crop')), (
-        updatedCrop,
+      final result = await updatePlant(UpdatePlantParams(plant: plant));
+      result.fold((failure) => emit(FarmError('Failed to update plant')), (
+        updatedPlant,
       ) {
-        final updatedCrops = currentCrops
-            .map((c) => c.id == event.id ? updatedCrop : c)
+        final updatedPlants = currentPlants
+            .map((p) => p.id == event.id ? updatedPlant : p)
             .toList();
         emit(
           FarmLoaded(
             lands: currentLands,
-            crops: updatedCrops,
+            plants: updatedPlants,
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: currentInputs,
@@ -508,25 +511,25 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       });
     });
 
-    on<DeleteCropEvent>((event, emit) async {
+    on<DeletePlantEvent>((event, emit) async {
       final currentState = state;
       final currentLands = currentState.lands;
-      final currentCrops = currentState.crops;
+      final currentPlants = currentState.plants;
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
 
       emit(FarmLoading());
 
-      final result = await deleteCrop(DeleteCropParams(id: event.id));
-      result.fold((failure) => emit(FarmError('Failed to delete crop')), (_) {
-        final updatedCrops = currentCrops
-            .where((c) => c.id != event.id)
+      final result = await deletePlant(DeletePlantParams(id: event.id));
+      result.fold((failure) => emit(FarmError('Failed to delete plant')), (_) {
+        final updatedPlants = currentPlants
+            .where((p) => p.id != event.id)
             .toList();
         emit(
           FarmLoaded(
             lands: currentLands,
-            crops: updatedCrops,
+            plants: updatedPlants,
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: currentInputs,
@@ -538,7 +541,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
     on<UpdateSeasonEvent>((event, emit) async {
       final currentState = state;
       final currentLands = currentState.lands;
-      final currentCrops = currentState.crops;
+      final currentPlants = currentState.plants;
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
@@ -550,7 +553,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         userId: currentSeasons.firstWhere((s) => s.id == event.id).userId,
         name: event.name,
         landId: event.landId,
-        cropId: event.cropId,
+        plantId: event.plantId,
         startDate: DateTime.parse(event.startDate),
         endDate: event.endDate.isNotEmpty
             ? DateTime.parse(event.endDate)
@@ -569,7 +572,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         emit(
           FarmLoaded(
             lands: currentLands,
-            crops: currentCrops,
+            plants: currentPlants,
             seasons: updatedSeasons,
             activities: currentActivities,
             inputs: currentInputs,
@@ -581,7 +584,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
     on<DeleteSeasonEvent>((event, emit) async {
       final currentState = state;
       final currentLands = currentState.lands;
-      final currentCrops = currentState.crops;
+      final currentPlants = currentState.plants;
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
@@ -596,7 +599,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         emit(
           FarmLoaded(
             lands: currentLands,
-            crops: currentCrops,
+            plants: currentPlants,
             seasons: updatedSeasons,
             activities: currentActivities,
             inputs: currentInputs,
@@ -608,7 +611,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
     on<UpdateActivityEvent>((event, emit) async {
       final currentState = state;
       final currentLands = currentState.lands;
-      final currentCrops = currentState.crops;
+      final currentPlants = currentState.plants;
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
@@ -617,12 +620,14 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
 
       final activity = Activity(
         id: event.id,
-        seasonId: event.seasonId,
-        landId: event.landId,
+        sourceType: event.sourceType,
+        sourceId: event.sourceId,
+        animalId: event.animalId,
         type: event.type,
         date: DateTime.parse(event.date),
         cost: event.cost,
         details: event.details,
+        notes: event.notes,
         createdAt: currentActivities
             .firstWhere((a) => a.id == event.id)
             .createdAt,
@@ -641,7 +646,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         emit(
           FarmLoaded(
             lands: currentLands,
-            crops: currentCrops,
+            plants: currentPlants,
             seasons: currentSeasons,
             activities: updatedActivities,
             inputs: currentInputs,
@@ -653,7 +658,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
     on<DeleteActivityEvent>((event, emit) async {
       final currentState = state;
       final currentLands = currentState.lands;
-      final currentCrops = currentState.crops;
+      final currentPlants = currentState.plants;
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
@@ -670,7 +675,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         emit(
           FarmLoaded(
             lands: currentLands,
-            crops: currentCrops,
+            plants: currentPlants,
             seasons: currentSeasons,
             activities: updatedActivities,
             inputs: currentInputs,
@@ -682,7 +687,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
     on<UpdateInputEvent>((event, emit) async {
       final currentState = state;
       final currentLands = currentState.lands;
-      final currentCrops = currentState.crops;
+      final currentPlants = currentState.plants;
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
@@ -691,8 +696,9 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
 
       final input = Input(
         id: event.id,
-        seasonId: event.seasonId,
-        landId: event.landId,
+        sourceType: event.sourceType,
+        sourceId: event.sourceId,
+        animalId: event.animalId,
         type: event.type,
         quantity: event.quantity,
         cost: event.cost,
@@ -712,7 +718,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         emit(
           FarmLoaded(
             lands: currentLands,
-            crops: currentCrops,
+            plants: currentPlants,
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: updatedInputs,
@@ -724,7 +730,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
     on<DeleteInputEvent>((event, emit) async {
       final currentState = state;
       final currentLands = currentState.lands;
-      final currentCrops = currentState.crops;
+      final currentPlants = currentState.plants;
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
@@ -739,7 +745,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         emit(
           FarmLoaded(
             lands: currentLands,
-            crops: currentCrops,
+            plants: currentPlants,
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: updatedInputs,

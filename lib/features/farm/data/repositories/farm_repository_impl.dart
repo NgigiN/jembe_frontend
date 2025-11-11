@@ -2,7 +2,7 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/error/exceptions.dart';
 import '../../domain/entities/land.dart';
-import '../../domain/entities/crop.dart';
+import '../../domain/entities/plant.dart';
 import '../../domain/entities/season.dart';
 import '../../domain/entities/activity.dart';
 import '../../domain/repositories/farm_repository.dart';
@@ -44,30 +44,30 @@ class FarmRepositoryImpl implements FarmRepository {
   }
 
   @override
-  Future<Either<Failure, List<Crop>>> getCrops() async {
+  Future<Either<Failure, List<Plant>>> getPlants() async {
     try {
-      final crops = await remoteDataSource.getCrops();
-      return Right(crops);
+      final plants = await remoteDataSource.getPlants();
+      return Right(plants);
     } on ServerException {
       return Left(ServerFailure());
     }
   }
 
   @override
-  Future<Either<Failure, Crop>> addCrop(String name) async {
+  Future<Either<Failure, Plant>> addPlant(String name) async {
     try {
-      final crop = await remoteDataSource.addCrop(name);
-      return Right(crop);
+      final plant = await remoteDataSource.addPlant(name);
+      return Right(plant);
     } on ServerException {
       return Left(ServerFailure());
     }
   }
 
   @override
-  Future<Either<Failure, Crop>> updateCrop(String id, String name) async {
+  Future<Either<Failure, Plant>> updatePlant(String id, String name) async {
     try {
-      final crop = await remoteDataSource.updateCrop(id, name);
-      return Right(crop);
+      final plant = await remoteDataSource.updatePlant(id, name);
+      return Right(plant);
     } on ServerException {
       return Left(ServerFailure());
     }

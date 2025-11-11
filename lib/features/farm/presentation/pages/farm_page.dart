@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'land_page.dart';
-import 'crop_page.dart';
+import 'plant_page.dart';
 import 'season_page.dart';
 import 'input_page.dart';
 import 'activity_page.dart';
@@ -65,14 +65,14 @@ class FarmPage extends StatelessWidget {
                     ),
                     _buildCard(
                       context,
-                      'Add Crop',
+                      'Add Plant',
                       Icons.eco,
                       Colors.green.shade100,
                       Colors.green.shade700,
                       () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const CropPage(),
+                          builder: (context) => const PlantPage(),
                         ),
                       ),
                     ),

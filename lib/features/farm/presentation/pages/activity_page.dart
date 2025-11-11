@@ -389,16 +389,6 @@ class _ActivityPageState extends State<ActivityPage> {
                         return;
                       }
 
-                      if (selectedLandId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a land'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
                       if (typeController.text.trim().isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -433,14 +423,16 @@ class _ActivityPageState extends State<ActivityPage> {
 
                       // Create activity model for validation (not used but required for consistency)
                       ActivityModel.create(
-                        seasonId: selectedSeasonId!,
-                        landId: selectedLandId!,
+                        sourceType: 'plant',
+                        sourceId: selectedSeasonId!,
+                        animalId: null,
                         type: typeController.text.trim(),
                         date: selectedDate!,
                         cost: cost,
                         details: detailsController.text.trim().isEmpty
                             ? null
                             : detailsController.text.trim(),
+                        notes: null,
                       );
 
                       context.read<FarmBloc>().add(
@@ -448,13 +440,15 @@ class _ActivityPageState extends State<ActivityPage> {
                           detailsController.text.trim().isEmpty
                               ? ''
                               : detailsController.text.trim(),
+                          'plant',
                           selectedSeasonId!,
-                          selectedLandId!,
+                          null,
                           typeController.text.trim(),
                           selectedDate!.toIso8601String(),
                           detailsController.text.trim().isEmpty
                               ? ''
                               : detailsController.text.trim(),
+                          null,
                           cost,
                         ),
                       );
@@ -490,8 +484,10 @@ class _ActivityPageState extends State<ActivityPage> {
       text: activity.cost.toString(),
     );
     DateTime? selectedDate = activity.date;
-    String? selectedSeasonId = activity.seasonId;
-    String? selectedLandId = activity.landId.isEmpty ? null : activity.landId;
+    String? selectedSeasonId = activity.sourceType == 'plant'
+        ? activity.sourceId
+        : '';
+    String? selectedLandId = null;
     String? selectedType = activity.type;
 
     // Predefined activity types based on PocketBase schema
@@ -735,13 +731,15 @@ class _ActivityPageState extends State<ActivityPage> {
                           descriptionController.text.trim().isEmpty
                               ? ''
                               : descriptionController.text.trim(),
+                          'plant',
                           selectedSeasonId!,
-                          selectedLandId ?? '',
+                          null,
                           selectedType!,
                           selectedDate!.toIso8601String(),
                           descriptionController.text.trim().isEmpty
                               ? ''
                               : descriptionController.text.trim(),
+                          null,
                           cost,
                         ),
                       );

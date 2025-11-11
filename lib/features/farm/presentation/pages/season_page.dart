@@ -200,19 +200,19 @@ class _SeasonPageState extends State<SeasonPage> {
     final nameController = TextEditingController();
     DateTime? selectedStartDate;
     DateTime? selectedEndDate;
-    String? selectedCropId;
+    String? selectedPlantId;
     String? selectedLandId;
-    String? selectedCropName;
+    String? selectedPlantName;
     String? selectedLandName;
 
-    // Fetch lands and crops for dropdowns
+    // Fetch lands and plants for dropdowns
     final lands = await FarmDataService.getLandsForDropdown();
-    final crops = await FarmDataService.getCropsForDropdown();
+    final plants = await FarmDataService.getPlantsForDropdown();
 
-    if (lands.isEmpty || crops.isEmpty) {
+    if (lands.isEmpty || plants.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please add at least one land and one crop first'),
+          content: Text('Please add at least one land and one plant first'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -265,27 +265,27 @@ class _SeasonPageState extends State<SeasonPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          initialValue: selectedCropId,
+                          initialValue: selectedPlantId,
                           decoration: const InputDecoration(
-                            labelText: 'Select Crop *',
+                            labelText: 'Select Plant *',
                             border: OutlineInputBorder(),
                           ),
-                          items: crops.map((crop) {
+                          items: plants.map((plant) {
                             final displayName =
-                                crop['variety'] != null &&
-                                    crop['variety'].isNotEmpty
-                                ? '${crop['name']} (${crop['variety']})'
-                                : crop['name'];
+                                plant['variety'] != null &&
+                                    plant['variety'].isNotEmpty
+                                ? '${plant['name']} (${plant['variety']})'
+                                : plant['name'];
                             return DropdownMenuItem<String>(
-                              value: crop['id'] as String,
+                              value: plant['id'] as String,
                               child: Text(displayName),
                             );
                           }).toList(),
                           onChanged: (value) {
                             setState(() {
-                              selectedCropId = value;
-                              selectedCropName = crops.firstWhere(
-                                (c) => c['id'] == value,
+                              selectedPlantId = value;
+                              selectedPlantName = plants.firstWhere(
+                                (p) => p['id'] == value,
                               )['name'];
                             });
                           },
@@ -382,10 +382,10 @@ class _SeasonPageState extends State<SeasonPage> {
                         return;
                       }
 
-                      if (selectedCropId == null) {
+                      if (selectedPlantId == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Please select a crop'),
+                            content: Text('Please select a plant'),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -429,7 +429,7 @@ class _SeasonPageState extends State<SeasonPage> {
                         AddSeasonEvent(
                           nameController.text.trim(),
                           selectedLandId!,
-                          selectedCropId!,
+                          selectedPlantId!,
                           selectedStartDate!.toIso8601String(),
                           selectedEndDate?.toIso8601String() ?? '',
                           userId,
@@ -463,19 +463,19 @@ class _SeasonPageState extends State<SeasonPage> {
     final nameController = TextEditingController(text: season.name);
     DateTime? selectedStartDate = season.startDate;
     DateTime? selectedEndDate = season.endDate;
-    String? selectedCropId = season.cropId;
+    String? selectedPlantId = season.plantId;
     String? selectedLandId = season.landId;
-    String? selectedCropName;
+    String? selectedPlantName;
     String? selectedLandName;
 
     // Fetch lands and crops for dropdowns
     final lands = await FarmDataService.getLandsForDropdown();
-    final crops = await FarmDataService.getCropsForDropdown();
+    final plants = await FarmDataService.getPlantsForDropdown();
 
-    if (lands.isEmpty || crops.isEmpty) {
+    if (lands.isEmpty || plants.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No lands or crops available for editing'),
+          content: Text('No lands or plants available for editing'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -483,8 +483,8 @@ class _SeasonPageState extends State<SeasonPage> {
     }
 
     // Set initial values for display
-    selectedCropName = crops.firstWhere(
-      (c) => c['id'] == selectedCropId,
+    selectedPlantName = plants.firstWhere(
+      (p) => p['id'] == selectedPlantId,
     )['name'];
     selectedLandName = lands.firstWhere(
       (l) => l['id'] == selectedLandId,
@@ -536,27 +536,27 @@ class _SeasonPageState extends State<SeasonPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          initialValue: selectedCropId,
+                          initialValue: selectedPlantId,
                           decoration: const InputDecoration(
-                            labelText: 'Select Crop *',
+                            labelText: 'Select Plant *',
                             border: OutlineInputBorder(),
                           ),
-                          items: crops.map((crop) {
+                          items: plants.map((plant) {
                             final displayName =
-                                crop['variety'] != null &&
-                                    crop['variety'].isNotEmpty
-                                ? '${crop['name']} (${crop['variety']})'
-                                : crop['name'];
+                                plant['variety'] != null &&
+                                    plant['variety'].isNotEmpty
+                                ? '${plant['name']} (${plant['variety']})'
+                                : plant['name'];
                             return DropdownMenuItem<String>(
-                              value: crop['id'] as String,
+                              value: plant['id'] as String,
                               child: Text(displayName),
                             );
                           }).toList(),
                           onChanged: (value) {
                             setState(() {
-                              selectedCropId = value;
-                              selectedCropName = crops.firstWhere(
-                                (c) => c['id'] == value,
+                              selectedPlantId = value;
+                              selectedPlantName = plants.firstWhere(
+                                (p) => p['id'] == value,
                               )['name'];
                             });
                           },
@@ -656,10 +656,10 @@ class _SeasonPageState extends State<SeasonPage> {
                         return;
                       }
 
-                      if (selectedCropId == null) {
+                      if (selectedPlantId == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Please select a crop'),
+                            content: Text('Please select a plant'),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -691,7 +691,7 @@ class _SeasonPageState extends State<SeasonPage> {
                           season.id,
                           nameController.text.trim(),
                           selectedLandId!,
-                          selectedCropId!,
+                          selectedPlantId!,
                           selectedStartDate!.toIso8601String(),
                           selectedEndDate?.toIso8601String() ?? '',
                         ),

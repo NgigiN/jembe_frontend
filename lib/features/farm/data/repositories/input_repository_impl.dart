@@ -27,13 +27,13 @@ class InputRepositoryImpl implements InputRepository {
       // Convert Input entity to InputModel
       final inputModel = InputModel(
         id: input.id,
-        seasonId: input.seasonId,
-        landId: input.landId,
+        sourceType: input.sourceType,
+        sourceId: input.sourceId,
+        animalId: input.animalId,
         type: input.type,
         quantity: input.quantity,
         cost: input.cost,
         date: input.date,
-        notes: input.notes,
         createdAt: input.createdAt,
         updatedAt: input.updatedAt,
       );
@@ -51,13 +51,13 @@ class InputRepositoryImpl implements InputRepository {
       // Convert Input entity to InputModel
       final inputModel = InputModel(
         id: input.id,
-        seasonId: input.seasonId,
-        landId: input.landId,
+        sourceType: input.sourceType,
+        sourceId: input.sourceId,
+        animalId: input.animalId,
         type: input.type,
         quantity: input.quantity,
         cost: input.cost,
         date: input.date,
-        notes: input.notes,
         createdAt: input.createdAt,
         updatedAt: input.updatedAt,
       );
