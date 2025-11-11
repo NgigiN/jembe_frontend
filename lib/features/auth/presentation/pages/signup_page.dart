@@ -212,7 +212,6 @@ class SignupPage extends StatelessWidget {
                       BlocListener<AuthBloc, AuthState>(
                         listener: (context, state) {
                           if (state is SignupSuccess) {
-                            // Show success message first
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
@@ -222,16 +221,25 @@ class SignupPage extends StatelessWidget {
                                 duration: Duration(seconds: 2),
                               ),
                             );
-                            // Navigate back to login page after a short delay
                             Future.delayed(
                               const Duration(milliseconds: 500),
                               () {
                                 if (context.mounted) {
                                   Navigator.pop(context);
+                                  context.read<AuthBloc>().add(
+                                    ResetAuthState(),
+                                  );
                                 }
                               },
                             );
-                            // Reset auth state after handling success
+                          } else if (state is AuthError) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(state.message),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
                             context.read<AuthBloc>().add(ResetAuthState());
                           }
                         },
@@ -241,37 +249,6 @@ class SignupPage extends StatelessWidget {
                               return const CircularProgressIndicator(
                                 valueColor: AlwaysStoppedAnimation<Color>(
                                   Colors.green,
-                                ),
-                              );
-                            }
-                            if (state is AuthError) {
-                              return Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.shade50,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: Colors.red.shade200,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.error_outline,
-                                      color: Colors.red.shade600,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        state.message,
-                                        style: TextStyle(
-                                          color: Colors.red.shade700,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
                                 ),
                               );
                             }
