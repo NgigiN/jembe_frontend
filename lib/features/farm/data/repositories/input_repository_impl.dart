@@ -28,6 +28,7 @@ class InputRepositoryImpl implements InputRepository {
       final inputModel = InputModel(
         id: input.id,
         seasonId: input.seasonId,
+        landId: input.landId,
         type: input.type,
         quantity: input.quantity,
         cost: input.cost,
@@ -47,8 +48,22 @@ class InputRepositoryImpl implements InputRepository {
   @override
   Future<Either<Failure, Input>> updateInput(Input input) async {
     try {
-      final inputModel = await remoteDataSource.updateInput(input as dynamic);
-      return Right(inputModel);
+      // Convert Input entity to InputModel
+      final inputModel = InputModel(
+        id: input.id,
+        seasonId: input.seasonId,
+        landId: input.landId,
+        type: input.type,
+        quantity: input.quantity,
+        cost: input.cost,
+        date: input.date,
+        notes: input.notes,
+        createdAt: input.createdAt,
+        updatedAt: input.updatedAt,
+      );
+
+      final result = await remoteDataSource.updateInput(inputModel);
+      return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

@@ -75,6 +75,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       },
       body: json.encode({
         'season_id': activity.seasonId,
+        'land_id': activity.landId,
         'type': activity.type,
         'date': activity.date.toIso8601String(),
         'cost': activity.cost,
@@ -109,6 +110,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
         'Content-Type': 'application/json',
       },
       body: json.encode({
+        'land_id': activity.landId,
         'type': activity.type,
         'date': activity.date.toIso8601String(),
         'cost': activity.cost,

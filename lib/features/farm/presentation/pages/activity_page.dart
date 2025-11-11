@@ -121,7 +121,7 @@ class _ActivityPageState extends State<ActivityPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Date: ${_formatDate(activity.date)}'),
-                        Text('Cost: \$${activity.cost.toStringAsFixed(2)}'),
+                        Text('Cost: Ksh ${activity.cost.toStringAsFixed(2)}'),
                         if (activity.details != null &&
                             activity.details!.isNotEmpty)
                           Text('Details: ${activity.details}'),
@@ -196,6 +196,7 @@ class _ActivityPageState extends State<ActivityPage> {
     final detailsController = TextEditingController();
     DateTime? selectedDate;
     String? selectedSeasonId;
+    String? selectedLandId;
 
     // Predefined activity types based on PocketBase schema
     final activityTypes = [
@@ -214,13 +215,14 @@ class _ActivityPageState extends State<ActivityPage> {
       'Other',
     ];
 
-    // Fetch seasons for dropdown
+    // Fetch seasons and lands for dropdowns
     final seasons = await FarmDataService.getSeasonsForDropdown();
+    final lands = await FarmDataService.getLandsForDropdown();
 
-    if (seasons.isEmpty) {
+    if (seasons.isEmpty || lands.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please add at least one season first'),
+          content: Text('Please add at least one season and one land first'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -265,7 +267,7 @@ class _ActivityPageState extends State<ActivityPage> {
                     child: Column(
                       children: [
                         DropdownButtonFormField<String>(
-                          value: selectedSeasonId,
+                          initialValue: selectedSeasonId,
                           decoration: const InputDecoration(
                             labelText: 'Select Season *',
                             border: OutlineInputBorder(),
@@ -279,6 +281,30 @@ class _ActivityPageState extends State<ActivityPage> {
                           onChanged: (value) {
                             setState(() {
                               selectedSeasonId = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          initialValue: selectedLandId,
+                          decoration: const InputDecoration(
+                            labelText: 'Select Land *',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: lands.map((land) {
+                            final displayName =
+                                land['location'] != null &&
+                                    land['location'].isNotEmpty
+                                ? '${land['name']} (${land['location']})'
+                                : land['name'];
+                            return DropdownMenuItem<String>(
+                              value: land['id'] as String,
+                              child: Text(displayName),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedLandId = value;
                             });
                           },
                         ),
@@ -330,7 +356,7 @@ class _ActivityPageState extends State<ActivityPage> {
                           decoration: const InputDecoration(
                             labelText: 'Cost (Optional)',
                             border: OutlineInputBorder(),
-                            prefixText: '\$',
+                            prefixText: 'Ksh ',
                             hintText: '0.00',
                           ),
                         ),
@@ -357,6 +383,16 @@ class _ActivityPageState extends State<ActivityPage> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Please select a season'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (selectedLandId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please select a land'),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -395,8 +431,10 @@ class _ActivityPageState extends State<ActivityPage> {
                         return;
                       }
 
-                      final activity = ActivityModel.create(
+                      // Create activity model for validation (not used but required for consistency)
+                      ActivityModel.create(
                         seasonId: selectedSeasonId!,
+                        landId: selectedLandId!,
                         type: typeController.text.trim(),
                         date: selectedDate!,
                         cost: cost,
@@ -411,6 +449,7 @@ class _ActivityPageState extends State<ActivityPage> {
                               ? ''
                               : detailsController.text.trim(),
                           selectedSeasonId!,
+                          selectedLandId!,
                           typeController.text.trim(),
                           selectedDate!.toIso8601String(),
                           detailsController.text.trim().isEmpty
@@ -452,6 +491,7 @@ class _ActivityPageState extends State<ActivityPage> {
     );
     DateTime? selectedDate = activity.date;
     String? selectedSeasonId = activity.seasonId;
+    String? selectedLandId = activity.landId.isEmpty ? null : activity.landId;
     String? selectedType = activity.type;
 
     // Predefined activity types based on PocketBase schema
@@ -471,13 +511,14 @@ class _ActivityPageState extends State<ActivityPage> {
       'Other',
     ];
 
-    // Fetch seasons for dropdown
+    // Fetch seasons and lands for dropdowns
     final seasons = await FarmDataService.getSeasonsForDropdown();
+    final lands = await FarmDataService.getLandsForDropdown();
 
-    if (seasons.isEmpty) {
+    if (seasons.isEmpty || lands.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No seasons available for editing'),
+          content: Text('No seasons or lands available for editing'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -522,7 +563,7 @@ class _ActivityPageState extends State<ActivityPage> {
                     child: Column(
                       children: [
                         DropdownButtonFormField<String>(
-                          value: selectedSeasonId,
+                          initialValue: selectedSeasonId,
                           decoration: const InputDecoration(
                             labelText: 'Select Season *',
                             border: OutlineInputBorder(),
@@ -541,7 +582,31 @@ class _ActivityPageState extends State<ActivityPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: selectedType,
+                          initialValue: selectedLandId,
+                          decoration: const InputDecoration(
+                            labelText: 'Select Land *',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: lands.map((land) {
+                            final displayName =
+                                land['location'] != null &&
+                                    land['location'].isNotEmpty
+                                ? '${land['name']} (${land['location']})'
+                                : land['name'];
+                            return DropdownMenuItem<String>(
+                              value: land['id'] as String,
+                              child: Text(displayName),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedLandId = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          initialValue: selectedType,
                           decoration: const InputDecoration(
                             labelText: 'Activity Type *',
                             border: OutlineInputBorder(),
@@ -574,7 +639,7 @@ class _ActivityPageState extends State<ActivityPage> {
                           decoration: const InputDecoration(
                             labelText: 'Cost',
                             border: OutlineInputBorder(),
-                            prefixText: '\$ ',
+                            prefixText: 'Ksh ',
                             hintText: '0.00',
                           ),
                           keyboardType: TextInputType.number,
@@ -621,6 +686,17 @@ class _ActivityPageState extends State<ActivityPage> {
                         return;
                       }
 
+                      // Temporarily disable land validation for existing data without land_id
+                      // if (selectedLandId == null && activity.landId.isEmpty) {
+                      //   ScaffoldMessenger.of(context).showSnackBar(
+                      //     const SnackBar(
+                      //       content: Text('Please select a land'),
+                      //       backgroundColor: Colors.red,
+                      //     ),
+                      //   );
+                      //   return;
+                      // }
+
                       if (selectedType == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -660,6 +736,7 @@ class _ActivityPageState extends State<ActivityPage> {
                               ? ''
                               : descriptionController.text.trim(),
                           selectedSeasonId!,
+                          selectedLandId ?? '',
                           selectedType!,
                           selectedDate!.toIso8601String(),
                           descriptionController.text.trim().isEmpty

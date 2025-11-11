@@ -4,6 +4,7 @@ class InputModel extends Input {
   const InputModel({
     required super.id,
     required super.seasonId,
+    required super.landId,
     required super.type,
     super.quantity,
     required super.cost,
@@ -17,6 +18,7 @@ class InputModel extends Input {
     return InputModel(
       id: json['id'],
       seasonId: json['season_id'],
+      landId: json['land_id'] ?? '',
       type: json['type'],
       quantity: json['quantity']?.toDouble(),
       cost: json['cost'].toDouble(),
@@ -31,6 +33,7 @@ class InputModel extends Input {
     return {
       'id': id,
       'season_id': seasonId,
+      'land_id': landId,
       'type': type,
       'quantity': quantity,
       'cost': cost,
@@ -43,6 +46,7 @@ class InputModel extends Input {
 
   factory InputModel.create({
     required String seasonId,
+    required String landId,
     required String type,
     double? quantity,
     required double cost,
@@ -53,6 +57,7 @@ class InputModel extends Input {
     return InputModel(
       id: '', // Will be set by the server
       seasonId: seasonId,
+      landId: landId,
       type: type,
       quantity: quantity,
       cost: cost,

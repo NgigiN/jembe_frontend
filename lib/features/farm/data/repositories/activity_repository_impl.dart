@@ -28,6 +28,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
       final activityModel = ActivityModel(
         id: activity.id,
         seasonId: activity.seasonId,
+        landId: activity.landId,
         type: activity.type,
         date: activity.date,
         cost: activity.cost,
@@ -46,10 +47,21 @@ class ActivityRepositoryImpl implements ActivityRepository {
   @override
   Future<Either<Failure, Activity>> updateActivity(Activity activity) async {
     try {
-      final activityModel = await remoteDataSource.updateActivity(
-        activity as dynamic,
+      // Convert Activity entity to ActivityModel
+      final activityModel = ActivityModel(
+        id: activity.id,
+        seasonId: activity.seasonId,
+        landId: activity.landId,
+        type: activity.type,
+        date: activity.date,
+        cost: activity.cost,
+        details: activity.details,
+        createdAt: activity.createdAt,
+        updatedAt: activity.updatedAt,
       );
-      return Right(activityModel);
+
+      final result = await remoteDataSource.updateActivity(activityModel);
+      return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

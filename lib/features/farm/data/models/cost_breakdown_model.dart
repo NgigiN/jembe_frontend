@@ -6,6 +6,7 @@ class CostBreakdownModel extends Equatable {
   final String cropName;
   final String landName;
   final String inputType;
+  final String farmName;
   final double inputCost;
   final double percentage;
 
@@ -15,6 +16,7 @@ class CostBreakdownModel extends Equatable {
     required this.cropName,
     required this.landName,
     required this.inputType,
+    required this.farmName,
     required this.inputCost,
     required this.percentage,
   });
@@ -26,6 +28,7 @@ class CostBreakdownModel extends Equatable {
       cropName: json['crop_name'] ?? '',
       landName: json['land_name'] ?? '',
       inputType: json['input_type'] ?? '',
+      farmName: json['farm_name'] ?? '',
       inputCost: (json['input_cost'] ?? 0.0).toDouble(),
       percentage: (json['percentage'] ?? 0.0).toDouble(),
     );
@@ -38,6 +41,7 @@ class CostBreakdownModel extends Equatable {
       'crop_name': cropName,
       'land_name': landName,
       'input_type': inputType,
+      'farm_name': farmName,
       'input_cost': inputCost,
       'percentage': percentage,
     };
@@ -50,6 +54,7 @@ class CostBreakdownModel extends Equatable {
     cropName,
     landName,
     inputType,
+    farmName,
     inputCost,
     percentage,
   ];

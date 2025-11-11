@@ -50,6 +50,7 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
               cropName: model.cropName,
               landName: model.landName,
               inputType: model.inputType,
+              farmName: model.farmName,
               inputCost: model.inputCost,
               percentage: model.percentage,
             ),

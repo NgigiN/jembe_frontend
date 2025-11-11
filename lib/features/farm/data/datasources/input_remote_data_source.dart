@@ -75,6 +75,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
       },
       body: json.encode({
         'season_id': input.seasonId,
+        'land_id': input.landId,
         'type': input.type,
         'quantity': input.quantity,
         'cost': input.cost,
@@ -110,6 +111,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
         'Content-Type': 'application/json',
       },
       body: json.encode({
+        'land_id': input.landId,
         'type': input.type,
         'quantity': input.quantity,
         'cost': input.cost,

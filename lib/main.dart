@@ -8,6 +8,8 @@ import 'features/farm/presentation/bloc/farm_event.dart';
 import 'features/farm/presentation/bloc/analysis_bloc.dart';
 import 'features/farm/presentation/pages/landing_page.dart';
 import 'core/config/app_config.dart';
+import 'core/logging/app_logger.dart';
+import 'core/logging/logging_navigator.dart';
 import 'injection_container.dart' as di;
 
 void main() async {
@@ -17,6 +19,10 @@ void main() async {
   AppConfig.initialize();
 
   await di.init();
+
+  // Log app startup
+  appLogger.info(LogCategory.general, 'Farm Tracker App Starting');
+
   runApp(MyApp());
 }
 
@@ -33,7 +39,7 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<AnalysisBloc>(create: (_) => di.sl<AnalysisBloc>()),
       ],
-      child: MaterialApp(
+      child: LoggingMaterialApp(
         title: 'Farm Tracking App',
         theme: ThemeData(primarySwatch: Colors.green, useMaterial3: true),
         initialRoute: '/',

@@ -4,6 +4,7 @@ class ActivityModel extends Activity {
   const ActivityModel({
     required super.id,
     required super.seasonId,
+    required super.landId,
     required super.type,
     required super.date,
     required super.cost,
@@ -16,6 +17,7 @@ class ActivityModel extends Activity {
     return ActivityModel(
       id: json['id'],
       seasonId: json['season_id'],
+      landId: json['land_id'] ?? '',
       type: json['type'],
       date: _parseDate(json['date']),
       cost: json['cost']?.toDouble() ?? 0.0,
@@ -29,6 +31,7 @@ class ActivityModel extends Activity {
     return {
       'id': id,
       'season_id': seasonId,
+      'land_id': landId,
       'type': type,
       'date': date.toIso8601String(),
       'cost': cost,
@@ -40,6 +43,7 @@ class ActivityModel extends Activity {
 
   factory ActivityModel.create({
     required String seasonId,
+    required String landId,
     required String type,
     required DateTime date,
     required double cost,
@@ -49,6 +53,7 @@ class ActivityModel extends Activity {
     return ActivityModel(
       id: '', // Will be set by the server
       seasonId: seasonId,
+      landId: landId,
       type: type,
       date: date,
       cost: cost,

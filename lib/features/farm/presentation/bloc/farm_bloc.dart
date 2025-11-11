@@ -306,6 +306,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final activity = Activity(
         id: '', // Will be set by the server
         seasonId: event.seasonId,
+        landId: event.landId,
         type: event.type,
         date: DateTime.parse(event.date),
         cost: event.cost,
@@ -373,6 +374,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final input = Input(
         id: '', // Will be set by the server
         seasonId: event.seasonId,
+        landId: event.landId,
         type: event.type,
         quantity: event.quantity,
         cost: event.cost,
@@ -616,6 +618,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final activity = Activity(
         id: event.id,
         seasonId: event.seasonId,
+        landId: event.landId,
         type: event.type,
         date: DateTime.parse(event.date),
         cost: event.cost,
@@ -689,6 +692,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final input = Input(
         id: event.id,
         seasonId: event.seasonId,
+        landId: event.landId,
         type: event.type,
         quantity: event.quantity,
         cost: event.cost,

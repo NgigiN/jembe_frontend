@@ -1,6 +1,8 @@
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'core/config/app_config.dart';
+import 'core/logging/app_logger.dart';
+import 'core/logging/logging_http_client.dart';
 import 'features/auth/data/datasources/auth_remote_data_source.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/domain/repositories/auth_repository.dart';
@@ -58,6 +60,9 @@ import 'features/farm/presentation/bloc/analysis_bloc.dart';
 final sl = GetIt.instance;
 
 Future<void> init() async {
+  // Initialize logging
+  appLogger.initialize();
+
   // Bloc
   sl.registerFactory(() => AuthBloc(login: sl(), signup: sl()));
   sl.registerFactory(
@@ -173,6 +178,6 @@ Future<void> init() async {
   );
 
   // External
-  sl.registerLazySingleton(() => http.Client());
+  sl.registerLazySingleton<http.Client>(() => LoggingHttpClient(http.Client()));
   sl.registerLazySingleton(() => FarmDataService());
 }

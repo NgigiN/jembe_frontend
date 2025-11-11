@@ -101,44 +101,59 @@ class FarmDataService {
   static Future<http.Response> getTotalCostsBySeason() async {
     final token = await _getToken();
     if (token == null) {
-      throw Exception('No authentication token available');
+      throw Exception('No authentication token available. Please log in.');
     }
 
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/collections/total_costs_by_season/records'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/collections/total_costs_by_season/records'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
 
-    return response;
+      return response;
+    } catch (e) {
+      print('Error in getTotalCostsBySeason: $e');
+      rethrow;
+    }
   }
 
   static Future<http.Response> getCostBreakdownByInputType() async {
     final token = await _getToken();
     if (token == null) {
-      throw Exception('No authentication token available');
+      throw Exception('No authentication token available. Please log in.');
     }
 
-    final response = await http.get(
-      Uri.parse(
-        '$baseUrl/api/collections/cost_breakdown_by_input_type/records',
-      ),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    try {
+      final response = await http.get(
+        Uri.parse(
+          '$baseUrl/api/collections/cost_breakdown_by_input_type/records',
+        ),
+        headers: {'Authorization': 'Bearer $token'},
+      );
 
-    return response;
+      return response;
+    } catch (e) {
+      print('Error in getCostBreakdownByInputType: $e');
+      rethrow;
+    }
   }
 
   static Future<http.Response> getAnnualCostSummary() async {
     final token = await _getToken();
     if (token == null) {
-      throw Exception('No authentication token available');
+      throw Exception('No authentication token available. Please log in.');
     }
 
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/collections/annual_cost_summary/records'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/collections/annual_cost_summary/records'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
 
-    return response;
+      return response;
+    } catch (e) {
+      print('Error in getAnnualCostSummary: $e');
+      rethrow;
+    }
   }
 }

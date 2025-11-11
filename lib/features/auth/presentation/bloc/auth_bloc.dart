@@ -1,4 +1,5 @@
 import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/usecases/login.dart';
 import '../../domain/usecases/signup.dart';
@@ -15,6 +16,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc({required this.login, required this.signup}) : super(AuthInitial()) {
     on<LoginEvent>((event, emit) async {
       emit(AuthLoading());
+      appLogger.logAuthEvent('Login attempt', details: {'email': event.email});
+
       try {
         final result = await login(
           LoginParams(email: event.email, password: event.password),
@@ -25,13 +28,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             if (failure is ServerFailure && failure.errorMessage != null) {
               message = failure.errorMessage!;
             }
+            appLogger.logAuthEvent(
+              'Login failed',
+              details: {'email': event.email, 'error': message},
+            );
             emit(AuthError(message));
           },
           (user) async {
+            appLogger.logAuthEvent(
+              'Login successful',
+              userId: user.id,
+              details: {'email': event.email, 'name': user.name},
+            );
             emit(AuthAuthenticated(user));
           },
         );
       } catch (e) {
+        appLogger.logError('LoginEvent', e);
         emit(AuthError('Login failed: ${e.toString()}'));
       }
     });
@@ -72,12 +85,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     });
 
     on<LogoutEvent>((event, emit) async {
+      appLogger.logAuthEvent('Logout');
       await UserStorageService.clearUserData();
       emit(AuthInitial());
     });
 
     on<CheckExistingLoginEvent>((event, emit) async {
       emit(AuthLoading());
+      appLogger.info(LogCategory.auth, 'Checking existing login');
+
       final isLoggedIn = await UserStorageService.isLoggedIn();
       if (isLoggedIn) {
         final userData = await UserStorageService.getUserData();
@@ -89,11 +105,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             farmName: userData.farmName,
             location: userData.location,
           );
+          appLogger.logAuthEvent(
+            'Existing login found',
+            userId: user.id,
+            details: {'email': user.email},
+          );
           emit(AuthAuthenticated(user));
         } else {
+          appLogger.warning(
+            LogCategory.auth,
+            'User data not found despite being logged in',
+          );
           emit(AuthInitial());
         }
       } else {
+        appLogger.info(LogCategory.auth, 'No existing login found');
         emit(AuthInitial());
       }
     });

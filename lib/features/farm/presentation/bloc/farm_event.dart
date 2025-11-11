@@ -124,6 +124,7 @@ class GetActivitiesEvent extends FarmEvent {}
 class AddActivityEvent extends FarmEvent {
   final String description;
   final String seasonId;
+  final String landId;
   final String type;
   final String date;
   final String details;
@@ -131,6 +132,7 @@ class AddActivityEvent extends FarmEvent {
   AddActivityEvent(
     this.description,
     this.seasonId,
+    this.landId,
     this.type,
     this.date,
     this.details,
@@ -138,13 +140,22 @@ class AddActivityEvent extends FarmEvent {
   );
 
   @override
-  List<Object> get props => [description, seasonId, type, date, details, cost];
+  List<Object> get props => [
+    description,
+    seasonId,
+    landId,
+    type,
+    date,
+    details,
+    cost,
+  ];
 }
 
 class UpdateActivityEvent extends FarmEvent {
   final String id;
   final String description;
   final String seasonId;
+  final String landId;
   final String type;
   final String date;
   final String details;
@@ -153,6 +164,7 @@ class UpdateActivityEvent extends FarmEvent {
     this.id,
     this.description,
     this.seasonId,
+    this.landId,
     this.type,
     this.date,
     this.details,
@@ -164,6 +176,7 @@ class UpdateActivityEvent extends FarmEvent {
     id,
     description,
     seasonId,
+    landId,
     type,
     date,
     details,
@@ -185,6 +198,7 @@ class GetInputsEvent extends FarmEvent {}
 
 class AddInputEvent extends FarmEvent {
   final String seasonId;
+  final String landId;
   final String type;
   final double? quantity;
   final double cost;
@@ -192,6 +206,7 @@ class AddInputEvent extends FarmEvent {
   final String? notes;
   AddInputEvent(
     this.seasonId,
+    this.landId,
     this.type,
     this.quantity,
     this.cost,
@@ -202,6 +217,7 @@ class AddInputEvent extends FarmEvent {
   @override
   List<Object> get props => [
     seasonId,
+    landId,
     type,
     quantity ?? 0.0,
     cost,
@@ -213,6 +229,7 @@ class AddInputEvent extends FarmEvent {
 class UpdateInputEvent extends FarmEvent {
   final String id;
   final String seasonId;
+  final String landId;
   final String type;
   final double? quantity;
   final double cost;
@@ -221,6 +238,7 @@ class UpdateInputEvent extends FarmEvent {
   UpdateInputEvent(
     this.id,
     this.seasonId,
+    this.landId,
     this.type,
     this.quantity,
     this.cost,
@@ -232,6 +250,7 @@ class UpdateInputEvent extends FarmEvent {
   List<Object> get props => [
     id,
     seasonId,
+    landId,
     type,
     quantity ?? 0.0,
     cost,

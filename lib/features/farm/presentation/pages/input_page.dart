@@ -4,7 +4,6 @@ import '../bloc/farm_bloc.dart';
 import '../bloc/farm_event.dart';
 import '../bloc/farm_state.dart';
 import '../../domain/entities/input.dart';
-// Removed unused import
 import '../../data/services/farm_data_service.dart';
 
 class InputPage extends StatefulWidget {
@@ -121,7 +120,7 @@ class _InputPageState extends State<InputPage> {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Cost: \$${input.cost.toStringAsFixed(2)}'),
+                        Text('Cost: Ksh ${input.cost.toStringAsFixed(2)}'),
                         if (input.quantity != null)
                           Text('Quantity: ${input.quantity}'),
                         Text('Date: ${_formatDate(input.date)}'),
@@ -193,6 +192,7 @@ class _InputPageState extends State<InputPage> {
     DateTime? selectedDate;
     String? selectedSeasonId;
     String? selectedSeasonName;
+    String? selectedLandId;
 
     // Predefined input types based on PocketBase schema
     final inputTypes = [
@@ -210,13 +210,14 @@ class _InputPageState extends State<InputPage> {
       'Other',
     ];
 
-    // Fetch seasons for dropdown
+    // Fetch seasons and lands for dropdowns
     final seasons = await FarmDataService.getSeasonsForDropdown();
+    final lands = await FarmDataService.getLandsForDropdown();
 
-    if (seasons.isEmpty) {
+    if (seasons.isEmpty || lands.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please add at least one season first'),
+          content: Text('Please add at least one season and one land first'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -261,7 +262,7 @@ class _InputPageState extends State<InputPage> {
                     child: Column(
                       children: [
                         DropdownButtonFormField<String>(
-                          value: selectedSeasonId,
+                          initialValue: selectedSeasonId,
                           decoration: const InputDecoration(
                             labelText: 'Select Season *',
                             border: OutlineInputBorder(),
@@ -278,6 +279,30 @@ class _InputPageState extends State<InputPage> {
                               selectedSeasonName = seasons.firstWhere(
                                 (s) => s['id'] == value,
                               )['name'];
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          initialValue: selectedLandId,
+                          decoration: const InputDecoration(
+                            labelText: 'Select Land *',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: lands.map((land) {
+                            final displayName =
+                                land['location'] != null &&
+                                    land['location'].isNotEmpty
+                                ? '${land['name']} (${land['location']})'
+                                : land['name'];
+                            return DropdownMenuItem<String>(
+                              value: land['id'] as String,
+                              child: Text(displayName),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedLandId = value;
                             });
                           },
                         ),
@@ -315,7 +340,7 @@ class _InputPageState extends State<InputPage> {
                           decoration: const InputDecoration(
                             labelText: 'Cost *',
                             border: OutlineInputBorder(),
-                            prefixText: '\$',
+                            prefixText: 'Ksh ',
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -369,6 +394,16 @@ class _InputPageState extends State<InputPage> {
                         return;
                       }
 
+                      if (selectedLandId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please select a land'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
                       if (typeController.text.trim().isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -415,6 +450,7 @@ class _InputPageState extends State<InputPage> {
                       context.read<FarmBloc>().add(
                         AddInputEvent(
                           selectedSeasonId!,
+                          selectedLandId!,
                           typeController.text.trim(),
                           double.tryParse(quantityController.text.trim()),
                           cost,
@@ -457,6 +493,7 @@ class _InputPageState extends State<InputPage> {
     final notesController = TextEditingController(text: input.notes ?? '');
     DateTime? selectedDate = input.date;
     String? selectedSeasonId = input.seasonId;
+    String? selectedLandId = input.landId.isEmpty ? null : input.landId;
     String? selectedSeasonName;
 
     // Predefined input types based on PocketBase schema
@@ -481,13 +518,14 @@ class _InputPageState extends State<InputPage> {
       'Other',
     ];
 
-    // Fetch seasons for dropdown
+    // Fetch seasons and lands for dropdowns
     final seasons = await FarmDataService.getSeasonsForDropdown();
+    final lands = await FarmDataService.getLandsForDropdown();
 
-    if (seasons.isEmpty) {
+    if (seasons.isEmpty || lands.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No seasons available for editing'),
+          content: Text('No seasons or lands available for editing'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -537,7 +575,7 @@ class _InputPageState extends State<InputPage> {
                     child: Column(
                       children: [
                         DropdownButtonFormField<String>(
-                          value: selectedSeasonId,
+                          initialValue: selectedSeasonId,
                           decoration: const InputDecoration(
                             labelText: 'Select Season *',
                             border: OutlineInputBorder(),
@@ -559,7 +597,31 @@ class _InputPageState extends State<InputPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: typeController.text,
+                          initialValue: selectedLandId,
+                          decoration: const InputDecoration(
+                            labelText: 'Select Land *',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: lands.map((land) {
+                            final displayName =
+                                land['location'] != null &&
+                                    land['location'].isNotEmpty
+                                ? '${land['name']} (${land['location']})'
+                                : land['name'];
+                            return DropdownMenuItem<String>(
+                              value: land['id'] as String,
+                              child: Text(displayName),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedLandId = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          initialValue: typeController.text,
                           decoration: const InputDecoration(
                             labelText: 'Input Type *',
                             border: OutlineInputBorder(),
@@ -592,7 +654,7 @@ class _InputPageState extends State<InputPage> {
                           decoration: const InputDecoration(
                             labelText: 'Cost *',
                             border: OutlineInputBorder(),
-                            prefixText: '\$ ',
+                            prefixText: 'Ksh ',
                             hintText: '0.00',
                           ),
                           keyboardType: TextInputType.number,
@@ -649,6 +711,17 @@ class _InputPageState extends State<InputPage> {
                         return;
                       }
 
+                      // Temporarily disable land validation for existing data
+                      if (selectedLandId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please select a land'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
                       if (typeController.text.trim().isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -694,6 +767,7 @@ class _InputPageState extends State<InputPage> {
                         UpdateInputEvent(
                           input.id,
                           selectedSeasonId!,
+                          selectedLandId ?? '',
                           typeController.text.trim(),
                           double.tryParse(quantityController.text.trim()),
                           cost,

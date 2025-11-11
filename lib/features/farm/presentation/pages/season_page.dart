@@ -265,7 +265,7 @@ class _SeasonPageState extends State<SeasonPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: selectedCropId,
+                          initialValue: selectedCropId,
                           decoration: const InputDecoration(
                             labelText: 'Select Crop *',
                             border: OutlineInputBorder(),
@@ -292,7 +292,7 @@ class _SeasonPageState extends State<SeasonPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: selectedLandId,
+                          initialValue: selectedLandId,
                           decoration: const InputDecoration(
                             labelText: 'Select Land *',
                             border: OutlineInputBorder(),
@@ -536,7 +536,7 @@ class _SeasonPageState extends State<SeasonPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: selectedCropId,
+                          initialValue: selectedCropId,
                           decoration: const InputDecoration(
                             labelText: 'Select Crop *',
                             border: OutlineInputBorder(),
@@ -563,7 +563,7 @@ class _SeasonPageState extends State<SeasonPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: selectedLandId,
+                          initialValue: selectedLandId,
                           decoration: const InputDecoration(
                             labelText: 'Select Land *',
                             border: OutlineInputBorder(),

@@ -3,6 +3,7 @@ import 'package:farm_tracker/features/farm/data/models/total_costs_by_season_mod
 import 'package:farm_tracker/features/farm/data/models/cost_breakdown_model.dart';
 import 'package:farm_tracker/features/farm/data/models/annual_cost_summary_model.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../services/farm_data_service.dart';
 
 abstract class AnalysisRemoteDataSource {
@@ -15,11 +16,17 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
   @override
   Future<List<TotalCostsBySeasonModel>> getTotalCostsBySeason() async {
     try {
+      appLogger.info(LogCategory.farm, 'Fetching total costs by season');
       final response = await FarmDataService.getTotalCostsBySeason();
-      print(
+
+      appLogger.debug(
+        LogCategory.http,
         'Total Costs by Season API Response Status: ${response.statusCode}',
       );
-      print('Total Costs by Season API Response Body: ${response.body}');
+      appLogger.debug(
+        LogCategory.http,
+        'Total Costs by Season API Response Body: ${response.body}',
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -29,13 +36,37 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
             .map((item) => TotalCostsBySeasonModel.fromJson(item))
             .toList();
 
-        print('Found ${totalCosts.length} total costs by season');
+        appLogger.info(
+          LogCategory.farm,
+          'Successfully fetched ${totalCosts.length} total costs by season',
+        );
         return totalCosts;
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        appLogger.warning(
+          LogCategory.auth,
+          'Authentication required for total costs by season',
+        );
+        throw ServerException('Authentication required. Please log in again.');
       } else {
-        throw ServerException('Failed to load total costs by season');
+        String errorMsg =
+            'Failed to load total costs by season (Status: ${response.statusCode})';
+        try {
+          final data = json.decode(response.body);
+          if (data is Map && data['message'] != null) {
+            errorMsg = data['message'].toString();
+          }
+        } catch (_) {}
+        appLogger.error(
+          LogCategory.http,
+          'Failed to load total costs by season: $errorMsg',
+        );
+        throw ServerException(errorMsg);
       }
     } catch (e) {
-      print('Error fetching total costs by season: $e');
+      appLogger.logError('getTotalCostsBySeason', e);
+      if (e is ServerException) {
+        rethrow;
+      }
       throw ServerException('Failed to load total costs by season: $e');
     }
   }
@@ -43,9 +74,17 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
   @override
   Future<List<CostBreakdownModel>> getCostBreakdownByInputType() async {
     try {
+      appLogger.info(LogCategory.farm, 'Fetching cost breakdown by input type');
       final response = await FarmDataService.getCostBreakdownByInputType();
-      print('Cost Breakdown API Response Status: ${response.statusCode}');
-      print('Cost Breakdown API Response Body: ${response.body}');
+
+      appLogger.debug(
+        LogCategory.http,
+        'Cost Breakdown API Response Status: ${response.statusCode}',
+      );
+      appLogger.debug(
+        LogCategory.http,
+        'Cost Breakdown API Response Body: ${response.body}',
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -55,13 +94,37 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
             .map((item) => CostBreakdownModel.fromJson(item))
             .toList();
 
-        print('Found ${breakdowns.length} cost breakdowns');
+        appLogger.info(
+          LogCategory.farm,
+          'Successfully fetched ${breakdowns.length} cost breakdowns',
+        );
         return breakdowns;
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        appLogger.warning(
+          LogCategory.auth,
+          'Authentication required for cost breakdown',
+        );
+        throw ServerException('Authentication required. Please log in again.');
       } else {
-        throw ServerException('Failed to load cost breakdown');
+        String errorMsg =
+            'Failed to load cost breakdown (Status: ${response.statusCode})';
+        try {
+          final data = json.decode(response.body);
+          if (data is Map && data['message'] != null) {
+            errorMsg = data['message'].toString();
+          }
+        } catch (_) {}
+        appLogger.error(
+          LogCategory.http,
+          'Failed to load cost breakdown: $errorMsg',
+        );
+        throw ServerException(errorMsg);
       }
     } catch (e) {
-      print('Error fetching cost breakdown: $e');
+      appLogger.logError('getCostBreakdownByInputType', e);
+      if (e is ServerException) {
+        rethrow;
+      }
       throw ServerException('Failed to load cost breakdown: $e');
     }
   }
@@ -69,9 +132,17 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
   @override
   Future<List<AnnualCostSummaryModel>> getAnnualCostSummary() async {
     try {
+      appLogger.info(LogCategory.farm, 'Fetching annual cost summary');
       final response = await FarmDataService.getAnnualCostSummary();
-      print('Annual Cost Summary API Response Status: ${response.statusCode}');
-      print('Annual Cost Summary API Response Body: ${response.body}');
+
+      appLogger.debug(
+        LogCategory.http,
+        'Annual Cost Summary API Response Status: ${response.statusCode}',
+      );
+      appLogger.debug(
+        LogCategory.http,
+        'Annual Cost Summary API Response Body: ${response.body}',
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -81,13 +152,37 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
             .map((item) => AnnualCostSummaryModel.fromJson(item))
             .toList();
 
-        print('Found ${summaries.length} annual cost summaries');
+        appLogger.info(
+          LogCategory.farm,
+          'Successfully fetched ${summaries.length} annual cost summaries',
+        );
         return summaries;
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        appLogger.warning(
+          LogCategory.auth,
+          'Authentication required for annual cost summary',
+        );
+        throw ServerException('Authentication required. Please log in again.');
       } else {
-        throw ServerException('Failed to load annual cost summary');
+        String errorMsg =
+            'Failed to load annual cost summary (Status: ${response.statusCode})';
+        try {
+          final data = json.decode(response.body);
+          if (data is Map && data['message'] != null) {
+            errorMsg = data['message'].toString();
+          }
+        } catch (_) {}
+        appLogger.error(
+          LogCategory.http,
+          'Failed to load annual cost summary: $errorMsg',
+        );
+        throw ServerException(errorMsg);
       }
     } catch (e) {
-      print('Error fetching annual cost summary: $e');
+      appLogger.logError('getAnnualCostSummary', e);
+      if (e is ServerException) {
+        rethrow;
+      }
       throw ServerException('Failed to load annual cost summary: $e');
     }
   }

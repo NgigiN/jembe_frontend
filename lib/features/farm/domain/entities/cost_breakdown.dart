@@ -6,6 +6,7 @@ class CostBreakdown extends Equatable {
   final String cropName;
   final String landName;
   final String inputType;
+  final String farmName;
   final double inputCost;
   final double percentage;
 
@@ -15,6 +16,7 @@ class CostBreakdown extends Equatable {
     required this.cropName,
     required this.landName,
     required this.inputType,
+    required this.farmName,
     required this.inputCost,
     required this.percentage,
   });
@@ -26,6 +28,7 @@ class CostBreakdown extends Equatable {
     cropName,
     landName,
     inputType,
+    farmName,
     inputCost,
     percentage,
   ];
