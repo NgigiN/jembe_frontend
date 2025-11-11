@@ -19,6 +19,8 @@ class UserUtils {
         'id': user.id,
         'email': user.email,
         'name': user.name,
+        'first_name': user.name.split(' ').isNotEmpty ? user.name.split(' ')[0] : '',
+        'last_name': user.name.split(' ').length > 1 ? user.name.split(' ').sublist(1).join(' ') : '',
         'farm_name': user.farmName,
         'location': user.location,
         'token': user.token,

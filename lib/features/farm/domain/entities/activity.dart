@@ -2,23 +2,27 @@ import 'package:equatable/equatable.dart';
 
 class Activity extends Equatable {
   final String id;
-  final String seasonId;
-  final String landId;
+  final String sourceType;
+  final String sourceId;
+  final int? animalId;
   final String type;
-  final DateTime date;
-  final double cost;
   final String? details;
+  final double cost;
+  final DateTime date;
+  final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   const Activity({
     required this.id,
-    required this.seasonId,
-    required this.landId,
+    required this.sourceType,
+    required this.sourceId,
+    this.animalId,
     required this.type,
-    required this.date,
-    required this.cost,
     this.details,
+    required this.cost,
+    required this.date,
+    this.notes,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -26,12 +30,14 @@ class Activity extends Equatable {
   @override
   List<Object?> get props => [
     id,
-    seasonId,
-    landId,
+    sourceType,
+    sourceId,
+    animalId,
     type,
-    date,
-    cost,
     details,
+    cost,
+    date,
+    notes,
     createdAt,
     updatedAt,
   ];

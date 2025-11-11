@@ -16,17 +16,17 @@ class FarmDataService {
 
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/collections/lands/records'),
+        Uri.parse('$baseUrl/api/lands'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final items = data['items'] as List;
+        final items = data as List;
         return items
             .map(
               (item) => {
-                'id': item['id'],
+                'id': item['id'].toString(),
                 'name': item['name'],
                 'location': item['location'] ?? '',
               },
@@ -39,23 +39,23 @@ class FarmDataService {
     return [];
   }
 
-  static Future<List<Map<String, dynamic>>> getCropsForDropdown() async {
+  static Future<List<Map<String, dynamic>>> getPlantsForDropdown() async {
     final token = await _getToken();
     if (token == null) return [];
 
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/collections/crops/records'),
+        Uri.parse('$baseUrl/api/plants'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final items = data['items'] as List;
+        final items = data as List;
         return items
             .map(
               (item) => {
-                'id': item['id'],
+                'id': item['id'].toString(),
                 'name': item['name'],
                 'variety': item['variety'] ?? '',
               },
@@ -63,7 +63,7 @@ class FarmDataService {
             .toList();
       }
     } catch (e) {
-      print('Error fetching crops: $e');
+      print('Error fetching plants: $e');
     }
     return [];
   }
@@ -74,17 +74,17 @@ class FarmDataService {
 
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/collections/seasons/records'),
+        Uri.parse('$baseUrl/api/seasons'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final items = data['items'] as List;
+        final items = data as List;
         return items
             .map(
               (item) => {
-                'id': item['id'],
+                'id': item['id'].toString(),
                 'name': item['name'],
                 'start_date': item['start_date'],
               },
@@ -97,62 +97,84 @@ class FarmDataService {
     return [];
   }
 
-  // Analysis methods
-  static Future<http.Response> getTotalCostsBySeason() async {
+  static Future<http.Response> getTotalCosts({
+    String? type,
+    String? startDate,
+    String? endDate,
+  }) async {
     final token = await _getToken();
     if (token == null) {
       throw Exception('No authentication token available. Please log in.');
     }
 
     try {
+      final uri = Uri.parse('$baseUrl/api/analysis/total-costs').replace(
+        queryParameters: {
+          if (type != null) 'type': type,
+          if (startDate != null) 'start_date': startDate,
+          if (endDate != null) 'end_date': endDate,
+        },
+      );
       final response = await http.get(
-        Uri.parse('$baseUrl/api/collections/total_costs_by_season/records'),
+        uri,
         headers: {'Authorization': 'Bearer $token'},
       );
 
       return response;
     } catch (e) {
-      print('Error in getTotalCostsBySeason: $e');
+      print('Error in getTotalCosts: $e');
       rethrow;
     }
   }
 
-  static Future<http.Response> getCostBreakdownByInputType() async {
+  static Future<http.Response> getCostBreakdown({
+    String? type,
+    String? startDate,
+    String? endDate,
+  }) async {
     final token = await _getToken();
     if (token == null) {
       throw Exception('No authentication token available. Please log in.');
     }
 
     try {
+      final uri = Uri.parse('$baseUrl/api/analysis/cost-breakdown').replace(
+        queryParameters: {
+          if (type != null) 'type': type,
+          if (startDate != null) 'start_date': startDate,
+          if (endDate != null) 'end_date': endDate,
+        },
+      );
       final response = await http.get(
-        Uri.parse(
-          '$baseUrl/api/collections/cost_breakdown_by_input_type/records',
-        ),
+        uri,
         headers: {'Authorization': 'Bearer $token'},
       );
 
       return response;
     } catch (e) {
-      print('Error in getCostBreakdownByInputType: $e');
+      print('Error in getCostBreakdown: $e');
       rethrow;
     }
   }
 
-  static Future<http.Response> getAnnualCostSummary() async {
+  static Future<http.Response> getMonthlySummary({required int year}) async {
     final token = await _getToken();
     if (token == null) {
       throw Exception('No authentication token available. Please log in.');
     }
 
     try {
+      final uri = Uri.parse('$baseUrl/api/analysis/monthly-summary').replace(
+        queryParameters: {'year': year.toString()},
+      );
       final response = await http.get(
-        Uri.parse('$baseUrl/api/collections/annual_cost_summary/records'),
+        uri,
         headers: {'Authorization': 'Bearer $token'},
       );
 
       return response;
     } catch (e) {
-      print('Error in getAnnualCostSummary: $e');
+      print('Error in getMonthlySummary: $e');
       rethrow;
     }
   }

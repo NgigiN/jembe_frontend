@@ -30,7 +30,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
 
     try {
       final response = await client.get(
-        Uri.parse('$baseUrl/api/collections/activities/records'),
+        Uri.parse('$baseUrl/api/activities'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -39,18 +39,16 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final items = data['items'] as List;
+        final items = data as List;
         print('Found ${items.length} activities');
         return items.map((json) => ActivityModel.fromJson(json)).toList();
       } else {
         String errorMsg =
             'Failed to load activities (Status: ${response.statusCode})';
         try {
-          final data = json.decode(response.body);
-          if (data is Map && data['data'] != null) {
-            errorMsg = data['data'].toString();
-          } else if (data['message'] != null) {
-            errorMsg = data['message'].toString();
+          final errorData = json.decode(response.body);
+          if (errorData is Map && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
           }
         } catch (_) {}
         throw ServerException(errorMsg);
@@ -67,33 +65,37 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
   @override
   Future<ActivityModel> addActivity(ActivityModel activity) async {
     final token = await _getToken();
+    final requestBody = {
+      'source_type': activity.sourceType,
+      'source_id': activity.sourceId,
+      'type': activity.type,
+      'details': activity.details,
+      'cost': activity.cost,
+      'date': activity.date.toIso8601String().split('T')[0],
+      'notes': activity.notes,
+    };
+    if (activity.animalId != null && activity.animalId != 0) {
+      requestBody['animal_id'] = activity.animalId;
+    }
+
     final response = await client.post(
-      Uri.parse('$baseUrl/api/collections/activities/records'),
+      Uri.parse('$baseUrl/api/activities'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-      body: json.encode({
-        'season_id': activity.seasonId,
-        'land_id': activity.landId,
-        'type': activity.type,
-        'date': activity.date.toIso8601String(),
-        'cost': activity.cost,
-        'details': activity.details,
-      }),
+      body: json.encode(requestBody),
     );
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 201) {
       final data = json.decode(response.body);
       return ActivityModel.fromJson(data);
     } else {
       String errorMsg = 'Failed to add activity';
       try {
-        final data = json.decode(response.body);
-        if (data is Map && data['data'] != null) {
-          errorMsg = data['data'].toString();
-        } else if (data['message'] != null) {
-          errorMsg = data['message'].toString();
+        final errorData = json.decode(response.body);
+        if (errorData is Map && errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
         }
       } catch (_) {}
       throw ServerException(errorMsg);
@@ -103,26 +105,40 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
   @override
   Future<ActivityModel> updateActivity(ActivityModel activity) async {
     final token = await _getToken();
-    final response = await client.patch(
-      Uri.parse('$baseUrl/api/collections/activities/records/${activity.id}'),
+    final requestBody = {
+      'source_type': activity.sourceType,
+      'source_id': activity.sourceId,
+      'type': activity.type,
+      'details': activity.details,
+      'cost': activity.cost,
+      'date': activity.date.toIso8601String().split('T')[0],
+      'notes': activity.notes,
+    };
+    if (activity.animalId != null && activity.animalId != 0) {
+      requestBody['animal_id'] = activity.animalId;
+    }
+
+    final response = await client.put(
+      Uri.parse('$baseUrl/api/activities/${activity.id}'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-      body: json.encode({
-        'land_id': activity.landId,
-        'type': activity.type,
-        'date': activity.date.toIso8601String(),
-        'cost': activity.cost,
-        'details': activity.details,
-      }),
+      body: json.encode(requestBody),
     );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       return ActivityModel.fromJson(data);
     } else {
-      throw ServerException();
+      String errorMsg = 'Failed to update activity';
+      try {
+        final errorData = json.decode(response.body);
+        if (errorData is Map && errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
+        }
+      } catch (_) {}
+      throw ServerException(errorMsg);
     }
   }
 
@@ -130,12 +146,19 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
   Future<void> deleteActivity(String id) async {
     final token = await _getToken();
     final response = await client.delete(
-      Uri.parse('$baseUrl/api/collections/activities/records/$id'),
+      Uri.parse('$baseUrl/api/activities/$id'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
-    if (response.statusCode != 204) {
-      throw ServerException();
+    if (response.statusCode != 200) {
+      String errorMsg = 'Failed to delete activity';
+      try {
+        final errorData = json.decode(response.body);
+        if (errorData is Map && errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
+        }
+      } catch (_) {}
+      throw ServerException(errorMsg);
     }
   }
 }

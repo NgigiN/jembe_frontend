@@ -38,7 +38,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             appLogger.logAuthEvent(
               'Login successful',
               userId: user.id,
-              details: {'email': event.email, 'name': user.name},
+              details: {'email': event.email, 'name': user.fullName},
             );
             emit(AuthAuthenticated(user));
           },
@@ -56,7 +56,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           SignupParams(
             email: event.email,
             password: event.password,
-            name: event.name,
+            firstName: event.firstName,
+            lastName: event.lastName,
             farmName: event.farmName,
             location: event.location,
           ),
@@ -98,10 +99,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       if (isLoggedIn) {
         final userData = await UserStorageService.getUserData();
         if (userData != null) {
+          final nameParts = userData.name.split(' ');
+          final firstName = nameParts.isNotEmpty ? nameParts[0] : '';
+          final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
           final user = User(
             id: userData.id,
             email: userData.email,
-            name: userData.name,
+            firstName: firstName,
+            lastName: lastName,
             farmName: userData.farmName,
             location: userData.location,
           );

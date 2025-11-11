@@ -30,7 +30,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
 
     try {
       final response = await client.get(
-        Uri.parse('$baseUrl/api/collections/inputs/records'),
+        Uri.parse('$baseUrl/api/inputs'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -39,18 +39,16 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final items = data['items'] as List;
+        final items = data as List;
         print('Found ${items.length} inputs');
         return items.map((json) => InputModel.fromJson(json)).toList();
       } else {
         String errorMsg =
             'Failed to load inputs (Status: ${response.statusCode})';
         try {
-          final data = json.decode(response.body);
-          if (data is Map && data['data'] != null) {
-            errorMsg = data['data'].toString();
-          } else if (data['message'] != null) {
-            errorMsg = data['message'].toString();
+          final errorData = json.decode(response.body);
+          if (errorData is Map && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
           }
         } catch (_) {}
         throw ServerException(errorMsg);
@@ -67,34 +65,37 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
   @override
   Future<InputModel> addInput(InputModel input) async {
     final token = await _getToken();
+    final requestBody = {
+      'source_type': input.sourceType,
+      'source_id': input.sourceId,
+      'type': input.type,
+      'quantity': input.quantity,
+      'cost': input.cost,
+      'date': input.date.toIso8601String().split('T')[0],
+      'notes': input.notes,
+    };
+    if (input.animalId != null && input.animalId != 0) {
+      requestBody['animal_id'] = input.animalId;
+    }
+
     final response = await client.post(
-      Uri.parse('$baseUrl/api/collections/inputs/records'),
+      Uri.parse('$baseUrl/api/inputs'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-      body: json.encode({
-        'season_id': input.seasonId,
-        'land_id': input.landId,
-        'type': input.type,
-        'quantity': input.quantity,
-        'cost': input.cost,
-        'date': input.date.toIso8601String(),
-        'notes': input.notes,
-      }),
+      body: json.encode(requestBody),
     );
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 201) {
       final data = json.decode(response.body);
       return InputModel.fromJson(data);
     } else {
       String errorMsg = 'Failed to add input';
       try {
-        final data = json.decode(response.body);
-        if (data is Map && data['data'] != null) {
-          errorMsg = data['data'].toString();
-        } else if (data['message'] != null) {
-          errorMsg = data['message'].toString();
+        final errorData = json.decode(response.body);
+        if (errorData is Map && errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
         }
       } catch (_) {}
       throw ServerException(errorMsg);
@@ -104,27 +105,40 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
   @override
   Future<InputModel> updateInput(InputModel input) async {
     final token = await _getToken();
-    final response = await client.patch(
-      Uri.parse('$baseUrl/api/collections/inputs/records/${input.id}'),
+    final requestBody = {
+      'source_type': input.sourceType,
+      'source_id': input.sourceId,
+      'type': input.type,
+      'quantity': input.quantity,
+      'cost': input.cost,
+      'date': input.date.toIso8601String().split('T')[0],
+      'notes': input.notes,
+    };
+    if (input.animalId != null && input.animalId != 0) {
+      requestBody['animal_id'] = input.animalId;
+    }
+
+    final response = await client.put(
+      Uri.parse('$baseUrl/api/inputs/${input.id}'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-      body: json.encode({
-        'land_id': input.landId,
-        'type': input.type,
-        'quantity': input.quantity,
-        'cost': input.cost,
-        'date': input.date.toIso8601String(),
-        'notes': input.notes,
-      }),
+      body: json.encode(requestBody),
     );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       return InputModel.fromJson(data);
     } else {
-      throw ServerException();
+      String errorMsg = 'Failed to update input';
+      try {
+        final errorData = json.decode(response.body);
+        if (errorData is Map && errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
+        }
+      } catch (_) {}
+      throw ServerException(errorMsg);
     }
   }
 
@@ -132,12 +146,19 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
   Future<void> deleteInput(String id) async {
     final token = await _getToken();
     final response = await client.delete(
-      Uri.parse('$baseUrl/api/collections/inputs/records/$id'),
+      Uri.parse('$baseUrl/api/inputs/$id'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
-    if (response.statusCode != 204) {
-      throw ServerException();
+    if (response.statusCode != 200) {
+      String errorMsg = 'Failed to delete input';
+      try {
+        final errorData = json.decode(response.body);
+        if (errorData is Map && errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
+        }
+      } catch (_) {}
+      throw ServerException(errorMsg);
     }
   }
 }

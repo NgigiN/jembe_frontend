@@ -1,25 +1,21 @@
-import '../../domain/entities/land.dart';
+import '../../domain/entities/plant.dart';
 
-class LandModel extends Land {
-  const LandModel({
+class PlantModel extends Plant {
+  const PlantModel({
     required super.id,
     required super.userId,
     required super.name,
-    super.size,
-    super.location,
-    super.soilType,
+    super.variety,
     required super.createdAt,
     required super.updatedAt,
   });
 
-  factory LandModel.fromJson(Map<String, dynamic> json) {
-    return LandModel(
+  factory PlantModel.fromJson(Map<String, dynamic> json) {
+    return PlantModel(
       id: json['id'].toString(),
       userId: json['user_id']?.toString() ?? '',
       name: json['name'],
-      size: json['size']?.toDouble(),
-      location: json['location'],
-      soilType: json['soil_type'],
+      variety: json['variety'],
       createdAt: _parseDate(json['created_at']),
       updatedAt: _parseDate(json['updated_at']),
     );
@@ -38,31 +34,26 @@ class LandModel extends Land {
       'id': id,
       'user_id': userId,
       'name': name,
-      'size': size,
-      'location': location,
-      'soil_type': soilType,
+      'variety': variety,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
   }
 
-  factory LandModel.create({
+  factory PlantModel.create({
     required String userId,
     required String name,
-    double? size,
-    String? location,
-    String? soilType,
+    String? variety,
   }) {
     final now = DateTime.now();
-    return LandModel(
-      id: '', // Will be set by the server
+    return PlantModel(
+      id: '',
       userId: userId,
       name: name,
-      size: size,
-      location: location,
-      soilType: soilType,
+      variety: variety,
       createdAt: now,
       updatedAt: now,
     );
   }
 }
+

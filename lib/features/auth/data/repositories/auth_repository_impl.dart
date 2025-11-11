@@ -35,7 +35,8 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, User>> signup(
     String email,
     String password,
-    String name,
+    String firstName,
+    String lastName,
     String farmName,
     String location,
   ) async {
@@ -43,7 +44,8 @@ class AuthRepositoryImpl implements AuthRepository {
       final userModel = await remoteDataSource.signup(
         email,
         password,
-        name,
+        firstName,
+        lastName,
         farmName,
         location,
       );

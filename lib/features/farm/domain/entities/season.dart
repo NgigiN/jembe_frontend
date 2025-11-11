@@ -4,7 +4,7 @@ class Season extends Equatable {
   final String id;
   final String userId;
   final String name;
-  final String cropId;
+  final String plantId;
   final String landId;
   final DateTime startDate;
   final DateTime? endDate;
@@ -15,7 +15,7 @@ class Season extends Equatable {
     required this.id,
     required this.userId,
     required this.name,
-    required this.cropId,
+    required this.plantId,
     required this.landId,
     required this.startDate,
     this.endDate,
@@ -28,7 +28,7 @@ class Season extends Equatable {
     id,
     userId,
     name,
-    cropId,
+    plantId,
     landId,
     startDate,
     endDate,
