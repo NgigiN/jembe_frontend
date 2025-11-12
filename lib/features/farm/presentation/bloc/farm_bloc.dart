@@ -5,6 +5,7 @@ import '../../domain/entities/plant.dart';
 import '../../domain/entities/season.dart';
 import '../../domain/entities/activity.dart';
 import '../../domain/entities/input.dart';
+import '../../domain/entities/animal.dart';
 import '../../domain/usecases/add_land.dart';
 import '../../domain/usecases/get_lands.dart';
 import '../../domain/usecases/update_land.dart';
@@ -25,6 +26,10 @@ import '../../domain/usecases/add_input.dart';
 import '../../domain/usecases/get_inputs.dart';
 import '../../domain/usecases/update_input.dart';
 import '../../domain/usecases/delete_input.dart';
+import '../../domain/usecases/get_animals.dart';
+import '../../domain/usecases/add_animal.dart';
+import '../../domain/usecases/update_animal.dart';
+import '../../domain/usecases/delete_animal.dart';
 import '../../../auth/data/utils/user_utils.dart';
 
 import 'farm_event.dart';
@@ -51,6 +56,10 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
   final AddInput addInput;
   final UpdateInput updateInput;
   final DeleteInput deleteInput;
+  final GetAnimals getAnimals;
+  final AddAnimal addAnimal;
+  final UpdateAnimal updateAnimal;
+  final DeleteAnimal deleteAnimal;
 
   FarmBloc({
     required this.getLands,
@@ -73,6 +82,10 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
     required this.addInput,
     required this.updateInput,
     required this.deleteInput,
+    required this.getAnimals,
+    required this.addAnimal,
+    required this.updateAnimal,
+    required this.deleteAnimal,
   }) : super(FarmInitial()) {
     on<GetLandsEvent>((event, emit) async {
       emit(FarmLoading());
@@ -86,6 +99,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: state.seasons,
             activities: state.activities,
             inputs: state.inputs,
+            animals: state.animals,
           ),
         ),
       );
@@ -99,6 +113,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
 
       emit(FarmLoading());
 
@@ -134,6 +149,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: currentInputs,
+            animals: currentAnimals,
           ),
         );
       });
@@ -152,6 +168,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: state.seasons,
             activities: state.activities,
             inputs: state.inputs,
+            animals: state.animals,
           ),
         ),
       );
@@ -165,6 +182,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
 
       emit(FarmLoading());
 
@@ -198,6 +216,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: currentInputs,
+            animals: currentAnimals,
           ),
         );
       });
@@ -216,6 +235,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: seasons,
             activities: state.activities,
             inputs: state.inputs,
+            animals: state.animals,
           ),
         ),
       );
@@ -229,6 +249,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
 
       emit(FarmLoading());
 
@@ -268,6 +289,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: updatedSeasons,
             activities: currentActivities,
             inputs: currentInputs,
+            animals: currentAnimals,
           ),
         );
       });
@@ -286,6 +308,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: state.seasons,
             activities: activities,
             inputs: state.inputs,
+            animals: state.animals,
           ),
         ),
       );
@@ -299,6 +322,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
 
       emit(FarmLoading());
 
@@ -331,6 +355,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: currentSeasons,
             activities: updatedActivities,
             inputs: currentInputs,
+            animals: currentAnimals,
           ),
         );
       });
@@ -349,6 +374,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: state.seasons,
             activities: state.activities,
             inputs: inputs,
+            animals: state.animals,
           ),
         ),
       );
@@ -362,6 +388,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
 
       emit(FarmLoading());
 
@@ -400,6 +427,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: updatedInputs,
+            animals: currentAnimals,
           ),
         );
       });
@@ -413,6 +441,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
 
       emit(FarmLoading());
 
@@ -441,6 +470,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: currentInputs,
+            animals: currentAnimals,
           ),
         );
       });
@@ -453,6 +483,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
 
       emit(FarmLoading());
 
@@ -468,6 +499,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: currentInputs,
+            animals: currentAnimals,
           ),
         );
       });
@@ -480,6 +512,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
 
       emit(FarmLoading());
 
@@ -506,6 +539,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: currentInputs,
+            animals: currentAnimals,
           ),
         );
       });
@@ -518,6 +552,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
 
       emit(FarmLoading());
 
@@ -533,6 +568,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: currentInputs,
+            animals: currentAnimals,
           ),
         );
       });
@@ -545,6 +581,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
 
       emit(FarmLoading());
 
@@ -576,6 +613,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: updatedSeasons,
             activities: currentActivities,
             inputs: currentInputs,
+            animals: currentAnimals,
           ),
         );
       });
@@ -588,6 +626,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
 
       emit(FarmLoading());
 
@@ -603,6 +642,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: updatedSeasons,
             activities: currentActivities,
             inputs: currentInputs,
+            animals: currentAnimals,
           ),
         );
       });
@@ -615,6 +655,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
 
       emit(FarmLoading());
 
@@ -650,6 +691,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: currentSeasons,
             activities: updatedActivities,
             inputs: currentInputs,
+            animals: currentAnimals,
           ),
         );
       });
@@ -662,6 +704,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
 
       emit(FarmLoading());
 
@@ -679,6 +722,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: currentSeasons,
             activities: updatedActivities,
             inputs: currentInputs,
+            animals: currentAnimals,
           ),
         );
       });
@@ -691,6 +735,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
 
       emit(FarmLoading());
 
@@ -722,6 +767,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: updatedInputs,
+            animals: currentAnimals,
           ),
         );
       });
@@ -734,6 +780,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
       final currentSeasons = currentState.seasons;
       final currentActivities = currentState.activities;
       final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
 
       emit(FarmLoading());
 
@@ -749,6 +796,142 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
             seasons: currentSeasons,
             activities: currentActivities,
             inputs: updatedInputs,
+            animals: currentAnimals,
+          ),
+        );
+      });
+    });
+
+    // Animal event handlers
+    on<GetAnimalsEvent>((event, emit) async {
+      emit(FarmLoading());
+      final result = await getAnimals(NoParams());
+      result.fold(
+        (failure) => emit(FarmError('Failed to load animals')),
+        (animals) => emit(
+          FarmLoaded(
+            lands: state.lands,
+            plants: state.plants,
+            seasons: state.seasons,
+            activities: state.activities,
+            inputs: state.inputs,
+            animals: animals,
+          ),
+        ),
+      );
+    });
+
+    on<AddAnimalEvent>((event, emit) async {
+      final currentState = state;
+      final currentLands = currentState.lands;
+      final currentPlants = currentState.plants;
+      final currentSeasons = currentState.seasons;
+      final currentActivities = currentState.activities;
+      final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
+
+      emit(FarmLoading());
+
+      final userId = await UserUtils.getCurrentUserId();
+      if (userId == null) {
+        emit(FarmError('User not authenticated'));
+        return;
+      }
+
+      final animal = Animal(
+        id: '',
+        userId: userId,
+        name: event.name,
+        type: event.type,
+        number: event.number,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      final result = await addAnimal(AddAnimalParams(animal: animal));
+      result.fold((failure) => emit(FarmError('Failed to add animal')), (
+        newAnimal,
+      ) {
+        final updatedAnimals = List<Animal>.from(currentAnimals)..add(newAnimal);
+
+        emit(
+          FarmLoaded(
+            lands: currentLands,
+            plants: currentPlants,
+            seasons: currentSeasons,
+            activities: currentActivities,
+            inputs: currentInputs,
+            animals: updatedAnimals,
+          ),
+        );
+      });
+    });
+
+    on<UpdateAnimalEvent>((event, emit) async {
+      final currentState = state;
+      final currentLands = currentState.lands;
+      final currentPlants = currentState.plants;
+      final currentSeasons = currentState.seasons;
+      final currentActivities = currentState.activities;
+      final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
+
+      emit(FarmLoading());
+
+      final animal = Animal(
+        id: event.id,
+        userId: currentAnimals.firstWhere((a) => a.id == event.id).userId,
+        name: event.name,
+        type: event.type,
+        number: event.number,
+        createdAt: currentAnimals.firstWhere((a) => a.id == event.id).createdAt,
+        updatedAt: DateTime.now(),
+      );
+
+      final result = await updateAnimal(UpdateAnimalParams(animal: animal));
+      result.fold((failure) => emit(FarmError('Failed to update animal')), (
+        updatedAnimal,
+      ) {
+        final updatedAnimals = currentAnimals
+            .map((a) => a.id == event.id ? updatedAnimal : a)
+            .toList();
+        emit(
+          FarmLoaded(
+            lands: currentLands,
+            plants: currentPlants,
+            seasons: currentSeasons,
+            activities: currentActivities,
+            inputs: currentInputs,
+            animals: updatedAnimals,
+          ),
+        );
+      });
+    });
+
+    on<DeleteAnimalEvent>((event, emit) async {
+      final currentState = state;
+      final currentLands = currentState.lands;
+      final currentPlants = currentState.plants;
+      final currentSeasons = currentState.seasons;
+      final currentActivities = currentState.activities;
+      final currentInputs = currentState.inputs;
+      final currentAnimals = currentState.animals;
+
+      emit(FarmLoading());
+
+      final result = await deleteAnimal(DeleteAnimalParams(id: event.id));
+      result.fold((failure) => emit(FarmError('Failed to delete animal')), (_) {
+        final updatedAnimals = currentAnimals
+            .where((a) => a.id != event.id)
+            .toList();
+        emit(
+          FarmLoaded(
+            lands: currentLands,
+            plants: currentPlants,
+            seasons: currentSeasons,
+            activities: currentActivities,
+            inputs: currentInputs,
+            animals: updatedAnimals,
           ),
         );
       });

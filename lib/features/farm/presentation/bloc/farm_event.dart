@@ -284,3 +284,35 @@ class DeleteInputEvent extends FarmEvent {
   @override
   List<Object> get props => [id];
 }
+
+class GetAnimalsEvent extends FarmEvent {}
+
+class AddAnimalEvent extends FarmEvent {
+  final String name;
+  final String type;
+  final int? number;
+  final String userId;
+  AddAnimalEvent(this.name, this.type, this.number, this.userId);
+
+  @override
+  List<Object> get props => [name, type, number ?? 0, userId];
+}
+
+class UpdateAnimalEvent extends FarmEvent {
+  final String id;
+  final String name;
+  final String type;
+  final int? number;
+  UpdateAnimalEvent(this.id, this.name, this.type, this.number);
+
+  @override
+  List<Object> get props => [id, name, type, number ?? 0];
+}
+
+class DeleteAnimalEvent extends FarmEvent {
+  final String id;
+  DeleteAnimalEvent(this.id);
+
+  @override
+  List<Object> get props => [id];
+}

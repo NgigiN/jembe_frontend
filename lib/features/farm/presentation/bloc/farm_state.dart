@@ -4,6 +4,7 @@ import '../../domain/entities/plant.dart';
 import '../../domain/entities/season.dart';
 import '../../domain/entities/activity.dart';
 import '../../domain/entities/input.dart';
+import '../../domain/entities/animal.dart';
 
 abstract class FarmState extends Equatable {
   final List<Land> lands;
@@ -11,6 +12,7 @@ abstract class FarmState extends Equatable {
   final List<Season> seasons;
   final List<Activity> activities;
   final List<Input> inputs;
+  final List<Animal> animals;
 
   const FarmState({
     this.lands = const [],
@@ -18,10 +20,11 @@ abstract class FarmState extends Equatable {
     this.seasons = const [],
     this.activities = const [],
     this.inputs = const [],
+    this.animals = const [],
   });
 
   @override
-  List<Object> get props => [lands, plants, seasons, activities, inputs];
+  List<Object> get props => [lands, plants, seasons, activities, inputs, animals];
 }
 
 class FarmInitial extends FarmState {}
@@ -33,6 +36,7 @@ class FarmLoading extends FarmState {
     super.seasons,
     super.activities,
     super.inputs,
+    super.animals,
   });
 }
 
@@ -43,6 +47,7 @@ class FarmLoaded extends FarmState {
     super.seasons,
     super.activities,
     super.inputs,
+    super.animals,
   });
 }
 
@@ -56,6 +61,7 @@ class FarmError extends FarmState {
     super.seasons,
     super.activities,
     super.inputs,
+    super.animals,
   });
 
   @override
@@ -66,5 +72,6 @@ class FarmError extends FarmState {
     seasons,
     activities,
     inputs,
+    animals,
   ];
 }
