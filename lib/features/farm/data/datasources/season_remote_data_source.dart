@@ -73,10 +73,10 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
       },
       body: json.encode({
         'name': season.name,
-        'plant_id': season.plantId,
-        'land_id': season.landId,
-        'start_date': season.startDate.toUtc().toIso8601String(),
-        'end_date': season.endDate?.toUtc().toIso8601String(),
+        'plant_id': int.tryParse(season.plantId) ?? 0,
+        'land_id': int.tryParse(season.landId) ?? 0,
+        'start_date': season.startDate.toIso8601String().split('T')[0],
+        'end_date': season.endDate?.toIso8601String().split('T')[0],
       }),
     );
 
@@ -106,10 +106,10 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
       },
       body: json.encode({
         'name': season.name,
-        'plant_id': season.plantId,
-        'land_id': season.landId,
-        'start_date': season.startDate.toUtc().toIso8601String(),
-        'end_date': season.endDate?.toUtc().toIso8601String(),
+        'plant_id': int.tryParse(season.plantId) ?? 0,
+        'land_id': int.tryParse(season.landId) ?? 0,
+        'start_date': season.startDate.toIso8601String().split('T')[0],
+        'end_date': season.endDate?.toIso8601String().split('T')[0],
       }),
     );
 

@@ -97,6 +97,35 @@ class FarmDataService {
     return [];
   }
 
+  static Future<List<Map<String, dynamic>>> getAnimalsForDropdown() async {
+    final token = await _getToken();
+    if (token == null) return [];
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/animals'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final items = data as List;
+        return items
+            .map(
+              (item) => {
+                'id': (item['ID'] ?? item['id'] ?? '').toString(),
+                'name': item['Name'] ?? item['name'] ?? '',
+                'type': item['Type'] ?? item['type'] ?? '',
+              },
+            )
+            .toList();
+      }
+    } catch (e) {
+      print('Error fetching animals: $e');
+    }
+    return [];
+  }
+
   static Future<http.Response> getTotalCosts({
     String? type,
     String? startDate,
@@ -164,9 +193,9 @@ class FarmDataService {
     }
 
     try {
-      final uri = Uri.parse('$baseUrl/api/analysis/monthly-summary').replace(
-        queryParameters: {'year': year.toString()},
-      );
+      final uri = Uri.parse(
+        '$baseUrl/api/analysis/monthly-summary',
+      ).replace(queryParameters: {'year': year.toString()});
       final response = await http.get(
         uri,
         headers: {'Authorization': 'Bearer $token'},
@@ -176,6 +205,74 @@ class FarmDataService {
     } catch (e) {
       print('Error in getMonthlySummary: $e');
       rethrow;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getCostCategories({
+    String? type,
+    String? category,
+  }) async {
+    final token = await _getToken();
+    if (token == null) return [];
+
+    try {
+      final queryParams = <String, String>{};
+      if (type != null) queryParams['type'] = type;
+      if (category != null) queryParams['category'] = category;
+
+      final uri = Uri.parse(
+        '$baseUrl/api/cost-categories',
+      ).replace(queryParameters: queryParams);
+      final response = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final items = data as List;
+        return items
+            .map(
+              (item) => {
+                'id': (item['id'] ?? item['ID'] ?? '').toString(),
+                'name': item['name'] ?? item['Name'] ?? '',
+                'type': item['type'] ?? item['Type'] ?? '',
+                'category': item['category'] ?? item['Category'] ?? '',
+                'is_default': item['is_default'] ?? item['isDefault'] ?? false,
+              },
+            )
+            .toList();
+      }
+    } catch (e) {
+      print('Error fetching cost categories: $e');
+    }
+    return [];
+  }
+
+  static Future<bool> createCostCategory({
+    required String name,
+    required String type,
+    required String category,
+  }) async {
+    final token = await _getToken();
+    if (token == null) {
+      throw Exception('No authentication token available. Please log in.');
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/cost-categories'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({'name': name, 'type': type, 'category': category}),
+      );
+
+      return response.statusCode == 201;
+    } catch (e) {
+      print('Error creating cost category: $e');
+      return false;
     }
   }
 }

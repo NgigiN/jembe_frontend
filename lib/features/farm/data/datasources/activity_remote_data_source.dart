@@ -67,7 +67,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
     final token = await _getToken();
     final requestBody = {
       'source_type': activity.sourceType,
-      'source_id': activity.sourceId,
+      'source_id': int.tryParse(activity.sourceId) ?? 0,
       'type': activity.type,
       'details': activity.details,
       'cost': activity.cost,
@@ -107,7 +107,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
     final token = await _getToken();
     final requestBody = {
       'source_type': activity.sourceType,
-      'source_id': activity.sourceId,
+      'source_id': int.tryParse(activity.sourceId) ?? 0,
       'type': activity.type,
       'details': activity.details,
       'cost': activity.cost,

@@ -67,7 +67,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
     final token = await _getToken();
     final requestBody = {
       'source_type': input.sourceType,
-      'source_id': input.sourceId,
+      'source_id': int.tryParse(input.sourceId) ?? 0,
       'type': input.type,
       'quantity': input.quantity,
       'cost': input.cost,
@@ -107,7 +107,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
     final token = await _getToken();
     final requestBody = {
       'source_type': input.sourceType,
-      'source_id': input.sourceId,
+      'source_id': int.tryParse(input.sourceId) ?? 0,
       'type': input.type,
       'quantity': input.quantity,
       'cost': input.cost,
