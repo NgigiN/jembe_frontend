@@ -71,7 +71,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       'type': activity.type,
       'details': activity.details,
       'cost': activity.cost,
-      'date': activity.date.toIso8601String().split('T')[0],
+      'date': activity.date.toUtc().toIso8601String(),
       'notes': activity.notes,
     };
     if (activity.animalId != null && activity.animalId != 0) {
@@ -111,7 +111,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       'type': activity.type,
       'details': activity.details,
       'cost': activity.cost,
-      'date': activity.date.toIso8601String().split('T')[0],
+      'date': activity.date.toUtc().toIso8601String(),
       'notes': activity.notes,
     };
     if (activity.animalId != null && activity.animalId != 0) {

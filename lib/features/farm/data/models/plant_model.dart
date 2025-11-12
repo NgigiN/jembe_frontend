@@ -12,12 +12,12 @@ class PlantModel extends Plant {
 
   factory PlantModel.fromJson(Map<String, dynamic> json) {
     return PlantModel(
-      id: json['id'].toString(),
-      userId: json['user_id']?.toString() ?? '',
-      name: json['name'],
-      variety: json['variety'],
-      createdAt: _parseDate(json['created_at']),
-      updatedAt: _parseDate(json['updated_at']),
+      id: (json['ID'] ?? json['id'] ?? '').toString(),
+      userId: (json['UserID'] ?? json['user_id'] ?? '').toString(),
+      name: json['Name'] ?? json['name'] ?? '',
+      variety: json['Variety'] ?? json['variety'],
+      createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
+      updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );
   }
 

@@ -14,19 +14,19 @@ class SeasonModel extends Season {
   });
 
   factory SeasonModel.fromJson(Map<String, dynamic> json) {
+    final endDateValue = json['EndDate'] ?? json['end_date'];
     return SeasonModel(
-      id: json['id'].toString(),
-      userId: json['user_id']?.toString() ?? '',
-      name: json['name'],
-      plantId: json['plant_id']?.toString() ?? '',
-      landId: json['land_id']?.toString() ?? '',
-      startDate: _parseDate(json['start_date']),
-      endDate:
-          json['end_date'] != null && json['end_date'].toString().isNotEmpty
-          ? _parseDate(json['end_date'])
+      id: (json['ID'] ?? json['id'] ?? '').toString(),
+      userId: (json['UserID'] ?? json['user_id'] ?? '').toString(),
+      name: json['Name'] ?? json['name'] ?? '',
+      plantId: (json['PlantID'] ?? json['plant_id'] ?? '').toString(),
+      landId: (json['LandID'] ?? json['land_id'] ?? '').toString(),
+      startDate: _parseDate(json['StartDate'] ?? json['start_date']),
+      endDate: endDateValue != null && endDateValue.toString().isNotEmpty
+          ? _parseDate(endDateValue)
           : null,
-      createdAt: _parseDate(json['created_at']),
-      updatedAt: _parseDate(json['updated_at']),
+      createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
+      updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );
   }
 

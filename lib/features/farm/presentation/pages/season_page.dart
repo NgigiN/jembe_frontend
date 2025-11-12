@@ -271,22 +271,24 @@ class _SeasonPageState extends State<SeasonPage> {
                             border: OutlineInputBorder(),
                           ),
                           items: plants.map((plant) {
-                            final displayName =
-                                plant['variety'] != null &&
-                                    plant['variety'].isNotEmpty
-                                ? '${plant['name']} (${plant['variety']})'
-                                : plant['name'];
+                            final name = plant['name'] ?? '';
+                            final variety = plant['variety'] ?? '';
+                            final displayName = variety.isNotEmpty
+                                ? '$name ($variety)'
+                                : name;
                             return DropdownMenuItem<String>(
-                              value: plant['id'] as String,
+                              value: plant['id']?.toString() ?? '',
                               child: Text(displayName),
                             );
                           }).toList(),
                           onChanged: (value) {
                             setState(() {
                               selectedPlantId = value;
-                              selectedPlantName = plants.firstWhere(
-                                (p) => p['id'] == value,
-                              )['name'];
+                              selectedPlantName =
+                                  plants.firstWhere(
+                                    (p) => p['id'] == value,
+                                  )['name'] ??
+                                  '';
                             });
                           },
                         ),
@@ -298,22 +300,24 @@ class _SeasonPageState extends State<SeasonPage> {
                             border: OutlineInputBorder(),
                           ),
                           items: lands.map((land) {
-                            final displayName =
-                                land['location'] != null &&
-                                    land['location'].isNotEmpty
-                                ? '${land['name']} (${land['location']})'
-                                : land['name'];
+                            final name = land['name'] ?? '';
+                            final location = land['location'] ?? '';
+                            final displayName = location.isNotEmpty
+                                ? '$name ($location)'
+                                : name;
                             return DropdownMenuItem<String>(
-                              value: land['id'] as String,
+                              value: land['id']?.toString() ?? '',
                               child: Text(displayName),
                             );
                           }).toList(),
                           onChanged: (value) {
                             setState(() {
                               selectedLandId = value;
-                              selectedLandName = lands.firstWhere(
-                                (l) => l['id'] == value,
-                              )['name'];
+                              selectedLandName =
+                                  lands.firstWhere(
+                                    (l) => l['id'] == value,
+                                  )['name'] ??
+                                  '';
                             });
                           },
                         ),
@@ -483,12 +487,18 @@ class _SeasonPageState extends State<SeasonPage> {
     }
 
     // Set initial values for display
-    selectedPlantName = plants.firstWhere(
-      (p) => p['id'] == selectedPlantId,
-    )['name'];
-    selectedLandName = lands.firstWhere(
-      (l) => l['id'] == selectedLandId,
-    )['name'];
+    selectedPlantName =
+        plants.firstWhere(
+          (p) => p['id'] == selectedPlantId,
+          orElse: () => {'name': ''},
+        )['name'] ??
+        '';
+    selectedLandName =
+        lands.firstWhere(
+          (l) => l['id'] == selectedLandId,
+          orElse: () => {'name': ''},
+        )['name'] ??
+        '';
 
     showModalBottomSheet(
       context: context,
@@ -542,22 +552,24 @@ class _SeasonPageState extends State<SeasonPage> {
                             border: OutlineInputBorder(),
                           ),
                           items: plants.map((plant) {
-                            final displayName =
-                                plant['variety'] != null &&
-                                    plant['variety'].isNotEmpty
-                                ? '${plant['name']} (${plant['variety']})'
-                                : plant['name'];
+                            final name = plant['name'] ?? '';
+                            final variety = plant['variety'] ?? '';
+                            final displayName = variety.isNotEmpty
+                                ? '$name ($variety)'
+                                : name;
                             return DropdownMenuItem<String>(
-                              value: plant['id'] as String,
+                              value: plant['id']?.toString() ?? '',
                               child: Text(displayName),
                             );
                           }).toList(),
                           onChanged: (value) {
                             setState(() {
                               selectedPlantId = value;
-                              selectedPlantName = plants.firstWhere(
-                                (p) => p['id'] == value,
-                              )['name'];
+                              selectedPlantName =
+                                  plants.firstWhere(
+                                    (p) => p['id'] == value,
+                                  )['name'] ??
+                                  '';
                             });
                           },
                         ),
@@ -569,22 +581,24 @@ class _SeasonPageState extends State<SeasonPage> {
                             border: OutlineInputBorder(),
                           ),
                           items: lands.map((land) {
-                            final displayName =
-                                land['location'] != null &&
-                                    land['location'].isNotEmpty
-                                ? '${land['name']} (${land['location']})'
-                                : land['name'];
+                            final name = land['name'] ?? '';
+                            final location = land['location'] ?? '';
+                            final displayName = location.isNotEmpty
+                                ? '$name ($location)'
+                                : name;
                             return DropdownMenuItem<String>(
-                              value: land['id'] as String,
+                              value: land['id']?.toString() ?? '',
                               child: Text(displayName),
                             );
                           }).toList(),
                           onChanged: (value) {
                             setState(() {
                               selectedLandId = value;
-                              selectedLandName = lands.firstWhere(
-                                (l) => l['id'] == value,
-                              )['name'];
+                              selectedLandName =
+                                  lands.firstWhere(
+                                    (l) => l['id'] == value,
+                                  )['name'] ??
+                                  '';
                             });
                           },
                         ),

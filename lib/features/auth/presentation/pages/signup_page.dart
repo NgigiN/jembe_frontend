@@ -212,6 +212,7 @@ class SignupPage extends StatelessWidget {
                       BlocListener<AuthBloc, AuthState>(
                         listener: (context, state) {
                           if (state is SignupSuccess) {
+                            context.read<AuthBloc>().add(ResetAuthState());
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
@@ -226,9 +227,6 @@ class SignupPage extends StatelessWidget {
                               () {
                                 if (context.mounted) {
                                   Navigator.pop(context);
-                                  context.read<AuthBloc>().add(
-                                    ResetAuthState(),
-                                  );
                                 }
                               },
                             );

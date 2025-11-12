@@ -16,20 +16,21 @@ class ActivityModel extends Activity {
   });
 
   factory ActivityModel.fromJson(Map<String, dynamic> json) {
+    final animalIdValue = json['AnimalID'] ?? json['animal_id'];
     return ActivityModel(
-      id: json['id'].toString(),
-      sourceType: json['source_type'] ?? 'plant',
-      sourceId: json['source_id']?.toString() ?? '',
-      animalId: json['animal_id'] != null && json['animal_id'] != 0
-          ? (json['animal_id'] is int ? json['animal_id'] : int.tryParse(json['animal_id'].toString()))
+      id: (json['ID'] ?? json['id'] ?? '').toString(),
+      sourceType: json['SourceType'] ?? json['source_type'] ?? 'plant',
+      sourceId: (json['SourceID'] ?? json['source_id'] ?? '').toString(),
+      animalId: animalIdValue != null && animalIdValue != 0
+          ? (animalIdValue is int ? animalIdValue : int.tryParse(animalIdValue.toString()))
           : null,
-      type: json['type'],
-      details: json['details'],
-      cost: json['cost']?.toDouble() ?? 0.0,
-      date: _parseDate(json['date']),
-      notes: json['notes'],
-      createdAt: _parseDate(json['created_at']),
-      updatedAt: _parseDate(json['updated_at']),
+      type: json['Type'] ?? json['type'] ?? '',
+      details: json['Details'] ?? json['details'],
+      cost: (json['Cost'] ?? json['cost'])?.toDouble() ?? 0.0,
+      date: _parseDate(json['Date'] ?? json['date']),
+      notes: json['Notes'] ?? json['notes'],
+      createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
+      updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );
   }
 

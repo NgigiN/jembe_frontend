@@ -26,9 +26,9 @@ class FarmDataService {
         return items
             .map(
               (item) => {
-                'id': item['id'].toString(),
-                'name': item['name'],
-                'location': item['location'] ?? '',
+                'id': (item['ID'] ?? item['id'] ?? '').toString(),
+                'name': item['Name'] ?? item['name'] ?? '',
+                'location': item['Location'] ?? item['location'] ?? '',
               },
             )
             .toList();
@@ -55,9 +55,9 @@ class FarmDataService {
         return items
             .map(
               (item) => {
-                'id': item['id'].toString(),
-                'name': item['name'],
-                'variety': item['variety'] ?? '',
+                'id': (item['ID'] ?? item['id'] ?? '').toString(),
+                'name': item['Name'] ?? item['name'] ?? '',
+                'variety': item['Variety'] ?? item['variety'] ?? '',
               },
             )
             .toList();
@@ -84,9 +84,9 @@ class FarmDataService {
         return items
             .map(
               (item) => {
-                'id': item['id'].toString(),
-                'name': item['name'],
-                'start_date': item['start_date'],
+                'id': (item['ID'] ?? item['id'] ?? '').toString(),
+                'name': item['Name'] ?? item['name'] ?? '',
+                'start_date': item['StartDate'] ?? item['start_date'],
               },
             )
             .toList();

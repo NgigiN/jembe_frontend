@@ -71,7 +71,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
       'type': input.type,
       'quantity': input.quantity,
       'cost': input.cost,
-      'date': input.date.toIso8601String().split('T')[0],
+      'date': input.date.toUtc().toIso8601String(),
       'notes': input.notes,
     };
     if (input.animalId != null && input.animalId != 0) {
@@ -111,7 +111,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
       'type': input.type,
       'quantity': input.quantity,
       'cost': input.cost,
-      'date': input.date.toIso8601String().split('T')[0],
+      'date': input.date.toUtc().toIso8601String(),
       'notes': input.notes,
     };
     if (input.animalId != null && input.animalId != 0) {

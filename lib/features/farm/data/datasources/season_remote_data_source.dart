@@ -75,8 +75,8 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
         'name': season.name,
         'plant_id': season.plantId,
         'land_id': season.landId,
-        'start_date': season.startDate.toIso8601String().split('T')[0],
-        'end_date': season.endDate?.toIso8601String().split('T')[0],
+        'start_date': season.startDate.toUtc().toIso8601String(),
+        'end_date': season.endDate?.toUtc().toIso8601String(),
       }),
     );
 
@@ -108,8 +108,8 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
         'name': season.name,
         'plant_id': season.plantId,
         'land_id': season.landId,
-        'start_date': season.startDate.toIso8601String().split('T')[0],
-        'end_date': season.endDate?.toIso8601String().split('T')[0],
+        'start_date': season.startDate.toUtc().toIso8601String(),
+        'end_date': season.endDate?.toUtc().toIso8601String(),
       }),
     );
 

@@ -30,11 +30,29 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     );
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return {
-        'user': UserModel.fromJson(data['user']),
-        'token': data['token'],
-        'record': data['user'],
-      };
+      final token = data['token'] as String;
+
+      if (data['user'] != null) {
+        final userData = data['user'] as Map<String, dynamic>;
+        return {
+          'user': UserModel.fromJson(userData),
+          'token': token,
+          'record': userData,
+        };
+      } else {
+        return {
+          'user': UserModel(
+            id: '',
+            email: email,
+            firstName: '',
+            lastName: '',
+            farmName: '',
+            location: '',
+          ),
+          'token': token,
+          'record': {'email': email},
+        };
+      }
     } else {
       String errorMsg = 'Login failed';
       try {
@@ -72,7 +90,18 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     );
     if (response.statusCode == 201) {
       final data = json.decode(response.body);
-      return UserModel.fromJson(data['user']);
+      if (data['user'] != null) {
+        return UserModel.fromJson(data['user']);
+      } else {
+        return UserModel(
+          id: '',
+          email: email,
+          firstName: firstName,
+          lastName: lastName,
+          farmName: farmName,
+          location: location,
+        );
+      }
     } else {
       String errorMsg = 'Signup failed';
       try {
