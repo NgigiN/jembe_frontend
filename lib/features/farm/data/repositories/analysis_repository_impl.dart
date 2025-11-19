@@ -53,6 +53,7 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
               farmName: model.farmName,
               inputCost: model.inputCost,
               percentage: model.percentage,
+              category: model.category,
             ),
           )
           .toList();

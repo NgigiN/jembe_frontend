@@ -223,7 +223,10 @@ class _HerdPageState extends State<HerdPage> {
                   children: [
                     const Text(
                       'Register New Herd',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
@@ -246,7 +249,7 @@ class _HerdPageState extends State<HerdPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: selectedType,
+                          initialValue: selectedType,
                           decoration: const InputDecoration(
                             labelText: 'Animal Type *',
                             border: OutlineInputBorder(),
@@ -334,7 +337,10 @@ class _HerdPageState extends State<HerdPage> {
                     ),
                     child: const Text(
                       'Register Herd',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -374,7 +380,10 @@ class _HerdPageState extends State<HerdPage> {
                   children: [
                     const Text(
                       'Edit Herd',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
@@ -396,7 +405,7 @@ class _HerdPageState extends State<HerdPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: selectedType,
+                          initialValue: selectedType,
                           decoration: const InputDecoration(
                             labelText: 'Animal Type *',
                             border: OutlineInputBorder(),
@@ -472,7 +481,10 @@ class _HerdPageState extends State<HerdPage> {
                     ),
                     child: const Text(
                       'Update Herd',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -518,4 +530,3 @@ class _HerdPageState extends State<HerdPage> {
     );
   }
 }
-

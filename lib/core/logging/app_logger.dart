@@ -151,7 +151,7 @@ class AppLogger {
   }
 
   void logError(String context, dynamic error, [StackTrace? stackTrace]) {
-    error(LogCategory.general, 'Error in $context: $error', error, stackTrace);
+    _log(Level.error, LogCategory.general, 'Error in $context: $error', error, stackTrace);
   }
 }
 

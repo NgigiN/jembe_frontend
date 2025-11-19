@@ -303,12 +303,29 @@ class _InputPageState extends State<InputPage> {
                               labelText: 'Select Season *',
                               border: OutlineInputBorder(),
                             ),
-                            items: seasons.map((season) {
-                              return DropdownMenuItem<String>(
-                                value: season['id'] as String,
-                                child: Text(season['name']),
-                              );
-                            }).toList(),
+                            items: seasons
+                                .where((season) =>
+                                    season['id'] != null &&
+                                    season['id'].toString().isNotEmpty)
+                                .fold<Map<String, Map<String, dynamic>>>(
+                                  {},
+                                  (map, season) {
+                                    final id = season['id']?.toString() ?? '';
+                                    if (id.isNotEmpty && !map.containsKey(id)) {
+                                      map[id] = season;
+                                    }
+                                    return map;
+                                  },
+                                )
+                                .values
+                                .map((season) {
+                                  final id = season['id']?.toString() ?? '';
+                                  return DropdownMenuItem<String>(
+                                    value: id,
+                                    child: Text(season['name']?.toString() ?? ''),
+                                  );
+                                })
+                                .toList(),
                             onChanged: (value) {
                               setState(() {
                                 selectedSeasonId = value;
@@ -322,17 +339,34 @@ class _InputPageState extends State<InputPage> {
                               labelText: 'Select Animal *',
                               border: OutlineInputBorder(),
                             ),
-                            items: animals.map((animal) {
-                              final displayName =
-                                  animal['type'] != null &&
-                                      animal['type'].toString().isNotEmpty
-                                  ? '${animal['name']} (${animal['type']})'
-                                  : animal['name'];
-                              return DropdownMenuItem<String>(
-                                value: animal['id'] as String,
-                                child: Text(displayName),
-                              );
-                            }).toList(),
+                            items: animals
+                                .where((animal) =>
+                                    animal['id'] != null &&
+                                    animal['id'].toString().isNotEmpty)
+                                .fold<Map<String, Map<String, dynamic>>>(
+                                  {},
+                                  (map, animal) {
+                                    final id = animal['id']?.toString() ?? '';
+                                    if (id.isNotEmpty && !map.containsKey(id)) {
+                                      map[id] = animal;
+                                    }
+                                    return map;
+                                  },
+                                )
+                                .values
+                                .map((animal) {
+                                  final id = animal['id']?.toString() ?? '';
+                                  final displayName =
+                                      animal['type'] != null &&
+                                          animal['type'].toString().isNotEmpty
+                                      ? '${animal['name']} (${animal['type']})'
+                                      : animal['name']?.toString() ?? '';
+                                  return DropdownMenuItem<String>(
+                                    value: id,
+                                    child: Text(displayName),
+                                  );
+                                })
+                                .toList(),
                             onChanged: (value) {
                               setState(() {
                                 selectedAnimalId = value;
@@ -357,11 +391,14 @@ class _InputPageState extends State<InputPage> {
                                     (selectedSourceType == 'plant'
                                             ? _plantInputTypes
                                             : _animalInputTypes)
+                                        .where((category) =>
+                                            category['name'] != null &&
+                                            category['name'].toString().isNotEmpty)
                                         .map((category) {
                                           return DropdownMenuItem<String>(
-                                            value: category['name'] as String,
+                                            value: category['name']?.toString() ?? '',
                                             child: Text(
-                                              category['name'] as String,
+                                              category['name']?.toString() ?? '',
                                             ),
                                           );
                                         })
@@ -654,17 +691,37 @@ class _InputPageState extends State<InputPage> {
                         const SizedBox(height: 16),
                         if (selectedSourceType == 'plant')
                           DropdownButtonFormField<String>(
-                            value: selectedSeasonId,
+                            value: selectedSeasonId != null &&
+                                    selectedSeasonId.toString().isNotEmpty
+                                ? selectedSeasonId.toString()
+                                : null,
                             decoration: const InputDecoration(
                               labelText: 'Select Season *',
                               border: OutlineInputBorder(),
                             ),
-                            items: seasons.map((season) {
-                              return DropdownMenuItem<String>(
-                                value: season['id'] as String,
-                                child: Text(season['name']),
-                              );
-                            }).toList(),
+                            items: seasons
+                                .where((season) =>
+                                    season['id'] != null &&
+                                    season['id'].toString().isNotEmpty)
+                                .fold<Map<String, Map<String, dynamic>>>(
+                                  {},
+                                  (map, season) {
+                                    final id = season['id']?.toString() ?? '';
+                                    if (id.isNotEmpty && !map.containsKey(id)) {
+                                      map[id] = season;
+                                    }
+                                    return map;
+                                  },
+                                )
+                                .values
+                                .map((season) {
+                                  final id = season['id']?.toString() ?? '';
+                                  return DropdownMenuItem<String>(
+                                    value: id,
+                                    child: Text(season['name']?.toString() ?? ''),
+                                  );
+                                })
+                                .toList(),
                             onChanged: (value) {
                               setState(() {
                                 selectedSeasonId = value;
@@ -673,22 +730,42 @@ class _InputPageState extends State<InputPage> {
                           ),
                         if (selectedSourceType == 'animal')
                           DropdownButtonFormField<String>(
-                            value: selectedAnimalId,
+                            value: selectedAnimalId != null &&
+                                    selectedAnimalId.toString().isNotEmpty
+                                ? selectedAnimalId.toString()
+                                : null,
                             decoration: const InputDecoration(
                               labelText: 'Select Animal *',
                               border: OutlineInputBorder(),
                             ),
-                            items: animals.map((animal) {
-                              final displayName =
-                                  animal['type'] != null &&
-                                      animal['type'].toString().isNotEmpty
-                                  ? '${animal['name']} (${animal['type']})'
-                                  : animal['name'];
-                              return DropdownMenuItem<String>(
-                                value: animal['id'] as String,
-                                child: Text(displayName),
-                              );
-                            }).toList(),
+                            items: animals
+                                .where((animal) =>
+                                    animal['id'] != null &&
+                                    animal['id'].toString().isNotEmpty)
+                                .fold<Map<String, Map<String, dynamic>>>(
+                                  {},
+                                  (map, animal) {
+                                    final id = animal['id']?.toString() ?? '';
+                                    if (id.isNotEmpty && !map.containsKey(id)) {
+                                      map[id] = animal;
+                                    }
+                                    return map;
+                                  },
+                                )
+                                .values
+                                .map((animal) {
+                                  final id = animal['id']?.toString() ?? '';
+                                  final displayName =
+                                      animal['type'] != null &&
+                                          animal['type'].toString().isNotEmpty
+                                      ? '${animal['name']} (${animal['type']})'
+                                      : animal['name']?.toString() ?? '';
+                                  return DropdownMenuItem<String>(
+                                    value: id,
+                                    child: Text(displayName),
+                                  );
+                                })
+                                .toList(),
                             onChanged: (value) {
                               setState(() {
                                 selectedAnimalId = value;
@@ -716,11 +793,14 @@ class _InputPageState extends State<InputPage> {
                                     (selectedSourceType == 'plant'
                                             ? _plantInputTypes
                                             : _animalInputTypes)
+                                        .where((category) =>
+                                            category['name'] != null &&
+                                            category['name'].toString().isNotEmpty)
                                         .map((category) {
                                           return DropdownMenuItem<String>(
-                                            value: category['name'] as String,
+                                            value: category['name']?.toString() ?? '',
                                             child: Text(
-                                              category['name'] as String,
+                                              category['name']?.toString() ?? '',
                                             ),
                                           );
                                         })

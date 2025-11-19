@@ -275,7 +275,7 @@ class _ActivityPageState extends State<ActivityPage> {
                     child: Column(
                       children: [
                         DropdownButtonFormField<String>(
-                          value: selectedSourceType,
+                          initialValue: selectedSourceType,
                           decoration: const InputDecoration(
                             labelText: 'Source Type *',
                             border: OutlineInputBorder(),
@@ -303,7 +303,7 @@ class _ActivityPageState extends State<ActivityPage> {
                         const SizedBox(height: 16),
                         if (selectedSourceType == 'plant')
                           DropdownButtonFormField<String>(
-                            value: selectedSeasonId,
+                            initialValue: selectedSeasonId,
                             decoration: const InputDecoration(
                               labelText: 'Select Season *',
                               border: OutlineInputBorder(),
@@ -322,7 +322,7 @@ class _ActivityPageState extends State<ActivityPage> {
                           ),
                         if (selectedSourceType == 'animal')
                           DropdownButtonFormField<String>(
-                            value: selectedAnimalId,
+                            initialValue: selectedAnimalId,
                             decoration: const InputDecoration(
                               labelText: 'Select Animal *',
                               border: OutlineInputBorder(),
@@ -618,7 +618,7 @@ class _ActivityPageState extends State<ActivityPage> {
                     child: Column(
                       children: [
                         DropdownButtonFormField<String>(
-                          value: selectedSourceType,
+                          initialValue: selectedSourceType,
                           decoration: const InputDecoration(
                             labelText: 'Source Type *',
                             border: OutlineInputBorder(),
@@ -648,7 +648,7 @@ class _ActivityPageState extends State<ActivityPage> {
                         const SizedBox(height: 16),
                         if (selectedSourceType == 'plant')
                           DropdownButtonFormField<String>(
-                            value: selectedSeasonId,
+                            initialValue: selectedSeasonId,
                             decoration: const InputDecoration(
                               labelText: 'Select Season *',
                               border: OutlineInputBorder(),
@@ -667,7 +667,7 @@ class _ActivityPageState extends State<ActivityPage> {
                           ),
                         if (selectedSourceType == 'animal')
                           DropdownButtonFormField<String>(
-                            value: selectedAnimalId,
+                            initialValue: selectedAnimalId,
                             decoration: const InputDecoration(
                               labelText: 'Select Animal *',
                               border: OutlineInputBorder(),
@@ -699,7 +699,7 @@ class _ActivityPageState extends State<ActivityPage> {
                           children: [
                             Expanded(
                               child: DropdownButtonFormField<String>(
-                                value: selectedType,
+                                initialValue: selectedType,
                                 decoration: const InputDecoration(
                                   labelText: 'Activity Type *',
                                   border: OutlineInputBorder(),

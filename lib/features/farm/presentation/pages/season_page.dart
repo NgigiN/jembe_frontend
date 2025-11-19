@@ -202,8 +202,6 @@ class _SeasonPageState extends State<SeasonPage> {
     DateTime? selectedEndDate;
     String? selectedPlantId;
     String? selectedLandId;
-    String? selectedPlantName;
-    String? selectedLandName;
 
     // Fetch lands and plants for dropdowns
     final lands = await FarmDataService.getLandsForDropdown();
@@ -265,12 +263,16 @@ class _SeasonPageState extends State<SeasonPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          initialValue: selectedPlantId,
+                          value: selectedPlantId,
                           decoration: const InputDecoration(
                             labelText: 'Select Plant *',
                             border: OutlineInputBorder(),
                           ),
-                          items: plants.map((plant) {
+                          items: plants
+                              .where((plant) =>
+                                  plant['id'] != null &&
+                                  plant['id'].toString().isNotEmpty)
+                              .map((plant) {
                             final name = plant['name'] ?? '';
                             final variety = plant['variety'] ?? '';
                             final displayName = variety.isNotEmpty
@@ -284,22 +286,21 @@ class _SeasonPageState extends State<SeasonPage> {
                           onChanged: (value) {
                             setState(() {
                               selectedPlantId = value;
-                              selectedPlantName =
-                                  plants.firstWhere(
-                                    (p) => p['id'] == value,
-                                  )['name'] ??
-                                  '';
                             });
                           },
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          initialValue: selectedLandId,
+                          value: selectedLandId,
                           decoration: const InputDecoration(
                             labelText: 'Select Land *',
                             border: OutlineInputBorder(),
                           ),
-                          items: lands.map((land) {
+                          items: lands
+                              .where((land) =>
+                                  land['id'] != null &&
+                                  land['id'].toString().isNotEmpty)
+                              .map((land) {
                             final name = land['name'] ?? '';
                             final location = land['location'] ?? '';
                             final displayName = location.isNotEmpty
@@ -313,11 +314,6 @@ class _SeasonPageState extends State<SeasonPage> {
                           onChanged: (value) {
                             setState(() {
                               selectedLandId = value;
-                              selectedLandName =
-                                  lands.firstWhere(
-                                    (l) => l['id'] == value,
-                                  )['name'] ??
-                                  '';
                             });
                           },
                         ),
@@ -466,11 +462,12 @@ class _SeasonPageState extends State<SeasonPage> {
   void _showEditSeasonDialog(BuildContext context, Season season) async {
     final nameController = TextEditingController(text: season.name);
     DateTime? selectedStartDate = season.startDate;
-    DateTime? selectedEndDate = season.endDate;
+    DateTime? selectedEndDate = season.endDate != null &&
+            season.endDate!.year > 2000
+        ? season.endDate
+        : null;
     String? selectedPlantId = season.plantId;
     String? selectedLandId = season.landId;
-    String? selectedPlantName;
-    String? selectedLandName;
 
     // Fetch lands and crops for dropdowns
     final lands = await FarmDataService.getLandsForDropdown();
@@ -485,20 +482,6 @@ class _SeasonPageState extends State<SeasonPage> {
       );
       return;
     }
-
-    // Set initial values for display
-    selectedPlantName =
-        plants.firstWhere(
-          (p) => p['id'] == selectedPlantId,
-          orElse: () => {'name': ''},
-        )['name'] ??
-        '';
-    selectedLandName =
-        lands.firstWhere(
-          (l) => l['id'] == selectedLandId,
-          orElse: () => {'name': ''},
-        )['name'] ??
-        '';
 
     showModalBottomSheet(
       context: context,
@@ -546,12 +529,16 @@ class _SeasonPageState extends State<SeasonPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          initialValue: selectedPlantId,
+                          value: selectedPlantId,
                           decoration: const InputDecoration(
                             labelText: 'Select Plant *',
                             border: OutlineInputBorder(),
                           ),
-                          items: plants.map((plant) {
+                          items: plants
+                              .where((plant) =>
+                                  plant['id'] != null &&
+                                  plant['id'].toString().isNotEmpty)
+                              .map((plant) {
                             final name = plant['name'] ?? '';
                             final variety = plant['variety'] ?? '';
                             final displayName = variety.isNotEmpty
@@ -565,22 +552,21 @@ class _SeasonPageState extends State<SeasonPage> {
                           onChanged: (value) {
                             setState(() {
                               selectedPlantId = value;
-                              selectedPlantName =
-                                  plants.firstWhere(
-                                    (p) => p['id'] == value,
-                                  )['name'] ??
-                                  '';
                             });
                           },
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          initialValue: selectedLandId,
+                          value: selectedLandId,
                           decoration: const InputDecoration(
                             labelText: 'Select Land *',
                             border: OutlineInputBorder(),
                           ),
-                          items: lands.map((land) {
+                          items: lands
+                              .where((land) =>
+                                  land['id'] != null &&
+                                  land['id'].toString().isNotEmpty)
+                              .map((land) {
                             final name = land['name'] ?? '';
                             final location = land['location'] ?? '';
                             final displayName = location.isNotEmpty
@@ -594,11 +580,6 @@ class _SeasonPageState extends State<SeasonPage> {
                           onChanged: (value) {
                             setState(() {
                               selectedLandId = value;
-                              selectedLandName =
-                                  lands.firstWhere(
-                                    (l) => l['id'] == value,
-                                  )['name'] ??
-                                  '';
                             });
                           },
                         ),
@@ -629,25 +610,61 @@ class _SeasonPageState extends State<SeasonPage> {
                         ListTile(
                           title: const Text('End Date (Optional)'),
                           subtitle: Text(
-                            selectedEndDate != null
+                            selectedEndDate != null &&
+                                    selectedEndDate!.year > 2000
                                 ? _formatDate(selectedEndDate!)
                                 : 'Select end date (optional)',
                           ),
-                          trailing: const Icon(Icons.calendar_today),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (selectedEndDate != null &&
+                                  selectedEndDate!.year > 2000)
+                                IconButton(
+                                  icon: const Icon(Icons.clear, size: 20),
+                                  onPressed: () {
+                                    setState(() {
+                                      selectedEndDate = null;
+                                    });
+                                  },
+                                ),
+                              const Icon(Icons.calendar_today),
+                            ],
+                          ),
                           onTap: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate:
-                                  selectedEndDate ??
-                                  selectedStartDate ??
-                                  DateTime.now(),
-                              firstDate: selectedStartDate ?? DateTime(2020),
-                              lastDate: DateTime(2030),
-                            );
-                            if (date != null) {
-                              setState(() {
-                                selectedEndDate = date;
-                              });
+                            final validEndDate = selectedEndDate != null &&
+                                    selectedEndDate!.year > 2000
+                                ? selectedEndDate
+                                : null;
+                            final initialDate = validEndDate ??
+                                selectedStartDate ??
+                                DateTime.now();
+                            final firstDate = selectedStartDate ?? DateTime(2020);
+
+                            if (initialDate.isBefore(firstDate)) {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: firstDate,
+                                firstDate: firstDate,
+                                lastDate: DateTime(2030),
+                              );
+                              if (date != null) {
+                                setState(() {
+                                  selectedEndDate = date;
+                                });
+                              }
+                            } else {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: initialDate,
+                                firstDate: firstDate,
+                                lastDate: DateTime(2030),
+                              );
+                              if (date != null) {
+                                setState(() {
+                                  selectedEndDate = date;
+                                });
+                              }
                             }
                           },
                         ),

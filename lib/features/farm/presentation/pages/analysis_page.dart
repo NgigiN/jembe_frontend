@@ -286,15 +286,17 @@ class CostBreakdownPage extends StatelessWidget {
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     title: Text(
-                      breakdown.inputType,
+                      breakdown.category.isNotEmpty ? breakdown.category : breakdown.inputType,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Season: ${breakdown.seasonName}'),
-                        Text('Plant: ${breakdown.cropName}'),
-                        Text('Land: ${breakdown.landName}'),
+                        Text('Category: ${breakdown.category.isNotEmpty ? breakdown.category : "N/A"}'),
+                        Text('Type: ${breakdown.inputType}'),
+                        Text(
+                          'Total Cost: \$${breakdown.inputCost.toStringAsFixed(2)}',
+                        ),
                         Text(
                           'Percentage: ${breakdown.percentage.toStringAsFixed(1)}%',
                         ),
