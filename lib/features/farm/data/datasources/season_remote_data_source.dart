@@ -30,7 +30,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
 
     try {
       final response = await client.get(
-        Uri.parse('$baseUrl/api/collections/seasons/records'),
+        Uri.parse('$baseUrl/api/seasons'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -39,18 +39,16 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final items = data['items'] as List;
+        final items = data as List;
         print('Found ${items.length} seasons');
         return items.map((json) => SeasonModel.fromJson(json)).toList();
       } else {
         String errorMsg =
             'Failed to load seasons (Status: ${response.statusCode})';
         try {
-          final data = json.decode(response.body);
-          if (data is Map && data['data'] != null) {
-            errorMsg = data['data'].toString();
-          } else if (data['message'] != null) {
-            errorMsg = data['message'].toString();
+          final errorData = json.decode(response.body);
+          if (errorData is Map && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
           }
         } catch (_) {}
         throw ServerException(errorMsg);
@@ -68,32 +66,29 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
   Future<SeasonModel> addSeason(SeasonModel season) async {
     final token = await _getToken();
     final response = await client.post(
-      Uri.parse('$baseUrl/api/collections/seasons/records'),
+      Uri.parse('$baseUrl/api/seasons'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
       body: json.encode({
-        'user_id': season.userId,
         'name': season.name,
-        'crop_id': season.cropId,
-        'land_id': season.landId,
-        'start_date': season.startDate.toIso8601String(),
-        'end_date': season.endDate?.toIso8601String(),
+        'plant_id': int.tryParse(season.plantId) ?? 0,
+        'land_id': int.tryParse(season.landId) ?? 0,
+        'start_date': season.startDate.toUtc().toIso8601String(),
+        'end_date': season.endDate?.toUtc().toIso8601String(),
       }),
     );
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 201) {
       final data = json.decode(response.body);
       return SeasonModel.fromJson(data);
     } else {
       String errorMsg = 'Failed to add season';
       try {
-        final data = json.decode(response.body);
-        if (data is Map && data['data'] != null) {
-          errorMsg = data['data'].toString();
-        } else if (data['message'] != null) {
-          errorMsg = data['message'].toString();
+        final errorData = json.decode(response.body);
+        if (errorData is Map && errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
         }
       } catch (_) {}
       throw ServerException(errorMsg);
@@ -103,18 +98,18 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
   @override
   Future<SeasonModel> updateSeason(SeasonModel season) async {
     final token = await _getToken();
-    final response = await client.patch(
-      Uri.parse('$baseUrl/api/collections/seasons/records/${season.id}'),
+    final response = await client.put(
+      Uri.parse('$baseUrl/api/seasons/${season.id}'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
       body: json.encode({
         'name': season.name,
-        'crop_id': season.cropId,
-        'land_id': season.landId,
-        'start_date': season.startDate.toIso8601String(),
-        'end_date': season.endDate?.toIso8601String(),
+        'plant_id': int.tryParse(season.plantId) ?? 0,
+        'land_id': int.tryParse(season.landId) ?? 0,
+        'start_date': season.startDate.toUtc().toIso8601String(),
+        'end_date': season.endDate?.toUtc().toIso8601String(),
       }),
     );
 
@@ -122,7 +117,14 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
       final data = json.decode(response.body);
       return SeasonModel.fromJson(data);
     } else {
-      throw ServerException();
+      String errorMsg = 'Failed to update season';
+      try {
+        final errorData = json.decode(response.body);
+        if (errorData is Map && errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
+        }
+      } catch (_) {}
+      throw ServerException(errorMsg);
     }
   }
 
@@ -130,12 +132,19 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
   Future<void> deleteSeason(String id) async {
     final token = await _getToken();
     final response = await client.delete(
-      Uri.parse('$baseUrl/api/collections/seasons/records/$id'),
+      Uri.parse('$baseUrl/api/seasons/$id'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
-    if (response.statusCode != 204) {
-      throw ServerException();
+    if (response.statusCode != 200) {
+      String errorMsg = 'Failed to delete season';
+      try {
+        final errorData = json.decode(response.body);
+        if (errorData is Map && errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
+        }
+      } catch (_) {}
+      throw ServerException(errorMsg);
     }
   }
 }

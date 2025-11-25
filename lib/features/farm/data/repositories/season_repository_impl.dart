@@ -29,12 +29,12 @@ class SeasonRepositoryImpl implements SeasonRepository {
         id: season.id,
         userId: season.userId,
         name: season.name,
-        cropId: season.cropId,
+        plantId: season.plantId,
         landId: season.landId,
         startDate: season.startDate,
         endDate: season.endDate,
-        createdAt: season.createdAt,
-        updatedAt: season.updatedAt,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
 
       final result = await remoteDataSource.addSeason(seasonModel);
@@ -45,22 +45,31 @@ class SeasonRepositoryImpl implements SeasonRepository {
   }
 
   @override
-  Future<Either<Failure, Season>> updateSeason(Season season) async {
+  Future<Either<Failure, void>> deleteSeason(String id) async {
     try {
-      final seasonModel = await remoteDataSource.updateSeason(
-        season as dynamic,
-      );
-      return Right(seasonModel);
+      await remoteDataSource.deleteSeason(id);
+      return const Right(null);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
   }
 
   @override
-  Future<Either<Failure, void>> deleteSeason(String id) async {
+  Future<Either<Failure, Season>> updateSeason(Season season) async {
     try {
-      await remoteDataSource.deleteSeason(id);
-      return const Right(null);
+      final seasonModel = SeasonModel(
+        id: season.id,
+        userId: season.userId,
+        name: season.name,
+        plantId: season.plantId,
+        landId: season.landId,
+        startDate: season.startDate,
+        endDate: season.endDate,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      final result = await remoteDataSource.updateSeason(seasonModel);
+      return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

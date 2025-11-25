@@ -18,12 +18,15 @@ class UserStorageModel {
   });
 
   factory UserStorageModel.fromJson(Map<String, dynamic> json) {
+    final firstName = json['first_name'] ?? '';
+    final lastName = json['last_name'] ?? '';
+    final fullName = '$firstName $lastName'.trim();
     return UserStorageModel(
       email: json['email'] ?? '',
       farmName: json['farm_name'] ?? '',
       id: json['id'] ?? '',
       location: json['location'] ?? '',
-      name: json['name'] ?? '',
+      name: json['name'] ?? fullName,
       token: json['token'] ?? '',
       loginTime: json['login_time'] != null
           ? DateTime.parse(json['login_time'])
@@ -47,12 +50,15 @@ class UserStorageModel {
     Map<String, dynamic> record,
     String token,
   ) {
+    final firstName = record['first_name'] ?? '';
+    final lastName = record['last_name'] ?? '';
+    final fullName = '$firstName $lastName'.trim();
     return UserStorageModel(
       email: record['email'] ?? '',
       farmName: record['farm_name'] ?? '',
-      id: record['id'] ?? '',
+      id: record['id'].toString(),
       location: record['location'] ?? '',
-      name: record['name'] ?? '',
+      name: fullName.isNotEmpty ? fullName : (record['name'] ?? ''),
       token: token,
       loginTime: DateTime.now(),
     );

@@ -12,9 +12,9 @@ class InputRepositoryImpl implements InputRepository {
   InputRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<Either<Failure, List<Input>>> getInputs() async {
+  Future<Either<Failure, List<Input>>> getInputs({String? sourceType}) async {
     try {
-      final inputs = await remoteDataSource.getInputs();
+      final inputs = await remoteDataSource.getInputs(sourceType: sourceType);
       return Right(inputs);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
@@ -27,13 +27,13 @@ class InputRepositoryImpl implements InputRepository {
       // Convert Input entity to InputModel
       final inputModel = InputModel(
         id: input.id,
-        seasonId: input.seasonId,
-        landId: input.landId,
+        sourceType: input.sourceType,
+        sourceId: input.sourceId,
+        animalId: input.animalId,
         type: input.type,
         quantity: input.quantity,
         cost: input.cost,
         date: input.date,
-        notes: input.notes,
         createdAt: input.createdAt,
         updatedAt: input.updatedAt,
       );
@@ -51,13 +51,13 @@ class InputRepositoryImpl implements InputRepository {
       // Convert Input entity to InputModel
       final inputModel = InputModel(
         id: input.id,
-        seasonId: input.seasonId,
-        landId: input.landId,
+        sourceType: input.sourceType,
+        sourceId: input.sourceId,
+        animalId: input.animalId,
         type: input.type,
         quantity: input.quantity,
         cost: input.cost,
         date: input.date,
-        notes: input.notes,
         createdAt: input.createdAt,
         updatedAt: input.updatedAt,
       );

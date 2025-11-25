@@ -2,8 +2,9 @@ import 'package:equatable/equatable.dart';
 
 class Input extends Equatable {
   final String id;
-  final String seasonId;
-  final String landId;
+  final String sourceType;
+  final String sourceId;
+  final int? animalId;
   final String type;
   final double? quantity;
   final double cost;
@@ -14,8 +15,9 @@ class Input extends Equatable {
 
   const Input({
     required this.id,
-    required this.seasonId,
-    required this.landId,
+    required this.sourceType,
+    required this.sourceId,
+    this.animalId,
     required this.type,
     this.quantity,
     required this.cost,
@@ -28,8 +30,9 @@ class Input extends Equatable {
   @override
   List<Object?> get props => [
     id,
-    seasonId,
-    landId,
+    sourceType,
+    sourceId,
+    animalId,
     type,
     quantity,
     cost,

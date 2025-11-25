@@ -3,70 +3,84 @@ import '../../domain/entities/activity.dart';
 class ActivityModel extends Activity {
   const ActivityModel({
     required super.id,
-    required super.seasonId,
-    required super.landId,
+    required super.sourceType,
+    required super.sourceId,
+    super.animalId,
     required super.type,
-    required super.date,
-    required super.cost,
     super.details,
+    required super.cost,
+    required super.date,
+    super.notes,
     required super.createdAt,
     required super.updatedAt,
   });
 
   factory ActivityModel.fromJson(Map<String, dynamic> json) {
+    final animalIdValue = json['AnimalID'] ?? json['animal_id'];
     return ActivityModel(
-      id: json['id'],
-      seasonId: json['season_id'],
-      landId: json['land_id'] ?? '',
-      type: json['type'],
-      date: _parseDate(json['date']),
-      cost: json['cost']?.toDouble() ?? 0.0,
-      details: json['details'],
-      createdAt: _parseDate(json['created']),
-      updatedAt: _parseDate(json['updated']),
+      id: (json['ID'] ?? json['id'] ?? '').toString(),
+      sourceType: json['SourceType'] ?? json['source_type'] ?? 'plant',
+      sourceId: (json['SourceID'] ?? json['source_id'] ?? '').toString(),
+      animalId: animalIdValue != null && animalIdValue != 0
+          ? (animalIdValue is int ? animalIdValue : int.tryParse(animalIdValue.toString()))
+          : null,
+      type: json['Type'] ?? json['type'] ?? '',
+      details: json['Details'] ?? json['details'],
+      cost: (json['Cost'] ?? json['cost'])?.toDouble() ?? 0.0,
+      date: _parseDate(json['Date'] ?? json['date']),
+      notes: json['Notes'] ?? json['notes'],
+      createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
+      updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'season_id': seasonId,
-      'land_id': landId,
+      'source_type': sourceType,
+      'source_id': sourceId,
+      'animal_id': animalId ?? 0,
       'type': type,
-      'date': date.toIso8601String(),
-      'cost': cost,
       'details': details,
-      'created': createdAt.toIso8601String(),
-      'updated': updatedAt.toIso8601String(),
+      'cost': cost,
+      'date': date.toIso8601String().split('T')[0],
+      'notes': notes,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 
   factory ActivityModel.create({
-    required String seasonId,
-    required String landId,
+    required String sourceType,
+    required String sourceId,
+    int? animalId,
     required String type,
-    required DateTime date,
-    required double cost,
     String? details,
+    required double cost,
+    required DateTime date,
+    String? notes,
   }) {
     final now = DateTime.now();
     return ActivityModel(
-      id: '', // Will be set by the server
-      seasonId: seasonId,
-      landId: landId,
+      id: '',
+      sourceType: sourceType,
+      sourceId: sourceId,
+      animalId: animalId,
       type: type,
-      date: date,
-      cost: cost,
       details: details,
+      cost: cost,
+      date: date,
+      notes: notes,
       createdAt: now,
       updatedAt: now,
     );
   }
 
-  static DateTime _parseDate(String dateString) {
-    // Handle PocketBase date format: "2025-08-02 00:00:00.000Z"
-    // Replace space with 'T' to make it ISO 8601 compliant
-    final normalizedDate = dateString.replaceFirst(' ', 'T');
-    return DateTime.parse(normalizedDate);
+  static DateTime _parseDate(dynamic dateValue) {
+    if (dateValue == null) return DateTime.now();
+    if (dateValue is String) {
+      return DateTime.parse(dateValue);
+    }
+    return DateTime.now();
   }
 }

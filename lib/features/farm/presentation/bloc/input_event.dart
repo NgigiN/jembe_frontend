@@ -6,7 +6,14 @@ abstract class InputEvent extends Equatable {
   List<Object> get props => [];
 }
 
-class GetInputsEvent extends InputEvent {}
+class GetInputsEvent extends InputEvent {
+  final String? sourceType;
+
+  GetInputsEvent({this.sourceType});
+
+  @override
+  List<Object> get props => [sourceType ?? ''];
+}
 
 class AddInputEvent extends InputEvent {
   final Input input;

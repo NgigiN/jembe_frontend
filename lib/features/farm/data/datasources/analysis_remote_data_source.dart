@@ -17,7 +17,7 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
   Future<List<TotalCostsBySeasonModel>> getTotalCostsBySeason() async {
     try {
       appLogger.info(LogCategory.farm, 'Fetching total costs by season');
-      final response = await FarmDataService.getTotalCostsBySeason();
+      final response = await FarmDataService.getTotalCosts(type: 'plant');
 
       appLogger.debug(
         LogCategory.http,
@@ -30,17 +30,26 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final List<dynamic> items = data['items'];
+        final totalCosts = data['total_costs']?.toDouble() ?? 0.0;
+        final breakdown = data['breakdown'] ?? {};
 
-        final List<TotalCostsBySeasonModel> totalCosts = items
-            .map((item) => TotalCostsBySeasonModel.fromJson(item))
-            .toList();
+        final List<TotalCostsBySeasonModel> result = [
+          TotalCostsBySeasonModel(
+            seasonId: '',
+            seasonName: 'Total',
+            startDate: DateTime.now(),
+            cropName: '',
+            landName: '',
+            farmName: '',
+            totalCost: totalCosts,
+          ),
+        ];
 
         appLogger.info(
           LogCategory.farm,
-          'Successfully fetched ${totalCosts.length} total costs by season',
+          'Successfully fetched total costs by season',
         );
-        return totalCosts;
+        return result;
       } else if (response.statusCode == 401 || response.statusCode == 403) {
         appLogger.warning(
           LogCategory.auth,
@@ -51,9 +60,9 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
         String errorMsg =
             'Failed to load total costs by season (Status: ${response.statusCode})';
         try {
-          final data = json.decode(response.body);
-          if (data is Map && data['message'] != null) {
-            errorMsg = data['message'].toString();
+          final errorData = json.decode(response.body);
+          if (errorData is Map && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
           }
         } catch (_) {}
         appLogger.error(
@@ -75,7 +84,7 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
   Future<List<CostBreakdownModel>> getCostBreakdownByInputType() async {
     try {
       appLogger.info(LogCategory.farm, 'Fetching cost breakdown by input type');
-      final response = await FarmDataService.getCostBreakdownByInputType();
+      final response = await FarmDataService.getCostBreakdown(type: 'plant');
 
       appLogger.debug(
         LogCategory.http,
@@ -88,11 +97,57 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final List<dynamic> items = data['items'];
+        final List<CostBreakdownModel> breakdowns = [];
 
-        final List<CostBreakdownModel> breakdowns = items
-            .map((item) => CostBreakdownModel.fromJson(item))
-            .toList();
+        if (data is List) {
+          for (var item in data) {
+            if (item is Map<String, dynamic>) {
+              breakdowns.add(
+                CostBreakdownModel(
+                  seasonId: '',
+                  seasonName: '',
+                  cropName: '',
+                  landName: '',
+                  inputType: item['Type'] ?? item['type'] ?? '',
+                  farmName: '',
+                  inputCost:
+                      (item['TotalCost'] ??
+                              item['total_cost'] ??
+                              item['amount'] ??
+                              0.0)
+                          .toDouble(),
+                  percentage: (item['Percentage'] ?? item['percentage'] ?? 0.0)
+                      .toDouble(),
+                  category: item['Category'] ?? item['category'] ?? '',
+                ),
+              );
+            }
+          }
+        } else if (data is Map) {
+          final byCategory = data['by_category'] ?? {};
+          if (byCategory['inputs'] != null) {
+            final inputs = byCategory['inputs'];
+            final items = inputs['items'] ?? [];
+            for (var item in items) {
+              breakdowns.add(
+                CostBreakdownModel(
+                  seasonId: '',
+                  seasonName: '',
+                  cropName: '',
+                  landName: '',
+                  inputType: item['type'] ?? '',
+                  farmName: '',
+                  inputCost: (item['amount'] ?? 0.0).toDouble(),
+                  percentage:
+                      (item['amount'] ?? 0.0).toDouble() /
+                      ((inputs['total'] ?? 1.0).toDouble()) *
+                      100,
+                  category: item['category'] ?? '',
+                ),
+              );
+            }
+          }
+        }
 
         appLogger.info(
           LogCategory.farm,
@@ -109,9 +164,9 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
         String errorMsg =
             'Failed to load cost breakdown (Status: ${response.statusCode})';
         try {
-          final data = json.decode(response.body);
-          if (data is Map && data['message'] != null) {
-            errorMsg = data['message'].toString();
+          final errorData = json.decode(response.body);
+          if (errorData is Map && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
           }
         } catch (_) {}
         appLogger.error(
@@ -133,7 +188,10 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
   Future<List<AnnualCostSummaryModel>> getAnnualCostSummary() async {
     try {
       appLogger.info(LogCategory.farm, 'Fetching annual cost summary');
-      final response = await FarmDataService.getAnnualCostSummary();
+      final currentYear = DateTime.now().year;
+      final response = await FarmDataService.getMonthlySummary(
+        year: currentYear,
+      );
 
       appLogger.debug(
         LogCategory.http,
@@ -146,11 +204,50 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final List<dynamic> items = data['items'];
+        final List<AnnualCostSummaryModel> summaries = [];
 
-        final List<AnnualCostSummaryModel> summaries = items
-            .map((item) => AnnualCostSummaryModel.fromJson(item))
-            .toList();
+        if (data is List) {
+          for (var item in data) {
+            if (item is Map<String, dynamic>) {
+              String year = currentYear.toString();
+              if (item['Month'] != null) {
+                final monthStr = item['Month'].toString();
+                if (monthStr.contains('-')) {
+                  year = monthStr.split('-')[0];
+                }
+              }
+              summaries.add(
+                AnnualCostSummaryModel(
+                  year: year,
+                  cropName: '',
+                  landName: '',
+                  farmName: '',
+                  totalCost:
+                      (item['TotalCosts'] ??
+                              item['total_costs'] ??
+                              item['costs'] ??
+                              0.0)
+                          .toDouble(),
+                ),
+              );
+            }
+          }
+        } else if (data is Map) {
+          final monthlyData = data['monthly_data'] ?? [];
+          summaries.addAll(
+            monthlyData
+                .map<AnnualCostSummaryModel>(
+                  (item) => AnnualCostSummaryModel(
+                    year: currentYear.toString(),
+                    cropName: '',
+                    landName: '',
+                    farmName: '',
+                    totalCost: (item['costs'] ?? 0.0).toDouble(),
+                  ),
+                )
+                .toList(),
+          );
+        }
 
         appLogger.info(
           LogCategory.farm,
@@ -167,9 +264,9 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
         String errorMsg =
             'Failed to load annual cost summary (Status: ${response.statusCode})';
         try {
-          final data = json.decode(response.body);
-          if (data is Map && data['message'] != null) {
-            errorMsg = data['message'].toString();
+          final errorData = json.decode(response.body);
+          if (errorData is Map && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
           }
         } catch (_) {}
         appLogger.error(

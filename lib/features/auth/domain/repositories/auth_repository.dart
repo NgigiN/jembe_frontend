@@ -7,7 +7,8 @@ abstract class AuthRepository {
   Future<Either<Failure, User>> signup(
     String email,
     String password,
-    String name,
+    String firstName,
+    String lastName,
     String farmName,
     String location,
   );

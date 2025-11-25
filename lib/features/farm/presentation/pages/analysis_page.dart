@@ -215,16 +215,16 @@ class TotalCostsBySeasonPage extends StatelessWidget {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Crop: ${cost.cropName}'),
-                        Text('Land: ${cost.landName}'),
-                        Text('Farm: ${cost.farmName}'),
+                        // Text('Plant: ${cost.cropName}'),
+                        // Text('Land: ${cost.landName}'),
+                        // Text('Farm: ${cost.farmName}'),
                         Text(
                           'Start Date: ${cost.startDate.toString().split(' ')[0]}',
                         ),
                       ],
                     ),
                     trailing: Text(
-                      '\$${cost.totalCost.toStringAsFixed(2)}',
+                      'KES ${cost.totalCost.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -286,22 +286,28 @@ class CostBreakdownPage extends StatelessWidget {
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     title: Text(
-                      breakdown.inputType,
+                      breakdown.category.isNotEmpty
+                          ? breakdown.category
+                          : breakdown.inputType,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Season: ${breakdown.seasonName}'),
-                        Text('Crop: ${breakdown.cropName}'),
-                        Text('Land: ${breakdown.landName}'),
+                        Text(
+                          'Category: ${breakdown.category.isNotEmpty ? breakdown.category : "N/A"}',
+                        ),
+                        Text('Type: ${breakdown.inputType}'),
+                        Text(
+                          'Total Cost: KES ${breakdown.inputCost.toStringAsFixed(2)}',
+                        ),
                         Text(
                           'Percentage: ${breakdown.percentage.toStringAsFixed(1)}%',
                         ),
                       ],
                     ),
                     trailing: Text(
-                      '\$${breakdown.inputCost.toStringAsFixed(2)}',
+                      'KES ${breakdown.inputCost.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -369,13 +375,13 @@ class AnnualSummaryPage extends StatelessWidget {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Crop: ${summary.cropName}'),
+                        Text('Plant: ${summary.cropName}'),
                         Text('Land: ${summary.landName}'),
                         Text('Farm: ${summary.farmName}'),
                       ],
                     ),
                     trailing: Text(
-                      '\$${summary.totalCost.toStringAsFixed(2)}',
+                      'KES ${summary.totalCost.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

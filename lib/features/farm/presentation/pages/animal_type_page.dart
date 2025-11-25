@@ -1,31 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/farm_bloc.dart';
-import '../bloc/farm_event.dart';
-import '../bloc/farm_state.dart';
-import '../../domain/entities/crop.dart';
-// Removed unused import
+import '../bloc/animal_type_bloc.dart';
+import '../bloc/animal_type_event.dart';
+import '../bloc/animal_type_state.dart';
+import '../../domain/entities/animal_type.dart';
 import '../../../auth/data/utils/user_utils.dart';
 
-class CropPage extends StatefulWidget {
-  const CropPage({super.key});
+class AnimalTypePage extends StatefulWidget {
+  const AnimalTypePage({super.key});
 
   @override
-  State<CropPage> createState() => _CropPageState();
+  State<AnimalTypePage> createState() => _AnimalTypePageState();
 }
 
-class _CropPageState extends State<CropPage> {
+class _AnimalTypePageState extends State<AnimalTypePage> {
   @override
   void initState() {
     super.initState();
-    context.read<FarmBloc>().add(GetCropsEvent());
+    context.read<AnimalTypeBloc>().add(GetAnimalTypesEvent());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Crop Management'),
+        title: const Text('Animal Types'),
         backgroundColor: Colors.green.shade600,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -34,13 +33,13 @@ class _CropPageState extends State<CropPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<FarmBloc, FarmState>(
+      body: BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
         builder: (context, state) {
-          if (state is FarmLoading) {
+          if (state is AnimalTypeLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state is FarmError) {
+          if (state is AnimalTypeError) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -59,7 +58,7 @@ class _CropPageState extends State<CropPage> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      context.read<FarmBloc>().add(GetCropsEvent());
+                      context.read<AnimalTypeBloc>().add(GetAnimalTypesEvent());
                     },
                     child: const Text('Retry'),
                   ),
@@ -68,16 +67,16 @@ class _CropPageState extends State<CropPage> {
             );
           }
 
-          if (state is FarmLoaded) {
-            if (state.crops.isEmpty) {
+          if (state is AnimalTypeLoaded) {
+            if (state.animalTypes.isEmpty) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.eco, size: 64, color: Colors.grey.shade400),
+                    Icon(Icons.category, size: 64, color: Colors.grey.shade400),
                     const SizedBox(height: 16),
                     const Text(
-                      'No crops registered yet',
+                      'No animal types added yet',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w500,
@@ -86,7 +85,7 @@ class _CropPageState extends State<CropPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Tap the + button to add your first crop',
+                      'Tap the + button to add your first animal type',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade600,
@@ -99,19 +98,19 @@ class _CropPageState extends State<CropPage> {
 
             return ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: state.crops.length,
+              itemCount: state.animalTypes.length,
               itemBuilder: (context, index) {
-                final crop = state.crops[index];
+                final animalType = state.animalTypes[index];
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   elevation: 2,
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: Colors.green.shade100,
-                      child: Icon(Icons.eco, color: Colors.green.shade700),
+                      backgroundColor: Colors.blue.shade100,
+                      child: Icon(Icons.category, color: Colors.blue.shade700),
                     ),
                     title: Text(
-                      crop.name,
+                      animalType.name,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
@@ -120,10 +119,10 @@ class _CropPageState extends State<CropPage> {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (crop.variety != null && crop.variety!.isNotEmpty)
-                          Text('Variety: ${crop.variety}'),
+                        if (animalType.notes != null && animalType.notes!.isNotEmpty)
+                          Text('Notes: ${animalType.notes}'),
                         Text(
-                          'Created: ${_formatDate(crop.createdAt)}',
+                          'Created: ${_formatDate(animalType.createdAt)}',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -134,9 +133,9 @@ class _CropPageState extends State<CropPage> {
                     trailing: PopupMenuButton<String>(
                       onSelected: (value) {
                         if (value == 'edit') {
-                          _showEditCropDialog(context, crop);
+                          _showEditAnimalTypeDialog(context, animalType);
                         } else if (value == 'delete') {
-                          _showDeleteConfirmation(context, crop);
+                          _showDeleteConfirmation(context, animalType);
                         }
                       },
                       itemBuilder: (context) => [
@@ -175,7 +174,7 @@ class _CropPageState extends State<CropPage> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddCropDialog(context),
+        onPressed: () => _showAddAnimalTypeDialog(context),
         backgroundColor: Colors.green.shade600,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
@@ -187,16 +186,16 @@ class _CropPageState extends State<CropPage> {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  void _showAddCropDialog(BuildContext context) {
+  void _showAddAnimalTypeDialog(BuildContext context) {
     final nameController = TextEditingController();
-    final varietyController = TextEditingController();
+    final notesController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
+        height: MediaQuery.of(context).size.height * 0.6,
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -210,8 +209,11 @@ class _CropPageState extends State<CropPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Add New Crop',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    'Add Animal Type',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
@@ -227,16 +229,19 @@ class _CropPageState extends State<CropPage> {
                       TextField(
                         controller: nameController,
                         decoration: const InputDecoration(
-                          labelText: 'Crop Name *',
+                          labelText: 'Animal Type Name *',
                           border: OutlineInputBorder(),
+                          hintText: 'e.g., Chickens, Cows, Goats',
                         ),
                       ),
                       const SizedBox(height: 16),
                       TextField(
-                        controller: varietyController,
+                        controller: notesController,
+                        maxLines: 3,
                         decoration: const InputDecoration(
-                          labelText: 'Variety (Optional)',
+                          labelText: 'Notes (Optional)',
                           border: OutlineInputBorder(),
+                          hintText: 'e.g., Poultry for eggs and meat',
                         ),
                       ),
                     ],
@@ -251,7 +256,7 @@ class _CropPageState extends State<CropPage> {
                     if (nameController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Crop name is required'),
+                          content: Text('Animal type name is required'),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -269,14 +274,14 @@ class _CropPageState extends State<CropPage> {
                       return;
                     }
 
-                    // Removed unused variable
+                    final notes = notesController.text.trim().isEmpty
+                        ? null
+                        : notesController.text.trim();
 
-                    context.read<FarmBloc>().add(
-                      AddCropEvent(
+                    context.read<AnimalTypeBloc>().add(
+                      AddAnimalTypeEvent(
                         nameController.text.trim(),
-                        varietyController.text.trim().isEmpty
-                            ? ''
-                            : varietyController.text.trim(),
+                        notes,
                         userId,
                       ),
                     );
@@ -288,8 +293,11 @@ class _CropPageState extends State<CropPage> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: const Text(
-                    'Add Crop',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    'Add Animal Type',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -300,16 +308,16 @@ class _CropPageState extends State<CropPage> {
     );
   }
 
-  void _showEditCropDialog(BuildContext context, Crop crop) {
-    final nameController = TextEditingController(text: crop.name);
-    final varietyController = TextEditingController(text: crop.variety ?? '');
+  void _showEditAnimalTypeDialog(BuildContext context, AnimalType animalType) {
+    final nameController = TextEditingController(text: animalType.name);
+    final notesController = TextEditingController(text: animalType.notes ?? '');
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.5,
+        height: MediaQuery.of(context).size.height * 0.6,
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -323,8 +331,11 @@ class _CropPageState extends State<CropPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Edit Crop',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    'Edit Animal Type',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
@@ -340,15 +351,16 @@ class _CropPageState extends State<CropPage> {
                       TextField(
                         controller: nameController,
                         decoration: const InputDecoration(
-                          labelText: 'Crop Name *',
+                          labelText: 'Animal Type Name *',
                           border: OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 16),
                       TextField(
-                        controller: varietyController,
+                        controller: notesController,
+                        maxLines: 3,
                         decoration: const InputDecoration(
-                          labelText: 'Variety (Optional)',
+                          labelText: 'Notes (Optional)',
                           border: OutlineInputBorder(),
                         ),
                       ),
@@ -360,24 +372,26 @@ class _CropPageState extends State<CropPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () async {
+                  onPressed: () {
                     if (nameController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Crop name is required'),
+                          content: Text('Animal type name is required'),
                           backgroundColor: Colors.red,
                         ),
                       );
                       return;
                     }
 
-                    context.read<FarmBloc>().add(
-                      UpdateCropEvent(
-                        crop.id,
+                    final notes = notesController.text.trim().isEmpty
+                        ? null
+                        : notesController.text.trim();
+
+                    context.read<AnimalTypeBloc>().add(
+                      UpdateAnimalTypeEvent(
+                        animalType.id,
                         nameController.text.trim(),
-                        varietyController.text.trim().isEmpty
-                            ? ''
-                            : varietyController.text.trim(),
+                        notes,
                       ),
                     );
                     Navigator.pop(context);
@@ -388,8 +402,11 @@ class _CropPageState extends State<CropPage> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: const Text(
-                    'Update Crop',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    'Update Animal Type',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -400,14 +417,14 @@ class _CropPageState extends State<CropPage> {
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, Crop crop) {
+  void _showDeleteConfirmation(BuildContext context, AnimalType animalType) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Delete Crop'),
+          title: const Text('Delete Animal Type'),
           content: Text(
-            'Are you sure you want to delete "${crop.name}"${crop.variety != null ? ' (${crop.variety})' : ''}? This action cannot be undone.',
+            'Are you sure you want to delete "${animalType.name}"? This action cannot be undone.',
           ),
           actions: [
             TextButton(
@@ -417,10 +434,10 @@ class _CropPageState extends State<CropPage> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                context.read<FarmBloc>().add(DeleteCropEvent(crop.id));
+                context.read<AnimalTypeBloc>().add(DeleteAnimalTypeEvent(animalType.id));
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('${crop.name} deleted successfully'),
+                    content: Text('${animalType.name} deleted successfully'),
                     backgroundColor: Colors.green,
                   ),
                 );
@@ -434,3 +451,4 @@ class _CropPageState extends State<CropPage> {
     );
   }
 }
+

@@ -9,6 +9,7 @@ class CostBreakdownModel extends Equatable {
   final String farmName;
   final double inputCost;
   final double percentage;
+  final String category;
 
   const CostBreakdownModel({
     required this.seasonId,
@@ -19,6 +20,7 @@ class CostBreakdownModel extends Equatable {
     required this.farmName,
     required this.inputCost,
     required this.percentage,
+    required this.category,
   });
 
   factory CostBreakdownModel.fromJson(Map<String, dynamic> json) {
@@ -31,6 +33,7 @@ class CostBreakdownModel extends Equatable {
       farmName: json['farm_name'] ?? '',
       inputCost: (json['input_cost'] ?? 0.0).toDouble(),
       percentage: (json['percentage'] ?? 0.0).toDouble(),
+      category: json['category'] ?? '',
     );
   }
 
@@ -44,6 +47,7 @@ class CostBreakdownModel extends Equatable {
       'farm_name': farmName,
       'input_cost': inputCost,
       'percentage': percentage,
+      'category': category,
     };
   }
 
@@ -57,5 +61,6 @@ class CostBreakdownModel extends Equatable {
     farmName,
     inputCost,
     percentage,
+    category,
   ];
 }

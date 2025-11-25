@@ -5,6 +5,7 @@ import '../../domain/usecases/login.dart';
 import '../../domain/usecases/signup.dart';
 import '../../data/services/user_storage_service.dart';
 import '../../domain/entities/user.dart';
+import '../../../farm/data/services/farm_data_service.dart';
 
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -38,8 +39,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             appLogger.logAuthEvent(
               'Login successful',
               userId: user.id,
-              details: {'email': event.email, 'name': user.name},
+              details: {'email': event.email, 'name': user.fullName},
             );
+            try {
+              await FarmDataService.getCostCategories();
+              appLogger.info(LogCategory.auth, 'Cost categories initialized after login');
+            } catch (e) {
+              appLogger.logError('CostCategoriesInit', e);
+            }
             emit(AuthAuthenticated(user));
           },
         );
@@ -56,7 +63,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           SignupParams(
             email: event.email,
             password: event.password,
-            name: event.name,
+            firstName: event.firstName,
+            lastName: event.lastName,
             farmName: event.farmName,
             location: event.location,
           ),
@@ -71,7 +79,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             emit(AuthError(message));
           },
           (user) async {
-            // Emit success and let the UI handle the navigation
+            try {
+              await FarmDataService.getCostCategories();
+              appLogger.info(LogCategory.auth, 'Cost categories initialized after signup');
+            } catch (e) {
+              appLogger.logError('CostCategoriesInit', e);
+            }
             emit(SignupSuccess());
           },
         );
@@ -98,10 +111,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       if (isLoggedIn) {
         final userData = await UserStorageService.getUserData();
         if (userData != null) {
+          final nameParts = userData.name.split(' ');
+          final firstName = nameParts.isNotEmpty ? nameParts[0] : '';
+          final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
           final user = User(
             id: userData.id,
             email: userData.email,
-            name: userData.name,
+            firstName: firstName,
+            lastName: lastName,
             farmName: userData.farmName,
             location: userData.location,
           );
@@ -110,6 +127,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             userId: user.id,
             details: {'email': user.email},
           );
+          try {
+            await FarmDataService.getCostCategories();
+            appLogger.info(LogCategory.auth, 'Cost categories initialized after existing login check');
+          } catch (e) {
+            appLogger.logError('CostCategoriesInit', e);
+          }
           emit(AuthAuthenticated(user));
         } else {
           appLogger.warning(

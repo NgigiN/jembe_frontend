@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/error/exceptions.dart';
 import '../models/land_model.dart';
-import '../models/crop_model.dart';
+import '../models/plant_model.dart';
 import '../models/season_model.dart';
 import '../models/activity_model.dart';
 
@@ -11,9 +11,9 @@ abstract class FarmRemoteDataSource {
   Future<List<LandModel>> getLands();
   Future<LandModel> addLand(String name);
   Future<LandModel> updateLand(String id, String name);
-  Future<List<CropModel>> getCrops();
-  Future<CropModel> addCrop(String name);
-  Future<CropModel> updateCrop(String id, String name);
+  Future<List<PlantModel>> getPlants();
+  Future<PlantModel> addPlant(String name);
+  Future<PlantModel> updatePlant(String id, String name);
   Future<List<SeasonModel>> getSeasons();
   Future<SeasonModel> addSeason(String name);
   Future<SeasonModel> updateSeason(String id, String name);
@@ -88,7 +88,7 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
   }
 
   @override
-  Future<List<CropModel>> getCrops() async {
+  Future<List<PlantModel>> getPlants() async {
     final token = await _getToken();
     final response = await client.get(
       Uri.parse('$baseUrl/api/collections/crops/records'),
@@ -97,7 +97,7 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       return (data['items'] as List)
-          .map((json) => CropModel.fromJson(json))
+          .map((json) => PlantModel.fromJson(json))
           .toList();
     } else {
       throw ServerException();
@@ -105,7 +105,7 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
   }
 
   @override
-  Future<CropModel> addCrop(String name) async {
+  Future<PlantModel> addPlant(String name) async {
     final token = await _getToken();
     final response = await client.post(
       Uri.parse('$baseUrl/api/collections/crops/records'),
@@ -117,14 +117,14 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
     );
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return CropModel.fromJson(data);
+      return PlantModel.fromJson(data);
     } else {
       throw ServerException();
     }
   }
 
   @override
-  Future<CropModel> updateCrop(String id, String name) async {
+  Future<PlantModel> updatePlant(String id, String name) async {
     final token = await _getToken();
     final response = await client.patch(
       Uri.parse('$baseUrl/api/collections/crops/records/$id'),
@@ -136,7 +136,7 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
     );
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return CropModel.fromJson(data);
+      return PlantModel.fromJson(data);
     } else {
       throw ServerException();
     }

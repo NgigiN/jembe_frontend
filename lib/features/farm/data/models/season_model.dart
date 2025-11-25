@@ -5,7 +5,7 @@ class SeasonModel extends Season {
     required super.id,
     required super.userId,
     required super.name,
-    required super.cropId,
+    required super.plantId,
     required super.landId,
     required super.startDate,
     super.endDate,
@@ -14,27 +14,28 @@ class SeasonModel extends Season {
   });
 
   factory SeasonModel.fromJson(Map<String, dynamic> json) {
+    final endDateValue = json['EndDate'] ?? json['end_date'];
     return SeasonModel(
-      id: json['id'],
-      userId: json['user_id'],
-      name: json['name'],
-      cropId: json['crop_id'],
-      landId: json['land_id'],
-      startDate: _parseDate(json['start_date']),
-      endDate:
-          json['end_date'] != null && json['end_date'].toString().isNotEmpty
-          ? _parseDate(json['end_date'])
+      id: (json['ID'] ?? json['id'] ?? '').toString(),
+      userId: (json['UserID'] ?? json['user_id'] ?? '').toString(),
+      name: json['Name'] ?? json['name'] ?? '',
+      plantId: (json['PlantID'] ?? json['plant_id'] ?? '').toString(),
+      landId: (json['LandID'] ?? json['land_id'] ?? '').toString(),
+      startDate: _parseDate(json['StartDate'] ?? json['start_date']),
+      endDate: endDateValue != null && endDateValue.toString().isNotEmpty
+          ? _parseDate(endDateValue)
           : null,
-      createdAt: _parseDate(json['created']),
-      updatedAt: _parseDate(json['updated']),
+      createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
+      updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );
   }
 
-  static DateTime _parseDate(String dateString) {
-    // Handle PocketBase date format: "2025-08-02 00:00:00.000Z"
-    // Replace space with 'T' to make it ISO 8601 compliant
-    final normalizedDate = dateString.replaceFirst(' ', 'T');
-    return DateTime.parse(normalizedDate);
+  static DateTime _parseDate(dynamic dateValue) {
+    if (dateValue == null) return DateTime.now();
+    if (dateValue is String) {
+      return DateTime.parse(dateValue);
+    }
+    return DateTime.now();
   }
 
   Map<String, dynamic> toJson() {
@@ -42,29 +43,29 @@ class SeasonModel extends Season {
       'id': id,
       'user_id': userId,
       'name': name,
-      'crop_id': cropId,
+      'plant_id': plantId,
       'land_id': landId,
-      'start_date': startDate.toIso8601String(),
-      'end_date': endDate?.toIso8601String(),
-      'created': createdAt.toIso8601String(),
-      'updated': updatedAt.toIso8601String(),
+      'start_date': startDate.toIso8601String().split('T')[0],
+      'end_date': endDate?.toIso8601String().split('T')[0],
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 
   factory SeasonModel.create({
     required String userId,
     required String name,
-    required String cropId,
+    required String plantId,
     required String landId,
     required DateTime startDate,
     DateTime? endDate,
   }) {
     final now = DateTime.now();
     return SeasonModel(
-      id: '', // Will be set by the server
+      id: '',
       userId: userId,
       name: name,
-      cropId: cropId,
+      plantId: plantId,
       landId: landId,
       startDate: startDate,
       endDate: endDate,

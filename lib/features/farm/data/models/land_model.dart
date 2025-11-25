@@ -14,15 +14,23 @@ class LandModel extends Land {
 
   factory LandModel.fromJson(Map<String, dynamic> json) {
     return LandModel(
-      id: json['id'],
-      userId: json['user_id'],
-      name: json['name'],
-      size: json['size']?.toDouble(),
-      location: json['location'],
-      soilType: json['soil_type'],
-      createdAt: DateTime.parse(json['created']),
-      updatedAt: DateTime.parse(json['updated']),
+      id: (json['ID'] ?? json['id'] ?? '').toString(),
+      userId: (json['UserID'] ?? json['user_id'] ?? '').toString(),
+      name: json['Name'] ?? json['name'] ?? '',
+      size: (json['Size'] ?? json['size'])?.toDouble(),
+      location: json['Location'] ?? json['location'],
+      soilType: json['SoilType'] ?? json['soil_type'],
+      createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
+      updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );
+  }
+
+  static DateTime _parseDate(dynamic dateValue) {
+    if (dateValue == null) return DateTime.now();
+    if (dateValue is String) {
+      return DateTime.parse(dateValue);
+    }
+    return DateTime.now();
   }
 
   Map<String, dynamic> toJson() {
@@ -33,8 +41,8 @@ class LandModel extends Land {
       'size': size,
       'location': location,
       'soil_type': soilType,
-      'created': createdAt.toIso8601String(),
-      'updated': updatedAt.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 

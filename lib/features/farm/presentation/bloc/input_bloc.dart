@@ -1,8 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/error/failures.dart';
-import '../../../../core/usecases/usecase.dart';
 import '../../domain/entities/input.dart';
 import '../../domain/usecases/get_inputs.dart';
+import '../../domain/usecases/get_inputs_params.dart';
 import '../../domain/usecases/add_input.dart';
 import '../bloc/input_event.dart';
 import '../bloc/input_state.dart';
@@ -18,7 +18,9 @@ class InputBloc extends Bloc<InputEvent, InputState> {
       emit(InputLoading());
 
       try {
-        final result = await getInputs(NoParams());
+        final result = await getInputs(
+          GetInputsParams(sourceType: event.sourceType),
+        );
         result.fold(
           (failure) {
             print('GetInputs failed: $failure');

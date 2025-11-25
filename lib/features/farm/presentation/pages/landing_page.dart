@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'farm_page.dart';
 import 'analysis_page.dart';
+import 'revenue_page.dart';
 import 'settings_page.dart';
 
 class LandingPage extends StatefulWidget {
@@ -16,6 +17,7 @@ class _LandingPageState extends State<LandingPage> {
   static final List<Widget> _pages = <Widget>[
     const FarmPage(),
     const AnalysisPage(),
+    const RevenuePage(),
     const SettingsPage(),
   ];
 
@@ -38,6 +40,10 @@ class _LandingPageState extends State<LandingPage> {
         onTap: _onItemTapped,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.agriculture), label: 'Farm'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.monetization_on),
+            label: 'Revenue',
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.analytics),
             label: 'Analysis',

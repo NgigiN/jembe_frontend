@@ -25,17 +25,24 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
   Future<List<LandModel>> getLands() async {
     final token = await _getToken();
     final response = await client.get(
-      Uri.parse('$baseUrl/api/collections/lands/records'),
+      Uri.parse('$baseUrl/api/lands'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return (data['items'] as List)
+      return (data as List)
           .map((json) => LandModel.fromJson(json))
           .toList();
     } else {
-      throw ServerException();
+      String errorMsg = 'Failed to load lands';
+      try {
+        final errorData = json.decode(response.body);
+        if (errorData is Map && errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
+        }
+      } catch (_) {}
+      throw ServerException(errorMsg);
     }
   }
 
@@ -43,13 +50,12 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
   Future<LandModel> addLand(LandModel land) async {
     final token = await _getToken();
     final response = await client.post(
-      Uri.parse('$baseUrl/api/collections/lands/records'),
+      Uri.parse('$baseUrl/api/lands'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
       body: json.encode({
-        'user_id': land.userId,
         'name': land.name,
         'size': land.size,
         'location': land.location,
@@ -57,17 +63,15 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
       }),
     );
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 201) {
       final data = json.decode(response.body);
       return LandModel.fromJson(data);
     } else {
       String errorMsg = 'Failed to add land';
       try {
-        final data = json.decode(response.body);
-        if (data is Map && data['data'] != null) {
-          errorMsg = data['data'].toString();
-        } else if (data['message'] != null) {
-          errorMsg = data['message'].toString();
+        final errorData = json.decode(response.body);
+        if (errorData is Map && errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
         }
       } catch (_) {}
       throw ServerException(errorMsg);
@@ -77,8 +81,8 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
   @override
   Future<LandModel> updateLand(LandModel land) async {
     final token = await _getToken();
-    final response = await client.patch(
-      Uri.parse('$baseUrl/api/collections/lands/records/${land.id}'),
+    final response = await client.put(
+      Uri.parse('$baseUrl/api/lands/${land.id}'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
@@ -95,7 +99,14 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
       final data = json.decode(response.body);
       return LandModel.fromJson(data);
     } else {
-      throw ServerException();
+      String errorMsg = 'Failed to update land';
+      try {
+        final errorData = json.decode(response.body);
+        if (errorData is Map && errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
+        }
+      } catch (_) {}
+      throw ServerException(errorMsg);
     }
   }
 
@@ -103,12 +114,19 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
   Future<void> deleteLand(String id) async {
     final token = await _getToken();
     final response = await client.delete(
-      Uri.parse('$baseUrl/api/collections/lands/records/$id'),
+      Uri.parse('$baseUrl/api/lands/$id'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
-    if (response.statusCode != 204) {
-      throw ServerException();
+    if (response.statusCode != 200) {
+      String errorMsg = 'Failed to delete land';
+      try {
+        final errorData = json.decode(response.body);
+        if (errorData is Map && errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
+        }
+      } catch (_) {}
+      throw ServerException(errorMsg);
     }
   }
 }

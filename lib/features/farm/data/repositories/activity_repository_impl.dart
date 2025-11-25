@@ -12,9 +12,9 @@ class ActivityRepositoryImpl implements ActivityRepository {
   ActivityRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<Either<Failure, List<Activity>>> getActivities() async {
+  Future<Either<Failure, List<Activity>>> getActivities({String? sourceType}) async {
     try {
-      final activities = await remoteDataSource.getActivities();
+      final activities = await remoteDataSource.getActivities(sourceType: sourceType);
       return Right(activities);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
@@ -27,14 +27,16 @@ class ActivityRepositoryImpl implements ActivityRepository {
       // Convert Activity entity to ActivityModel
       final activityModel = ActivityModel(
         id: activity.id,
-        seasonId: activity.seasonId,
-        landId: activity.landId,
+        sourceType: activity.sourceType,
+        sourceId: activity.sourceId,
+        animalId: activity.animalId,
         type: activity.type,
         date: activity.date,
         cost: activity.cost,
         details: activity.details,
-        createdAt: activity.createdAt,
-        updatedAt: activity.updatedAt,
+        notes: activity.notes,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
 
       final result = await remoteDataSource.addActivity(activityModel);
@@ -50,14 +52,16 @@ class ActivityRepositoryImpl implements ActivityRepository {
       // Convert Activity entity to ActivityModel
       final activityModel = ActivityModel(
         id: activity.id,
-        seasonId: activity.seasonId,
-        landId: activity.landId,
+        sourceType: activity.sourceType,
+        sourceId: activity.sourceId,
+        animalId: activity.animalId,
         type: activity.type,
         date: activity.date,
         cost: activity.cost,
         details: activity.details,
-        createdAt: activity.createdAt,
-        updatedAt: activity.updatedAt,
+        notes: activity.notes,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
 
       final result = await remoteDataSource.updateActivity(activityModel);

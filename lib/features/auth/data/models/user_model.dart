@@ -4,18 +4,20 @@ class UserModel extends User {
   const UserModel({
     required super.id,
     required super.email,
-    required super.name,
+    required super.firstName,
+    required super.lastName,
     required super.farmName,
     required super.location,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'],
+      id: json['id'].toString(),
       email: json['email'],
-      name: json['name'],
-      farmName: json['farm_name'],
-      location: json['location'],
+      firstName: json['first_name'] ?? '',
+      lastName: json['last_name'] ?? '',
+      farmName: json['farm_name'] ?? '',
+      location: json['location'] ?? '',
     );
   }
 
@@ -23,7 +25,8 @@ class UserModel extends User {
     return {
       'id': id,
       'email': email,
-      'name': name,
+      'first_name': firstName,
+      'last_name': lastName,
       'farm_name': farmName,
       'location': location,
     };

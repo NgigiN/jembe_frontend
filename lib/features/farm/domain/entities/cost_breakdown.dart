@@ -9,6 +9,7 @@ class CostBreakdown extends Equatable {
   final String farmName;
   final double inputCost;
   final double percentage;
+  final String category;
 
   const CostBreakdown({
     required this.seasonId,
@@ -19,6 +20,7 @@ class CostBreakdown extends Equatable {
     required this.farmName,
     required this.inputCost,
     required this.percentage,
+    required this.category,
   });
 
   @override
@@ -31,5 +33,6 @@ class CostBreakdown extends Equatable {
     farmName,
     inputCost,
     percentage,
+    category,
   ];
 }
