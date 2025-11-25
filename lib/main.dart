@@ -5,6 +5,8 @@ import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/splash_page.dart';
 import 'features/farm/presentation/bloc/farm_bloc.dart';
 import 'features/farm/presentation/bloc/farm_event.dart';
+import 'features/farm/presentation/bloc/animal_type_bloc.dart';
+import 'features/farm/presentation/bloc/herd_bloc.dart';
 import 'features/farm/presentation/bloc/analysis_bloc.dart';
 import 'features/farm/presentation/pages/landing_page.dart';
 import 'core/config/app_config.dart';
@@ -37,6 +39,8 @@ class MyApp extends StatelessWidget {
         BlocProvider<FarmBloc>(
           create: (_) => di.sl<FarmBloc>()..add(GetLandsEvent()),
         ),
+        BlocProvider<AnimalTypeBloc>(create: (_) => di.sl<AnimalTypeBloc>()),
+        BlocProvider<HerdBloc>(create: (_) => di.sl<HerdBloc>()),
         BlocProvider<AnalysisBloc>(create: (_) => di.sl<AnalysisBloc>()),
       ],
       child: LoggingMaterialApp(

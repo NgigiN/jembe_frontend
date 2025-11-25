@@ -5,7 +5,7 @@ import '../models/activity_model.dart';
 import '../../../auth/data/services/user_storage_service.dart';
 
 abstract class ActivityRemoteDataSource {
-  Future<List<ActivityModel>> getActivities();
+  Future<List<ActivityModel>> getActivities({String? sourceType});
   Future<ActivityModel> addActivity(ActivityModel activity);
   Future<ActivityModel> updateActivity(ActivityModel activity);
   Future<void> deleteActivity(String id);
@@ -22,15 +22,21 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
   }
 
   @override
-  Future<List<ActivityModel>> getActivities() async {
+  Future<List<ActivityModel>> getActivities({String? sourceType}) async {
     final token = await _getToken();
     if (token.isEmpty) {
       throw ServerException('No authentication token found');
     }
 
     try {
+      final uri = sourceType != null && sourceType.isNotEmpty
+          ? Uri.parse(
+              '$baseUrl/api/activities',
+            ).replace(queryParameters: {'source_type': sourceType})
+          : Uri.parse('$baseUrl/api/activities');
+
       final response = await client.get(
-        Uri.parse('$baseUrl/api/activities'),
+        uri,
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -38,8 +44,25 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       print('Activities API Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
+        if (response.body.isEmpty || response.body.trim() == 'null') {
+          print('No activities found (empty response)');
+          return [];
+        }
+
         final data = json.decode(response.body);
-        final items = data as List;
+        if (data == null) {
+          print('No activities found (null response)');
+          return [];
+        }
+
+        if (data is! List) {
+          print(
+            'Unexpected response format: expected List, got ${data.runtimeType}',
+          );
+          return [];
+        }
+
+        final items = data;
         print('Found ${items.length} activities');
         return items.map((json) => ActivityModel.fromJson(json)).toList();
       } else {

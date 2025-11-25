@@ -102,17 +102,25 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
         if (data is List) {
           for (var item in data) {
             if (item is Map<String, dynamic>) {
-              breakdowns.add(CostBreakdownModel(
-                seasonId: '',
-                seasonName: '',
-                cropName: '',
-                landName: '',
-                inputType: item['Type'] ?? item['type'] ?? '',
-                farmName: '',
-                inputCost: (item['TotalCost'] ?? item['total_cost'] ?? item['amount'] ?? 0.0).toDouble(),
-                percentage: (item['Percentage'] ?? item['percentage'] ?? 0.0).toDouble(),
-                category: item['Category'] ?? item['category'] ?? '',
-              ));
+              breakdowns.add(
+                CostBreakdownModel(
+                  seasonId: '',
+                  seasonName: '',
+                  cropName: '',
+                  landName: '',
+                  inputType: item['Type'] ?? item['type'] ?? '',
+                  farmName: '',
+                  inputCost:
+                      (item['TotalCost'] ??
+                              item['total_cost'] ??
+                              item['amount'] ??
+                              0.0)
+                          .toDouble(),
+                  percentage: (item['Percentage'] ?? item['percentage'] ?? 0.0)
+                      .toDouble(),
+                  category: item['Category'] ?? item['category'] ?? '',
+                ),
+              );
             }
           }
         } else if (data is Map) {
@@ -121,18 +129,22 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
             final inputs = byCategory['inputs'];
             final items = inputs['items'] ?? [];
             for (var item in items) {
-              breakdowns.add(CostBreakdownModel(
-                seasonId: '',
-                seasonName: '',
-                cropName: '',
-                landName: '',
-                inputType: item['type'] ?? '',
-                farmName: '',
-                inputCost: (item['amount'] ?? 0.0).toDouble(),
-                percentage: (item['amount'] ?? 0.0).toDouble() /
-                    ((inputs['total'] ?? 1.0).toDouble()) * 100,
-                category: item['category'] ?? '',
-              ));
+              breakdowns.add(
+                CostBreakdownModel(
+                  seasonId: '',
+                  seasonName: '',
+                  cropName: '',
+                  landName: '',
+                  inputType: item['type'] ?? '',
+                  farmName: '',
+                  inputCost: (item['amount'] ?? 0.0).toDouble(),
+                  percentage:
+                      (item['amount'] ?? 0.0).toDouble() /
+                      ((inputs['total'] ?? 1.0).toDouble()) *
+                      100,
+                  category: item['category'] ?? '',
+                ),
+              );
             }
           }
         }
@@ -177,7 +189,9 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
     try {
       appLogger.info(LogCategory.farm, 'Fetching annual cost summary');
       final currentYear = DateTime.now().year;
-      final response = await FarmDataService.getMonthlySummary(year: currentYear);
+      final response = await FarmDataService.getMonthlySummary(
+        year: currentYear,
+      );
 
       appLogger.debug(
         LogCategory.http,
@@ -202,26 +216,37 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
                   year = monthStr.split('-')[0];
                 }
               }
-              summaries.add(AnnualCostSummaryModel(
-                year: year,
-                cropName: '',
-                landName: '',
-                farmName: '',
-                totalCost: (item['TotalCosts'] ?? item['total_costs'] ?? item['costs'] ?? 0.0).toDouble(),
-              ));
+              summaries.add(
+                AnnualCostSummaryModel(
+                  year: year,
+                  cropName: '',
+                  landName: '',
+                  farmName: '',
+                  totalCost:
+                      (item['TotalCosts'] ??
+                              item['total_costs'] ??
+                              item['costs'] ??
+                              0.0)
+                          .toDouble(),
+                ),
+              );
             }
           }
         } else if (data is Map) {
           final monthlyData = data['monthly_data'] ?? [];
-          summaries.addAll(monthlyData
-              .map<AnnualCostSummaryModel>((item) => AnnualCostSummaryModel(
-                year: currentYear.toString(),
-                cropName: '',
-                landName: '',
-                farmName: '',
-                totalCost: (item['costs'] ?? 0.0).toDouble(),
-              ))
-              .toList());
+          summaries.addAll(
+            monthlyData
+                .map<AnnualCostSummaryModel>(
+                  (item) => AnnualCostSummaryModel(
+                    year: currentYear.toString(),
+                    cropName: '',
+                    landName: '',
+                    farmName: '',
+                    totalCost: (item['costs'] ?? 0.0).toDouble(),
+                  ),
+                )
+                .toList(),
+          );
         }
 
         appLogger.info(

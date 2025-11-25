@@ -215,9 +215,9 @@ class TotalCostsBySeasonPage extends StatelessWidget {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Plant: ${cost.cropName}'),
-                        Text('Land: ${cost.landName}'),
-                        Text('Farm: ${cost.farmName}'),
+                        // Text('Plant: ${cost.cropName}'),
+                        // Text('Land: ${cost.landName}'),
+                        // Text('Farm: ${cost.farmName}'),
                         Text(
                           'Start Date: ${cost.startDate.toString().split(' ')[0]}',
                         ),
@@ -286,13 +286,17 @@ class CostBreakdownPage extends StatelessWidget {
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     title: Text(
-                      breakdown.category.isNotEmpty ? breakdown.category : breakdown.inputType,
+                      breakdown.category.isNotEmpty
+                          ? breakdown.category
+                          : breakdown.inputType,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Category: ${breakdown.category.isNotEmpty ? breakdown.category : "N/A"}'),
+                        Text(
+                          'Category: ${breakdown.category.isNotEmpty ? breakdown.category : "N/A"}',
+                        ),
                         Text('Type: ${breakdown.inputType}'),
                         Text(
                           'Total Cost: \$${breakdown.inputCost.toStringAsFixed(2)}',

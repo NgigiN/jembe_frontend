@@ -263,26 +263,29 @@ class _SeasonPageState extends State<SeasonPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: selectedPlantId,
+                          initialValue: selectedPlantId,
                           decoration: const InputDecoration(
                             labelText: 'Select Plant *',
                             border: OutlineInputBorder(),
                           ),
                           items: plants
-                              .where((plant) =>
-                                  plant['id'] != null &&
-                                  plant['id'].toString().isNotEmpty)
+                              .where(
+                                (plant) =>
+                                    plant['id'] != null &&
+                                    plant['id'].toString().isNotEmpty,
+                              )
                               .map((plant) {
-                            final name = plant['name'] ?? '';
-                            final variety = plant['variety'] ?? '';
-                            final displayName = variety.isNotEmpty
-                                ? '$name ($variety)'
-                                : name;
-                            return DropdownMenuItem<String>(
-                              value: plant['id']?.toString() ?? '',
-                              child: Text(displayName),
-                            );
-                          }).toList(),
+                                final name = plant['name'] ?? '';
+                                final variety = plant['variety'] ?? '';
+                                final displayName = variety.isNotEmpty
+                                    ? '$name ($variety)'
+                                    : name;
+                                return DropdownMenuItem<String>(
+                                  value: plant['id']?.toString() ?? '',
+                                  child: Text(displayName),
+                                );
+                              })
+                              .toList(),
                           onChanged: (value) {
                             setState(() {
                               selectedPlantId = value;
@@ -291,26 +294,29 @@ class _SeasonPageState extends State<SeasonPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: selectedLandId,
+                          initialValue: selectedLandId,
                           decoration: const InputDecoration(
                             labelText: 'Select Land *',
                             border: OutlineInputBorder(),
                           ),
                           items: lands
-                              .where((land) =>
-                                  land['id'] != null &&
-                                  land['id'].toString().isNotEmpty)
+                              .where(
+                                (land) =>
+                                    land['id'] != null &&
+                                    land['id'].toString().isNotEmpty,
+                              )
                               .map((land) {
-                            final name = land['name'] ?? '';
-                            final location = land['location'] ?? '';
-                            final displayName = location.isNotEmpty
-                                ? '$name ($location)'
-                                : name;
-                            return DropdownMenuItem<String>(
-                              value: land['id']?.toString() ?? '',
-                              child: Text(displayName),
-                            );
-                          }).toList(),
+                                final name = land['name'] ?? '';
+                                final location = land['location'] ?? '';
+                                final displayName = location.isNotEmpty
+                                    ? '$name ($location)'
+                                    : name;
+                                return DropdownMenuItem<String>(
+                                  value: land['id']?.toString() ?? '',
+                                  child: Text(displayName),
+                                );
+                              })
+                              .toList(),
                           onChanged: (value) {
                             setState(() {
                               selectedLandId = value;
@@ -462,8 +468,8 @@ class _SeasonPageState extends State<SeasonPage> {
   void _showEditSeasonDialog(BuildContext context, Season season) async {
     final nameController = TextEditingController(text: season.name);
     DateTime? selectedStartDate = season.startDate;
-    DateTime? selectedEndDate = season.endDate != null &&
-            season.endDate!.year > 2000
+    DateTime? selectedEndDate =
+        season.endDate != null && season.endDate!.year > 2000
         ? season.endDate
         : null;
     String? selectedPlantId = season.plantId;
@@ -529,26 +535,29 @@ class _SeasonPageState extends State<SeasonPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: selectedPlantId,
+                          initialValue: selectedPlantId,
                           decoration: const InputDecoration(
                             labelText: 'Select Plant *',
                             border: OutlineInputBorder(),
                           ),
                           items: plants
-                              .where((plant) =>
-                                  plant['id'] != null &&
-                                  plant['id'].toString().isNotEmpty)
+                              .where(
+                                (plant) =>
+                                    plant['id'] != null &&
+                                    plant['id'].toString().isNotEmpty,
+                              )
                               .map((plant) {
-                            final name = plant['name'] ?? '';
-                            final variety = plant['variety'] ?? '';
-                            final displayName = variety.isNotEmpty
-                                ? '$name ($variety)'
-                                : name;
-                            return DropdownMenuItem<String>(
-                              value: plant['id']?.toString() ?? '',
-                              child: Text(displayName),
-                            );
-                          }).toList(),
+                                final name = plant['name'] ?? '';
+                                final variety = plant['variety'] ?? '';
+                                final displayName = variety.isNotEmpty
+                                    ? '$name ($variety)'
+                                    : name;
+                                return DropdownMenuItem<String>(
+                                  value: plant['id']?.toString() ?? '',
+                                  child: Text(displayName),
+                                );
+                              })
+                              .toList(),
                           onChanged: (value) {
                             setState(() {
                               selectedPlantId = value;
@@ -557,26 +566,29 @@ class _SeasonPageState extends State<SeasonPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: selectedLandId,
+                          initialValue: selectedLandId,
                           decoration: const InputDecoration(
                             labelText: 'Select Land *',
                             border: OutlineInputBorder(),
                           ),
                           items: lands
-                              .where((land) =>
-                                  land['id'] != null &&
-                                  land['id'].toString().isNotEmpty)
+                              .where(
+                                (land) =>
+                                    land['id'] != null &&
+                                    land['id'].toString().isNotEmpty,
+                              )
                               .map((land) {
-                            final name = land['name'] ?? '';
-                            final location = land['location'] ?? '';
-                            final displayName = location.isNotEmpty
-                                ? '$name ($location)'
-                                : name;
-                            return DropdownMenuItem<String>(
-                              value: land['id']?.toString() ?? '',
-                              child: Text(displayName),
-                            );
-                          }).toList(),
+                                final name = land['name'] ?? '';
+                                final location = land['location'] ?? '';
+                                final displayName = location.isNotEmpty
+                                    ? '$name ($location)'
+                                    : name;
+                                return DropdownMenuItem<String>(
+                                  value: land['id']?.toString() ?? '',
+                                  child: Text(displayName),
+                                );
+                              })
+                              .toList(),
                           onChanged: (value) {
                             setState(() {
                               selectedLandId = value;
@@ -632,14 +644,17 @@ class _SeasonPageState extends State<SeasonPage> {
                             ],
                           ),
                           onTap: () async {
-                            final validEndDate = selectedEndDate != null &&
+                            final validEndDate =
+                                selectedEndDate != null &&
                                     selectedEndDate!.year > 2000
                                 ? selectedEndDate
                                 : null;
-                            final initialDate = validEndDate ??
+                            final initialDate =
+                                validEndDate ??
                                 selectedStartDate ??
                                 DateTime.now();
-                            final firstDate = selectedStartDate ?? DateTime(2020);
+                            final firstDate =
+                                selectedStartDate ?? DateTime(2020);
 
                             if (initialDate.isBefore(firstDate)) {
                               final date = await showDatePicker(

@@ -12,9 +12,9 @@ class ActivityRepositoryImpl implements ActivityRepository {
   ActivityRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<Either<Failure, List<Activity>>> getActivities() async {
+  Future<Either<Failure, List<Activity>>> getActivities({String? sourceType}) async {
     try {
-      final activities = await remoteDataSource.getActivities();
+      final activities = await remoteDataSource.getActivities(sourceType: sourceType);
       return Right(activities);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));

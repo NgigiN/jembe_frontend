@@ -119,7 +119,14 @@ class DeleteSeasonEvent extends FarmEvent {
   List<Object> get props => [id];
 }
 
-class GetActivitiesEvent extends FarmEvent {}
+class GetActivitiesEvent extends FarmEvent {
+  final String? sourceType;
+
+  GetActivitiesEvent({this.sourceType});
+
+  @override
+  List<Object> get props => [sourceType ?? ''];
+}
 
 class AddActivityEvent extends FarmEvent {
   final String description;
@@ -206,7 +213,14 @@ class DeleteActivityEvent extends FarmEvent {
 
 class GetActivitiesBySeasonEvent extends FarmEvent {}
 
-class GetInputsEvent extends FarmEvent {}
+class GetInputsEvent extends FarmEvent {
+  final String? sourceType;
+
+  GetInputsEvent({this.sourceType});
+
+  @override
+  List<Object> get props => [sourceType ?? ''];
+}
 
 class AddInputEvent extends FarmEvent {
   final String sourceType;

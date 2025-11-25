@@ -1,8 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/error/failures.dart';
-import '../../../../core/usecases/usecase.dart';
 import '../../domain/entities/activity.dart';
 import '../../domain/usecases/get_activities.dart';
+import '../../domain/usecases/get_activities_params.dart';
 import '../../domain/usecases/add_activity.dart';
 import '../bloc/activity_event.dart';
 import '../bloc/activity_state.dart';
@@ -18,7 +18,9 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       emit(ActivityLoading());
 
       try {
-        final result = await getActivities(NoParams());
+        final result = await getActivities(
+          GetActivitiesParams(sourceType: event.sourceType),
+        );
         result.fold(
           (failure) {
             print('GetActivities failed: $failure');

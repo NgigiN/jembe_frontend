@@ -3,11 +3,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/farm_bloc.dart';
 import '../bloc/farm_event.dart';
 import '../bloc/farm_state.dart';
+import '../bloc/herd_bloc.dart';
+import '../bloc/herd_event.dart';
+import '../bloc/herd_state.dart';
 import '../../domain/entities/activity.dart';
 import '../../data/services/farm_data_service.dart';
 
 class ActivityPage extends StatefulWidget {
-  const ActivityPage({super.key});
+  final String? sourceType;
+
+  const ActivityPage({super.key, this.sourceType});
 
   @override
   State<ActivityPage> createState() => _ActivityPageState();
@@ -20,7 +25,8 @@ class _ActivityPageState extends State<ActivityPage> {
   @override
   void initState() {
     super.initState();
-    context.read<FarmBloc>().add(GetActivitiesEvent());
+    context.read<FarmBloc>().add(GetActivitiesEvent(sourceType: widget.sourceType));
+    context.read<HerdBloc>().add(GetHerdsEvent());
     _loadCostCategories();
   }
 
@@ -81,7 +87,7 @@ class _ActivityPageState extends State<ActivityPage> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      context.read<FarmBloc>().add(GetActivitiesEvent());
+                      context.read<FarmBloc>().add(GetActivitiesEvent(sourceType: widget.sourceType));
                     },
                     child: const Text('Retry'),
                   ),
@@ -219,18 +225,18 @@ class _ActivityPageState extends State<ActivityPage> {
     DateTime? selectedDate;
     String? selectedSourceType = 'plant';
     String? selectedSeasonId;
-    String? selectedAnimalId;
-    int? selectedAnimalIdInt;
+    String? selectedHerdId;
 
     await _loadCostCategories();
 
     final seasons = await FarmDataService.getSeasonsForDropdown();
-    final animals = await FarmDataService.getAnimalsForDropdown();
+    final herdState = context.read<HerdBloc>().state;
+    final herds = herdState is HerdLoaded ? herdState.herds : [];
 
-    if (seasons.isEmpty && animals.isEmpty) {
+    if (seasons.isEmpty && herds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please add at least one season or animal first'),
+          content: Text('Please add at least one season or herd first'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -294,8 +300,7 @@ class _ActivityPageState extends State<ActivityPage> {
                             setState(() {
                               selectedSourceType = value ?? 'plant';
                               selectedSeasonId = null;
-                              selectedAnimalId = null;
-                              selectedAnimalIdInt = null;
+                              selectedHerdId = null;
                               typeController.clear();
                             });
                           },
@@ -321,30 +326,30 @@ class _ActivityPageState extends State<ActivityPage> {
                             },
                           ),
                         if (selectedSourceType == 'animal')
-                          DropdownButtonFormField<String>(
-                            initialValue: selectedAnimalId,
-                            decoration: const InputDecoration(
-                              labelText: 'Select Animal *',
-                              border: OutlineInputBorder(),
-                            ),
-                            items: animals.map((animal) {
-                              final displayName =
-                                  animal['type'] != null &&
-                                      animal['type'].toString().isNotEmpty
-                                  ? '${animal['name']} (${animal['type']})'
-                                  : animal['name'];
-                              return DropdownMenuItem<String>(
-                                value: animal['id'] as String,
-                                child: Text(displayName),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                selectedAnimalId = value;
-                                selectedAnimalIdInt = value != null
-                                    ? int.tryParse(value)
-                                    : null;
-                              });
+                          BlocBuilder<HerdBloc, HerdState>(
+                            builder: (context, herdState) {
+                              if (herdState is HerdLoaded) {
+                                final herds = herdState.herds;
+                                return DropdownButtonFormField<String>(
+                                  value: selectedHerdId,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Select Herd *',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: herds.map((herd) {
+                                    return DropdownMenuItem<String>(
+                                      value: herd.id,
+                                      child: Text('${herd.name} (${herd.location})'),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      selectedHerdId = value;
+                                    });
+                                  },
+                                );
+                              }
+                              return const CircularProgressIndicator();
                             },
                           ),
                         if (selectedSourceType == 'plant' ||
@@ -459,10 +464,10 @@ class _ActivityPageState extends State<ActivityPage> {
                       }
 
                       if (selectedSourceType == 'animal' &&
-                          selectedAnimalId == null) {
+                          selectedHerdId == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Please select an animal'),
+                            content: Text('Please select a herd'),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -503,7 +508,7 @@ class _ActivityPageState extends State<ActivityPage> {
 
                       final sourceId = selectedSourceType == 'plant'
                           ? selectedSeasonId!
-                          : selectedAnimalId!;
+                          : selectedHerdId!;
 
                       context.read<FarmBloc>().add(
                         AddActivityEvent(
@@ -512,7 +517,7 @@ class _ActivityPageState extends State<ActivityPage> {
                               : detailsController.text.trim(),
                           selectedSourceType!,
                           sourceId,
-                          selectedAnimalIdInt,
+                          0,
                           typeController.text.trim(),
                           selectedDate!.toIso8601String(),
                           detailsController.text.trim().isEmpty
@@ -558,22 +563,22 @@ class _ActivityPageState extends State<ActivityPage> {
     String? selectedSeasonId = activity.sourceType == 'plant'
         ? activity.sourceId
         : null;
-    String? selectedAnimalId = activity.sourceType == 'animal'
+    String? selectedHerdId = activity.sourceType == 'animal'
         ? activity.sourceId
         : null;
-    int? selectedAnimalIdInt = activity.animalId;
     String? selectedType = activity.type;
 
     await _loadCostCategories();
 
     final seasons = await FarmDataService.getSeasonsForDropdown();
-    final animals = await FarmDataService.getAnimalsForDropdown();
+    final herdState = context.read<HerdBloc>().state;
+    final herds = herdState is HerdLoaded ? herdState.herds : [];
 
     if ((selectedSourceType == 'plant' && seasons.isEmpty) ||
-        (selectedSourceType == 'animal' && animals.isEmpty)) {
+        (selectedSourceType == 'animal' && herds.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No seasons or animals available for editing'),
+          content: Text('No seasons or herds available for editing'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -637,8 +642,7 @@ class _ActivityPageState extends State<ActivityPage> {
                             setState(() {
                               selectedSourceType = value ?? 'plant';
                               if (selectedSourceType == 'plant') {
-                                selectedAnimalId = null;
-                                selectedAnimalIdInt = null;
+                                selectedHerdId = null;
                               } else {
                                 selectedSeasonId = null;
                               }
@@ -666,30 +670,30 @@ class _ActivityPageState extends State<ActivityPage> {
                             },
                           ),
                         if (selectedSourceType == 'animal')
-                          DropdownButtonFormField<String>(
-                            initialValue: selectedAnimalId,
-                            decoration: const InputDecoration(
-                              labelText: 'Select Animal *',
-                              border: OutlineInputBorder(),
-                            ),
-                            items: animals.map((animal) {
-                              final displayName =
-                                  animal['type'] != null &&
-                                      animal['type'].toString().isNotEmpty
-                                  ? '${animal['name']} (${animal['type']})'
-                                  : animal['name'];
-                              return DropdownMenuItem<String>(
-                                value: animal['id'] as String,
-                                child: Text(displayName),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                selectedAnimalId = value;
-                                selectedAnimalIdInt = value != null
-                                    ? int.tryParse(value)
-                                    : null;
-                              });
+                          BlocBuilder<HerdBloc, HerdState>(
+                            builder: (context, herdState) {
+                              if (herdState is HerdLoaded) {
+                                final herds = herdState.herds;
+                                return DropdownButtonFormField<String>(
+                                  value: selectedHerdId,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Select Herd *',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: herds.map((herd) {
+                                    return DropdownMenuItem<String>(
+                                      value: herd.id,
+                                      child: Text('${herd.name} (${herd.location})'),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      selectedHerdId = value;
+                                    });
+                                  },
+                                );
+                              }
+                              return const CircularProgressIndicator();
                             },
                           ),
                         if (selectedSourceType == 'plant' ||
@@ -804,10 +808,10 @@ class _ActivityPageState extends State<ActivityPage> {
                       }
 
                       if (selectedSourceType == 'animal' &&
-                          selectedAnimalId == null) {
+                          selectedHerdId == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Please select an animal'),
+                            content: Text('Please select a herd'),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -848,7 +852,7 @@ class _ActivityPageState extends State<ActivityPage> {
 
                       final sourceId = selectedSourceType == 'plant'
                           ? selectedSeasonId!
-                          : selectedAnimalId!;
+                          : selectedHerdId!;
 
                       context.read<FarmBloc>().add(
                         UpdateActivityEvent(
@@ -858,7 +862,7 @@ class _ActivityPageState extends State<ActivityPage> {
                               : descriptionController.text.trim(),
                           selectedSourceType!,
                           sourceId,
-                          selectedAnimalIdInt,
+                          0,
                           selectedType!,
                           selectedDate!.toIso8601String(),
                           descriptionController.text.trim().isEmpty

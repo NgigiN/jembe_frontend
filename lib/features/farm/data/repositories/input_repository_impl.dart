@@ -12,9 +12,9 @@ class InputRepositoryImpl implements InputRepository {
   InputRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<Either<Failure, List<Input>>> getInputs() async {
+  Future<Either<Failure, List<Input>>> getInputs({String? sourceType}) async {
     try {
-      final inputs = await remoteDataSource.getInputs();
+      final inputs = await remoteDataSource.getInputs(sourceType: sourceType);
       return Right(inputs);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));

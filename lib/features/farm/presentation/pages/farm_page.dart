@@ -5,6 +5,7 @@ import 'season_page.dart';
 import 'input_page.dart';
 import 'activity_page.dart';
 import 'herd_page.dart';
+import 'animal_type_page.dart';
 
 class FarmPage extends StatefulWidget {
   const FarmPage({super.key});
@@ -13,7 +14,8 @@ class FarmPage extends StatefulWidget {
   State<FarmPage> createState() => _FarmPageState();
 }
 
-class _FarmPageState extends State<FarmPage> with SingleTickerProviderStateMixin {
+class _FarmPageState extends State<FarmPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -32,15 +34,17 @@ class _FarmPageState extends State<FarmPage> with SingleTickerProviderStateMixin
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Farm Tracker'),
         backgroundColor: Colors.green.shade600,
         foregroundColor: Colors.white,
         elevation: 0,
+        toolbarHeight: 0,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
+          tabAlignment: TabAlignment.center,
+          isScrollable: true,
           tabs: const [
             Tab(icon: Icon(Icons.eco), text: 'Plants'),
             Tab(icon: Icon(Icons.pets), text: 'Animals'),
@@ -57,10 +61,7 @@ class _FarmPageState extends State<FarmPage> with SingleTickerProviderStateMixin
         ),
         child: TabBarView(
           controller: _tabController,
-          children: [
-            _buildPlantsTab(context),
-            _buildAnimalsTab(context),
-          ],
+          children: [_buildPlantsTab(context), _buildAnimalsTab(context)],
         ),
       ),
     );
@@ -100,9 +101,7 @@ class _FarmPageState extends State<FarmPage> with SingleTickerProviderStateMixin
                   Colors.blue.shade700,
                   () => Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const LandPage(),
-                    ),
+                    MaterialPageRoute(builder: (context) => const LandPage()),
                   ),
                 ),
                 _buildCard(
@@ -113,9 +112,7 @@ class _FarmPageState extends State<FarmPage> with SingleTickerProviderStateMixin
                   Colors.green.shade700,
                   () => Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const PlantPage(),
-                    ),
+                    MaterialPageRoute(builder: (context) => const PlantPage()),
                   ),
                 ),
                 _buildCard(
@@ -126,9 +123,7 @@ class _FarmPageState extends State<FarmPage> with SingleTickerProviderStateMixin
                   Colors.orange.shade700,
                   () => Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const SeasonPage(),
-                    ),
+                    MaterialPageRoute(builder: (context) => const SeasonPage()),
                   ),
                 ),
                 _buildCard(
@@ -140,7 +135,8 @@ class _FarmPageState extends State<FarmPage> with SingleTickerProviderStateMixin
                   () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const InputPage(),
+                      builder: (context) =>
+                          const InputPage(sourceType: 'plant'),
                     ),
                   ),
                 ),
@@ -153,7 +149,8 @@ class _FarmPageState extends State<FarmPage> with SingleTickerProviderStateMixin
                   () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const ActivityPage(),
+                      builder: (context) =>
+                          const ActivityPage(sourceType: 'plant'),
                     ),
                   ),
                 ),
@@ -193,15 +190,26 @@ class _FarmPageState extends State<FarmPage> with SingleTickerProviderStateMixin
               children: [
                 _buildCard(
                   context,
+                  'Animal Types',
+                  Icons.category,
+                  Colors.blue.shade100,
+                  Colors.blue.shade700,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AnimalTypePage(),
+                    ),
+                  ),
+                ),
+                _buildCard(
+                  context,
                   'Register Herd',
                   Icons.pets,
                   Colors.orange.shade100,
                   Colors.orange.shade700,
                   () => Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const HerdPage(),
-                    ),
+                    MaterialPageRoute(builder: (context) => const HerdPage()),
                   ),
                 ),
                 _buildCard(
@@ -213,7 +221,8 @@ class _FarmPageState extends State<FarmPage> with SingleTickerProviderStateMixin
                   () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const InputPage(),
+                      builder: (context) =>
+                          const InputPage(sourceType: 'animal'),
                     ),
                   ),
                 ),
@@ -226,7 +235,8 @@ class _FarmPageState extends State<FarmPage> with SingleTickerProviderStateMixin
                   () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const ActivityPage(),
+                      builder: (context) =>
+                          const ActivityPage(sourceType: 'animal'),
                     ),
                   ),
                 ),

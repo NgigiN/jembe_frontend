@@ -6,7 +6,14 @@ abstract class ActivityEvent extends Equatable {
   List<Object> get props => [];
 }
 
-class GetActivitiesEvent extends ActivityEvent {}
+class GetActivitiesEvent extends ActivityEvent {
+  final String? sourceType;
+
+  GetActivitiesEvent({this.sourceType});
+
+  @override
+  List<Object> get props => [sourceType ?? ''];
+}
 
 class AddActivityEvent extends ActivityEvent {
   final Activity activity;

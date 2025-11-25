@@ -5,7 +5,7 @@ import '../models/input_model.dart';
 import '../../../auth/data/services/user_storage_service.dart';
 
 abstract class InputRemoteDataSource {
-  Future<List<InputModel>> getInputs();
+  Future<List<InputModel>> getInputs({String? sourceType});
   Future<InputModel> addInput(InputModel input);
   Future<InputModel> updateInput(InputModel input);
   Future<void> deleteInput(String id);
@@ -22,15 +22,21 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
   }
 
   @override
-  Future<List<InputModel>> getInputs() async {
+  Future<List<InputModel>> getInputs({String? sourceType}) async {
     final token = await _getToken();
     if (token.isEmpty) {
       throw ServerException('No authentication token found');
     }
 
     try {
+      final uri = sourceType != null && sourceType.isNotEmpty
+          ? Uri.parse(
+              '$baseUrl/api/inputs',
+            ).replace(queryParameters: {'source_type': sourceType})
+          : Uri.parse('$baseUrl/api/inputs');
+
       final response = await client.get(
-        Uri.parse('$baseUrl/api/inputs'),
+        uri,
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -38,8 +44,25 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
       print('Inputs API Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
+        if (response.body.isEmpty || response.body.trim() == 'null') {
+          print('No inputs found (empty response)');
+          return [];
+        }
+
         final data = json.decode(response.body);
-        final items = data as List;
+        if (data == null) {
+          print('No inputs found (null response)');
+          return [];
+        }
+
+        if (data is! List) {
+          print(
+            'Unexpected response format: expected List, got ${data.runtimeType}',
+          );
+          return [];
+        }
+
+        final items = data;
         print('Found ${items.length} inputs');
         return items.map((json) => InputModel.fromJson(json)).toList();
       } else {

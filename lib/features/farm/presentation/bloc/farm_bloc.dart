@@ -20,10 +20,12 @@ import '../../domain/usecases/update_season.dart';
 import '../../domain/usecases/delete_season.dart';
 import '../../domain/usecases/add_activity.dart';
 import '../../domain/usecases/get_activities.dart';
+import '../../domain/usecases/get_activities_params.dart';
 import '../../domain/usecases/update_activity.dart';
 import '../../domain/usecases/delete_activity.dart';
 import '../../domain/usecases/add_input.dart';
 import '../../domain/usecases/get_inputs.dart';
+import '../../domain/usecases/get_inputs_params.dart';
 import '../../domain/usecases/update_input.dart';
 import '../../domain/usecases/delete_input.dart';
 import '../../domain/usecases/get_animals.dart';
@@ -298,7 +300,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
     // Activity event handlers
     on<GetActivitiesEvent>((event, emit) async {
       emit(FarmLoading());
-      final result = await getActivities(NoParams());
+      final result = await getActivities(GetActivitiesParams(sourceType: event.sourceType));
       result.fold(
         (failure) => emit(FarmError('Failed to load activities')),
         (activities) => emit(
@@ -364,7 +366,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
     // Input event handlers
     on<GetInputsEvent>((event, emit) async {
       emit(FarmLoading());
-      final result = await getInputs(NoParams());
+      final result = await getInputs(GetInputsParams(sourceType: event.sourceType));
       result.fold(
         (failure) => emit(FarmError('Failed to load inputs')),
         (inputs) => emit(

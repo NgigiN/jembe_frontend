@@ -16,6 +16,8 @@ import 'features/farm/data/datasources/input_remote_data_source.dart';
 import 'features/farm/data/datasources/land_remote_data_source.dart';
 import 'features/farm/data/datasources/season_remote_data_source.dart';
 import 'features/farm/data/datasources/animal_remote_data_source.dart';
+import 'features/farm/data/datasources/animal_type_remote_data_source.dart';
+import 'features/farm/data/datasources/herd_remote_data_source.dart';
 import 'features/farm/data/datasources/analysis_remote_data_source.dart';
 import 'features/farm/data/repositories/activity_repository_impl.dart';
 import 'features/farm/data/repositories/analysis_repository_impl.dart';
@@ -26,6 +28,8 @@ import 'features/farm/data/repositories/input_repository_impl.dart';
 import 'features/farm/data/repositories/land_repository_impl.dart';
 import 'features/farm/data/repositories/season_repository_impl.dart';
 import 'features/farm/data/repositories/animal_repository_impl.dart';
+import 'features/farm/data/repositories/animal_type_repository_impl.dart';
+import 'features/farm/data/repositories/herd_repository_impl.dart';
 import 'features/farm/domain/repositories/activity_repository.dart';
 import 'features/farm/domain/repositories/plant_repository.dart';
 import 'features/farm/domain/repositories/farm_repository.dart';
@@ -34,6 +38,8 @@ import 'features/farm/domain/repositories/land_repository.dart';
 import 'features/farm/domain/repositories/analysis_repository.dart';
 import 'features/farm/domain/repositories/season_repository.dart';
 import 'features/farm/domain/repositories/animal_repository.dart';
+import 'features/farm/domain/repositories/animal_type_repository.dart';
+import 'features/farm/domain/repositories/herd_repository.dart';
 import 'features/farm/domain/usecases/add_activity.dart';
 import 'features/farm/domain/usecases/add_plant.dart';
 import 'features/farm/domain/usecases/add_input.dart';
@@ -58,10 +64,20 @@ import 'features/farm/domain/usecases/get_animals.dart';
 import 'features/farm/domain/usecases/add_animal.dart';
 import 'features/farm/domain/usecases/update_animal.dart';
 import 'features/farm/domain/usecases/delete_animal.dart';
+import 'features/farm/domain/usecases/get_animal_types.dart';
+import 'features/farm/domain/usecases/add_animal_type.dart';
+import 'features/farm/domain/usecases/update_animal_type.dart';
+import 'features/farm/domain/usecases/delete_animal_type.dart';
+import 'features/farm/domain/usecases/get_herds.dart';
+import 'features/farm/domain/usecases/add_herd.dart';
+import 'features/farm/domain/usecases/update_herd.dart';
+import 'features/farm/domain/usecases/delete_herd.dart';
 import 'features/farm/domain/usecases/get_total_costs_by_season.dart';
 import 'features/farm/domain/usecases/get_cost_breakdown.dart';
 import 'features/farm/domain/usecases/get_annual_cost_summary.dart';
 import 'features/farm/presentation/bloc/farm_bloc.dart';
+import 'features/farm/presentation/bloc/animal_type_bloc.dart';
+import 'features/farm/presentation/bloc/herd_bloc.dart';
 import 'features/farm/presentation/bloc/analysis_bloc.dart';
 
 final sl = GetIt.instance;
@@ -101,6 +117,22 @@ Future<void> init() async {
     ),
   );
   sl.registerFactory(
+    () => AnimalTypeBloc(
+      getAnimalTypes: sl(),
+      addAnimalType: sl(),
+      updateAnimalType: sl(),
+      deleteAnimalType: sl(),
+    ),
+  );
+  sl.registerFactory(
+    () => HerdBloc(
+      getHerds: sl(),
+      addHerd: sl(),
+      updateHerd: sl(),
+      deleteHerd: sl(),
+    ),
+  );
+  sl.registerFactory(
     () => AnalysisBloc(
       getTotalCostsBySeason: sl(),
       getCostBreakdown: sl(),
@@ -135,6 +167,14 @@ Future<void> init() async {
   sl.registerLazySingleton(() => AddAnimal(sl()));
   sl.registerLazySingleton(() => UpdateAnimal(sl()));
   sl.registerLazySingleton(() => DeleteAnimal(sl()));
+  sl.registerLazySingleton(() => GetAnimalTypes(sl()));
+  sl.registerLazySingleton(() => AddAnimalType(sl()));
+  sl.registerLazySingleton(() => UpdateAnimalType(sl()));
+  sl.registerLazySingleton(() => DeleteAnimalType(sl()));
+  sl.registerLazySingleton(() => GetHerds(sl()));
+  sl.registerLazySingleton(() => AddHerd(sl()));
+  sl.registerLazySingleton(() => UpdateHerd(sl()));
+  sl.registerLazySingleton(() => DeleteHerd(sl()));
   sl.registerLazySingleton(() => GetTotalCostsBySeason(sl()));
   sl.registerLazySingleton(() => GetCostBreakdown(sl()));
   sl.registerLazySingleton(() => GetAnnualCostSummary(sl()));
@@ -163,6 +203,12 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<AnimalRepository>(
     () => AnimalRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerLazySingleton<AnimalTypeRepository>(
+    () => AnimalTypeRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerLazySingleton<HerdRepository>(
+    () => HerdRepositoryImpl(remoteDataSource: sl()),
   );
   sl.registerLazySingleton<AnalysisRepository>(
     () => AnalysisRepositoryImpl(remoteDataSource: sl()),
@@ -193,6 +239,12 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<AnimalRemoteDataSource>(
     () => AnimalRemoteDataSourceImpl(client: sl(), baseUrl: AppConfig.baseUrl),
+  );
+  sl.registerLazySingleton<AnimalTypeRemoteDataSource>(
+    () => AnimalTypeRemoteDataSourceImpl(client: sl(), baseUrl: AppConfig.baseUrl),
+  );
+  sl.registerLazySingleton<HerdRemoteDataSource>(
+    () => HerdRemoteDataSourceImpl(client: sl(), baseUrl: AppConfig.baseUrl),
   );
   sl.registerLazySingleton<AnalysisRemoteDataSource>(
     () => AnalysisRemoteDataSourceImpl(),
