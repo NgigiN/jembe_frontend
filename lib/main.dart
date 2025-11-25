@@ -8,6 +8,7 @@ import 'features/farm/presentation/bloc/farm_event.dart';
 import 'features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'features/farm/presentation/bloc/herd_bloc.dart';
 import 'features/farm/presentation/bloc/analysis_bloc.dart';
+import 'features/farm/presentation/bloc/revenue_bloc.dart';
 import 'features/farm/presentation/pages/landing_page.dart';
 import 'core/config/app_config.dart';
 import 'core/logging/app_logger.dart';
@@ -42,6 +43,7 @@ class MyApp extends StatelessWidget {
         BlocProvider<AnimalTypeBloc>(create: (_) => di.sl<AnimalTypeBloc>()),
         BlocProvider<HerdBloc>(create: (_) => di.sl<HerdBloc>()),
         BlocProvider<AnalysisBloc>(create: (_) => di.sl<AnalysisBloc>()),
+        BlocProvider<RevenueBloc>(create: (_) => di.sl<RevenueBloc>()),
       ],
       child: LoggingMaterialApp(
         title: 'Farm Tracking App',
@@ -52,6 +54,7 @@ class MyApp extends StatelessWidget {
           '/login': (context) => LoginPage(),
           '/landing': (context) => LandingPage(),
         },
+        debugShowCheckedModeBanner: false,
       ),
     );
   }

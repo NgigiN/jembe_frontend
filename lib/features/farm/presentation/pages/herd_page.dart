@@ -115,7 +115,8 @@ class _HerdPageState extends State<HerdPage> {
                   itemCount: state.herds.length,
                   itemBuilder: (context, index) {
                     final herd = state.herds[index];
-                    final animalTypeName = animalTypeMap[herd.animalTypeId] ?? 'Unknown';
+                    final animalTypeName =
+                        animalTypeMap[herd.animalTypeId] ?? 'Unknown';
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
@@ -123,7 +124,10 @@ class _HerdPageState extends State<HerdPage> {
                       child: ListTile(
                         leading: CircleAvatar(
                           backgroundColor: Colors.orange.shade100,
-                          child: Icon(Icons.pets, color: Colors.orange.shade700),
+                          child: Icon(
+                            Icons.pets,
+                            color: Colors.orange.shade700,
+                          ),
                         ),
                         title: Text(
                           herd.name,
@@ -214,183 +218,212 @@ class _HerdPageState extends State<HerdPage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
-          builder: (context, animalTypeState) {
-            final List<AnimalType> animalTypes = [];
-            if (animalTypeState is AnimalTypeLoaded) {
-              animalTypes.addAll(animalTypeState.animalTypes);
-            }
+        builder: (context, setState) =>
+            BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
+              builder: (context, animalTypeState) {
+                final List<AnimalType> animalTypes = [];
+                if (animalTypeState is AnimalTypeLoaded) {
+                  animalTypes.addAll(animalTypeState.animalTypes);
+                }
 
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.7,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Register New Herd',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close),
-                        ),
-                      ],
+                return Container(
+                  height: MediaQuery.of(context).size.height * 0.7,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
                     ),
-                    const SizedBox(height: 20),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            TextField(
-                              controller: nameController,
-                              decoration: const InputDecoration(
-                                labelText: 'Herd Name *',
-                                border: OutlineInputBorder(),
-                                hintText: 'e.g., Main Chicken Coop',
+                            const Text(
+                              'Register New Herd',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(height: 16),
-                            if (animalTypes.isEmpty)
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.shade50,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.orange.shade200),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.info_outline, color: Colors.orange.shade700),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'No animal types available. Please add animal types first.',
-                                        style: TextStyle(color: Colors.orange.shade900),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            else
-                              DropdownButtonFormField<String>(
-                                value: selectedAnimalTypeId,
-                                decoration: const InputDecoration(
-                                  labelText: 'Animal Type *',
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: animalTypes.map((type) {
-                                  return DropdownMenuItem<String>(
-                                    value: type.id,
-                                    child: Text(type.name),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedAnimalTypeId = value;
-                                  });
-                                },
-                              ),
-                            const SizedBox(height: 16),
-                            TextField(
-                              controller: locationController,
-                              decoration: const InputDecoration(
-                                labelText: 'Location *',
-                                border: OutlineInputBorder(),
-                                hintText: 'e.g., North Field A',
-                              ),
+                            IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.close),
                             ),
                           ],
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: animalTypes.isEmpty ? null : () async {
-                          if (nameController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Herd name is required'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          if (selectedAnimalTypeId == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Animal type is required'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          if (locationController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Location is required'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          final userId = await UserUtils.getCurrentUserId();
-                          if (userId == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('User not authenticated'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          context.read<HerdBloc>().add(
-                            AddHerdEvent(
-                              nameController.text.trim(),
-                              selectedAnimalTypeId!,
-                              locationController.text.trim(),
-                              userId,
+                        const SizedBox(height: 20),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                TextField(
+                                  controller: nameController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Herd Name *',
+                                    border: OutlineInputBorder(),
+                                    hintText: 'e.g., Main Chicken Coop',
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                if (animalTypes.isEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade50,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: Colors.orange.shade200,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.info_outline,
+                                          color: Colors.orange.shade700,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'No animal types available. Please add animal types first.',
+                                            style: TextStyle(
+                                              color: Colors.orange.shade900,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                else
+                                  DropdownButtonFormField<String>(
+                                    initialValue: selectedAnimalTypeId,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Animal Type *',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    items: animalTypes.map((type) {
+                                      return DropdownMenuItem<String>(
+                                        value: type.id,
+                                        child: Text(type.name),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        selectedAnimalTypeId = value;
+                                      });
+                                    },
+                                  ),
+                                const SizedBox(height: 16),
+                                TextField(
+                                  controller: locationController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Location *',
+                                    border: OutlineInputBorder(),
+                                    hintText: 'e.g., North Field A',
+                                  ),
+                                ),
+                              ],
                             ),
-                          );
-                          Navigator.pop(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade600,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text(
-                          'Register Herd',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: animalTypes.isEmpty
+                                ? null
+                                : () async {
+                                    if (nameController.text.trim().isEmpty) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Herd name is required',
+                                          ),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    if (selectedAnimalTypeId == null) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Animal type is required',
+                                          ),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    if (locationController.text
+                                        .trim()
+                                        .isEmpty) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Location is required'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    final userId =
+                                        await UserUtils.getCurrentUserId();
+                                    if (userId == null) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'User not authenticated',
+                                          ),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    context.read<HerdBloc>().add(
+                                      AddHerdEvent(
+                                        nameController.text.trim(),
+                                        selectedAnimalTypeId!,
+                                        locationController.text.trim(),
+                                        userId,
+                                      ),
+                                    );
+                                    Navigator.pop(context);
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green.shade600,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            child: const Text(
+                              'Register Herd',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+                  ),
+                );
+              },
+            ),
       ),
     );
   }
@@ -405,148 +438,151 @@ class _HerdPageState extends State<HerdPage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
-          builder: (context, animalTypeState) {
-            final List<AnimalType> animalTypes = [];
-            if (animalTypeState is AnimalTypeLoaded) {
-              animalTypes.addAll(animalTypeState.animalTypes);
-            }
+        builder: (context, setState) =>
+            BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
+              builder: (context, animalTypeState) {
+                final List<AnimalType> animalTypes = [];
+                if (animalTypeState is AnimalTypeLoaded) {
+                  animalTypes.addAll(animalTypeState.animalTypes);
+                }
 
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.7,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Edit Herd',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close),
-                        ),
-                      ],
+                return Container(
+                  height: MediaQuery.of(context).size.height * 0.7,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
                     ),
-                    const SizedBox(height: 20),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            TextField(
-                              controller: nameController,
-                              decoration: const InputDecoration(
-                                labelText: 'Herd Name *',
-                                border: OutlineInputBorder(),
+                            const Text(
+                              'Edit Herd',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(height: 16),
-                            DropdownButtonFormField<String>(
-                              value: selectedAnimalTypeId,
-                              decoration: const InputDecoration(
-                                labelText: 'Animal Type *',
-                                border: OutlineInputBorder(),
-                              ),
-                              items: animalTypes.map((type) {
-                                return DropdownMenuItem<String>(
-                                  value: type.id,
-                                  child: Text(type.name),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedAnimalTypeId = value;
-                                });
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            TextField(
-                              controller: locationController,
-                              decoration: const InputDecoration(
-                                labelText: 'Location *',
-                                border: OutlineInputBorder(),
-                              ),
+                            IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.close),
                             ),
                           ],
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          if (nameController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Herd name is required'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          if (selectedAnimalTypeId == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Animal type is required'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          if (locationController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Location is required'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          context.read<HerdBloc>().add(
-                            UpdateHerdEvent(
-                              herd.id,
-                              nameController.text.trim(),
-                              selectedAnimalTypeId!,
-                              locationController.text.trim(),
+                        const SizedBox(height: 20),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                TextField(
+                                  controller: nameController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Herd Name *',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                DropdownButtonFormField<String>(
+                                  initialValue: selectedAnimalTypeId,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Animal Type *',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: animalTypes.map((type) {
+                                    return DropdownMenuItem<String>(
+                                      value: type.id,
+                                      child: Text(type.name),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      selectedAnimalTypeId = value;
+                                    });
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                TextField(
+                                  controller: locationController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Location *',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ],
                             ),
-                          );
-                          Navigator.pop(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade600,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text(
-                          'Update Herd',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              if (nameController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Herd name is required'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              if (selectedAnimalTypeId == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Animal type is required'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              if (locationController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Location is required'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              context.read<HerdBloc>().add(
+                                UpdateHerdEvent(
+                                  herd.id,
+                                  nameController.text.trim(),
+                                  selectedAnimalTypeId!,
+                                  locationController.text.trim(),
+                                ),
+                              );
+                              Navigator.pop(context);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue.shade600,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            child: const Text(
+                              'Update Herd',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+                  ),
+                );
+              },
+            ),
       ),
     );
   }

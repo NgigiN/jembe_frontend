@@ -25,7 +25,9 @@ class _ActivityPageState extends State<ActivityPage> {
   @override
   void initState() {
     super.initState();
-    context.read<FarmBloc>().add(GetActivitiesEvent(sourceType: widget.sourceType));
+    context.read<FarmBloc>().add(
+      GetActivitiesEvent(sourceType: widget.sourceType),
+    );
     context.read<HerdBloc>().add(GetHerdsEvent());
     _loadCostCategories();
   }
@@ -87,7 +89,9 @@ class _ActivityPageState extends State<ActivityPage> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      context.read<FarmBloc>().add(GetActivitiesEvent(sourceType: widget.sourceType));
+                      context.read<FarmBloc>().add(
+                        GetActivitiesEvent(sourceType: widget.sourceType),
+                      );
                     },
                     child: const Text('Retry'),
                   ),
@@ -331,7 +335,7 @@ class _ActivityPageState extends State<ActivityPage> {
                               if (herdState is HerdLoaded) {
                                 final herds = herdState.herds;
                                 return DropdownButtonFormField<String>(
-                                  value: selectedHerdId,
+                                  initialValue: selectedHerdId,
                                   decoration: const InputDecoration(
                                     labelText: 'Select Herd *',
                                     border: OutlineInputBorder(),
@@ -339,7 +343,9 @@ class _ActivityPageState extends State<ActivityPage> {
                                   items: herds.map((herd) {
                                     return DropdownMenuItem<String>(
                                       value: herd.id,
-                                      child: Text('${herd.name} (${herd.location})'),
+                                      child: Text(
+                                        '${herd.name} (${herd.location})',
+                                      ),
                                     );
                                   }).toList(),
                                   onChanged: (value) {
@@ -675,7 +681,7 @@ class _ActivityPageState extends State<ActivityPage> {
                               if (herdState is HerdLoaded) {
                                 final herds = herdState.herds;
                                 return DropdownButtonFormField<String>(
-                                  value: selectedHerdId,
+                                  initialValue: selectedHerdId,
                                   decoration: const InputDecoration(
                                     labelText: 'Select Herd *',
                                     border: OutlineInputBorder(),
@@ -683,7 +689,9 @@ class _ActivityPageState extends State<ActivityPage> {
                                   items: herds.map((herd) {
                                     return DropdownMenuItem<String>(
                                       value: herd.id,
-                                      child: Text('${herd.name} (${herd.location})'),
+                                      child: Text(
+                                        '${herd.name} (${herd.location})',
+                                      ),
                                     );
                                   }).toList(),
                                   onChanged: (value) {

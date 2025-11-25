@@ -87,7 +87,9 @@ class _InputPageState extends State<InputPage> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      context.read<FarmBloc>().add(GetInputsEvent(sourceType: widget.sourceType));
+                      context.read<FarmBloc>().add(
+                        GetInputsEvent(sourceType: widget.sourceType),
+                      );
                     },
                     child: const Text('Retry'),
                   ),
@@ -346,7 +348,7 @@ class _InputPageState extends State<InputPage> {
                               if (herdState is HerdLoaded) {
                                 final herds = herdState.herds;
                                 return DropdownButtonFormField<String>(
-                                  value: selectedHerdId,
+                                  initialValue: selectedHerdId,
                                   decoration: const InputDecoration(
                                     labelText: 'Select Herd *',
                                     border: OutlineInputBorder(),
@@ -354,7 +356,9 @@ class _InputPageState extends State<InputPage> {
                                   items: herds.map((herd) {
                                     return DropdownMenuItem<String>(
                                       value: herd.id,
-                                      child: Text('${herd.name} (${herd.location})'),
+                                      child: Text(
+                                        '${herd.name} (${herd.location})',
+                                      ),
                                     );
                                   }).toList(),
                                   onChanged: (value) {
@@ -733,7 +737,7 @@ class _InputPageState extends State<InputPage> {
                           ),
                         if (selectedSourceType == 'animal')
                           DropdownButtonFormField<String>(
-                            value: selectedHerdId,
+                            initialValue: selectedHerdId,
                             decoration: const InputDecoration(
                               labelText: 'Select Herd *',
                               border: OutlineInputBorder(),

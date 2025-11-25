@@ -4,8 +4,9 @@ class AppConfig {
   static late Environment _currentEnvironment;
 
   // Remote server configuration
-  static const String _remoteBaseUrl = 'http://193.187.129.179:8090';
-  static const String _localBaseUrl = 'http://127.0.0.1:8080';
+  static const String _remoteBaseUrl = 'http://193.187.129.179:6060';
+  // static const String _localBaseUrl = 'http://127.0.0.1:8080';
+  static const String _localBaseUrl = 'http://192.168.100.5:8080';
 
   // Initialize environment based on dart-define flags
   static void initialize() {

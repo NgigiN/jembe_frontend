@@ -72,6 +72,7 @@ class LoggingMaterialApp extends StatelessWidget {
   final Map<String, WidgetBuilder>? routes;
   final Widget? home;
   final List<NavigatorObserver>? navigatorObservers;
+  final bool debugShowCheckedModeBanner;
 
   const LoggingMaterialApp({
     super.key,
@@ -81,6 +82,7 @@ class LoggingMaterialApp extends StatelessWidget {
     this.routes,
     this.home,
     this.navigatorObservers,
+    this.debugShowCheckedModeBanner = true,
   });
 
   @override
@@ -97,6 +99,7 @@ class LoggingMaterialApp extends StatelessWidget {
       routes: routes ?? {},
       home: home,
       navigatorObservers: observers,
+      debugShowCheckedModeBanner: debugShowCheckedModeBanner,
     );
   }
 }

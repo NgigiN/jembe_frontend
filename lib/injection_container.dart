@@ -19,8 +19,10 @@ import 'features/farm/data/datasources/animal_remote_data_source.dart';
 import 'features/farm/data/datasources/animal_type_remote_data_source.dart';
 import 'features/farm/data/datasources/herd_remote_data_source.dart';
 import 'features/farm/data/datasources/analysis_remote_data_source.dart';
+import 'features/farm/data/datasources/revenue_remote_data_source.dart';
 import 'features/farm/data/repositories/activity_repository_impl.dart';
 import 'features/farm/data/repositories/analysis_repository_impl.dart';
+import 'features/farm/data/repositories/revenue_repository_impl.dart';
 import 'features/farm/data/repositories/plant_repository_impl.dart';
 import 'features/farm/data/services/farm_data_service.dart';
 import 'features/farm/data/repositories/farm_repository_impl.dart';
@@ -40,6 +42,7 @@ import 'features/farm/domain/repositories/season_repository.dart';
 import 'features/farm/domain/repositories/animal_repository.dart';
 import 'features/farm/domain/repositories/animal_type_repository.dart';
 import 'features/farm/domain/repositories/herd_repository.dart';
+import 'features/farm/domain/repositories/revenue_repository.dart';
 import 'features/farm/domain/usecases/add_activity.dart';
 import 'features/farm/domain/usecases/add_plant.dart';
 import 'features/farm/domain/usecases/add_input.dart';
@@ -75,10 +78,16 @@ import 'features/farm/domain/usecases/delete_herd.dart';
 import 'features/farm/domain/usecases/get_total_costs_by_season.dart';
 import 'features/farm/domain/usecases/get_cost_breakdown.dart';
 import 'features/farm/domain/usecases/get_annual_cost_summary.dart';
+import 'features/farm/domain/usecases/get_revenues.dart';
+import 'features/farm/domain/usecases/get_revenue_by_id.dart';
+import 'features/farm/domain/usecases/add_revenue.dart';
+import 'features/farm/domain/usecases/update_revenue.dart';
+import 'features/farm/domain/usecases/delete_revenue.dart';
 import 'features/farm/presentation/bloc/farm_bloc.dart';
 import 'features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'features/farm/presentation/bloc/herd_bloc.dart';
 import 'features/farm/presentation/bloc/analysis_bloc.dart';
+import 'features/farm/presentation/bloc/revenue_bloc.dart';
 
 final sl = GetIt.instance;
 
@@ -139,6 +148,15 @@ Future<void> init() async {
       getAnnualCostSummary: sl(),
     ),
   );
+  sl.registerFactory(
+    () => RevenueBloc(
+      getRevenues: sl(),
+      getRevenueById: sl(),
+      addRevenue: sl(),
+      updateRevenue: sl(),
+      deleteRevenue: sl(),
+    ),
+  );
 
   // Use Cases
   sl.registerLazySingleton(() => Login(sl()));
@@ -178,6 +196,11 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetTotalCostsBySeason(sl()));
   sl.registerLazySingleton(() => GetCostBreakdown(sl()));
   sl.registerLazySingleton(() => GetAnnualCostSummary(sl()));
+  sl.registerLazySingleton(() => GetRevenues(sl()));
+  sl.registerLazySingleton(() => GetRevenueById(sl()));
+  sl.registerLazySingleton(() => AddRevenue(sl()));
+  sl.registerLazySingleton(() => UpdateRevenue(sl()));
+  sl.registerLazySingleton(() => DeleteRevenue(sl()));
 
   // Repositories
   sl.registerLazySingleton<AuthRepository>(
@@ -212,6 +235,9 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<AnalysisRepository>(
     () => AnalysisRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerLazySingleton<RevenueRepository>(
+    () => RevenueRepositoryImpl(remoteDataSource: sl()),
   );
 
   // Data Sources
@@ -248,6 +274,9 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<AnalysisRemoteDataSource>(
     () => AnalysisRemoteDataSourceImpl(),
+  );
+  sl.registerLazySingleton<RevenueRemoteDataSource>(
+    () => RevenueRemoteDataSourceImpl(client: sl(), baseUrl: AppConfig.baseUrl),
   );
 
   // External

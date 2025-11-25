@@ -224,7 +224,7 @@ class TotalCostsBySeasonPage extends StatelessWidget {
                       ],
                     ),
                     trailing: Text(
-                      '\$${cost.totalCost.toStringAsFixed(2)}',
+                      'KES ${cost.totalCost.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -299,7 +299,7 @@ class CostBreakdownPage extends StatelessWidget {
                         ),
                         Text('Type: ${breakdown.inputType}'),
                         Text(
-                          'Total Cost: \$${breakdown.inputCost.toStringAsFixed(2)}',
+                          'Total Cost: KES ${breakdown.inputCost.toStringAsFixed(2)}',
                         ),
                         Text(
                           'Percentage: ${breakdown.percentage.toStringAsFixed(1)}%',
@@ -307,7 +307,7 @@ class CostBreakdownPage extends StatelessWidget {
                       ],
                     ),
                     trailing: Text(
-                      '\$${breakdown.inputCost.toStringAsFixed(2)}',
+                      'KES ${breakdown.inputCost.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -381,7 +381,7 @@ class AnnualSummaryPage extends StatelessWidget {
                       ],
                     ),
                     trailing: Text(
-                      '\$${summary.totalCost.toStringAsFixed(2)}',
+                      'KES ${summary.totalCost.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
