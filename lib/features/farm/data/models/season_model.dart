@@ -18,7 +18,7 @@ class SeasonModel extends Season {
     return SeasonModel(
       id: (json['ID'] ?? json['id'] ?? '').toString(),
       userId: (json['UserID'] ?? json['user_id'] ?? '').toString(),
-      name: json['Name'] ?? json['name'] ?? '',
+      name: (json['Name'] ?? json['name'] ?? '').toString(),
       plantId: (json['PlantID'] ?? json['plant_id'] ?? '').toString(),
       landId: (json['LandID'] ?? json['land_id'] ?? '').toString(),
       startDate: _parseDate(json['StartDate'] ?? json['start_date']),

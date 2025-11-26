@@ -20,16 +20,17 @@ class TotalCostsBySeasonModel extends Equatable {
   });
 
   factory TotalCostsBySeasonModel.fromJson(Map<String, dynamic> json) {
+    final startDateValue = json['start_date'] ?? DateTime.now().toIso8601String();
+    final totalCostValue = json['total_cost'] ?? 0.0;
+
     return TotalCostsBySeasonModel(
-      seasonId: json['season_id'] ?? '',
-      seasonName: json['season_name'] ?? '',
-      startDate: DateTime.parse(
-        json['start_date'] ?? DateTime.now().toIso8601String(),
-      ),
-      cropName: json['crop_name'] ?? '',
-      landName: json['land_name'] ?? '',
-      farmName: json['farm_name'] ?? '',
-      totalCost: (json['total_cost'] ?? 0.0).toDouble(),
+      seasonId: (json['season_id'] ?? '').toString(),
+      seasonName: (json['season_name'] ?? '').toString(),
+      startDate: DateTime.parse(startDateValue.toString()),
+      cropName: (json['crop_name'] ?? '').toString(),
+      landName: (json['land_name'] ?? '').toString(),
+      farmName: (json['farm_name'] ?? '').toString(),
+      totalCost: (totalCostValue as num).toDouble(),
     );
   }
 

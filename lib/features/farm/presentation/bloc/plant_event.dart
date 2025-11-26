@@ -16,3 +16,21 @@ class AddPlantEvent extends PlantEvent {
   @override
   List<Object> get props => [plant];
 }
+
+class UpdatePlantEvent extends PlantEvent {
+  final Plant plant;
+
+  UpdatePlantEvent(this.plant);
+
+  @override
+  List<Object> get props => [plant];
+}
+
+class DeletePlantEvent extends PlantEvent {
+  final String id;
+
+  DeletePlantEvent(this.id);
+
+  @override
+  List<Object> get props => [id];
+}

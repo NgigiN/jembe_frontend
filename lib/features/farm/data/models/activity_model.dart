@@ -17,18 +17,22 @@ class ActivityModel extends Activity {
 
   factory ActivityModel.fromJson(Map<String, dynamic> json) {
     final animalIdValue = json['AnimalID'] ?? json['animal_id'];
+    final detailsValue = json['Details'] ?? json['details'];
+    final costValue = json['Cost'] ?? json['cost'];
+    final notesValue = json['Notes'] ?? json['notes'];
+
     return ActivityModel(
       id: (json['ID'] ?? json['id'] ?? '').toString(),
-      sourceType: json['SourceType'] ?? json['source_type'] ?? 'plant',
+      sourceType: (json['SourceType'] ?? json['source_type'] ?? 'plant').toString(),
       sourceId: (json['SourceID'] ?? json['source_id'] ?? '').toString(),
       animalId: animalIdValue != null && animalIdValue != 0
           ? (animalIdValue is int ? animalIdValue : int.tryParse(animalIdValue.toString()))
           : null,
-      type: json['Type'] ?? json['type'] ?? '',
-      details: json['Details'] ?? json['details'],
-      cost: (json['Cost'] ?? json['cost'])?.toDouble() ?? 0.0,
+      type: (json['Type'] ?? json['type'] ?? '').toString(),
+      details: detailsValue != null ? detailsValue.toString() : null,
+      cost: costValue != null ? (costValue as num).toDouble() : 0.0,
       date: _parseDate(json['Date'] ?? json['date']),
-      notes: json['Notes'] ?? json['notes'],
+      notes: notesValue != null ? notesValue.toString() : null,
       createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
       updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );

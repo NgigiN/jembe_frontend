@@ -1,8 +1,6 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import '../../../../core/error/exceptions.dart';
 import '../models/herd_model.dart';
-import '../../../auth/data/services/user_storage_service.dart';
 
 abstract class HerdRemoteDataSource {
   Future<List<HerdModel>> getHerds();
@@ -12,113 +10,145 @@ abstract class HerdRemoteDataSource {
 }
 
 class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
-  final http.Client client;
+  final Dio dio;
   final String baseUrl;
 
-  HerdRemoteDataSourceImpl({required this.client, required this.baseUrl});
-
-  Future<String> _getToken() async {
-    return await UserStorageService.getToken() ?? '';
-  }
+  HerdRemoteDataSourceImpl({required this.dio, required this.baseUrl});
 
   @override
   Future<List<HerdModel>> getHerds() async {
-    final token = await _getToken();
-    final response = await client.get(
-      Uri.parse('$baseUrl/api/herds'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    try {
+      final response = await dio.get('/api/herds');
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data == null) return [];
-      return (data as List)
-          .map((json) => HerdModel.fromJson(json))
-          .toList();
-    } else {
-      String errorMsg = 'Failed to load herds';
-      try {
-        final errorData = json.decode(response.body);
-        if (errorData is Map && errorData['error'] != null) {
-          errorMsg = errorData['error'].toString();
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data == null) return [];
+        if (data is List) {
+          return data
+              .map((json) => HerdModel.fromJson(json as Map<String, dynamic>))
+              .toList();
         }
-      } catch (_) {}
+        return [];
+      } else {
+        String errorMsg = 'Failed to load herds';
+        try {
+          final errorData = response.data as Map<String, dynamic>?;
+          if (errorData != null && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+        throw ServerException(errorMsg);
+      }
+    } on DioException catch (e) {
+      String errorMsg = 'Failed to load herds';
+      if (e.response?.data != null) {
+        try {
+          final errorData = e.response!.data as Map<String, dynamic>;
+          if (errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+      }
       throw ServerException(errorMsg);
     }
   }
 
   @override
   Future<HerdModel> addHerd(HerdModel herd) async {
-    final token = await _getToken();
-    final response = await client.post(
-      Uri.parse('$baseUrl/api/herds'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode(herd.toJson()),
-    );
+    try {
+      final response = await dio.post(
+        '/api/herds',
+        data: herd.toJson(),
+      );
 
-    if (response.statusCode == 201 || response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return HerdModel.fromJson(data);
-    } else {
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return HerdModel.fromJson(data);
+      } else {
+        String errorMsg = 'Failed to add herd';
+        try {
+          final errorData = response.data as Map<String, dynamic>?;
+          if (errorData != null && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+        throw ServerException(errorMsg);
+      }
+    } on DioException catch (e) {
       String errorMsg = 'Failed to add herd';
-      try {
-        final errorData = json.decode(response.body);
-        if (errorData is Map && errorData['error'] != null) {
-          errorMsg = errorData['error'].toString();
-        }
-      } catch (_) {}
+      if (e.response?.data != null) {
+        try {
+          final errorData = e.response!.data as Map<String, dynamic>;
+          if (errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+      }
       throw ServerException(errorMsg);
     }
   }
 
   @override
   Future<HerdModel> updateHerd(HerdModel herd) async {
-    final token = await _getToken();
-    final response = await client.put(
-      Uri.parse('$baseUrl/api/herds/${herd.id}'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode(herd.toJson()),
-    );
+    try {
+      final response = await dio.put(
+        '/api/herds/${herd.id}',
+        data: herd.toJson(),
+      );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return HerdModel.fromJson(data);
-    } else {
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return HerdModel.fromJson(data);
+      } else {
+        String errorMsg = 'Failed to update herd';
+        try {
+          final errorData = response.data as Map<String, dynamic>?;
+          if (errorData != null && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+        throw ServerException(errorMsg);
+      }
+    } on DioException catch (e) {
       String errorMsg = 'Failed to update herd';
-      try {
-        final errorData = json.decode(response.body);
-        if (errorData is Map && errorData['error'] != null) {
-          errorMsg = errorData['error'].toString();
-        }
-      } catch (_) {}
+      if (e.response?.data != null) {
+        try {
+          final errorData = e.response!.data as Map<String, dynamic>;
+          if (errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+      }
       throw ServerException(errorMsg);
     }
   }
 
   @override
   Future<void> deleteHerd(String id) async {
-    final token = await _getToken();
-    final response = await client.delete(
-      Uri.parse('$baseUrl/api/herds/$id'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    try {
+      final response = await dio.delete('/api/herds/$id');
 
-    if (response.statusCode != 200 && response.statusCode != 204) {
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        String errorMsg = 'Failed to delete herd';
+        try {
+          final errorData = response.data as Map<String, dynamic>?;
+          if (errorData != null && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+        throw ServerException(errorMsg);
+      }
+    } on DioException catch (e) {
       String errorMsg = 'Failed to delete herd';
-      try {
-        final errorData = json.decode(response.body);
-        if (errorData is Map && errorData['error'] != null) {
-          errorMsg = errorData['error'].toString();
-        }
-      } catch (_) {}
+      if (e.response?.data != null) {
+        try {
+          final errorData = e.response!.data as Map<String, dynamic>;
+          if (errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+      }
       throw ServerException(errorMsg);
     }
   }
 }
-

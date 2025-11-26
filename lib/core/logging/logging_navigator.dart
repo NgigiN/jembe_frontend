@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../logging/app_logger.dart';
 
+/// Navigator observer for GoRouter that logs all navigation events
 class LoggingNavigatorObserver extends NavigatorObserver {
   final AppLogger _logger = appLogger;
 
@@ -65,6 +66,47 @@ class LoggingNavigatorObserver extends NavigatorObserver {
   }
 }
 
+/// GoRouter observer that logs navigation events
+class LoggingGoRouterObserver extends NavigatorObserver {
+  final AppLogger _logger = appLogger;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    _logNavigation('PUSH', previousRoute, route);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    _logNavigation('POP', route, previousRoute);
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    _logNavigation('REPLACE', oldRoute, newRoute);
+  }
+
+  void _logNavigation(
+    String action,
+    Route<dynamic>? from,
+    Route<dynamic>? to,
+  ) {
+    final fromName = from?.settings.name ?? 'unknown';
+    final toName = to?.settings.name ?? 'unknown';
+    final args = to?.settings.arguments;
+    final argsStr = args != null ? ' with args: $args' : '';
+
+    _logger.info(
+      LogCategory.navigation,
+      'Navigation $action: $fromName -> $toName$argsStr',
+    );
+  }
+}
+
+/// Legacy MaterialApp wrapper - deprecated, use GoRouter instead
+@Deprecated('Use GoRouter from app_router.dart instead')
 class LoggingMaterialApp extends StatelessWidget {
   final String title;
   final ThemeData? theme;

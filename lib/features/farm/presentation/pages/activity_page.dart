@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/farm_bloc.dart';
-import '../bloc/farm_event.dart';
-import '../bloc/farm_state.dart';
+import '../bloc/activity_bloc.dart';
+import '../bloc/activity_event.dart';
+import '../bloc/activity_state.dart';
 import '../bloc/herd_bloc.dart';
 import '../bloc/herd_event.dart';
 import '../bloc/herd_state.dart';
 import '../../domain/entities/activity.dart';
+import '../../data/models/activity_model.dart';
 import '../../data/services/farm_data_service.dart';
+import '../../../auth/data/utils/user_utils.dart';
 
 class ActivityPage extends StatefulWidget {
   final String? sourceType;
@@ -25,7 +27,7 @@ class _ActivityPageState extends State<ActivityPage> {
   @override
   void initState() {
     super.initState();
-    context.read<FarmBloc>().add(
+    context.read<ActivityBloc>().add(
       GetActivitiesEvent(sourceType: widget.sourceType),
     );
     context.read<HerdBloc>().add(GetHerdsEvent());
@@ -64,13 +66,13 @@ class _ActivityPageState extends State<ActivityPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<FarmBloc, FarmState>(
+      body: BlocBuilder<ActivityBloc, ActivityState>(
         builder: (context, state) {
-          if (state is FarmLoading) {
+          if (state is ActivityLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state is FarmError) {
+          if (state is ActivityError) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -89,7 +91,7 @@ class _ActivityPageState extends State<ActivityPage> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      context.read<FarmBloc>().add(
+                      context.read<ActivityBloc>().add(
                         GetActivitiesEvent(sourceType: widget.sourceType),
                       );
                     },
@@ -100,7 +102,7 @@ class _ActivityPageState extends State<ActivityPage> {
             );
           }
 
-          if (state is FarmLoaded) {
+          if (state is ActivityLoaded) {
             if (state.activities.isEmpty) {
               return Center(
                 child: Column(
@@ -319,8 +321,8 @@ class _ActivityPageState extends State<ActivityPage> {
                             ),
                             items: seasons.map((season) {
                               return DropdownMenuItem<String>(
-                                value: season['id'] as String,
-                                child: Text(season['name']),
+                                value: (season['id'] ?? '').toString(),
+                                child: Text((season['name'] ?? '').toString()),
                               );
                             }).toList(),
                             onChanged: (value) {
@@ -516,23 +518,21 @@ class _ActivityPageState extends State<ActivityPage> {
                           ? selectedSeasonId!
                           : selectedHerdId!;
 
-                      context.read<FarmBloc>().add(
-                        AddActivityEvent(
-                          detailsController.text.trim().isEmpty
-                              ? ''
-                              : detailsController.text.trim(),
-                          selectedSourceType!,
-                          sourceId,
-                          0,
-                          typeController.text.trim(),
-                          selectedDate!.toIso8601String(),
-                          detailsController.text.trim().isEmpty
-                              ? ''
-                              : detailsController.text.trim(),
-                          null,
-                          cost,
-                        ),
+                      final activity = ActivityModel.create(
+                        sourceType: selectedSourceType!,
+                        sourceId: sourceId,
+                        animalId: selectedSourceType == 'animal' ? 0 : null,
+                        type: typeController.text.trim(),
+                        details: detailsController.text.trim().isEmpty
+                            ? null
+                            : detailsController.text.trim(),
+                        cost: cost,
+                        date: selectedDate!,
+                        notes: detailsController.text.trim().isEmpty
+                            ? null
+                            : detailsController.text.trim(),
                       );
+                      context.read<ActivityBloc>().add(AddActivityEvent(activity));
                       Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
@@ -665,8 +665,8 @@ class _ActivityPageState extends State<ActivityPage> {
                             ),
                             items: seasons.map((season) {
                               return DropdownMenuItem<String>(
-                                value: season['id'] as String,
-                                child: Text(season['name']),
+                                value: (season['id'] ?? '').toString(),
+                                child: Text((season['name'] ?? '').toString()),
                               );
                             }).toList(),
                             onChanged: (value) {
@@ -862,25 +862,30 @@ class _ActivityPageState extends State<ActivityPage> {
                           ? selectedSeasonId!
                           : selectedHerdId!;
 
-                      context.read<FarmBloc>().add(
-                        UpdateActivityEvent(
-                          activity.id,
-                          descriptionController.text.trim().isEmpty
-                              ? ''
-                              : descriptionController.text.trim(),
-                          selectedSourceType!,
-                          sourceId,
-                          0,
-                          selectedType!,
-                          selectedDate!.toIso8601String(),
-                          descriptionController.text.trim().isEmpty
-                              ? ''
-                              : descriptionController.text.trim(),
-                          null,
-                          cost,
+                      final updatedActivity = ActivityModel(
+                        id: activity.id,
+                        sourceType: selectedSourceType!,
+                        sourceId: sourceId,
+                        animalId: selectedSourceType == 'animal' ? 0 : null,
+                        type: selectedType!,
+                        details: descriptionController.text.trim().isEmpty
+                            ? null
+                            : descriptionController.text.trim(),
+                        cost: cost,
+                        date: selectedDate!,
+                        notes: activity.notes, // Preserve existing notes
+                        createdAt: activity.createdAt,
+                        updatedAt: DateTime.now(),
+                      );
+
+                      context.read<ActivityBloc>().add(UpdateActivityEvent(updatedActivity));
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Activity updated successfully'),
+                          backgroundColor: Colors.green,
                         ),
                       );
-                      Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.shade600,
@@ -921,7 +926,7 @@ class _ActivityPageState extends State<ActivityPage> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                context.read<FarmBloc>().add(DeleteActivityEvent(activity.id));
+                context.read<ActivityBloc>().add(DeleteActivityEvent(activity.id));
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(

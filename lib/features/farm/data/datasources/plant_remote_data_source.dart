@@ -1,8 +1,6 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import '../../../../core/error/exceptions.dart';
 import '../models/plant_model.dart';
-import '../../../auth/data/services/user_storage_service.dart';
 
 abstract class PlantRemoteDataSource {
   Future<List<PlantModel>> getPlants();
@@ -12,115 +10,147 @@ abstract class PlantRemoteDataSource {
 }
 
 class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
-  final http.Client client;
+  final Dio dio;
   final String baseUrl;
 
-  PlantRemoteDataSourceImpl({required this.client, required this.baseUrl});
-
-  Future<String> _getToken() async {
-    return await UserStorageService.getToken() ?? '';
-  }
+  PlantRemoteDataSourceImpl({required this.dio, required this.baseUrl});
 
   @override
   Future<List<PlantModel>> getPlants() async {
-    final token = await _getToken();
-    final response = await client.get(
-      Uri.parse('$baseUrl/api/plants'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    try {
+      final response = await dio.get('/api/plants');
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return (data as List)
-          .map((json) => PlantModel.fromJson(json))
-          .toList();
-    } else {
-      String errorMsg = 'Failed to load plants';
-      try {
-        final errorData = json.decode(response.body);
-        if (errorData is Map && errorData['error'] != null) {
-          errorMsg = errorData['error'].toString();
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data is List) {
+          return data
+              .map((json) => PlantModel.fromJson(json as Map<String, dynamic>))
+              .toList();
         }
-      } catch (_) {}
+        return [];
+      } else {
+        String errorMsg = 'Failed to load plants';
+        try {
+          final errorData = response.data as Map<String, dynamic>?;
+          if (errorData != null && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+        throw ServerException(errorMsg);
+      }
+    } on DioException catch (e) {
+      String errorMsg = 'Failed to load plants';
+      if (e.response?.data != null) {
+        try {
+          final errorData = e.response!.data as Map<String, dynamic>;
+          if (errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+      }
       throw ServerException(errorMsg);
     }
   }
 
   @override
   Future<PlantModel> addPlant(PlantModel plant) async {
-    final token = await _getToken();
-    final response = await client.post(
-      Uri.parse('$baseUrl/api/plants'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode({
-        'name': plant.name,
-        'variety': plant.variety,
-      }),
-    );
+    try {
+      final response = await dio.post(
+        '/api/plants',
+        data: {
+          'name': plant.name,
+          'variety': plant.variety,
+        },
+      );
 
-    if (response.statusCode == 201) {
-      final data = json.decode(response.body);
-      return PlantModel.fromJson(data);
-    } else {
+      if (response.statusCode == 201) {
+        final data = response.data as Map<String, dynamic>;
+        return PlantModel.fromJson(data);
+      } else {
+        String errorMsg = 'Failed to add plant';
+        try {
+          final errorData = response.data as Map<String, dynamic>?;
+          if (errorData != null && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+        throw ServerException(errorMsg);
+      }
+    } on DioException catch (e) {
       String errorMsg = 'Failed to add plant';
-      try {
-        final errorData = json.decode(response.body);
-        if (errorData is Map && errorData['error'] != null) {
-          errorMsg = errorData['error'].toString();
-        }
-      } catch (_) {}
+      if (e.response?.data != null) {
+        try {
+          final errorData = e.response!.data as Map<String, dynamic>;
+          if (errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+      }
       throw ServerException(errorMsg);
     }
   }
 
   @override
   Future<PlantModel> updatePlant(PlantModel plant) async {
-    final token = await _getToken();
-    final response = await client.put(
-      Uri.parse('$baseUrl/api/plants/${plant.id}'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode({'name': plant.name, 'variety': plant.variety}),
-    );
+    try {
+      final response = await dio.put(
+        '/api/plants/${plant.id}',
+        data: {'name': plant.name, 'variety': plant.variety},
+      );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return PlantModel.fromJson(data);
-    } else {
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return PlantModel.fromJson(data);
+      } else {
+        String errorMsg = 'Failed to update plant';
+        try {
+          final errorData = response.data as Map<String, dynamic>?;
+          if (errorData != null && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+        throw ServerException(errorMsg);
+      }
+    } on DioException catch (e) {
       String errorMsg = 'Failed to update plant';
-      try {
-        final errorData = json.decode(response.body);
-        if (errorData is Map && errorData['error'] != null) {
-          errorMsg = errorData['error'].toString();
-        }
-      } catch (_) {}
+      if (e.response?.data != null) {
+        try {
+          final errorData = e.response!.data as Map<String, dynamic>;
+          if (errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+      }
       throw ServerException(errorMsg);
     }
   }
 
   @override
   Future<void> deletePlant(String id) async {
-    final token = await _getToken();
-    final response = await client.delete(
-      Uri.parse('$baseUrl/api/plants/$id'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    try {
+      final response = await dio.delete('/api/plants/$id');
 
-    if (response.statusCode != 200) {
+      if (response.statusCode != 200) {
+        String errorMsg = 'Failed to delete plant';
+        try {
+          final errorData = response.data as Map<String, dynamic>?;
+          if (errorData != null && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+        throw ServerException(errorMsg);
+      }
+    } on DioException catch (e) {
       String errorMsg = 'Failed to delete plant';
-      try {
-        final errorData = json.decode(response.body);
-        if (errorData is Map && errorData['error'] != null) {
-          errorMsg = errorData['error'].toString();
-        }
-      } catch (_) {}
+      if (e.response?.data != null) {
+        try {
+          final errorData = e.response!.data as Map<String, dynamic>;
+          if (errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+      }
       throw ServerException(errorMsg);
     }
   }
 }
-

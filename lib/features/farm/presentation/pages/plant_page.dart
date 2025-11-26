@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/farm_bloc.dart';
-import '../bloc/farm_event.dart';
-import '../bloc/farm_state.dart';
+import '../bloc/plant_bloc.dart';
+import '../bloc/plant_event.dart';
+import '../bloc/plant_state.dart';
 import '../../domain/entities/plant.dart';
-// Removed unused import
+import '../../data/models/plant_model.dart';
 import '../../../auth/data/utils/user_utils.dart';
 
 class PlantPage extends StatefulWidget {
@@ -18,7 +18,7 @@ class _PlantPageState extends State<PlantPage> {
   @override
   void initState() {
     super.initState();
-    context.read<FarmBloc>().add(GetPlantsEvent());
+    context.read<PlantBloc>().add(GetPlantsEvent());
   }
 
   @override
@@ -34,13 +34,13 @@ class _PlantPageState extends State<PlantPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<FarmBloc, FarmState>(
+      body: BlocBuilder<PlantBloc, PlantState>(
         builder: (context, state) {
-          if (state is FarmLoading) {
+          if (state is PlantLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state is FarmError) {
+          if (state is PlantError) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -59,7 +59,7 @@ class _PlantPageState extends State<PlantPage> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      context.read<FarmBloc>().add(GetPlantsEvent());
+                      context.read<PlantBloc>().add(GetPlantsEvent());
                     },
                     child: const Text('Retry'),
                   ),
@@ -68,7 +68,7 @@ class _PlantPageState extends State<PlantPage> {
             );
           }
 
-          if (state is FarmLoaded) {
+          if (state is PlantLoaded) {
             if (state.plants.isEmpty) {
               return Center(
                 child: Column(
@@ -269,17 +269,14 @@ class _PlantPageState extends State<PlantPage> {
                       return;
                     }
 
-                    // Removed unused variable
-
-                    context.read<FarmBloc>().add(
-                      AddPlantEvent(
-                        nameController.text.trim(),
-                        varietyController.text.trim().isEmpty
-                            ? ''
-                            : varietyController.text.trim(),
-                        userId,
-                      ),
+                    final plant = PlantModel.create(
+                      userId: userId ?? '',
+                      name: nameController.text.trim(),
+                      variety: varietyController.text.trim().isEmpty
+                          ? null
+                          : varietyController.text.trim(),
                     );
+                    context.read<PlantBloc>().add(AddPlantEvent(plant));
                     Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
@@ -371,16 +368,24 @@ class _PlantPageState extends State<PlantPage> {
                       return;
                     }
 
-                    context.read<FarmBloc>().add(
-                      UpdatePlantEvent(
-                        plant.id,
-                        nameController.text.trim(),
-                        varietyController.text.trim().isEmpty
-                            ? ''
-                            : varietyController.text.trim(),
+                    final updatedPlant = PlantModel(
+                      id: plant.id,
+                      userId: plant.userId,
+                      name: nameController.text.trim(),
+                      variety: varietyController.text.trim().isEmpty
+                          ? null
+                          : varietyController.text.trim(),
+                      createdAt: plant.createdAt,
+                      updatedAt: DateTime.now(),
+                    );
+                    context.read<PlantBloc>().add(UpdatePlantEvent(updatedPlant));
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Plant updated successfully'),
+                        backgroundColor: Colors.green,
                       ),
                     );
-                    Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue.shade600,
@@ -417,7 +422,7 @@ class _PlantPageState extends State<PlantPage> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                context.read<FarmBloc>().add(DeletePlantEvent(plant.id));
+                context.read<PlantBloc>().add(DeletePlantEvent(plant.id));
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('${plant.name} deleted successfully'),

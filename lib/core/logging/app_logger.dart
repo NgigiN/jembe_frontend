@@ -25,7 +25,7 @@ class AppLogger {
         printEmojis: true,
         dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
       ),
-      level: kDebugMode ? Level.debug : Level.info,
+      level: kDebugMode ? Level.debug : Level.warning,
     );
     _isInitialized = true;
   }
@@ -38,6 +38,10 @@ class AppLogger {
     StackTrace? stackTrace,
   ]) {
     if (!_isInitialized) initialize();
+
+    final shouldEmit =
+        !kReleaseMode || level.index >= Level.warning.index;
+    if (!shouldEmit) return;
 
     final categoryPrefix = '[${category.name.toUpperCase()}]';
     final formattedMessage = '$categoryPrefix $message';

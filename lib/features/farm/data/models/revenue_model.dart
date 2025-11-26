@@ -17,17 +17,19 @@ class RevenueModel extends Revenue {
   });
 
   factory RevenueModel.fromJson(Map<String, dynamic> json) {
+    final notesValue = json['notes'] ?? json['Notes'];
+
     return RevenueModel(
       id: (json['ID'] ?? json['id'] ?? '').toString(),
       userId: (json['user_id'] ?? json['UserID'] ?? '').toString(),
-      source: json['source'] ?? json['Source'] ?? '',
+      source: (json['source'] ?? json['Source'] ?? '').toString(),
       sourceId: (json['source_id'] ?? json['SourceID'] ?? '').toString(),
-      type: json['type'] ?? json['Type'] ?? '',
+      type: (json['type'] ?? json['Type'] ?? '').toString(),
       quantity: _parseDouble(json['quantity'] ?? json['Quantity']),
       unitPrice: _parseDouble(json['unit_price'] ?? json['UnitPrice']),
       total: _parseDouble(json['total'] ?? json['Total']),
       date: _parseDate(json['date'] ?? json['Date']),
-      notes: json['notes'] ?? json['Notes'],
+      notes: notesValue != null ? notesValue.toString() : null,
       createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
       updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );

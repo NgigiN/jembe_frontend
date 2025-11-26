@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/navigation/app_router.dart';
 import '../bloc/analysis_bloc.dart';
 
 class AnalysisPage extends StatelessWidget {
@@ -136,26 +138,17 @@ class AnalysisPage extends StatelessWidget {
 
   void _showTotalCostsBySeason(BuildContext context) {
     context.read<AnalysisBloc>().add(LoadTotalCostsBySeason());
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const TotalCostsBySeasonPage()),
-    );
+    context.push(AppRoutePath.totalCosts);
   }
 
   void _showCostBreakdown(BuildContext context) {
     context.read<AnalysisBloc>().add(LoadCostBreakdown());
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const CostBreakdownPage()),
-    );
+    context.push(AppRoutePath.costBreakdown);
   }
 
   void _showAnnualSummary(BuildContext context) {
     context.read<AnalysisBloc>().add(LoadAnnualCostSummary());
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AnnualSummaryPage()),
-    );
+    context.push(AppRoutePath.annualSummary);
   }
 
   void _showPerformanceInsights(BuildContext context) {

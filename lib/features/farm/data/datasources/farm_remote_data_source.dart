@@ -1,6 +1,4 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
 import '../../../../core/error/exceptions.dart';
 import '../models/land_model.dart';
 import '../models/plant_model.dart';
@@ -22,214 +20,206 @@ abstract class FarmRemoteDataSource {
 }
 
 class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
-  final http.Client client;
+  final Dio dio;
   final String baseUrl;
 
-  FarmRemoteDataSourceImpl({required this.client, required this.baseUrl});
-
-  Future<String> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token') ?? '';
-  }
+  FarmRemoteDataSourceImpl({required this.dio, required this.baseUrl});
 
   @override
   Future<List<LandModel>> getLands() async {
-    final token = await _getToken();
-    final response = await client.get(
-      Uri.parse('$baseUrl/api/collections/lands/records'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return (data['items'] as List)
-          .map((json) => LandModel.fromJson(json))
-          .toList();
-    } else {
-      throw ServerException();
+    try {
+      final response = await dio.get('/api/collections/lands/records');
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        final items = data['items'] as List;
+        return items
+            .map((json) => LandModel.fromJson(json as Map<String, dynamic>))
+            .toList();
+      } else {
+        throw ServerException('Failed to load lands');
+      }
+    } on DioException catch (e) {
+      throw ServerException('Network error: ${e.message}');
     }
   }
 
   @override
   Future<LandModel> addLand(String name) async {
-    final token = await _getToken();
-    final response = await client.post(
-      Uri.parse('$baseUrl/api/collections/lands/records'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode({'name': name}),
-    );
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return LandModel.fromJson(data);
-    } else {
-      throw ServerException();
+    try {
+      final response = await dio.post(
+        '/api/collections/lands/records',
+        data: {'name': name},
+      );
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return LandModel.fromJson(data);
+      } else {
+        throw ServerException('Failed to add land');
+      }
+    } on DioException catch (e) {
+      throw ServerException('Network error: ${e.message}');
     }
   }
 
   @override
   Future<LandModel> updateLand(String id, String name) async {
-    final token = await _getToken();
-    final response = await client.patch(
-      Uri.parse('$baseUrl/api/collections/lands/records/$id'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode({'name': name}),
-    );
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return LandModel.fromJson(data);
-    } else {
-      throw ServerException();
+    try {
+      final response = await dio.patch(
+        '/api/collections/lands/records/$id',
+        data: {'name': name},
+      );
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return LandModel.fromJson(data);
+      } else {
+        throw ServerException('Failed to update land');
+      }
+    } on DioException catch (e) {
+      throw ServerException('Network error: ${e.message}');
     }
   }
 
   @override
   Future<List<PlantModel>> getPlants() async {
-    final token = await _getToken();
-    final response = await client.get(
-      Uri.parse('$baseUrl/api/collections/crops/records'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return (data['items'] as List)
-          .map((json) => PlantModel.fromJson(json))
-          .toList();
-    } else {
-      throw ServerException();
+    try {
+      final response = await dio.get('/api/collections/crops/records');
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        final items = data['items'] as List;
+        return items
+            .map((json) => PlantModel.fromJson(json as Map<String, dynamic>))
+            .toList();
+      } else {
+        throw ServerException('Failed to load plants');
+      }
+    } on DioException catch (e) {
+      throw ServerException('Network error: ${e.message}');
     }
   }
 
   @override
   Future<PlantModel> addPlant(String name) async {
-    final token = await _getToken();
-    final response = await client.post(
-      Uri.parse('$baseUrl/api/collections/crops/records'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode({'name': name}),
-    );
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return PlantModel.fromJson(data);
-    } else {
-      throw ServerException();
+    try {
+      final response = await dio.post(
+        '/api/collections/crops/records',
+        data: {'name': name},
+      );
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return PlantModel.fromJson(data);
+      } else {
+        throw ServerException('Failed to add plant');
+      }
+    } on DioException catch (e) {
+      throw ServerException('Network error: ${e.message}');
     }
   }
 
   @override
   Future<PlantModel> updatePlant(String id, String name) async {
-    final token = await _getToken();
-    final response = await client.patch(
-      Uri.parse('$baseUrl/api/collections/crops/records/$id'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode({'name': name}),
-    );
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return PlantModel.fromJson(data);
-    } else {
-      throw ServerException();
+    try {
+      final response = await dio.patch(
+        '/api/collections/crops/records/$id',
+        data: {'name': name},
+      );
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return PlantModel.fromJson(data);
+      } else {
+        throw ServerException('Failed to update plant');
+      }
+    } on DioException catch (e) {
+      throw ServerException('Network error: ${e.message}');
     }
   }
 
   @override
   Future<List<SeasonModel>> getSeasons() async {
-    final token = await _getToken();
-    final response = await client.get(
-      Uri.parse('$baseUrl/api/collections/seasons/records'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return (data['items'] as List)
-          .map((json) => SeasonModel.fromJson(json))
-          .toList();
-    } else {
-      throw ServerException();
+    try {
+      final response = await dio.get('/api/collections/seasons/records');
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        final items = data['items'] as List;
+        return items
+            .map((json) => SeasonModel.fromJson(json as Map<String, dynamic>))
+            .toList();
+      } else {
+        throw ServerException('Failed to load seasons');
+      }
+    } on DioException catch (e) {
+      throw ServerException('Network error: ${e.message}');
     }
   }
 
   @override
   Future<SeasonModel> addSeason(String name) async {
-    final token = await _getToken();
-    final response = await client.post(
-      Uri.parse('$baseUrl/api/collections/seasons/records'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode({'name': name}),
-    );
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return SeasonModel.fromJson(data);
-    } else {
-      throw ServerException();
+    try {
+      final response = await dio.post(
+        '/api/collections/seasons/records',
+        data: {'name': name},
+      );
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return SeasonModel.fromJson(data);
+      } else {
+        throw ServerException('Failed to add season');
+      }
+    } on DioException catch (e) {
+      throw ServerException('Network error: ${e.message}');
     }
   }
 
   @override
   Future<SeasonModel> updateSeason(String id, String name) async {
-    final token = await _getToken();
-    final response = await client.patch(
-      Uri.parse('$baseUrl/api/collections/seasons/records/$id'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode({'name': name}),
-    );
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return SeasonModel.fromJson(data);
-    } else {
-      throw ServerException();
+    try {
+      final response = await dio.patch(
+        '/api/collections/seasons/records/$id',
+        data: {'name': name},
+      );
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return SeasonModel.fromJson(data);
+      } else {
+        throw ServerException('Failed to update season');
+      }
+    } on DioException catch (e) {
+      throw ServerException('Network error: ${e.message}');
     }
   }
 
   @override
   Future<List<ActivityModel>> getActivities() async {
-    final token = await _getToken();
-    final response = await client.get(
-      Uri.parse('$baseUrl/api/collections/activities/records'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return (data['items'] as List)
-          .map((json) => ActivityModel.fromJson(json))
-          .toList();
-    } else {
-      throw ServerException();
+    try {
+      final response = await dio.get('/api/collections/activities/records');
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        final items = data['items'] as List;
+        return items
+            .map((json) => ActivityModel.fromJson(json as Map<String, dynamic>))
+            .toList();
+      } else {
+        throw ServerException('Failed to load activities');
+      }
+    } on DioException catch (e) {
+      throw ServerException('Network error: ${e.message}');
     }
   }
 
   @override
   Future<ActivityModel> addActivity(String description) async {
-    final token = await _getToken();
-    final response = await client.post(
-      Uri.parse('$baseUrl/api/collections/activities/records'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode({'description': description}),
-    );
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return ActivityModel.fromJson(data);
-    } else {
-      throw ServerException();
+    try {
+      final response = await dio.post(
+        '/api/collections/activities/records',
+        data: {'description': description},
+      );
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return ActivityModel.fromJson(data);
+      } else {
+        throw ServerException('Failed to add activity');
+      }
+    } on DioException catch (e) {
+      throw ServerException('Network error: ${e.message}');
     }
   }
 }

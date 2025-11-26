@@ -1,20 +1,30 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/error/failures.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../domain/entities/input.dart';
 import '../../domain/usecases/get_inputs.dart';
 import '../../domain/usecases/get_inputs_params.dart';
 import '../../domain/usecases/add_input.dart';
+import '../../domain/usecases/update_input.dart';
+import '../../domain/usecases/delete_input.dart';
 import '../bloc/input_event.dart';
 import '../bloc/input_state.dart';
 
 class InputBloc extends Bloc<InputEvent, InputState> {
   final GetInputs getInputs;
   final AddInput addInput;
+  final UpdateInput updateInput;
+  final DeleteInput deleteInput;
 
-  InputBloc({required this.getInputs, required this.addInput})
+  InputBloc({
+    required this.getInputs,
+    required this.addInput,
+    required this.updateInput,
+    required this.deleteInput,
+  })
     : super(InputInitial()) {
     on<GetInputsEvent>((event, emit) async {
-      print('GetInputsEvent triggered');
+      appLogger.debug(LogCategory.farm, 'GetInputsEvent triggered');
       emit(InputLoading());
 
       try {
@@ -23,7 +33,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
         );
         result.fold(
           (failure) {
-            print('GetInputs failed: $failure');
+            appLogger.warning(LogCategory.farm, 'GetInputs failed: $failure');
             String message = 'Failed to load inputs';
             if (failure is ServerFailure && failure.errorMessage != null) {
               message = failure.errorMessage!;
@@ -31,12 +41,12 @@ class InputBloc extends Bloc<InputEvent, InputState> {
             emit(InputError(message));
           },
           (inputs) {
-            print('GetInputs success: ${inputs.length} inputs loaded');
+            appLogger.info(LogCategory.farm, 'Loaded ${inputs.length} inputs');
             emit(InputLoaded(inputs: inputs));
           },
         );
       } catch (e) {
-        print('GetInputs exception: $e');
+        appLogger.error(LogCategory.farm, 'GetInputs exception', e);
         emit(InputError('Unexpected error: $e'));
       }
     });
@@ -59,6 +69,53 @@ class InputBloc extends Bloc<InputEvent, InputState> {
         },
         (input) {
           final updatedInputs = List<Input>.from(currentInputs)..add(input);
+          emit(InputLoaded(inputs: updatedInputs));
+        },
+      );
+    });
+
+    on<UpdateInputEvent>((event, emit) async {
+      final currentInputs = state is InputLoaded
+          ? (state as InputLoaded).inputs
+          : <Input>[];
+
+      emit(InputLoading());
+      final result = await updateInput(UpdateInputParams(input: event.input));
+      result.fold(
+        (failure) {
+          String message = 'Failed to update input';
+          if (failure is ServerFailure && failure.errorMessage != null) {
+            message = failure.errorMessage!;
+          }
+          emit(InputError(message, inputs: currentInputs));
+        },
+        (updatedInput) {
+          final updatedInputs = currentInputs.map((input) {
+            return input.id == updatedInput.id ? updatedInput : input;
+          }).toList();
+          emit(InputLoaded(inputs: updatedInputs));
+        },
+      );
+    });
+
+    on<DeleteInputEvent>((event, emit) async {
+      final currentInputs = state is InputLoaded
+          ? (state as InputLoaded).inputs
+          : <Input>[];
+
+      emit(InputLoading());
+      final result = await deleteInput(DeleteInputParams(id: event.id));
+      result.fold(
+        (failure) {
+          String message = 'Failed to delete input';
+          if (failure is ServerFailure && failure.errorMessage != null) {
+            message = failure.errorMessage!;
+          }
+          emit(InputError(message, inputs: currentInputs));
+        },
+        (_) {
+          final updatedInputs =
+              currentInputs.where((input) => input.id != event.id).toList();
           emit(InputLoaded(inputs: updatedInputs));
         },
       );

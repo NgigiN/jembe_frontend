@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
-import 'features/auth/presentation/pages/login_page.dart';
-import 'features/auth/presentation/pages/splash_page.dart';
-import 'features/farm/presentation/bloc/farm_bloc.dart';
-import 'features/farm/presentation/bloc/farm_event.dart';
 import 'features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'features/farm/presentation/bloc/herd_bloc.dart';
 import 'features/farm/presentation/bloc/analysis_bloc.dart';
 import 'features/farm/presentation/bloc/revenue_bloc.dart';
-import 'features/farm/presentation/pages/landing_page.dart';
+import 'features/farm/presentation/bloc/land_bloc.dart';
+import 'features/farm/presentation/bloc/plant_bloc.dart';
+import 'features/farm/presentation/bloc/season_bloc.dart';
+import 'features/farm/presentation/bloc/activity_bloc.dart';
+import 'features/farm/presentation/bloc/input_bloc.dart';
 import 'core/config/app_config.dart';
 import 'core/logging/app_logger.dart';
-import 'core/logging/logging_navigator.dart';
+import 'core/navigation/app_router.dart';
 import 'injection_container.dart' as di;
 
 void main() async {
@@ -26,7 +26,7 @@ void main() async {
   // Log app startup
   appLogger.info(LogCategory.general, 'Farm Tracker App Starting');
 
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -34,26 +34,25 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appRouter = AppRouter();
+
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(create: (_) => di.sl<AuthBloc>()),
-        BlocProvider<FarmBloc>(
-          create: (_) => di.sl<FarmBloc>()..add(GetLandsEvent()),
-        ),
+        BlocProvider<LandBloc>(create: (_) => di.sl<LandBloc>()),
+        BlocProvider<PlantBloc>(create: (_) => di.sl<PlantBloc>()),
+        BlocProvider<SeasonBloc>(create: (_) => di.sl<SeasonBloc>()),
+        BlocProvider<ActivityBloc>(create: (_) => di.sl<ActivityBloc>()),
+        BlocProvider<InputBloc>(create: (_) => di.sl<InputBloc>()),
         BlocProvider<AnimalTypeBloc>(create: (_) => di.sl<AnimalTypeBloc>()),
         BlocProvider<HerdBloc>(create: (_) => di.sl<HerdBloc>()),
         BlocProvider<AnalysisBloc>(create: (_) => di.sl<AnalysisBloc>()),
         BlocProvider<RevenueBloc>(create: (_) => di.sl<RevenueBloc>()),
       ],
-      child: LoggingMaterialApp(
+      child: MaterialApp.router(
         title: 'Farm Tracking App',
         theme: ThemeData(primarySwatch: Colors.green, useMaterial3: true),
-        initialRoute: '/',
-        routes: {
-          '/': (context) => const SplashPage(),
-          '/login': (context) => LoginPage(),
-          '/landing': (context) => LandingPage(),
-        },
+        routerConfig: appRouter.router,
         debugShowCheckedModeBanner: false,
       ),
     );

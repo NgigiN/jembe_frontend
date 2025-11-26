@@ -1,8 +1,7 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../models/activity_model.dart';
-import '../../../auth/data/services/user_storage_service.dart';
 
 abstract class ActivityRemoteDataSource {
   Future<List<ActivityModel>> getActivities({String? sourceType});
@@ -12,175 +11,195 @@ abstract class ActivityRemoteDataSource {
 }
 
 class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
-  final http.Client client;
+  final Dio dio;
   final String baseUrl;
 
-  ActivityRemoteDataSourceImpl({required this.client, required this.baseUrl});
-
-  Future<String> _getToken() async {
-    return await UserStorageService.getToken() ?? '';
-  }
+  ActivityRemoteDataSourceImpl({required this.dio, required this.baseUrl});
 
   @override
   Future<List<ActivityModel>> getActivities({String? sourceType}) async {
-    final token = await _getToken();
-    if (token.isEmpty) {
-      throw ServerException('No authentication token found');
-    }
-
     try {
-      final uri = sourceType != null && sourceType.isNotEmpty
-          ? Uri.parse(
-              '$baseUrl/api/activities',
-            ).replace(queryParameters: {'source_type': sourceType})
-          : Uri.parse('$baseUrl/api/activities');
+      final queryParams = sourceType != null && sourceType.isNotEmpty
+          ? {'source_type': sourceType}
+          : null;
 
-      final response = await client.get(
-        uri,
-        headers: {'Authorization': 'Bearer $token'},
+      final response = await dio.get<Map<String, dynamic>>(
+        '/api/activities',
+        queryParameters: queryParams,
       );
 
-      print('Activities API Response Status: ${response.statusCode}');
-      print('Activities API Response Body: ${response.body}');
+      appLogger.debug(
+        LogCategory.http,
+        'Activities API Status: ${response.statusCode}',
+      );
 
       if (response.statusCode == 200) {
-        if (response.body.isEmpty || response.body.trim() == 'null') {
-          print('No activities found (empty response)');
-          return [];
-        }
-
-        final data = json.decode(response.body);
+        final data = response.data;
         if (data == null) {
-          print('No activities found (null response)');
+          appLogger.info(LogCategory.farm, 'No activities found (null)');
           return [];
         }
 
         if (data is! List) {
-          print(
-            'Unexpected response format: expected List, got ${data.runtimeType}',
+          appLogger.warning(
+            LogCategory.http,
+            'Unexpected response: expected List, got ${data.runtimeType}',
           );
           return [];
         }
 
-        final items = data;
-        print('Found ${items.length} activities');
-        return items.map((json) => ActivityModel.fromJson(json)).toList();
+        final items = data as List;
+        appLogger.info(LogCategory.farm, 'Found ${items.length} activities');
+        return items
+            .map((json) => ActivityModel.fromJson(json as Map<String, dynamic>))
+            .toList();
       } else {
         String errorMsg =
             'Failed to load activities (Status: ${response.statusCode})';
         try {
-          final errorData = json.decode(response.body);
-          if (errorData is Map && errorData['error'] != null) {
+          final errorData = response.data;
+          if (errorData != null && errorData is Map<String, dynamic> && errorData['error'] != null) {
             errorMsg = errorData['error'].toString();
           }
         } catch (_) {}
         throw ServerException(errorMsg);
       }
-    } catch (e) {
-      print('Error in getActivities: $e');
-      if (e is ServerException) {
-        rethrow;
+    } on DioException catch (e) {
+      appLogger.error(LogCategory.http, 'Error in getActivities', e);
+      String errorMsg = 'Network error';
+      if (e.response?.data != null) {
+        try {
+          final errorData = e.response!.data as Map<String, dynamic>;
+          if (errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
       }
-      throw ServerException('Network error: $e');
+      throw ServerException(errorMsg);
     }
   }
 
   @override
   Future<ActivityModel> addActivity(ActivityModel activity) async {
-    final token = await _getToken();
-    final requestBody = {
-      'source_type': activity.sourceType,
-      'source_id': int.tryParse(activity.sourceId) ?? 0,
-      'type': activity.type,
-      'details': activity.details,
-      'cost': activity.cost,
-      'date': activity.date.toUtc().toIso8601String(),
-      'notes': activity.notes,
-    };
-    if (activity.animalId != null && activity.animalId != 0) {
-      requestBody['animal_id'] = activity.animalId;
-    }
+    try {
+      final requestBody = <String, dynamic>{
+        'source_type': activity.sourceType,
+        'source_id': int.tryParse(activity.sourceId) ?? 0,
+        'type': activity.type,
+        'details': activity.details,
+        'cost': activity.cost,
+        'date': activity.date.toUtc().toIso8601String(),
+        'notes': activity.notes,
+      };
+      if (activity.animalId != null && activity.animalId != 0) {
+        requestBody['animal_id'] = activity.animalId;
+      }
 
-    final response = await client.post(
-      Uri.parse('$baseUrl/api/activities'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode(requestBody),
-    );
+      final response = await dio.post<Map<String, dynamic>>(
+        '/api/activities',
+        data: requestBody,
+      );
 
-    if (response.statusCode == 201) {
-      final data = json.decode(response.body);
-      return ActivityModel.fromJson(data);
-    } else {
+      if (response.statusCode == 201) {
+        final data = response.data as Map<String, dynamic>;
+        return ActivityModel.fromJson(data);
+      } else {
+        String errorMsg = 'Failed to add activity';
+        try {
+          final errorData = response.data as Map<String, dynamic>?;
+          if (errorData != null && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+        throw ServerException(errorMsg);
+      }
+    } on DioException catch (e) {
       String errorMsg = 'Failed to add activity';
-      try {
-        final errorData = json.decode(response.body);
-        if (errorData is Map && errorData['error'] != null) {
-          errorMsg = errorData['error'].toString();
-        }
-      } catch (_) {}
+      if (e.response?.data != null) {
+        try {
+          final errorData = e.response!.data as Map<String, dynamic>;
+          if (errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+      }
       throw ServerException(errorMsg);
     }
   }
 
   @override
   Future<ActivityModel> updateActivity(ActivityModel activity) async {
-    final token = await _getToken();
-    final requestBody = {
-      'source_type': activity.sourceType,
-      'source_id': int.tryParse(activity.sourceId) ?? 0,
-      'type': activity.type,
-      'details': activity.details,
-      'cost': activity.cost,
-      'date': activity.date.toUtc().toIso8601String(),
-      'notes': activity.notes,
-    };
-    if (activity.animalId != null && activity.animalId != 0) {
-      requestBody['animal_id'] = activity.animalId;
-    }
+    try {
+      final requestBody = <String, dynamic>{
+        'source_type': activity.sourceType,
+        'source_id': int.tryParse(activity.sourceId) ?? 0,
+        'type': activity.type,
+        'details': activity.details,
+        'cost': activity.cost,
+        'date': activity.date.toUtc().toIso8601String(),
+        'notes': activity.notes,
+      };
+      if (activity.animalId != null && activity.animalId != 0) {
+        requestBody['animal_id'] = activity.animalId;
+      }
 
-    final response = await client.put(
-      Uri.parse('$baseUrl/api/activities/${activity.id}'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode(requestBody),
-    );
+      final response = await dio.put<Map<String, dynamic>>(
+        '/api/activities/${activity.id}',
+        data: requestBody,
+      );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return ActivityModel.fromJson(data);
-    } else {
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return ActivityModel.fromJson(data);
+      } else {
+        String errorMsg = 'Failed to update activity';
+        try {
+          final errorData = response.data as Map<String, dynamic>?;
+          if (errorData != null && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+        throw ServerException(errorMsg);
+      }
+    } on DioException catch (e) {
       String errorMsg = 'Failed to update activity';
-      try {
-        final errorData = json.decode(response.body);
-        if (errorData is Map && errorData['error'] != null) {
-          errorMsg = errorData['error'].toString();
-        }
-      } catch (_) {}
+      if (e.response?.data != null) {
+        try {
+          final errorData = e.response!.data as Map<String, dynamic>;
+          if (errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+      }
       throw ServerException(errorMsg);
     }
   }
 
   @override
   Future<void> deleteActivity(String id) async {
-    final token = await _getToken();
-    final response = await client.delete(
-      Uri.parse('$baseUrl/api/activities/$id'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    try {
+      final response = await dio.delete<Map<String, dynamic>>('/api/activities/$id');
 
-    if (response.statusCode != 200) {
+      if (response.statusCode != 200) {
+        String errorMsg = 'Failed to delete activity';
+        try {
+          final errorData = response.data as Map<String, dynamic>?;
+          if (errorData != null && errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+        throw ServerException(errorMsg);
+      }
+    } on DioException catch (e) {
       String errorMsg = 'Failed to delete activity';
-      try {
-        final errorData = json.decode(response.body);
-        if (errorData is Map && errorData['error'] != null) {
-          errorMsg = errorData['error'].toString();
-        }
-      } catch (_) {}
+      if (e.response?.data != null) {
+        try {
+          final errorData = e.response!.data as Map<String, dynamic>;
+          if (errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          }
+        } catch (_) {}
+      }
       throw ServerException(errorMsg);
     }
   }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../logging/app_logger.dart';
 
@@ -11,20 +13,30 @@ class LoggingHttpClient extends http.BaseClient {
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     final stopwatch = Stopwatch()..start();
 
-    _logger.logHttpRequest(
-      request.method,
-      request.url.toString(),
-      headers: request.headers,
-      body: request is http.Request ? request.body : null,
-    );
+    if (!kReleaseMode) {
+      _logger.logHttpRequest(
+        request.method,
+        request.url.toString(),
+        headers: request.headers,
+        body: request is http.Request ? request.body : null,
+      );
+    }
 
     try {
       final response = await _inner.send(request);
       stopwatch.stop();
 
-      // Read response body for logging
-      final responseBody = await response.stream.bytesToString();
+      // In release mode, avoid reading response body to save memory
+      if (kReleaseMode) {
+        _logger.info(
+          LogCategory.http,
+          '${request.method} ${request.url} -> ${response.statusCode} (${stopwatch.elapsed.inMilliseconds}ms)',
+        );
+        return response;
+      }
 
+      // In debug mode, read body for detailed logging
+      final responseBody = await response.stream.bytesToString();
       _logger.logHttpResponse(
         request.method,
         request.url.toString(),
@@ -35,7 +47,7 @@ class LoggingHttpClient extends http.BaseClient {
 
       // Return response with the body stream reset
       return http.StreamedResponse(
-        Stream.value(responseBody.codeUnits),
+        Stream.value(utf8.encode(responseBody)),
         response.statusCode,
         headers: response.headers,
         isRedirect: response.isRedirect,

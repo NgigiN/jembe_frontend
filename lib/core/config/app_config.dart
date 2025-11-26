@@ -1,12 +1,16 @@
+import 'package:flutter/foundation.dart';
+
+import '../logging/app_logger.dart';
+
 enum Environment { local, remote }
 
 class AppConfig {
   static late Environment _currentEnvironment;
 
-  // Remote server configuration
-  static const String _remoteBaseUrl = 'http://193.187.129.179:6060';
+  // Remote server configuration - HTTPS enforced in production
+  static const String _remoteBaseUrl = 'https://193.187.129.179:6060';
   // static const String _localBaseUrl = 'http://127.0.0.1:8080';
-  static const String _localBaseUrl = 'http://192.168.100.5:8080';
+  static const String _localBaseUrl = 'http://10.145.34.171:8080';
 
   // Initialize environment based on dart-define flags
   static void initialize() {
@@ -25,10 +29,16 @@ class AppConfig {
         _currentEnvironment = Environment.local; // Default to local
     }
 
-    // Always print in production builds for debugging
-    print('Environment initialized: ${_currentEnvironment.name}');
-    print('Base URL: $baseUrl');
-    print('ENV dart-define value: "$envValue"');
+    if (!kReleaseMode) {
+      appLogger.info(
+        LogCategory.general,
+        'Environment initialized: ${_currentEnvironment.name}',
+      );
+      appLogger.debug(
+        LogCategory.general,
+        'Base URL: $baseUrl | ENV dart-define value: "$envValue"',
+      );
+    }
   }
 
   // Getter for current environment

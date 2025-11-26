@@ -20,4 +20,3 @@ class AddAnimalParams {
 
   AddAnimalParams({required this.animal});
 }
-

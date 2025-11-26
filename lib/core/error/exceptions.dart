@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 abstract class Exceptions extends Equatable {
-  const Exceptions([List properties = const <dynamic>[]]);
+  const Exceptions([List<dynamic> properties = const <dynamic>[]]);
 
   @override
   List<Object?> get props => [];

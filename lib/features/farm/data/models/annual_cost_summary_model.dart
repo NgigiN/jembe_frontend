@@ -16,12 +16,14 @@ class AnnualCostSummaryModel extends Equatable {
   });
 
   factory AnnualCostSummaryModel.fromJson(Map<String, dynamic> json) {
+    final totalCostValue = json['total_cost'] ?? 0.0;
+
     return AnnualCostSummaryModel(
       year: (json['year'] ?? '').toString(),
-      cropName: json['crop_name'] ?? '',
-      landName: json['land_name'] ?? '',
-      farmName: json['farm_name'] ?? '',
-      totalCost: (json['total_cost'] ?? 0.0).toDouble(),
+      cropName: (json['crop_name'] ?? '').toString(),
+      landName: (json['land_name'] ?? '').toString(),
+      farmName: (json['farm_name'] ?? '').toString(),
+      totalCost: (totalCostValue as num).toDouble(),
     );
   }
 

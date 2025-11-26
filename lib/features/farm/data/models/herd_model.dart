@@ -15,9 +15,9 @@ class HerdModel extends Herd {
     return HerdModel(
       id: (json['ID'] ?? json['id'] ?? '').toString(),
       userId: (json['user_id'] ?? json['UserID'] ?? '').toString(),
-      name: json['name'] ?? json['Name'] ?? '',
+      name: (json['name'] ?? json['Name'] ?? '').toString(),
       animalTypeId: (json['animal_type_id'] ?? json['AnimalTypeID'] ?? '').toString(),
-      location: json['location'] ?? json['Location'] ?? '',
+      location: (json['location'] ?? json['Location'] ?? '').toString(),
       createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
       updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );

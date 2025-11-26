@@ -1,37 +1,47 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../models/user_storage_model.dart';
 
 class UserStorageService {
   static const String _userKey = 'user_data';
   static const String _tokenKey = 'auth_token';
   static const String _userIdKey = 'user_id';
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+    lOptions: LinuxOptions(),
+    mOptions: MacOsOptions(),
+    wOptions: WindowsOptions(),
+    webOptions: WebOptions(),
+  );
+
+  static bool get _shouldUseSecureStorage => !kIsWeb;
 
   // Save user data to shared preferences
   static Future<void> saveUserData(UserStorageModel user) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    // Save complete user data as JSON
-    await prefs.setString(_userKey, jsonEncode(user.toJson()));
-
-    // Save token separately for easy access
-    await prefs.setString(_tokenKey, user.token);
-
-    // Save user ID separately for easy access
-    await prefs.setString(_userIdKey, user.id);
+    final serialized = jsonEncode(user.toJson());
+    await _writeString(_userKey, serialized);
+    await _writeString(_tokenKey, user.token);
+    await _writeString(_userIdKey, user.id);
   }
 
   // Get user data from shared preferences
   static Future<UserStorageModel?> getUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userJson = prefs.getString(_userKey);
+    final userJson = await _readString(_userKey);
 
     if (userJson != null) {
       try {
         final userMap = jsonDecode(userJson) as Map<String, dynamic>;
         return UserStorageModel.fromJson(userMap);
       } catch (e) {
-        print('Error parsing user data: $e');
+        appLogger.warning(
+          LogCategory.auth,
+          'Failed to parse cached user data',
+          e,
+        );
         return null;
       }
     }
@@ -40,14 +50,12 @@ class UserStorageService {
 
   // Get token from shared preferences
   static Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
+    return _readString(_tokenKey);
   }
 
   // Get user ID from shared preferences
   static Future<String?> getUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_userIdKey);
+    return _readString(_userIdKey);
   }
 
   // Check if user is logged in and session is valid (24 hours)
@@ -85,6 +93,11 @@ class UserStorageService {
 
   // Clear all user data (logout)
   static Future<void> clearUserData() async {
+    if (_shouldUseSecureStorage) {
+      await _secureStorage.delete(key: _userKey);
+      await _secureStorage.delete(key: _tokenKey);
+      await _secureStorage.delete(key: _userIdKey);
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userKey);
     await prefs.remove(_tokenKey);
@@ -106,5 +119,39 @@ class UserStorageService {
       );
       await saveUserData(updatedUser);
     }
+  }
+
+  static Future<void> _writeString(String key, String value) async {
+    if (_shouldUseSecureStorage) {
+      try {
+        await _secureStorage.write(key: key, value: value);
+        return;
+      } catch (e) {
+        appLogger.warning(
+          LogCategory.general,
+          'Secure storage write failed for $key',
+          e,
+        );
+      }
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, value);
+  }
+
+  static Future<String?> _readString(String key) async {
+    if (_shouldUseSecureStorage) {
+      try {
+        final secureValue = await _secureStorage.read(key: key);
+        if (secureValue != null) return secureValue;
+      } catch (e) {
+        appLogger.warning(
+          LogCategory.general,
+          'Secure storage read failed for $key',
+          e,
+        );
+      }
+    }
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(key);
   }
 }

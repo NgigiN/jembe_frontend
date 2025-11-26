@@ -5,7 +5,6 @@ import '../../domain/usecases/login.dart';
 import '../../domain/usecases/signup.dart';
 import '../../data/services/user_storage_service.dart';
 import '../../domain/entities/user.dart';
-import '../../../farm/data/services/farm_data_service.dart';
 
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -41,12 +40,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               userId: user.id,
               details: {'email': event.email, 'name': user.fullName},
             );
-            try {
-              await FarmDataService.getCostCategories();
-              appLogger.info(LogCategory.auth, 'Cost categories initialized after login');
-            } catch (e) {
-              appLogger.logError('CostCategoriesInit', e);
-            }
             emit(AuthAuthenticated(user));
           },
         );
@@ -79,12 +72,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             emit(AuthError(message));
           },
           (user) async {
-            try {
-              await FarmDataService.getCostCategories();
-              appLogger.info(LogCategory.auth, 'Cost categories initialized after signup');
-            } catch (e) {
-              appLogger.logError('CostCategoriesInit', e);
-            }
             emit(SignupSuccess());
           },
         );
@@ -127,12 +114,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             userId: user.id,
             details: {'email': user.email},
           );
-          try {
-            await FarmDataService.getCostCategories();
-            appLogger.info(LogCategory.auth, 'Cost categories initialized after existing login check');
-          } catch (e) {
-            appLogger.logError('CostCategoriesInit', e);
-          }
           emit(AuthAuthenticated(user));
         } else {
           appLogger.warning(

@@ -13,13 +13,17 @@ class LandModel extends Land {
   });
 
   factory LandModel.fromJson(Map<String, dynamic> json) {
+    final sizeValue = json['Size'] ?? json['size'];
+    final locationValue = json['Location'] ?? json['location'];
+    final soilTypeValue = json['SoilType'] ?? json['soil_type'];
+
     return LandModel(
       id: (json['ID'] ?? json['id'] ?? '').toString(),
       userId: (json['UserID'] ?? json['user_id'] ?? '').toString(),
-      name: json['Name'] ?? json['name'] ?? '',
-      size: (json['Size'] ?? json['size'])?.toDouble(),
-      location: json['Location'] ?? json['location'],
-      soilType: json['SoilType'] ?? json['soil_type'],
+      name: (json['Name'] ?? json['name'] ?? '').toString(),
+      size: sizeValue != null ? (sizeValue as num).toDouble() : null,
+      location: locationValue != null ? locationValue.toString() : null,
+      soilType: soilTypeValue != null ? soilTypeValue.toString() : null,
       createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
       updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );

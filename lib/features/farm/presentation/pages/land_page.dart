@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/farm_bloc.dart';
-import '../bloc/farm_event.dart';
-import '../bloc/farm_state.dart';
+import '../bloc/land_bloc.dart';
+import '../bloc/land_event.dart';
+import '../bloc/land_state.dart';
 import '../../domain/entities/land.dart';
-// Removed unused import
+import '../../data/models/land_model.dart';
 import '../../../auth/data/utils/user_utils.dart';
 
 class LandPage extends StatefulWidget {
@@ -18,7 +18,7 @@ class _LandPageState extends State<LandPage> {
   @override
   void initState() {
     super.initState();
-    context.read<FarmBloc>().add(GetLandsEvent());
+    context.read<LandBloc>().add(GetLandsEvent());
   }
 
   @override
@@ -34,13 +34,13 @@ class _LandPageState extends State<LandPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<FarmBloc, FarmState>(
+      body: BlocBuilder<LandBloc, LandState>(
         builder: (context, state) {
-          if (state is FarmLoading) {
+          if (state is LandLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state is FarmError) {
+          if (state is LandError) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -59,7 +59,7 @@ class _LandPageState extends State<LandPage> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      context.read<FarmBloc>().add(GetLandsEvent());
+                      context.read<LandBloc>().add(GetLandsEvent());
                     },
                     child: const Text('Retry'),
                   ),
@@ -68,7 +68,7 @@ class _LandPageState extends State<LandPage> {
             );
           }
 
-          if (state is FarmLoaded) {
+          if (state is LandLoaded) {
             if (state.lands.isEmpty) {
               return Center(
                 child: Column(
@@ -286,23 +286,18 @@ class _LandPageState extends State<LandPage> {
                       );
                       return;
                     }
-
-                    // Removed unused variable
-
-                    context.read<FarmBloc>().add(
-                      AddLandEvent(
-                        nameController.text.trim(),
-                        soilTypeController.text.trim().isEmpty
-                            ? ''
-                            : soilTypeController.text.trim(),
-                        locationController.text.trim().isEmpty
-                            ? ''
-                            : locationController.text.trim(),
-                        sizeController.text.trim().isEmpty
-                            ? '0'
-                            : sizeController.text.trim(),
-                      ),
+                    final land = LandModel.create(
+                      userId: userId,
+                      name: nameController.text.trim(),
+                      size: double.tryParse(sizeController.text.trim()),
+                      location: locationController.text.trim().isEmpty
+                          ? null
+                          : locationController.text.trim(),
+                      soilType: soilTypeController.text.trim().isEmpty
+                          ? null
+                          : soilTypeController.text.trim(),
                     );
+                    context.read<LandBloc>().add(AddLandEvent(land));
                     Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
@@ -418,22 +413,28 @@ class _LandPageState extends State<LandPage> {
                       return;
                     }
 
-                    context.read<FarmBloc>().add(
-                      UpdateLandEvent(
-                        land.id,
-                        nameController.text.trim(),
-                        soilTypeController.text.trim().isEmpty
-                            ? ''
-                            : soilTypeController.text.trim(),
-                        locationController.text.trim().isEmpty
-                            ? ''
-                            : locationController.text.trim(),
-                        sizeController.text.trim().isEmpty
-                            ? '0'
-                            : sizeController.text.trim(),
+                    final updatedLand = LandModel(
+                      id: land.id,
+                      userId: land.userId,
+                      name: nameController.text.trim(),
+                      size: double.tryParse(sizeController.text.trim()),
+                      location: locationController.text.trim().isEmpty
+                          ? null
+                          : locationController.text.trim(),
+                      soilType: soilTypeController.text.trim().isEmpty
+                          ? null
+                          : soilTypeController.text.trim(),
+                      createdAt: land.createdAt,
+                      updatedAt: DateTime.now(),
+                    );
+                    context.read<LandBloc>().add(UpdateLandEvent(updatedLand));
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Land updated successfully'),
+                        backgroundColor: Colors.green,
                       ),
                     );
-                    Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue.shade600,
@@ -470,7 +471,7 @@ class _LandPageState extends State<LandPage> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                context.read<FarmBloc>().add(DeleteLandEvent(land.id));
+                context.read<LandBloc>().add(DeleteLandEvent(land.id));
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('${land.name} deleted successfully'),

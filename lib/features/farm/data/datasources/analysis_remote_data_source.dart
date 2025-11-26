@@ -30,8 +30,10 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final totalCosts = data['total_costs']?.toDouble() ?? 0.0;
-        final breakdown = data['breakdown'] ?? {};
+        final totalCostsValue = data['total_costs'];
+        final totalCosts = totalCostsValue != null
+            ? (totalCostsValue as num).toDouble()
+            : 0.0;
 
         final List<TotalCostsBySeasonModel> result = [
           TotalCostsBySeasonModel(
@@ -108,41 +110,41 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
                   seasonName: '',
                   cropName: '',
                   landName: '',
-                  inputType: item['Type'] ?? item['type'] ?? '',
+                  inputType: (item['Type'] ?? item['type'] ?? '').toString(),
                   farmName: '',
-                  inputCost:
-                      (item['TotalCost'] ??
+                  inputCost: ((item['TotalCost'] ??
                               item['total_cost'] ??
                               item['amount'] ??
-                              0.0)
+                              0.0) as num)
                           .toDouble(),
-                  percentage: (item['Percentage'] ?? item['percentage'] ?? 0.0)
+                  percentage: ((item['Percentage'] ?? item['percentage'] ?? 0.0) as num)
                       .toDouble(),
-                  category: item['Category'] ?? item['category'] ?? '',
+                  category: (item['Category'] ?? item['category'] ?? '').toString(),
                 ),
               );
             }
           }
         } else if (data is Map) {
-          final byCategory = data['by_category'] ?? {};
+          final byCategory = data['by_category'] as Map<String, dynamic>? ?? {};
           if (byCategory['inputs'] != null) {
-            final inputs = byCategory['inputs'];
-            final items = inputs['items'] ?? [];
+            final inputs = byCategory['inputs'] as Map<String, dynamic>;
+            final items = (inputs['items'] as List<dynamic>?) ?? [];
             for (var item in items) {
+              if (item is! Map<String, dynamic>) continue;
               breakdowns.add(
                 CostBreakdownModel(
                   seasonId: '',
                   seasonName: '',
                   cropName: '',
                   landName: '',
-                  inputType: item['type'] ?? '',
+                  inputType: (item['type'] ?? '').toString(),
                   farmName: '',
-                  inputCost: (item['amount'] ?? 0.0).toDouble(),
+                  inputCost: ((item['amount'] ?? 0.0) as num).toDouble(),
                   percentage:
-                      (item['amount'] ?? 0.0).toDouble() /
-                      ((inputs['total'] ?? 1.0).toDouble()) *
+                      ((item['amount'] ?? 0.0) as num).toDouble() /
+                      ((inputs['total'] ?? 1.0) as num).toDouble() *
                       100,
-                  category: item['category'] ?? '',
+                  category: (item['category'] ?? '').toString(),
                 ),
               );
             }
@@ -223,27 +225,38 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
                   landName: '',
                   farmName: '',
                   totalCost:
-                      (item['TotalCosts'] ??
+                      ((item['TotalCosts'] ??
                               item['total_costs'] ??
                               item['costs'] ??
-                              0.0)
+                              0.0) as num)
                           .toDouble(),
                 ),
               );
             }
           }
         } else if (data is Map) {
-          final monthlyData = data['monthly_data'] ?? [];
+          final monthlyData = (data['monthly_data'] as List<dynamic>?) ?? [];
           summaries.addAll(
             monthlyData
                 .map<AnnualCostSummaryModel>(
-                  (item) => AnnualCostSummaryModel(
-                    year: currentYear.toString(),
-                    cropName: '',
-                    landName: '',
-                    farmName: '',
-                    totalCost: (item['costs'] ?? 0.0).toDouble(),
-                  ),
+                  (item) {
+                    if (item is! Map<String, dynamic>) {
+                      return AnnualCostSummaryModel(
+                        year: currentYear.toString(),
+                        cropName: '',
+                        landName: '',
+                        farmName: '',
+                        totalCost: 0.0,
+                      );
+                    }
+                    return AnnualCostSummaryModel(
+                      year: currentYear.toString(),
+                      cropName: '',
+                      landName: '',
+                      farmName: '',
+                      totalCost: ((item['costs'] ?? 0.0) as num).toDouble(),
+                    );
+                  },
                 )
                 .toList(),
           );

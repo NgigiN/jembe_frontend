@@ -1,5 +1,4 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import '../../../../core/error/exceptions.dart';
 import '../models/user_model.dart';
 
@@ -16,53 +15,74 @@ abstract class AuthRemoteDataSource {
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
-  final http.Client client;
+  final Dio dio;
   final String baseUrl;
 
-  AuthRemoteDataSourceImpl({required this.client, required this.baseUrl});
+  AuthRemoteDataSourceImpl({required this.dio, required this.baseUrl});
 
   @override
   Future<Map<String, dynamic>> login(String email, String password) async {
-    final response = await client.post(
-      Uri.parse('$baseUrl/api/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'email': email, 'password': password}),
-    );
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      final token = data['token'] as String;
+    try {
+      final response = await dio.post<Map<String, dynamic>>(
+        '/api/auth/login',
+        data: {'email': email, 'password': password},
+        options: Options(
+          headers: {'Content-Type': 'application/json'},
+          validateStatus: (status) => status != null && status < 500,
+        ),
+      );
 
-      if (data['user'] != null) {
-        final userData = data['user'] as Map<String, dynamic>;
-        return {
-          'user': UserModel.fromJson(userData),
-          'token': token,
-          'record': userData,
-        };
-      } else {
-        return {
-          'user': UserModel(
-            id: '',
-            email: email,
-            firstName: '',
-            lastName: '',
-            farmName: '',
-            location: '',
-          ),
-          'token': token,
-          'record': {'email': email},
-        };
-      }
-    } else {
-      String errorMsg = 'Login failed';
-      try {
-        final errorData = json.decode(response.body);
-        if (errorData is Map && errorData['error'] != null) {
-          errorMsg = errorData['error'].toString();
-        } else if (errorData['message'] != null) {
-          errorMsg = errorData['message'].toString();
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        final token = (data['token'] ?? '').toString();
+
+        if (data['user'] != null) {
+          final userData = data['user'] as Map<String, dynamic>;
+          return {
+            'user': UserModel.fromJson(userData),
+            'token': token,
+            'record': userData,
+          };
+        } else {
+          return {
+            'user': UserModel(
+              id: '',
+              email: email,
+              firstName: '',
+              lastName: '',
+              farmName: '',
+              location: '',
+            ),
+            'token': token,
+            'record': {'email': email},
+          };
         }
-      } catch (_) {}
+      } else {
+        String errorMsg = 'Login failed';
+        try {
+          final errorData = response.data;
+          if (errorData != null && errorData is Map<String, dynamic>) {
+            if (errorData['error'] != null) {
+              errorMsg = errorData['error'].toString();
+            } else if (errorData['message'] != null) {
+              errorMsg = errorData['message'].toString();
+            }
+          }
+        } catch (_) {}
+        throw ServerException(errorMsg);
+      }
+    } on DioException catch (e) {
+      String errorMsg = 'Login failed';
+      if (e.response?.data != null) {
+        try {
+          final errorData = e.response!.data as Map<String, dynamic>;
+          if (errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          } else if (errorData['message'] != null) {
+            errorMsg = errorData['message'].toString();
+          }
+        } catch (_) {}
+      }
       throw ServerException(errorMsg);
     }
   }
@@ -76,42 +96,63 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     String farmName,
     String location,
   ) async {
-    final response = await client.post(
-      Uri.parse('$baseUrl/api/auth/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'email': email,
-        'password': password,
-        'first_name': firstName,
-        'last_name': lastName,
-        'farm_name': farmName,
-        'location': location,
-      }),
-    );
-    if (response.statusCode == 201) {
-      final data = json.decode(response.body);
-      if (data['user'] != null) {
-        return UserModel.fromJson(data['user']);
-      } else {
-        return UserModel(
-          id: '',
-          email: email,
-          firstName: firstName,
-          lastName: lastName,
-          farmName: farmName,
-          location: location,
-        );
-      }
-    } else {
-      String errorMsg = 'Signup failed';
-      try {
-        final errorData = json.decode(response.body);
-        if (errorData is Map && errorData['error'] != null) {
-          errorMsg = errorData['error'].toString();
-        } else if (errorData['message'] != null) {
-          errorMsg = errorData['message'].toString();
+    try {
+      final response = await dio.post<Map<String, dynamic>>(
+        '/api/auth/register',
+        data: {
+          'email': email,
+          'password': password,
+          'first_name': firstName,
+          'last_name': lastName,
+          'farm_name': farmName,
+          'location': location,
+        },
+        options: Options(
+          headers: {'Content-Type': 'application/json'},
+          validateStatus: (status) => status != null && status < 500,
+        ),
+      );
+
+      if (response.statusCode == 201) {
+        final data = response.data as Map<String, dynamic>;
+        if (data['user'] != null) {
+          return UserModel.fromJson(data['user'] as Map<String, dynamic>);
+        } else {
+          return UserModel(
+            id: '',
+            email: email,
+            firstName: firstName,
+            lastName: lastName,
+            farmName: farmName,
+            location: location,
+          );
         }
-      } catch (_) {}
+      } else {
+        String errorMsg = 'Signup failed';
+        try {
+          final errorData = response.data;
+          if (errorData != null && errorData is Map<String, dynamic>) {
+            if (errorData['error'] != null) {
+              errorMsg = errorData['error'].toString();
+            } else if (errorData['message'] != null) {
+              errorMsg = errorData['message'].toString();
+            }
+          }
+        } catch (_) {}
+        throw ServerException(errorMsg);
+      }
+    } on DioException catch (e) {
+      String errorMsg = 'Signup failed';
+      if (e.response?.data != null) {
+        try {
+          final errorData = e.response!.data as Map<String, dynamic>;
+          if (errorData['error'] != null) {
+            errorMsg = errorData['error'].toString();
+          } else if (errorData['message'] != null) {
+            errorMsg = errorData['message'].toString();
+          }
+        } catch (_) {}
+      }
       throw ServerException(errorMsg);
     }
   }

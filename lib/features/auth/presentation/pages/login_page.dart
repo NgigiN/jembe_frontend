@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/navigation/app_router.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
-import 'signup_page.dart';
 
 class LoginPage extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
@@ -152,10 +153,7 @@ class LoginPage extends StatelessWidget {
                             style: TextStyle(color: Colors.grey),
                           ),
                           TextButton(
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => SignupPage()),
-                            ),
+                            onPressed: () => context.push(AppRoutePath.signup),
                             child: Text(
                               'Sign Up',
                               style: TextStyle(
@@ -201,10 +199,7 @@ class LoginPage extends StatelessWidget {
                             // Navigate after a short delay to show the message
                             Future.delayed(const Duration(seconds: 1), () {
                               if (context.mounted) {
-                                Navigator.pushReplacementNamed(
-                                  context,
-                                  '/landing',
-                                );
+                                context.go(AppRoutePath.landing);
                               }
                             });
                           }

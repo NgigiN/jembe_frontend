@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../../../core/logging/app_logger.dart';
 import '../../../auth/data/services/user_storage_service.dart';
 import '../../../../core/config/app_config.dart';
 
@@ -34,7 +35,7 @@ class FarmDataService {
             .toList();
       }
     } catch (e) {
-      print('Error fetching lands: $e');
+      appLogger.error(LogCategory.farm, 'Error fetching lands', e);
     }
     return [];
   }
@@ -63,7 +64,7 @@ class FarmDataService {
             .toList();
       }
     } catch (e) {
-      print('Error fetching plants: $e');
+      appLogger.error(LogCategory.farm, 'Error fetching plants', e);
     }
     return [];
   }
@@ -92,7 +93,7 @@ class FarmDataService {
             .toList();
       }
     } catch (e) {
-      print('Error fetching seasons: $e');
+      appLogger.error(LogCategory.farm, 'Error fetching seasons', e);
     }
     return [];
   }
@@ -121,7 +122,7 @@ class FarmDataService {
             .toList();
       }
     } catch (e) {
-      print('Error fetching animals: $e');
+      appLogger.error(LogCategory.farm, 'Error fetching animals', e);
     }
     return [];
   }
@@ -151,7 +152,7 @@ class FarmDataService {
 
       return response;
     } catch (e) {
-      print('Error in getTotalCosts: $e');
+      appLogger.error(LogCategory.http, 'Error in getTotalCosts', e);
       rethrow;
     }
   }
@@ -181,7 +182,7 @@ class FarmDataService {
 
       return response;
     } catch (e) {
-      print('Error in getCostBreakdown: $e');
+      appLogger.error(LogCategory.http, 'Error in getCostBreakdown', e);
       rethrow;
     }
   }
@@ -203,7 +204,7 @@ class FarmDataService {
 
       return response;
     } catch (e) {
-      print('Error in getMonthlySummary: $e');
+      appLogger.error(LogCategory.http, 'Error in getMonthlySummary', e);
       rethrow;
     }
   }
@@ -244,7 +245,7 @@ class FarmDataService {
             .toList();
       }
     } catch (e) {
-      print('Error fetching cost categories: $e');
+      appLogger.error(LogCategory.farm, 'Error fetching cost categories', e);
     }
     return [];
   }
@@ -271,7 +272,7 @@ class FarmDataService {
 
       return response.statusCode == 201;
     } catch (e) {
-      print('Error creating cost category: $e');
+      appLogger.error(LogCategory.farm, 'Error creating cost category', e);
       return false;
     }
   }

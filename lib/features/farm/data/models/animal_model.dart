@@ -12,12 +12,14 @@ class AnimalModel extends Animal {
   });
 
   factory AnimalModel.fromJson(Map<String, dynamic> json) {
+    final numberValue = json['Number'] ?? json['number'];
+
     return AnimalModel(
       id: (json['ID'] ?? json['id'] ?? '').toString(),
       userId: (json['UserID'] ?? json['user_id'] ?? '').toString(),
-      name: json['Name'] ?? json['name'] ?? '',
-      type: json['Type'] ?? json['type'] ?? '',
-      number: json['Number'] ?? json['number'],
+      name: (json['Name'] ?? json['name'] ?? '').toString(),
+      type: (json['Type'] ?? json['type'] ?? '').toString(),
+      number: numberValue != null ? (numberValue as num).toInt() : null,
       createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
       updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );

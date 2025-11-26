@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
-import 'land_page.dart';
-import 'plant_page.dart';
-import 'season_page.dart';
-import 'input_page.dart';
-import 'activity_page.dart';
-import 'herd_page.dart';
-import 'animal_type_page.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/navigation/app_router.dart';
 
 class FarmPage extends StatefulWidget {
   const FarmPage({super.key});
@@ -99,10 +94,7 @@ class _FarmPageState extends State<FarmPage>
                   Icons.landscape,
                   Colors.blue.shade100,
                   Colors.blue.shade700,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const LandPage()),
-                  ),
+                  () => context.push(AppRoutePath.lands),
                 ),
                 _buildCard(
                   context,
@@ -110,10 +102,7 @@ class _FarmPageState extends State<FarmPage>
                   Icons.eco,
                   Colors.green.shade100,
                   Colors.green.shade700,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const PlantPage()),
-                  ),
+                  () => context.push(AppRoutePath.plants),
                 ),
                 _buildCard(
                   context,
@@ -121,10 +110,7 @@ class _FarmPageState extends State<FarmPage>
                   Icons.calendar_today,
                   Colors.orange.shade100,
                   Colors.orange.shade700,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const SeasonPage()),
-                  ),
+                  () => context.push(AppRoutePath.seasons),
                 ),
                 _buildCard(
                   context,
@@ -132,13 +118,7 @@ class _FarmPageState extends State<FarmPage>
                   Icons.input,
                   Colors.purple.shade100,
                   Colors.purple.shade700,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          const InputPage(sourceType: 'plant'),
-                    ),
-                  ),
+                  () => context.push(AppRoutePath.inputsFor('plant')),
                 ),
                 _buildCard(
                   context,
@@ -146,13 +126,7 @@ class _FarmPageState extends State<FarmPage>
                   Icons.work,
                   Colors.red.shade100,
                   Colors.red.shade700,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          const ActivityPage(sourceType: 'plant'),
-                    ),
-                  ),
+                  () => context.push(AppRoutePath.activitiesFor('plant')),
                 ),
               ],
             ),
@@ -194,12 +168,7 @@ class _FarmPageState extends State<FarmPage>
                   Icons.category,
                   Colors.blue.shade100,
                   Colors.blue.shade700,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AnimalTypePage(),
-                    ),
-                  ),
+                  () => context.push(AppRoutePath.animalTypes),
                 ),
                 _buildCard(
                   context,
@@ -207,10 +176,7 @@ class _FarmPageState extends State<FarmPage>
                   Icons.pets,
                   Colors.orange.shade100,
                   Colors.orange.shade700,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const HerdPage()),
-                  ),
+                  () => context.push(AppRoutePath.herds),
                 ),
                 _buildCard(
                   context,
@@ -218,13 +184,7 @@ class _FarmPageState extends State<FarmPage>
                   Icons.input,
                   Colors.purple.shade100,
                   Colors.purple.shade700,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          const InputPage(sourceType: 'animal'),
-                    ),
-                  ),
+                  () => context.push(AppRoutePath.inputsFor('animal')),
                 ),
                 _buildCard(
                   context,
@@ -232,13 +192,7 @@ class _FarmPageState extends State<FarmPage>
                   Icons.work,
                   Colors.red.shade100,
                   Colors.red.shade700,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          const ActivityPage(sourceType: 'animal'),
-                    ),
-                  ),
+                  () => context.push(AppRoutePath.activitiesFor('animal')),
                 ),
               ],
             ),

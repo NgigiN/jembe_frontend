@@ -18,18 +18,18 @@ class UserStorageModel {
   });
 
   factory UserStorageModel.fromJson(Map<String, dynamic> json) {
-    final firstName = json['first_name'] ?? '';
-    final lastName = json['last_name'] ?? '';
+    final firstName = (json['first_name'] ?? '').toString();
+    final lastName = (json['last_name'] ?? '').toString();
     final fullName = '$firstName $lastName'.trim();
     return UserStorageModel(
-      email: json['email'] ?? '',
-      farmName: json['farm_name'] ?? '',
-      id: json['id'] ?? '',
-      location: json['location'] ?? '',
-      name: json['name'] ?? fullName,
-      token: json['token'] ?? '',
+      email: (json['email'] ?? '').toString(),
+      farmName: (json['farm_name'] ?? '').toString(),
+      id: (json['id'] ?? '').toString(),
+      location: (json['location'] ?? '').toString(),
+      name: (json['name'] ?? fullName).toString(),
+      token: (json['token'] ?? '').toString(),
       loginTime: json['login_time'] != null
-          ? DateTime.parse(json['login_time'])
+          ? DateTime.parse(json['login_time'].toString())
           : DateTime.now(),
     );
   }
@@ -50,15 +50,15 @@ class UserStorageModel {
     Map<String, dynamic> record,
     String token,
   ) {
-    final firstName = record['first_name'] ?? '';
-    final lastName = record['last_name'] ?? '';
+    final firstName = (record['first_name'] ?? '').toString();
+    final lastName = (record['last_name'] ?? '').toString();
     final fullName = '$firstName $lastName'.trim();
     return UserStorageModel(
-      email: record['email'] ?? '',
-      farmName: record['farm_name'] ?? '',
-      id: record['id'].toString(),
-      location: record['location'] ?? '',
-      name: fullName.isNotEmpty ? fullName : (record['name'] ?? ''),
+      email: (record['email'] ?? '').toString(),
+      farmName: (record['farm_name'] ?? '').toString(),
+      id: (record['id'] ?? '').toString(),
+      location: (record['location'] ?? '').toString(),
+      name: fullName.isNotEmpty ? fullName : (record['name'] ?? '').toString(),
       token: token,
       loginTime: DateTime.now(),
     );

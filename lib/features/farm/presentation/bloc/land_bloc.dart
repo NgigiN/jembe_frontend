@@ -4,14 +4,23 @@ import '../../../../core/usecases/usecase.dart';
 import '../../domain/entities/land.dart';
 import '../../domain/usecases/get_lands.dart';
 import '../../domain/usecases/add_land.dart';
+import '../../domain/usecases/update_land.dart';
+import '../../domain/usecases/delete_land.dart';
 import '../bloc/land_event.dart';
 import '../bloc/land_state.dart';
 
 class LandBloc extends Bloc<LandEvent, LandState> {
   final GetLands getLands;
   final AddLand addLand;
+  final UpdateLand updateLand;
+  final DeleteLand deleteLand;
 
-  LandBloc({required this.getLands, required this.addLand})
+  LandBloc({
+    required this.getLands,
+    required this.addLand,
+    required this.updateLand,
+    required this.deleteLand,
+  })
     : super(LandInitial()) {
     on<GetLandsEvent>((event, emit) async {
       emit(LandLoading());
@@ -41,6 +50,53 @@ class LandBloc extends Bloc<LandEvent, LandState> {
           } else {
             emit(LandLoaded(lands: [land]));
           }
+        },
+      );
+    });
+
+    on<UpdateLandEvent>((event, emit) async {
+      final currentLands = state is LandLoaded
+          ? (state as LandLoaded).lands
+          : <Land>[];
+
+      emit(LandLoading());
+      final result = await updateLand(UpdateLandParams(land: event.land));
+      result.fold(
+        (failure) {
+          String message = 'Failed to update land';
+          if (failure is ServerFailure && failure.errorMessage != null) {
+            message = failure.errorMessage!;
+          }
+          emit(LandError(message, lands: currentLands));
+        },
+        (updatedLand) {
+          final updatedLands = currentLands.map((land) {
+            return land.id == updatedLand.id ? updatedLand : land;
+          }).toList();
+          emit(LandLoaded(lands: updatedLands));
+        },
+      );
+    });
+
+    on<DeleteLandEvent>((event, emit) async {
+      final currentLands = state is LandLoaded
+          ? (state as LandLoaded).lands
+          : <Land>[];
+
+      emit(LandLoading());
+      final result = await deleteLand(DeleteLandParams(id: event.id));
+      result.fold(
+        (failure) {
+          String message = 'Failed to delete land';
+          if (failure is ServerFailure && failure.errorMessage != null) {
+            message = failure.errorMessage!;
+          }
+          emit(LandError(message, lands: currentLands));
+        },
+        (_) {
+          final updatedLands =
+              currentLands.where((land) => land.id != event.id).toList();
+          emit(LandLoaded(lands: updatedLands));
         },
       );
     });

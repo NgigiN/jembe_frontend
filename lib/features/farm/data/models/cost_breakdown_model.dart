@@ -24,16 +24,19 @@ class CostBreakdownModel extends Equatable {
   });
 
   factory CostBreakdownModel.fromJson(Map<String, dynamic> json) {
+    final inputCostValue = json['input_cost'] ?? 0.0;
+    final percentageValue = json['percentage'] ?? 0.0;
+
     return CostBreakdownModel(
-      seasonId: json['season_id'] ?? '',
-      seasonName: json['season_name'] ?? '',
-      cropName: json['crop_name'] ?? '',
-      landName: json['land_name'] ?? '',
-      inputType: json['input_type'] ?? '',
-      farmName: json['farm_name'] ?? '',
-      inputCost: (json['input_cost'] ?? 0.0).toDouble(),
-      percentage: (json['percentage'] ?? 0.0).toDouble(),
-      category: json['category'] ?? '',
+      seasonId: (json['season_id'] ?? '').toString(),
+      seasonName: (json['season_name'] ?? '').toString(),
+      cropName: (json['crop_name'] ?? '').toString(),
+      landName: (json['land_name'] ?? '').toString(),
+      inputType: (json['input_type'] ?? '').toString(),
+      farmName: (json['farm_name'] ?? '').toString(),
+      inputCost: (inputCostValue as num).toDouble(),
+      percentage: (percentageValue as num).toDouble(),
+      category: (json['category'] ?? '').toString(),
     );
   }
 

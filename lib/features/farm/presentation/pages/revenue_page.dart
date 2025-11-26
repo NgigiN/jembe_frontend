@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/navigation/app_router.dart';
 import '../bloc/revenue_bloc.dart';
 import '../bloc/revenue_event.dart';
 import '../bloc/revenue_state.dart';
@@ -143,37 +145,21 @@ class RevenuePage extends StatelessWidget {
 
   void _showAllRevenue(BuildContext context) {
     context.read<RevenueBloc>().add(LoadRevenues());
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AllRevenuePage()),
-    );
+    context.push(AppRoutePath.revenueAll);
   }
 
   void _showPlantRevenue(BuildContext context) {
     context.read<RevenueBloc>().add(LoadRevenues(source: 'plant'));
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const FilteredRevenuePage(source: 'plant'),
-      ),
-    );
+    context.push(AppRoutePath.revenueFilterFor('plant'));
   }
 
   void _showAnimalRevenue(BuildContext context) {
     context.read<RevenueBloc>().add(LoadRevenues(source: 'animal'));
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const FilteredRevenuePage(source: 'animal'),
-      ),
-    );
+    context.push(AppRoutePath.revenueFilterFor('animal'));
   }
 
   void _showAddRevenue(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AddRevenuePage()),
-    );
+    context.push(AppRoutePath.revenueAdd);
   }
 }
 
@@ -240,10 +226,7 @@ class AllRevenuePage extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddRevenuePage()),
-          );
+          context.push(AppRoutePath.revenueAdd);
         },
         backgroundColor: Colors.green.shade600,
         child: const Icon(Icons.add),
@@ -396,12 +379,7 @@ class FilteredRevenuePage extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AddRevenuePage(defaultSource: source),
-            ),
-          );
+          context.push(AppRoutePath.revenueAdd);
         },
         backgroundColor: color,
         child: const Icon(Icons.add),

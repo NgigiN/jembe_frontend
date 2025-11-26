@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/farm_bloc.dart';
-import '../bloc/farm_event.dart';
-import '../bloc/farm_state.dart';
+import '../bloc/input_bloc.dart';
+import '../bloc/input_event.dart';
+import '../bloc/input_state.dart';
 import '../bloc/herd_bloc.dart';
 import '../bloc/herd_event.dart';
 import '../bloc/herd_state.dart';
 import '../../domain/entities/input.dart';
+import '../../domain/entities/herd.dart';
+import '../../data/models/input_model.dart';
 import '../../data/services/farm_data_service.dart';
+import '../../../auth/data/utils/user_utils.dart';
 
 class InputPage extends StatefulWidget {
   final String? sourceType;
@@ -25,7 +28,7 @@ class _InputPageState extends State<InputPage> {
   @override
   void initState() {
     super.initState();
-    context.read<FarmBloc>().add(GetInputsEvent(sourceType: widget.sourceType));
+    context.read<InputBloc>().add(GetInputsEvent(sourceType: widget.sourceType));
     context.read<HerdBloc>().add(GetHerdsEvent());
     _loadCostCategories();
   }
@@ -62,13 +65,13 @@ class _InputPageState extends State<InputPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<FarmBloc, FarmState>(
+      body: BlocBuilder<InputBloc, InputState>(
         builder: (context, state) {
-          if (state is FarmLoading) {
+          if (state is InputLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state is FarmError) {
+          if (state is InputError) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -87,7 +90,7 @@ class _InputPageState extends State<InputPage> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      context.read<FarmBloc>().add(
+                      context.read<InputBloc>().add(
                         GetInputsEvent(sourceType: widget.sourceType),
                       );
                     },
@@ -98,7 +101,7 @@ class _InputPageState extends State<InputPage> {
             );
           }
 
-          if (state is FarmLoaded) {
+          if (state is InputLoaded) {
             final inputs = state.inputs;
             if (inputs.isEmpty) {
               return Center(
@@ -554,20 +557,19 @@ class _InputPageState extends State<InputPage> {
                           ? selectedSeasonId!
                           : selectedHerdId!;
 
-                      context.read<FarmBloc>().add(
-                        AddInputEvent(
-                          selectedSourceType!,
-                          sourceId,
-                          0,
-                          typeController.text.trim(),
-                          double.tryParse(quantityController.text.trim()),
-                          cost,
-                          selectedDate!.toIso8601String(),
-                          notesController.text.trim().isEmpty
-                              ? null
-                              : notesController.text.trim(),
-                        ),
+                      final input = InputModel.create(
+                        sourceType: selectedSourceType!,
+                        sourceId: sourceId,
+                        animalId: selectedSourceType == 'animal' ? 0 : null,
+                        type: typeController.text.trim(),
+                        quantity: double.tryParse(quantityController.text.trim()),
+                        cost: cost,
+                        date: selectedDate!,
+                        notes: notesController.text.trim().isEmpty
+                            ? null
+                            : notesController.text.trim(),
                       );
+                      context.read<InputBloc>().add(AddInputEvent(input));
                       Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
@@ -613,7 +615,7 @@ class _InputPageState extends State<InputPage> {
     final seasons = await FarmDataService.getSeasonsForDropdown();
 
     final herdState = context.read<HerdBloc>().state;
-    final herds = herdState is HerdLoaded ? herdState.herds : [];
+    final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
 
     if ((selectedSourceType == 'plant' && seasons.isEmpty) ||
         (selectedSourceType == 'animal' && herds.isEmpty)) {
@@ -742,7 +744,7 @@ class _InputPageState extends State<InputPage> {
                               labelText: 'Select Herd *',
                               border: OutlineInputBorder(),
                             ),
-                            items: herds.map((herd) {
+                            items: herds.map<DropdownMenuItem<String>>((herd) {
                               return DropdownMenuItem<String>(
                                 value: herd.id,
                                 child: Text('${herd.name} (${herd.location})'),
@@ -943,22 +945,30 @@ class _InputPageState extends State<InputPage> {
                           ? selectedSeasonId!
                           : selectedHerdId!;
 
-                      context.read<FarmBloc>().add(
-                        UpdateInputEvent(
-                          input.id,
-                          selectedSourceType!,
-                          sourceId,
-                          0,
-                          typeController.text.trim(),
-                          double.tryParse(quantityController.text.trim()),
-                          cost,
-                          selectedDate!.toIso8601String(),
-                          notesController.text.trim().isEmpty
-                              ? null
-                              : notesController.text.trim(),
+                      final updatedInput = InputModel(
+                        id: input.id,
+                        sourceType: selectedSourceType!,
+                        sourceId: sourceId,
+                        animalId: selectedSourceType == 'animal' ? 0 : null,
+                        type: typeController.text.trim(),
+                        quantity: double.tryParse(quantityController.text.trim()),
+                        cost: cost,
+                        date: selectedDate!,
+                        notes: notesController.text.trim().isEmpty
+                            ? null
+                            : notesController.text.trim(),
+                        createdAt: input.createdAt,
+                        updatedAt: DateTime.now(),
+                      );
+
+                      context.read<InputBloc>().add(UpdateInputEvent(updatedInput));
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Input updated successfully'),
+                          backgroundColor: Colors.green,
                         ),
                       );
-                      Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.shade600,
@@ -999,7 +1009,7 @@ class _InputPageState extends State<InputPage> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                context.read<FarmBloc>().add(DeleteInputEvent(input.id));
+                context.read<InputBloc>().add(DeleteInputEvent(input.id));
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('${input.type} input deleted successfully'),

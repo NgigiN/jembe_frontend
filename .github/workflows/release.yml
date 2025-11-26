@@ -1,0 +1,76 @@
+name: Release CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  analyze:
+    name: Analyze Code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Verify dependencies
+        run: flutter pub run dependency_validator
+      - name: Analyze code
+        run: flutter analyze
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Run tests
+        run: flutter test --coverage
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage/lcov.info
+
+  build-size-check:
+    name: Check Build Size
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Build app bundle
+        run: |
+          flutter build appbundle \
+            --release \
+            --dart-define=ENV=production \
+            --obfuscate \
+            --split-debug-info=build/split-info \
+            --tree-shake-icons
+      - name: Analyze size
+        run: |
+          flutter build appbundle --analyze-size --release
+        continue-on-error: true
+      - name: Check size limit
+        run: |
+          SIZE=$(du -sh build/app/outputs/bundle/release/app-release.aab | cut -f1)
+          echo "App bundle size: $SIZE"
+          # Fail if size exceeds 30MB (approximate check)
+          if [ $(du -m build/app/outputs/bundle/release/app-release.aab | cut -f1) -gt 30 ]; then
+            echo "ERROR: App bundle exceeds 30MB limit"
+            exit 1
+          fi
+

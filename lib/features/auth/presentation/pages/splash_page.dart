@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/navigation/app_router.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
-import 'login_page.dart';
-import '../../../farm/presentation/pages/landing_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -29,14 +29,10 @@ class _SplashPageState extends State<SplashPage> {
       listener: (context, state) {
         if (state is AuthAuthenticated) {
           // User is logged in, navigate to landing page
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => LandingPage()),
-          );
+          context.go(AppRoutePath.landing);
         } else if (state is AuthInitial) {
           // User is not logged in, navigate to login page
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => LoginPage()),
-          );
+          context.go(AppRoutePath.login);
         }
       },
       child: Scaffold(

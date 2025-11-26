@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/farm_bloc.dart';
-import '../bloc/farm_event.dart';
-import '../bloc/farm_state.dart';
+import '../bloc/season_bloc.dart';
+import '../bloc/season_event.dart';
+import '../bloc/season_state.dart';
 import '../../domain/entities/season.dart';
-// Removed unused import
+import '../../data/models/season_model.dart';
 import '../../data/services/farm_data_service.dart';
 import '../../../auth/data/utils/user_utils.dart';
 
@@ -19,7 +19,7 @@ class _SeasonPageState extends State<SeasonPage> {
   @override
   void initState() {
     super.initState();
-    context.read<FarmBloc>().add(GetSeasonsEvent());
+    context.read<SeasonBloc>().add(GetSeasonsEvent());
   }
 
   @override
@@ -35,13 +35,13 @@ class _SeasonPageState extends State<SeasonPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<FarmBloc, FarmState>(
+      body: BlocBuilder<SeasonBloc, SeasonState>(
         builder: (context, state) {
-          if (state is FarmLoading) {
+          if (state is SeasonLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state is FarmError) {
+          if (state is SeasonError) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -60,7 +60,7 @@ class _SeasonPageState extends State<SeasonPage> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      context.read<FarmBloc>().add(GetSeasonsEvent());
+                      context.read<SeasonBloc>().add(GetSeasonsEvent());
                     },
                     child: const Text('Retry'),
                   ),
@@ -69,7 +69,7 @@ class _SeasonPageState extends State<SeasonPage> {
             );
           }
 
-          if (state is FarmLoaded) {
+          if (state is SeasonLoaded) {
             if (state.seasons.isEmpty) {
               return Center(
                 child: Column(
@@ -271,12 +271,12 @@ class _SeasonPageState extends State<SeasonPage> {
                           items: plants
                               .where(
                                 (plant) =>
-                                    plant['id'] != null &&
-                                    plant['id'].toString().isNotEmpty,
+                                    (plant['id']?.toString() ?? '').isNotEmpty,
                               )
                               .map((plant) {
-                                final name = plant['name'] ?? '';
-                                final variety = plant['variety'] ?? '';
+                                final name = (plant['name'] ?? '').toString();
+                                final variety = (plant['variety'] ?? '')
+                                    .toString();
                                 final displayName = variety.isNotEmpty
                                     ? '$name ($variety)'
                                     : name;
@@ -302,12 +302,12 @@ class _SeasonPageState extends State<SeasonPage> {
                           items: lands
                               .where(
                                 (land) =>
-                                    land['id'] != null &&
-                                    land['id'].toString().isNotEmpty,
+                                    (land['id']?.toString() ?? '').isNotEmpty,
                               )
                               .map((land) {
-                                final name = land['name'] ?? '';
-                                final location = land['location'] ?? '';
+                                final name = (land['name'] ?? '').toString();
+                                final location = (land['location'] ?? '')
+                                    .toString();
                                 final displayName = location.isNotEmpty
                                     ? '$name ($location)'
                                     : name;
@@ -429,18 +429,15 @@ class _SeasonPageState extends State<SeasonPage> {
                         return;
                       }
 
-                      // Removed unused variable
-
-                      context.read<FarmBloc>().add(
-                        AddSeasonEvent(
-                          nameController.text.trim(),
-                          selectedLandId!,
-                          selectedPlantId!,
-                          selectedStartDate!.toIso8601String(),
-                          selectedEndDate?.toIso8601String() ?? '',
-                          userId,
-                        ),
+                      final season = SeasonModel.create(
+                        userId: userId,
+                        name: nameController.text.trim(),
+                        plantId: selectedPlantId!,
+                        landId: selectedLandId!,
+                        startDate: selectedStartDate!,
+                        endDate: selectedEndDate,
                       );
+                      context.read<SeasonBloc>().add(AddSeasonEvent(season));
                       Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
@@ -543,12 +540,12 @@ class _SeasonPageState extends State<SeasonPage> {
                           items: plants
                               .where(
                                 (plant) =>
-                                    plant['id'] != null &&
-                                    plant['id'].toString().isNotEmpty,
+                                    (plant['id']?.toString() ?? '').isNotEmpty,
                               )
                               .map((plant) {
-                                final name = plant['name'] ?? '';
-                                final variety = plant['variety'] ?? '';
+                                final name = (plant['name'] ?? '').toString();
+                                final variety = (plant['variety'] ?? '')
+                                    .toString();
                                 final displayName = variety.isNotEmpty
                                     ? '$name ($variety)'
                                     : name;
@@ -574,12 +571,12 @@ class _SeasonPageState extends State<SeasonPage> {
                           items: lands
                               .where(
                                 (land) =>
-                                    land['id'] != null &&
-                                    land['id'].toString().isNotEmpty,
+                                    (land['id']?.toString() ?? '').isNotEmpty,
                               )
                               .map((land) {
-                                final name = land['name'] ?? '';
-                                final location = land['location'] ?? '';
+                                final name = (land['name'] ?? '').toString();
+                                final location = (land['location'] ?? '')
+                                    .toString();
                                 final displayName = location.isNotEmpty
                                     ? '$name ($location)'
                                     : name;
@@ -732,17 +729,27 @@ class _SeasonPageState extends State<SeasonPage> {
                         return;
                       }
 
-                      context.read<FarmBloc>().add(
-                        UpdateSeasonEvent(
-                          season.id,
-                          nameController.text.trim(),
-                          selectedLandId!,
-                          selectedPlantId!,
-                          selectedStartDate!.toIso8601String(),
-                          selectedEndDate?.toIso8601String() ?? '',
-                        ),
+                      final updatedSeason = SeasonModel(
+                        id: season.id,
+                        userId: season.userId,
+                        name: nameController.text.trim(),
+                        plantId: selectedPlantId!,
+                        landId: selectedLandId!,
+                        startDate: selectedStartDate!,
+                        endDate: selectedEndDate,
+                        createdAt: season.createdAt,
+                        updatedAt: DateTime.now(),
+                      );
+                      context.read<SeasonBloc>().add(
+                        UpdateSeasonEvent(updatedSeason),
                       );
                       Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Season updated successfully'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.shade600,
@@ -783,7 +790,7 @@ class _SeasonPageState extends State<SeasonPage> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                context.read<FarmBloc>().add(DeleteSeasonEvent(season.id));
+                context.read<SeasonBloc>().add(DeleteSeasonEvent(season.id));
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('${season.name} deleted successfully'),

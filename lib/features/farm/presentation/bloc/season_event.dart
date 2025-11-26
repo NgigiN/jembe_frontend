@@ -16,3 +16,21 @@ class AddSeasonEvent extends SeasonEvent {
   @override
   List<Object> get props => [season];
 }
+
+class UpdateSeasonEvent extends SeasonEvent {
+  final Season season;
+
+  UpdateSeasonEvent(this.season);
+
+  @override
+  List<Object> get props => [season];
+}
+
+class DeleteSeasonEvent extends SeasonEvent {
+  final String id;
+
+  DeleteSeasonEvent(this.id);
+
+  @override
+  List<Object> get props => [id];
+}
