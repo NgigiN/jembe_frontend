@@ -95,6 +95,13 @@ import 'features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'features/farm/presentation/bloc/herd_bloc.dart';
 import 'features/farm/presentation/bloc/analysis_bloc.dart';
 import 'features/farm/presentation/bloc/revenue_bloc.dart';
+import 'features/profile/data/datasources/profile_remote_data_source.dart';
+import 'features/profile/data/repositories/profile_repository_impl.dart';
+import 'features/profile/domain/repositories/profile_repository.dart';
+import 'features/profile/domain/usecases/get_profile.dart';
+import 'features/profile/domain/usecases/update_profile.dart';
+import 'features/profile/domain/usecases/change_password.dart';
+import 'features/profile/presentation/bloc/profile_bloc.dart';
 
 final sl = GetIt.instance;
 
@@ -166,6 +173,13 @@ Future<void> init() async {
       addRevenue: sl(),
       updateRevenue: sl(),
       deleteRevenue: sl(),
+    ),
+  );
+  sl.registerFactory(
+    () => ProfileBloc(
+      getProfile: sl(),
+      updateProfile: sl(),
+      changePassword: sl(),
     ),
   );
 
@@ -243,6 +257,9 @@ Future<void> init() async {
   sl.registerLazySingleton(() => AddRevenue(sl()));
   sl.registerLazySingleton(() => UpdateRevenue(sl()));
   sl.registerLazySingleton(() => DeleteRevenue(sl()));
+  sl.registerLazySingleton(() => GetProfile(sl()));
+  sl.registerLazySingleton(() => UpdateProfile(sl()));
+  sl.registerLazySingleton(() => ChangePassword(sl()));
 
   // Repositories
   sl.registerLazySingleton<AuthRepository>(
@@ -280,6 +297,9 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<RevenueRepository>(
     () => RevenueRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerLazySingleton<ProfileRepository>(
+    () => ProfileRepositoryImpl(remoteDataSource: sl()),
   );
 
   // Data Sources
@@ -319,6 +339,9 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<RevenueRemoteDataSource>(
     () => RevenueRemoteDataSourceImpl(dio: sl(), baseUrl: AppConfig.baseUrl),
+  );
+  sl.registerLazySingleton<ProfileRemoteDataSource>(
+    () => ProfileRemoteDataSourceImpl(dio: sl()),
   );
 
   // External - Dio client (preferred for new code)

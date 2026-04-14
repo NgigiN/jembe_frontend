@@ -10,6 +10,7 @@ import 'features/farm/presentation/bloc/plant_bloc.dart';
 import 'features/farm/presentation/bloc/season_bloc.dart';
 import 'features/farm/presentation/bloc/activity_bloc.dart';
 import 'features/farm/presentation/bloc/input_bloc.dart';
+import 'features/profile/presentation/bloc/profile_bloc.dart';
 import 'core/theme/bloc/theme_bloc.dart';
 import 'core/theme/bloc/theme_state.dart';
 import 'core/theme/app_theme.dart';
@@ -51,6 +52,7 @@ class MyApp extends StatelessWidget {
         BlocProvider<HerdBloc>(create: (_) => di.sl<HerdBloc>()),
         BlocProvider<AnalysisBloc>(create: (_) => di.sl<AnalysisBloc>()),
         BlocProvider<RevenueBloc>(create: (_) => di.sl<RevenueBloc>()),
+        BlocProvider<ProfileBloc>(create: (_) => di.sl<ProfileBloc>()),
         BlocProvider<ThemeBloc>(create: (_) => ThemeBloc()),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(
