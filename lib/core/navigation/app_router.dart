@@ -47,9 +47,9 @@ class AppRoutePath {
   static const herds = '/herds';
   static const inputsTemplate = '/inputs/:sourceType';
   static const activitiesTemplate = '/activities/:sourceType';
-  static const totalCosts = '/analysis/total-costs';
-  static const costBreakdown = '/analysis/cost-breakdown';
-  static const annualSummary = '/analysis/annual-summary';
+  static const totalCosts = '/analytics/total-costs';
+  static const costBreakdown = '/analytics/cost-breakdown';
+  static const annualSummary = '/analytics/annual-summary';
   static const revenueAll = '/revenue/all';
   static const revenueFilterTemplate = '/revenue/filter/:source';
   static const revenueAdd = '/revenue/add';

@@ -18,7 +18,7 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
   @override
   Future<List<LandModel>> getLands() async {
     try {
-      final response = await dio.get('/api/lands');
+      final response = await dio.get('/api/v1/lands');
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -56,7 +56,7 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
   Future<LandModel> addLand(LandModel land) async {
     try {
       final response = await dio.post(
-        '/api/lands',
+        '/api/v1/lands',
         data: {
           'name': land.name,
           'size': land.size,
@@ -96,7 +96,7 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
   Future<LandModel> updateLand(LandModel land) async {
     try {
       final response = await dio.put(
-        '/api/lands/${land.id}',
+        '/api/v1/lands/${land.id}',
         data: {
           'name': land.name,
           'size': land.size,
@@ -135,7 +135,7 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
   @override
   Future<void> deleteLand(String id) async {
     try {
-      final response = await dio.delete('/api/lands/$id');
+      final response = await dio.delete('/api/v1/lands/$id');
 
       if (response.statusCode != 200) {
         String errorMsg = 'Failed to delete land';

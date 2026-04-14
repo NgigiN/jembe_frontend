@@ -28,7 +28,7 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
   @override
   Future<List<LandModel>> getLands() async {
     try {
-      final response = await dio.get('/api/collections/lands/records');
+      final response = await dio.get('/api/v1/collections/lands/records');
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
         final items = data['items'] as List;
@@ -47,7 +47,7 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
   Future<LandModel> addLand(String name) async {
     try {
       final response = await dio.post(
-        '/api/collections/lands/records',
+        '/api/v1/collections/lands/records',
         data: {'name': name},
       );
       if (response.statusCode == 200) {
@@ -65,7 +65,7 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
   Future<LandModel> updateLand(String id, String name) async {
     try {
       final response = await dio.patch(
-        '/api/collections/lands/records/$id',
+        '/api/v1/collections/lands/records/$id',
         data: {'name': name},
       );
       if (response.statusCode == 200) {
@@ -82,7 +82,7 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
   @override
   Future<List<PlantModel>> getPlants() async {
     try {
-      final response = await dio.get('/api/collections/crops/records');
+      final response = await dio.get('/api/v1/collections/crops/records');
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
         final items = data['items'] as List;
@@ -101,7 +101,7 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
   Future<PlantModel> addPlant(String name) async {
     try {
       final response = await dio.post(
-        '/api/collections/crops/records',
+        '/api/v1/collections/crops/records',
         data: {'name': name},
       );
       if (response.statusCode == 200) {
@@ -119,7 +119,7 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
   Future<PlantModel> updatePlant(String id, String name) async {
     try {
       final response = await dio.patch(
-        '/api/collections/crops/records/$id',
+        '/api/v1/collections/crops/records/$id',
         data: {'name': name},
       );
       if (response.statusCode == 200) {
@@ -136,7 +136,7 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
   @override
   Future<List<SeasonModel>> getSeasons() async {
     try {
-      final response = await dio.get('/api/collections/seasons/records');
+      final response = await dio.get('/api/v1/collections/seasons/records');
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
         final items = data['items'] as List;
@@ -155,7 +155,7 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
   Future<SeasonModel> addSeason(String name) async {
     try {
       final response = await dio.post(
-        '/api/collections/seasons/records',
+        '/api/v1/collections/seasons/records',
         data: {'name': name},
       );
       if (response.statusCode == 200) {
@@ -173,7 +173,7 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
   Future<SeasonModel> updateSeason(String id, String name) async {
     try {
       final response = await dio.patch(
-        '/api/collections/seasons/records/$id',
+        '/api/v1/collections/seasons/records/$id',
         data: {'name': name},
       );
       if (response.statusCode == 200) {
@@ -190,7 +190,7 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
   @override
   Future<List<ActivityModel>> getActivities() async {
     try {
-      final response = await dio.get('/api/collections/activities/records');
+      final response = await dio.get('/api/v1/collections/activities/records');
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
         final items = data['items'] as List;
@@ -209,7 +209,7 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
   Future<ActivityModel> addActivity(String description) async {
     try {
       final response = await dio.post(
-        '/api/collections/activities/records',
+        '/api/v1/collections/activities/records',
         data: {'description': description},
       );
       if (response.statusCode == 200) {

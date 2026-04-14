@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/navigation/app_router.dart';
+import '../../../../core/utils/responsive_utils.dart';
 
 class FarmPage extends StatefulWidget {
   const FarmPage({super.key});
@@ -29,15 +30,12 @@ class _FarmPageState extends State<FarmPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.green.shade600,
-        foregroundColor: Colors.white,
-        elevation: 0,
         toolbarHeight: 0,
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          indicatorColor: Theme.of(context).colorScheme.primary,
+          labelColor: Theme.of(context).colorScheme.primary,
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
           tabAlignment: TabAlignment.center,
           isScrollable: true,
           tabs: const [
@@ -51,7 +49,10 @@ class _FarmPageState extends State<FarmPage>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.green.shade50, Colors.white],
+            colors: [
+              Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+              Theme.of(context).colorScheme.surface
+            ],
           ),
         ),
         child: TabBarView(
@@ -64,29 +65,27 @@ class _FarmPageState extends State<FarmPage>
 
   Widget _buildPlantsTab(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.all(context.paddingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Plant Management',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
+            style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 8),
           Text(
             'Manage your crops, seasons, and plant-related activities',
-            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: context.paddingLarge),
           Expanded(
             child: GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
+              crossAxisCount: context.screenWidth > 600 ? 3 : 2,
+              crossAxisSpacing: context.paddingMedium,
+              mainAxisSpacing: context.paddingMedium,
               children: [
                 _buildCard(
                   context,
@@ -138,29 +137,27 @@ class _FarmPageState extends State<FarmPage>
 
   Widget _buildAnimalsTab(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.all(context.paddingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Animal Management',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
+            style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 8),
           Text(
             'Manage your herds, animals, and animal-related activities',
-            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: context.paddingLarge),
           Expanded(
             child: GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
+              crossAxisCount: context.screenWidth > 600 ? 3 : 2,
+              crossAxisSpacing: context.paddingMedium,
+              mainAxisSpacing: context.paddingMedium,
               children: [
                 _buildCard(
                   context,
@@ -211,40 +208,40 @@ class _FarmPageState extends State<FarmPage>
     VoidCallback onTap,
   ) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(context.paddingMedium),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [backgroundColor, backgroundColor.withValues(alpha: 0.7)],
+              colors: [
+                backgroundColor.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.3 : 1.0),
+                backgroundColor.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.1 : 0.7),
+              ],
             ),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(context.paddingSmall),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 32, color: iconColor),
+                child: Icon(icon, size: context.fontSize(32), color: iconColor),
               ),
               const SizedBox(height: 12),
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
+                    ),
                 textAlign: TextAlign.center,
               ),
             ],

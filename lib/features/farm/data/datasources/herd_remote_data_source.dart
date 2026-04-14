@@ -18,7 +18,7 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
   @override
   Future<List<HerdModel>> getHerds() async {
     try {
-      final response = await dio.get('/api/herds');
+      final response = await dio.get('/api/v1/herds');
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -57,7 +57,7 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
   Future<HerdModel> addHerd(HerdModel herd) async {
     try {
       final response = await dio.post(
-        '/api/herds',
+        '/api/v1/herds',
         data: herd.toJson(),
       );
 
@@ -92,7 +92,7 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
   Future<HerdModel> updateHerd(HerdModel herd) async {
     try {
       final response = await dio.put(
-        '/api/herds/${herd.id}',
+        '/api/v1/herds/${herd.id}',
         data: herd.toJson(),
       );
 
@@ -126,7 +126,7 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
   @override
   Future<void> deleteHerd(String id) async {
     try {
-      final response = await dio.delete('/api/herds/$id');
+      final response = await dio.delete('/api/v1/herds/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         String errorMsg = 'Failed to delete herd';

@@ -19,7 +19,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
   @override
   Future<List<SeasonModel>> getSeasons() async {
     try {
-      final response = await dio.get('/api/seasons');
+      final response = await dio.get('/api/v1/seasons');
 
       appLogger.debug(
         LogCategory.http,
@@ -66,7 +66,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
   Future<SeasonModel> addSeason(SeasonModel season) async {
     try {
       final response = await dio.post(
-        '/api/seasons',
+        '/api/v1/seasons',
         data: {
           'name': season.name,
           'plant_id': int.tryParse(season.plantId) ?? 0,
@@ -107,7 +107,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
   Future<SeasonModel> updateSeason(SeasonModel season) async {
     try {
       final response = await dio.put(
-        '/api/seasons/${season.id}',
+        '/api/v1/seasons/${season.id}',
         data: {
           'name': season.name,
           'plant_id': int.tryParse(season.plantId) ?? 0,
@@ -147,7 +147,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
   @override
   Future<void> deleteSeason(String id) async {
     try {
-      final response = await dio.delete('/api/seasons/$id');
+      final response = await dio.delete('/api/v1/seasons/$id');
 
       if (response.statusCode != 200) {
         String errorMsg = 'Failed to delete season';

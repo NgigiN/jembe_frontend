@@ -33,9 +33,9 @@ class _LandingPageState extends State<LandingPage> {
       body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.green.shade600,
-        unselectedItemColor: Colors.grey.shade600,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         items: const [

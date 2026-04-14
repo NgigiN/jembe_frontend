@@ -24,7 +24,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
       final response = await dio.post<Map<String, dynamic>>(
-        '/api/auth/login',
+        '/api/v1/auth/login',
         data: {'email': email, 'password': password},
         options: Options(
           headers: {'Content-Type': 'application/json'},
@@ -98,7 +98,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   ) async {
     try {
       final response = await dio.post<Map<String, dynamic>>(
-        '/api/auth/register',
+        '/api/v1/auth/register',
         data: {
           'email': email,
           'password': password,

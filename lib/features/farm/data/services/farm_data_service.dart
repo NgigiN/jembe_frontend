@@ -17,7 +17,7 @@ class FarmDataService {
 
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/lands'),
+        Uri.parse('$baseUrl/api/v1/lands'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -46,7 +46,7 @@ class FarmDataService {
 
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/plants'),
+        Uri.parse('$baseUrl/api/v1/plants'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -75,7 +75,7 @@ class FarmDataService {
 
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/seasons'),
+        Uri.parse('$baseUrl/api/v1/seasons'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -104,7 +104,7 @@ class FarmDataService {
 
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/animals'),
+        Uri.parse('$baseUrl/api/v1/animals'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -138,7 +138,7 @@ class FarmDataService {
     }
 
     try {
-      final uri = Uri.parse('$baseUrl/api/analysis/total-costs').replace(
+      final uri = Uri.parse('$baseUrl/api/v1/analytics/total-costs').replace(
         queryParameters: {
           if (type != null) 'type': type,
           if (startDate != null) 'start_date': startDate,
@@ -168,7 +168,7 @@ class FarmDataService {
     }
 
     try {
-      final uri = Uri.parse('$baseUrl/api/analysis/cost-breakdown').replace(
+      final uri = Uri.parse('$baseUrl/api/v1/analytics/cost-breakdown').replace(
         queryParameters: {
           if (type != null) 'type': type,
           if (startDate != null) 'start_date': startDate,
@@ -195,7 +195,7 @@ class FarmDataService {
 
     try {
       final uri = Uri.parse(
-        '$baseUrl/api/analysis/monthly-summary',
+        '$baseUrl/api/v1/analytics/monthly-summary',
       ).replace(queryParameters: {'year': year.toString()});
       final response = await http.get(
         uri,
@@ -222,7 +222,7 @@ class FarmDataService {
       if (category != null) queryParams['category'] = category;
 
       final uri = Uri.parse(
-        '$baseUrl/api/cost-categories',
+        '$baseUrl/api/v1/cost-categories',
       ).replace(queryParameters: queryParams);
       final response = await http.get(
         uri,
@@ -262,7 +262,7 @@ class FarmDataService {
 
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/cost-categories'),
+        Uri.parse('$baseUrl/api/v1/cost-categories'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

@@ -19,7 +19,7 @@ class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
   @override
   Future<List<AnimalTypeModel>> getAnimalTypes() async {
     try {
-      final response = await dio.get('/api/animal-types');
+      final response = await dio.get('/api/v1/animal-types');
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -57,7 +57,7 @@ class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
   @override
   Future<AnimalTypeModel> getAnimalType(String id) async {
     try {
-      final response = await dio.get('/api/animal-types/$id');
+      final response = await dio.get('/api/v1/animal-types/$id');
 
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
@@ -90,7 +90,7 @@ class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
   Future<AnimalTypeModel> addAnimalType(AnimalTypeModel animalType) async {
     try {
       final response = await dio.post(
-        '/api/animal-types',
+        '/api/v1/animal-types',
         data: animalType.toJson(),
       );
 
@@ -125,7 +125,7 @@ class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
   Future<AnimalTypeModel> updateAnimalType(AnimalTypeModel animalType) async {
     try {
       final response = await dio.put(
-        '/api/animal-types/${animalType.id}',
+        '/api/v1/animal-types/${animalType.id}',
         data: animalType.toJson(),
       );
 
@@ -159,7 +159,7 @@ class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
   @override
   Future<void> deleteAnimalType(String id) async {
     try {
-      final response = await dio.delete('/api/animal-types/$id');
+      final response = await dio.delete('/api/v1/animal-types/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         String errorMsg = 'Failed to delete animal type';

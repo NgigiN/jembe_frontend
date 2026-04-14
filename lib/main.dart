@@ -10,6 +10,9 @@ import 'features/farm/presentation/bloc/plant_bloc.dart';
 import 'features/farm/presentation/bloc/season_bloc.dart';
 import 'features/farm/presentation/bloc/activity_bloc.dart';
 import 'features/farm/presentation/bloc/input_bloc.dart';
+import 'core/theme/bloc/theme_bloc.dart';
+import 'core/theme/bloc/theme_state.dart';
+import 'core/theme/app_theme.dart';
 import 'core/config/app_config.dart';
 import 'core/logging/app_logger.dart';
 import 'core/navigation/app_router.dart';
@@ -48,12 +51,19 @@ class MyApp extends StatelessWidget {
         BlocProvider<HerdBloc>(create: (_) => di.sl<HerdBloc>()),
         BlocProvider<AnalysisBloc>(create: (_) => di.sl<AnalysisBloc>()),
         BlocProvider<RevenueBloc>(create: (_) => di.sl<RevenueBloc>()),
+        BlocProvider<ThemeBloc>(create: (_) => ThemeBloc()),
       ],
-      child: MaterialApp.router(
-        title: 'Farm Tracking App',
-        theme: ThemeData(primarySwatch: Colors.green, useMaterial3: true),
-        routerConfig: appRouter.router,
-        debugShowCheckedModeBanner: false,
+      child: BlocBuilder<ThemeBloc, ThemeState>(
+        builder: (context, themeState) {
+          return MaterialApp.router(
+            title: 'Farm Tracking App',
+            theme: AppTheme.getLightTheme(),
+            darkTheme: AppTheme.getDarkTheme(),
+            themeMode: themeState.themeMode,
+            routerConfig: appRouter.router,
+            debugShowCheckedModeBanner: false,
+          );
+        },
       ),
     );
   }

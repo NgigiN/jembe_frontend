@@ -23,8 +23,8 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
           ? {'source_type': sourceType}
           : null;
 
-      final response = await dio.get<Map<String, dynamic>>(
-        '/api/activities',
+      final response = await dio.get(
+        '/api/v1/activities',
         queryParameters: queryParams,
       );
 
@@ -96,7 +96,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       }
 
       final response = await dio.post<Map<String, dynamic>>(
-        '/api/activities',
+        '/api/v1/activities',
         data: requestBody,
       );
 
@@ -144,7 +144,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       }
 
       final response = await dio.put<Map<String, dynamic>>(
-        '/api/activities/${activity.id}',
+        '/api/v1/activities/${activity.id}',
         data: requestBody,
       );
 
@@ -178,7 +178,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
   @override
   Future<void> deleteActivity(String id) async {
     try {
-      final response = await dio.delete<Map<String, dynamic>>('/api/activities/$id');
+      final response = await dio.delete<Map<String, dynamic>>('/api/v1/activities/$id');
 
       if (response.statusCode != 200) {
         String errorMsg = 'Failed to delete activity';

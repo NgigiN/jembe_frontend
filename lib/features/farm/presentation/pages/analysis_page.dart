@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/navigation/app_router.dart';
@@ -12,42 +13,41 @@ class AnalysisPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Farm Analysis'),
-        backgroundColor: Colors.green.shade600,
-        foregroundColor: Colors.white,
-        elevation: 0,
       ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.green.shade50, Colors.white],
+            colors: [
+              Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+              Theme.of(context).colorScheme.surface
+            ],
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(context.paddingMedium),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Farm Analytics',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+                style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 8),
               Text(
                 'Track your farm performance and costs',
-                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: context.paddingLarge),
               Expanded(
                 child: GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+                  crossAxisCount: context.screenWidth > 600 ? 3 : 2,
+                  crossAxisSpacing: context.paddingMedium,
+                  mainAxisSpacing: context.paddingMedium,
+                  childAspectRatio: 0.85,
                   children: [
                     _buildAnalysisCard(
                       context,
@@ -95,15 +95,13 @@ class AnalysisPage extends StatelessWidget {
     VoidCallback onTap,
   ) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(context.paddingMedium),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -116,19 +114,21 @@ class AnalysisPage extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 48, color: color),
+              Icon(icon, size: context.fontSize(40), color: color),
               const SizedBox(height: 12),
               Text(
                 title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                    ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              Text('Tap to view', style: TextStyle(fontSize: 12, color: color)),
+              Text(
+                'Tap to view', 
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
+              ),
             ],
           ),
         ),
@@ -167,8 +167,6 @@ class TotalCostsBySeasonPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Total Costs by Season'),
-        backgroundColor: Colors.blue.shade600,
-        foregroundColor: Colors.white,
       ),
       body: BlocBuilder<AnalysisBloc, AnalysisState>(
         builder: (context, state) {
@@ -244,8 +242,6 @@ class CostBreakdownPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Cost Breakdown by Input Type'),
-        backgroundColor: Colors.orange.shade600,
-        foregroundColor: Colors.white,
       ),
       body: BlocBuilder<AnalysisBloc, AnalysisState>(
         builder: (context, state) {
@@ -327,8 +323,6 @@ class AnnualSummaryPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Annual Cost Summary'),
-        backgroundColor: Colors.green.shade600,
-        foregroundColor: Colors.white,
       ),
       body: BlocBuilder<AnalysisBloc, AnalysisState>(
         builder: (context, state) {

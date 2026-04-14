@@ -24,7 +24,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
           : null;
 
       final response = await dio.get(
-        '/api/inputs',
+        '/api/v1/inputs',
         queryParameters: queryParams,
       );
 
@@ -96,7 +96,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
       }
 
       final response = await dio.post(
-        '/api/inputs',
+        '/api/v1/inputs',
         data: requestBody,
       );
 
@@ -144,7 +144,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
       }
 
       final response = await dio.put(
-        '/api/inputs/${input.id}',
+        '/api/v1/inputs/${input.id}',
         data: requestBody,
       );
 
@@ -178,7 +178,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
   @override
   Future<void> deleteInput(String id) async {
     try {
-      final response = await dio.delete('/api/inputs/$id');
+      final response = await dio.delete('/api/v1/inputs/$id');
 
       if (response.statusCode != 200) {
         String errorMsg = 'Failed to delete input';
