@@ -21,12 +21,12 @@ class AnalysisError extends AnalysisState {
 }
 
 class TotalCostsBySeasonLoaded extends AnalysisState {
-  final List<TotalCostsBySeason> totalCosts;
+  final FarmDetailedCost detailedCosts;
 
-  const TotalCostsBySeasonLoaded(this.totalCosts);
+  const TotalCostsBySeasonLoaded(this.detailedCosts);
 
   @override
-  List<Object> get props => [totalCosts];
+  List<Object> get props => [detailedCosts];
 }
 
 class CostBreakdownLoaded extends AnalysisState {

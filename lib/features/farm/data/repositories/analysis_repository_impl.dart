@@ -1,7 +1,7 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/error/exceptions.dart';
-import '../../domain/entities/total_costs_by_season.dart';
+import '../../domain/entities/farm_detailed_cost.dart';
 import '../../domain/entities/cost_breakdown.dart';
 import '../../domain/entities/annual_cost_summary.dart';
 import '../../domain/repositories/analysis_repository.dart';
@@ -13,24 +13,11 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
   AnalysisRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<Either<Failure, List<TotalCostsBySeason>>>
+  Future<Either<Failure, FarmDetailedCost>>
   getTotalCostsBySeason() async {
     try {
-      final totalCostsModels = await remoteDataSource.getTotalCostsBySeason();
-      final totalCosts = totalCostsModels
-          .map(
-            (model) => TotalCostsBySeason(
-              seasonId: model.seasonId,
-              seasonName: model.seasonName,
-              startDate: model.startDate,
-              cropName: model.cropName,
-              landName: model.landName,
-              farmName: model.farmName,
-              totalCost: model.totalCost,
-            ),
-          )
-          .toList();
-      return Right(totalCosts);
+      final model = await remoteDataSource.getTotalCostsBySeason();
+      return Right(model);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

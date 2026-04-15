@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:farm_tracker/features/farm/data/models/total_costs_by_season_model.dart';
+import 'package:farm_tracker/features/farm/data/models/farm_detailed_cost_model.dart';
 import 'package:farm_tracker/features/farm/data/models/cost_breakdown_model.dart';
 import 'package:farm_tracker/features/farm/data/models/annual_cost_summary_model.dart';
 import '../../../../core/error/exceptions.dart';
@@ -7,49 +7,34 @@ import '../../../../core/logging/app_logger.dart';
 import '../services/farm_data_service.dart';
 
 abstract class AnalysisRemoteDataSource {
-  Future<List<TotalCostsBySeasonModel>> getTotalCostsBySeason();
+  Future<FarmDetailedCostModel> getTotalCostsBySeason();
   Future<List<CostBreakdownModel>> getCostBreakdownByInputType();
   Future<List<AnnualCostSummaryModel>> getAnnualCostSummary();
 }
 
 class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
   @override
-  Future<List<TotalCostsBySeasonModel>> getTotalCostsBySeason() async {
+  Future<FarmDetailedCostModel> getTotalCostsBySeason() async {
     try {
-      appLogger.info(LogCategory.farm, 'Fetching total costs by season');
-      final response = await FarmDataService.getTotalCosts(type: 'plant');
+      appLogger.info(LogCategory.farm, 'Fetching unified total costs');
+      final response = await FarmDataService.getTotalCosts();
 
       appLogger.debug(
         LogCategory.http,
-        'Total Costs by Season API Response Status: ${response.statusCode}',
+        'Unified Total Costs API Response Status: ${response.statusCode}',
       );
       appLogger.debug(
         LogCategory.http,
-        'Total Costs by Season API Response Body: ${response.body}',
+        'Unified Total Costs API Response Body: ${response.body}',
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final totalCostsValue = data['total_costs'];
-        final totalCosts = totalCostsValue != null
-            ? (totalCostsValue as num).toDouble()
-            : 0.0;
-
-        final List<TotalCostsBySeasonModel> result = [
-          TotalCostsBySeasonModel(
-            seasonId: '',
-            seasonName: 'Total',
-            startDate: DateTime.now(),
-            cropName: '',
-            landName: '',
-            farmName: '',
-            totalCost: totalCosts,
-          ),
-        ];
+        final result = FarmDetailedCostModel.fromJson(data);
 
         appLogger.info(
           LogCategory.farm,
-          'Successfully fetched total costs by season',
+          'Successfully fetched unified total costs',
         );
         return result;
       } else if (response.statusCode == 401 || response.statusCode == 403) {
