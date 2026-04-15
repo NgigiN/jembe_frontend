@@ -30,8 +30,6 @@ class _HerdPageState extends State<HerdPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Herd Management'),
-        backgroundColor: Colors.green.shade600,
-        foregroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -85,15 +83,13 @@ class _HerdPageState extends State<HerdPage> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w500,
-                        color: Colors.black87,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Tap the + button to register your first herd',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -197,8 +193,6 @@ class _HerdPageState extends State<HerdPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddHerdDialog(context),
-        backgroundColor: Colors.green.shade600,
-        foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
     );
@@ -228,9 +222,9 @@ class _HerdPageState extends State<HerdPage> {
 
                 return Container(
                   height: MediaQuery.of(context).size.height * 0.7,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(20),
                     ),
                   ),
@@ -242,10 +236,9 @@ class _HerdPageState extends State<HerdPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Register New Herd',
-                              style: TextStyle(
-                                fontSize: 20,
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -405,8 +398,6 @@ class _HerdPageState extends State<HerdPage> {
                                     Navigator.pop(context);
                                   },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green.shade600,
-                              foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
                             child: const Text(
@@ -448,9 +439,9 @@ class _HerdPageState extends State<HerdPage> {
 
                 return Container(
                   height: MediaQuery.of(context).size.height * 0.7,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(20),
                     ),
                   ),
@@ -462,10 +453,9 @@ class _HerdPageState extends State<HerdPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Edit Herd',
-                              style: TextStyle(
-                                fontSize: 20,
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -564,8 +554,8 @@ class _HerdPageState extends State<HerdPage> {
                               Navigator.pop(context);
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue.shade600,
-                              foregroundColor: Colors.white,
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
                             child: const Text(

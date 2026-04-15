@@ -41,12 +41,12 @@ class _LandingPageState extends State<LandingPage> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.agriculture), label: 'Farm'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.monetization_on),
-            label: 'Revenue',
+            icon: Icon(Icons.analytics),
+            label: 'Analytics',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.analytics),
-            label: 'Analysis',
+            icon: Icon(Icons.monetization_on),
+            label: 'Revenue',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
