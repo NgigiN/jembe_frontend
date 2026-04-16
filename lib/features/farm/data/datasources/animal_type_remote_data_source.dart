@@ -12,9 +12,8 @@ abstract class AnimalTypeRemoteDataSource {
 
 class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
   final Dio dio;
-  final String baseUrl;
 
-  AnimalTypeRemoteDataSourceImpl({required this.dio, required this.baseUrl});
+  AnimalTypeRemoteDataSourceImpl({required this.dio});
 
   @override
   Future<List<AnimalTypeModel>> getAnimalTypes() async {

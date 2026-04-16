@@ -11,9 +11,8 @@ abstract class HerdRemoteDataSource {
 
 class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
   final Dio dio;
-  final String baseUrl;
 
-  HerdRemoteDataSourceImpl({required this.dio, required this.baseUrl});
+  HerdRemoteDataSourceImpl({required this.dio});
 
   @override
   Future<List<HerdModel>> getHerds() async {

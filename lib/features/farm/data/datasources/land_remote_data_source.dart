@@ -11,9 +11,8 @@ abstract class LandRemoteDataSource {
 
 class LandRemoteDataSourceImpl implements LandRemoteDataSource {
   final Dio dio;
-  final String baseUrl;
 
-  LandRemoteDataSourceImpl({required this.dio, required this.baseUrl});
+  LandRemoteDataSourceImpl({required this.dio});
 
   @override
   Future<List<LandModel>> getLands() async {

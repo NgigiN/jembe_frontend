@@ -32,15 +32,11 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
       final breakdowns = breakdownModels
           .map(
             (model) => CostBreakdown(
-              seasonId: model.seasonId,
-              seasonName: model.seasonName,
-              cropName: model.cropName,
-              landName: model.landName,
-              inputType: model.inputType,
-              farmName: model.farmName,
-              inputCost: model.inputCost,
-              percentage: model.percentage,
               category: model.category,
+              type: model.type,
+              origin: model.origin,
+              totalCost: model.totalCost,
+              percentage: model.percentage,
             ),
           )
           .toList();

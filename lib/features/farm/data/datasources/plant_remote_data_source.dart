@@ -11,9 +11,8 @@ abstract class PlantRemoteDataSource {
 
 class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
   final Dio dio;
-  final String baseUrl;
 
-  PlantRemoteDataSourceImpl({required this.dio, required this.baseUrl});
+  PlantRemoteDataSourceImpl({required this.dio});
 
   @override
   Future<List<PlantModel>> getPlants() async {

@@ -83,58 +83,10 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
       );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final List<CostBreakdownModel> breakdowns = [];
-
-        if (data is List) {
-          for (var item in data) {
-            if (item is Map<String, dynamic>) {
-              breakdowns.add(
-                CostBreakdownModel(
-                  seasonId: '',
-                  seasonName: '',
-                  cropName: '',
-                  landName: '',
-                  inputType: (item['Type'] ?? item['type'] ?? '').toString(),
-                  farmName: '',
-                  inputCost: ((item['TotalCost'] ??
-                              item['total_cost'] ??
-                              item['amount'] ??
-                              0.0) as num)
-                          .toDouble(),
-                  percentage: ((item['Percentage'] ?? item['percentage'] ?? 0.0) as num)
-                      .toDouble(),
-                  category: (item['Category'] ?? item['category'] ?? '').toString(),
-                ),
-              );
-            }
-          }
-        } else if (data is Map) {
-          final byCategory = data['by_category'] as Map<String, dynamic>? ?? {};
-          if (byCategory['inputs'] != null) {
-            final inputs = byCategory['inputs'] as Map<String, dynamic>;
-            final items = (inputs['items'] as List<dynamic>?) ?? [];
-            for (var item in items) {
-              if (item is! Map<String, dynamic>) continue;
-              breakdowns.add(
-                CostBreakdownModel(
-                  seasonId: '',
-                  seasonName: '',
-                  cropName: '',
-                  landName: '',
-                  inputType: (item['type'] ?? '').toString(),
-                  farmName: '',
-                  inputCost: ((item['amount'] ?? 0.0) as num).toDouble(),
-                  percentage:
-                      ((item['amount'] ?? 0.0) as num).toDouble() /
-                      ((inputs['total'] ?? 1.0) as num).toDouble() *
-                      100,
-                  category: (item['category'] ?? '').toString(),
-                ),
-              );
-            }
-          }
-        }
+        final List<dynamic> data = json.decode(response.body);
+        final List<CostBreakdownModel> breakdowns = data
+            .map((item) => CostBreakdownModel.fromJson(item as Map<String, dynamic>))
+            .toList();
 
         appLogger.info(
           LogCategory.farm,

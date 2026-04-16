@@ -1,9 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'package:dio/dio.dart';
-import 'package:http/http.dart' as http;
-import 'core/config/app_config.dart';
 import 'core/logging/app_logger.dart';
-import 'core/logging/logging_http_client.dart';
 import 'core/network/dio_client.dart';
 import 'features/auth/data/datasources/auth_remote_data_source.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
@@ -13,7 +10,6 @@ import 'features/auth/domain/usecases/signup.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/farm/data/datasources/activity_remote_data_source.dart';
 import 'features/farm/data/datasources/plant_remote_data_source.dart';
-import 'features/farm/data/datasources/farm_remote_data_source.dart';
 import 'features/farm/data/datasources/input_remote_data_source.dart';
 import 'features/farm/data/datasources/land_remote_data_source.dart';
 import 'features/farm/data/datasources/season_remote_data_source.dart';
@@ -26,8 +22,6 @@ import 'features/farm/data/repositories/activity_repository_impl.dart';
 import 'features/farm/data/repositories/analysis_repository_impl.dart';
 import 'features/farm/data/repositories/revenue_repository_impl.dart';
 import 'features/farm/data/repositories/plant_repository_impl.dart';
-import 'features/farm/data/services/farm_data_service.dart';
-import 'features/farm/data/repositories/farm_repository_impl.dart';
 import 'features/farm/data/repositories/input_repository_impl.dart';
 import 'features/farm/data/repositories/land_repository_impl.dart';
 import 'features/farm/data/repositories/season_repository_impl.dart';
@@ -36,7 +30,6 @@ import 'features/farm/data/repositories/animal_type_repository_impl.dart';
 import 'features/farm/data/repositories/herd_repository_impl.dart';
 import 'features/farm/domain/repositories/activity_repository.dart';
 import 'features/farm/domain/repositories/plant_repository.dart';
-import 'features/farm/domain/repositories/farm_repository.dart';
 import 'features/farm/domain/repositories/input_repository.dart';
 import 'features/farm/domain/repositories/land_repository.dart';
 import 'features/farm/domain/repositories/analysis_repository.dart';
@@ -85,7 +78,6 @@ import 'features/farm/domain/usecases/get_revenue_by_id.dart';
 import 'features/farm/domain/usecases/add_revenue.dart';
 import 'features/farm/domain/usecases/update_revenue.dart';
 import 'features/farm/domain/usecases/delete_revenue.dart';
-import 'features/farm/presentation/bloc/farm_bloc.dart';
 import 'features/farm/presentation/bloc/land_bloc.dart';
 import 'features/farm/presentation/bloc/plant_bloc.dart';
 import 'features/farm/presentation/bloc/season_bloc.dart';
@@ -183,37 +175,6 @@ Future<void> init() async {
     ),
   );
 
-  // Legacy FarmBloc (deprecated - use feature-specific blocs instead)
-  // Kept for backward compatibility during migration
-  sl.registerFactory(
-    () => FarmBloc(
-      getLands: sl(),
-      addLand: sl(),
-      updateLand: sl(),
-      deleteLand: sl(),
-      getPlants: sl(),
-      addPlant: sl(),
-      updatePlant: sl(),
-      deletePlant: sl(),
-      getSeasons: sl(),
-      addSeason: sl(),
-      updateSeason: sl(),
-      deleteSeason: sl(),
-      getActivities: sl(),
-      addActivity: sl(),
-      updateActivity: sl(),
-      deleteActivity: sl(),
-      getInputs: sl(),
-      addInput: sl(),
-      updateInput: sl(),
-      deleteInput: sl(),
-      getAnimals: sl(),
-      addAnimal: sl(),
-      updateAnimal: sl(),
-      deleteAnimal: sl(),
-    ),
-  );
-
   // Use Cases
   sl.registerLazySingleton(() => Login(sl()));
   sl.registerLazySingleton(() => Signup(sl()));
@@ -265,9 +226,6 @@ Future<void> init() async {
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(remoteDataSource: sl()),
   );
-  sl.registerLazySingleton<FarmRepository>(
-    () => FarmRepositoryImpl(remoteDataSource: sl()),
-  );
   sl.registerLazySingleton<LandRepository>(
     () => LandRepositoryImpl(remoteDataSource: sl()),
   );
@@ -304,41 +262,37 @@ Future<void> init() async {
 
   // Data Sources
   sl.registerLazySingleton<AuthRemoteDataSource>(
-    () => AuthRemoteDataSourceImpl(dio: sl(), baseUrl: AppConfig.baseUrl),
-  );
-  sl.registerLazySingleton<FarmRemoteDataSource>(
-    () => FarmRemoteDataSourceImpl(dio: sl(), baseUrl: AppConfig.baseUrl),
+    () => AuthRemoteDataSourceImpl(dio: sl()),
   );
   sl.registerLazySingleton<LandRemoteDataSource>(
-    () => LandRemoteDataSourceImpl(dio: sl(), baseUrl: AppConfig.baseUrl),
+    () => LandRemoteDataSourceImpl(dio: sl()),
   );
   sl.registerLazySingleton<PlantRemoteDataSource>(
-    () => PlantRemoteDataSourceImpl(dio: sl(), baseUrl: AppConfig.baseUrl),
+    () => PlantRemoteDataSourceImpl(dio: sl()),
   );
   sl.registerLazySingleton<SeasonRemoteDataSource>(
-    () => SeasonRemoteDataSourceImpl(dio: sl(), baseUrl: AppConfig.baseUrl),
+    () => SeasonRemoteDataSourceImpl(dio: sl()),
   );
   sl.registerLazySingleton<ActivityRemoteDataSource>(
-    () =>
-        ActivityRemoteDataSourceImpl(dio: sl(), baseUrl: AppConfig.baseUrl),
+    () => ActivityRemoteDataSourceImpl(dio: sl()),
   );
   sl.registerLazySingleton<InputRemoteDataSource>(
-    () => InputRemoteDataSourceImpl(dio: sl(), baseUrl: AppConfig.baseUrl),
+    () => InputRemoteDataSourceImpl(dio: sl()),
   );
   sl.registerLazySingleton<AnimalRemoteDataSource>(
-    () => AnimalRemoteDataSourceImpl(dio: sl(), baseUrl: AppConfig.baseUrl),
+    () => AnimalRemoteDataSourceImpl(dio: sl()),
   );
   sl.registerLazySingleton<AnimalTypeRemoteDataSource>(
-    () => AnimalTypeRemoteDataSourceImpl(dio: sl(), baseUrl: AppConfig.baseUrl),
+    () => AnimalTypeRemoteDataSourceImpl(dio: sl()),
   );
   sl.registerLazySingleton<HerdRemoteDataSource>(
-    () => HerdRemoteDataSourceImpl(dio: sl(), baseUrl: AppConfig.baseUrl),
+    () => HerdRemoteDataSourceImpl(dio: sl()),
   );
   sl.registerLazySingleton<AnalysisRemoteDataSource>(
     () => AnalysisRemoteDataSourceImpl(),
   );
   sl.registerLazySingleton<RevenueRemoteDataSource>(
-    () => RevenueRemoteDataSourceImpl(dio: sl(), baseUrl: AppConfig.baseUrl),
+    () => RevenueRemoteDataSourceImpl(dio: sl()),
   );
   sl.registerLazySingleton<ProfileRemoteDataSource>(
     () => ProfileRemoteDataSourceImpl(dio: sl()),
@@ -348,8 +302,4 @@ Future<void> init() async {
   sl.registerLazySingleton<Dio>(
     () => DioClientFactory.create(enableLogging: true, enableCache: true),
   );
-
-  // Legacy HTTP client (kept for backward compatibility)
-  sl.registerLazySingleton<http.Client>(() => LoggingHttpClient(http.Client()));
-  sl.registerLazySingleton(() => FarmDataService());
 }

@@ -12,9 +12,8 @@ abstract class ActivityRemoteDataSource {
 
 class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
   final Dio dio;
-  final String baseUrl;
 
-  ActivityRemoteDataSourceImpl({required this.dio, required this.baseUrl});
+  ActivityRemoteDataSourceImpl({required this.dio});
 
   @override
   Future<List<ActivityModel>> getActivities({String? sourceType}) async {

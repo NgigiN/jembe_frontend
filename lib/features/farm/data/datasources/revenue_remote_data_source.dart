@@ -16,9 +16,8 @@ abstract class RevenueRemoteDataSource {
 
 class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
   final Dio dio;
-  final String baseUrl;
 
-  RevenueRemoteDataSourceImpl({required this.dio, required this.baseUrl});
+  RevenueRemoteDataSourceImpl({required this.dio});
 
   @override
   Future<List<RevenueModel>> getRevenues({

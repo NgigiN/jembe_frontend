@@ -12,9 +12,8 @@ abstract class SeasonRemoteDataSource {
 
 class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
   final Dio dio;
-  final String baseUrl;
 
-  SeasonRemoteDataSourceImpl({required this.dio, required this.baseUrl});
+  SeasonRemoteDataSourceImpl({required this.dio});
 
   @override
   Future<List<SeasonModel>> getSeasons() async {

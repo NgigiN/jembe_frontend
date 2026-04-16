@@ -12,9 +12,8 @@ abstract class InputRemoteDataSource {
 
 class InputRemoteDataSourceImpl implements InputRemoteDataSource {
   final Dio dio;
-  final String baseUrl;
 
-  InputRemoteDataSourceImpl({required this.dio, required this.baseUrl});
+  InputRemoteDataSourceImpl({required this.dio});
 
   @override
   Future<List<InputModel>> getInputs({String? sourceType}) async {
