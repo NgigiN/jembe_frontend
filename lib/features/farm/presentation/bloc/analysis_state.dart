@@ -39,7 +39,7 @@ class CostBreakdownLoaded extends AnalysisState {
 }
 
 class AnnualCostSummaryLoaded extends AnalysisState {
-  final List<AnnualCostSummary> summaries;
+  final List<MonthlySummary> summaries;
 
   const AnnualCostSummaryLoaded(this.summaries);
 

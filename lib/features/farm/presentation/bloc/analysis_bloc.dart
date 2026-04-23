@@ -3,7 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../domain/entities/farm_detailed_cost.dart';
 import '../../domain/entities/cost_breakdown.dart';
-import '../../domain/entities/annual_cost_summary.dart';
+import '../../domain/entities/monthly_summary.dart';
 import '../../domain/usecases/get_total_costs_by_season.dart';
 import '../../domain/usecases/get_cost_breakdown.dart';
 import '../../domain/usecases/get_annual_cost_summary.dart';

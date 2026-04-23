@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../bloc/analysis_bloc.dart';
 import '../../domain/entities/farm_detailed_cost.dart';
+import '../../domain/entities/monthly_summary.dart';
 
 class AnalysisPage extends StatelessWidget {
   const AnalysisPage({super.key});
@@ -264,37 +265,37 @@ class TotalCostsBySeasonPage extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          Text(
-            'Total Overall Farm Cost',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.9),
-                ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'KES ${total.toStringAsFixed(2)}',
-            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text(
-              'Unified View: Plants & Animals',
-              style: TextStyle(color: Colors.white, fontSize: 12),
-            ),
-          ),
-        ],
-      ),
+      // child: Column(
+      //   children: [
+      //     Text(
+      //       'Total Overall Farm Cost',
+      //       style: Theme.of(context).textTheme.titleMedium?.copyWith(
+      //             color: Colors.white.withValues(alpha: 0.9),
+      //           ),
+      //     ),
+      //     const SizedBox(height: 12),
+      //     Text(
+      //       'KES ${total.toStringAsFixed(2)}',
+      //       style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+      //             color: Colors.white,
+      //             fontWeight: FontWeight.bold,
+      //             letterSpacing: 1.2,
+      //           ),
+      //     ),
+      //     const SizedBox(height: 8),
+      //     Container(
+      //       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      //       decoration: BoxDecoration(
+      //         color: Colors.white.withValues(alpha: 0.2),
+      //         borderRadius: BorderRadius.circular(20),
+      //       ),
+      //       child: const Text(
+      //         'Unified View: Plants & Animals',
+      //         style: TextStyle(color: Colors.white, fontSize: 12),
+      //       ),
+      //     ),
+      //   ],
+      // ),
     );
   }
 
@@ -477,67 +478,342 @@ class AnnualSummaryPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Annual Cost Summary'),
+        title: const Text('Annual Performance Summary'),
+        elevation: 0,
       ),
       body: BlocBuilder<AnalysisBloc, AnalysisState>(
         builder: (context, state) {
           if (state is AnalysisLoading) {
             return const Center(child: CircularProgressIndicator());
           } else if (state is AnalysisError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+            return RefreshIndicator(
+              onRefresh: () async {
+                context.read<AnalysisBloc>().add(LoadAnnualCostSummary());
+              },
+              child: ListView(
                 children: [
-                  Icon(Icons.error, size: 64, color: Colors.red.shade300),
-                  const SizedBox(height: 16),
-                  Text(
-                    state.message,
-                    style: const TextStyle(fontSize: 16),
-                    textAlign: TextAlign.center,
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
+                        const SizedBox(height: 16),
+                        Text(
+                          state.message,
+                          style: Theme.of(context).textTheme.bodyLarge,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            context.read<AnalysisBloc>().add(LoadAnnualCostSummary());
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             );
           } else if (state is AnnualCostSummaryLoaded) {
             if (state.summaries.isEmpty) {
-              return const Center(child: Text('No data available'));
+              return const Center(child: Text('No performance data available for this year'));
             }
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.summaries.length,
-              itemBuilder: (context, index) {
-                final summary = state.summaries[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    title: Text(
-                      'Year ${summary.year}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Plant: ${summary.cropName}'),
-                        Text('Land: ${summary.landName}'),
-                        Text('Farm: ${summary.farmName}'),
-                      ],
-                    ),
-                    trailing: Text(
-                      'KES ${summary.totalCost.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green.shade700,
+
+            // Sort summaries by month string (e.g. "2026-01")
+            final sortedSummaries = List<MonthlySummary>.from(state.summaries)
+              ..sort((a, b) => a.month.compareTo(b.month));
+
+            return RefreshIndicator(
+              onRefresh: () async {
+                context.read<AnalysisBloc>().add(LoadAnnualCostSummary());
+              },
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _buildAnnualOverview(context, sortedSummaries),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.all(16),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final summary = sortedSummaries[index];
+                          return _buildMonthlyPerformanceCard(context, summary);
+                        },
+                        childCount: sortedSummaries.length,
                       ),
                     ),
                   ),
-                );
-              },
+                ],
+              ),
             );
           }
           return const Center(child: Text('No data loaded'));
         },
       ),
     );
+  }
+
+  Widget _buildAnnualOverview(BuildContext context, List<MonthlySummary> summaries) {
+    double totalAnnualCosts = 0;
+    double totalAnnualRevenue = 0;
+    for (var s in summaries) {
+      totalAnnualCosts += s.totalCosts;
+      totalAnnualRevenue += s.totalRevenue;
+    }
+    final totalAnnualProfit = totalAnnualRevenue - totalAnnualCosts;
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.secondary,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Annual Net Profit',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'KES ${totalAnnualProfit.toStringAsFixed(2)}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.1,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildOverviewStat('Total Revenue', totalAnnualRevenue, Icons.trending_up, Colors.greenAccent),
+              _buildOverviewStat('Total Costs', totalAnnualCosts, Icons.trending_down, Colors.orangeAccent),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverviewStat(String label, double value, IconData icon, Color color) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(height: 8),
+        Text(
+          'KES ${value.toStringAsFixed(0)}',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        Text(
+          label,
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMonthlyPerformanceCard(BuildContext context, MonthlySummary summary) {
+    final DateTime date = DateTime.tryParse('${summary.month}-01') ?? DateTime.now();
+    final String monthName = _getMonthName(date.month);
+    final isProfit = summary.profit >= 0;
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 20),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      monthName,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                    Text(
+                      date.year.toString(),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: (isProfit ? Colors.green : Colors.red).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    isProfit ? 'PROFIT' : 'LOSS',
+                    style: TextStyle(
+                      color: isProfit ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildCompactStat(context, 'Revenue', summary.totalRevenue, Colors.green),
+                    _buildCompactStat(context, 'Costs', summary.totalCosts, Colors.orange),
+                    _buildCompactStat(
+                      context,
+                      'Net',
+                      summary.profit,
+                      isProfit ? Colors.blue : Colors.red,
+                    ),
+                  ],
+                ),
+                const Divider(height: 32),
+                _buildBreakdownSection(context, summary),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactStat(BuildContext context, String label, double value, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 4),
+        Text(
+          'KES ${value.toStringAsFixed(0)}',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: value < 0 ? Colors.red : color,
+            fontSize: 15,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBreakdownSection(BuildContext context, MonthlySummary summary) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Detailed Breakdown',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSubLabel('Costs'),
+                  _buildMiniBreakdownRow('Plant', summary.breakdown.costs.plant, Colors.green.shade300),
+                  _buildMiniBreakdownRow('Animal', summary.breakdown.costs.animal, Colors.blue.shade300),
+                  _buildMiniBreakdownRow('Infra', summary.breakdown.costs.infrastructure, Colors.brown.shade300),
+                ],
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSubLabel('Revenue'),
+                  _buildMiniBreakdownRow('Plant', summary.breakdown.revenue.plant, Colors.green),
+                  _buildMiniBreakdownRow('Animal', summary.breakdown.revenue.animal, Colors.blue),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
+      ),
+    );
+  }
+
+  Widget _buildMiniBreakdownRow(String label, double value, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4.0),
+      child: Row(
+        children: [
+          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Text(
+            value.toStringAsFixed(0),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[month - 1];
   }
 }
