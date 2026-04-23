@@ -53,12 +53,9 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
     });
 
     on<AddSeasonEvent>((event, emit) async {
-      // Store current seasons before emitting loading state
-      final currentSeasons = state is SeasonLoaded
-          ? (state as SeasonLoaded).seasons
-          : <Season>[];
+      final currentSeasons = state.seasons;
 
-      emit(SeasonLoading());
+      emit(SeasonLoading(seasons: currentSeasons));
       final result = await addSeason(AddSeasonParams(season: event.season));
       result.fold(
         (failure) {
@@ -66,7 +63,7 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
           if (failure is ServerFailure && failure.errorMessage != null) {
             message = failure.errorMessage!;
           }
-          emit(SeasonError(message));
+          emit(SeasonError(message, seasons: currentSeasons));
         },
         (season) {
           final updatedSeasons = List<Season>.from(currentSeasons)..add(season);

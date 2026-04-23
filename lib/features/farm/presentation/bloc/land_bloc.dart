@@ -32,6 +32,10 @@ class LandBloc extends Bloc<LandEvent, LandState> {
     });
 
     on<AddLandEvent>((event, emit) async {
+      final currentLands = state is LandLoaded
+          ? (state as LandLoaded).lands
+          : <Land>[];
+
       emit(LandLoading());
       final result = await addLand(AddLandParams(land: event.land));
       result.fold(
@@ -40,16 +44,11 @@ class LandBloc extends Bloc<LandEvent, LandState> {
           if (failure is ServerFailure && failure.errorMessage != null) {
             message = failure.errorMessage!;
           }
-          emit(LandError(message));
+          emit(LandError(message, lands: currentLands));
         },
         (land) {
-          final currentState = state;
-          if (currentState is LandLoaded) {
-            final updatedLands = List<Land>.from(currentState.lands)..add(land);
-            emit(LandLoaded(lands: updatedLands));
-          } else {
-            emit(LandLoaded(lands: [land]));
-          }
+          final updatedLands = List<Land>.from(currentLands)..add(land);
+          emit(LandLoaded(lands: updatedLands));
         },
       );
     });

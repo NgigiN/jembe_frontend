@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../domain/entities/cost_category.dart';
 import '../../domain/usecases/get_cost_categories.dart';
 import '../../domain/usecases/add_cost_category.dart';
 import 'cost_category_event.dart';
@@ -35,7 +36,8 @@ class CostCategoryBloc extends Bloc<CostCategoryEvent, CostCategoryState> {
     AddCostCategoryEvent event,
     Emitter<CostCategoryState> emit,
   ) async {
-    emit(CostCategoryLoading());
+    final currentCategories = state.categories;
+    emit(CostCategoryLoading(categories: currentCategories));
     final result = await addCostCategory(
       AddCostCategoryParams(
         name: event.name,
@@ -45,10 +47,10 @@ class CostCategoryBloc extends Bloc<CostCategoryEvent, CostCategoryState> {
     );
 
     result.fold(
-      (failure) => emit(CostCategoryError(failure.message)),
+      (failure) => emit(CostCategoryError(failure.message, categories: currentCategories)),
       (success) {
-        emit(CostCategoryAdded());
-        // Reload categories after adding
+        emit(CostCategoryAdded(categories: currentCategories));
+        // Reload categories after adding to get the full list with IDs
         add(GetCostCategoriesEvent(type: event.type, category: event.category));
       },
     );

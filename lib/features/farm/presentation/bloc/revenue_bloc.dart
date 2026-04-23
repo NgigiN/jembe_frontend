@@ -90,7 +90,8 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     AddRevenueEvent event,
     Emitter<RevenueState> emit,
   ) async {
-    emit(RevenueLoading(revenues: state.revenues));
+    final currentRevenues = state.revenues;
+    emit(RevenueLoading(revenues: currentRevenues));
 
     final params = AddRevenueParams(
       source: event.source,
@@ -111,10 +112,10 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
         if (failure is ServerFailure && failure.errorMessage != null) {
           message = failure.errorMessage!;
         }
-        emit(RevenueError(message, revenues: state.revenues));
+        emit(RevenueError(message, revenues: currentRevenues));
       },
       (revenue) {
-        final updatedList = List<Revenue>.from(state.revenues)..add(revenue);
+        final updatedList = List<Revenue>.from(currentRevenues)..add(revenue);
         emit(RevenueAdded(revenue: revenue, revenues: updatedList));
       },
     );
@@ -124,7 +125,8 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     UpdateRevenueEvent event,
     Emitter<RevenueState> emit,
   ) async {
-    emit(RevenueLoading(revenues: state.revenues));
+    final currentRevenues = state.revenues;
+    emit(RevenueLoading(revenues: currentRevenues));
 
     final params = UpdateRevenueParams(
       id: event.id,
@@ -146,10 +148,10 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
         if (failure is ServerFailure && failure.errorMessage != null) {
           message = failure.errorMessage!;
         }
-        emit(RevenueError(message, revenues: state.revenues));
+        emit(RevenueError(message, revenues: currentRevenues));
       },
       (revenue) {
-        final updatedList = List<Revenue>.from(state.revenues);
+        final updatedList = List<Revenue>.from(currentRevenues);
         final index = updatedList.indexWhere((r) => r.id == revenue.id);
         if (index != -1) {
           updatedList[index] = revenue;
@@ -163,7 +165,8 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     DeleteRevenueEvent event,
     Emitter<RevenueState> emit,
   ) async {
-    emit(RevenueLoading(revenues: state.revenues));
+    final currentRevenues = state.revenues;
+    emit(RevenueLoading(revenues: currentRevenues));
 
     final result = await deleteRevenue(event.id);
 
@@ -173,10 +176,10 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
         if (failure is ServerFailure && failure.errorMessage != null) {
           message = failure.errorMessage!;
         }
-        emit(RevenueError(message, revenues: state.revenues));
+        emit(RevenueError(message, revenues: currentRevenues));
       },
       (_) {
-        final updatedList = List<Revenue>.from(state.revenues)
+        final updatedList = List<Revenue>.from(currentRevenues)
           ..removeWhere((r) => r.id == event.id);
         emit(RevenueDeleted(revenues: updatedList));
       },

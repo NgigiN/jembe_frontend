@@ -52,12 +52,9 @@ class InputBloc extends Bloc<InputEvent, InputState> {
     });
 
     on<AddInputEvent>((event, emit) async {
-      // Store current inputs before emitting loading state
-      final currentInputs = state is InputLoaded
-          ? (state as InputLoaded).inputs
-          : <Input>[];
+      final currentInputs = state.inputs;
 
-      emit(InputLoading());
+      emit(InputLoading(inputs: currentInputs));
       final result = await addInput(AddInputParams(input: event.input));
       result.fold(
         (failure) {
@@ -65,7 +62,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
           if (failure is ServerFailure && failure.errorMessage != null) {
             message = failure.errorMessage!;
           }
-          emit(InputError(message));
+          emit(InputError(message, inputs: currentInputs));
         },
         (input) {
           final updatedInputs = List<Input>.from(currentInputs)..add(input);

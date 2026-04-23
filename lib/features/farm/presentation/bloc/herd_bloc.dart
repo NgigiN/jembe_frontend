@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/usecases/usecase.dart';
+import '../../domain/entities/herd.dart';
 import '../../domain/usecases/add_herd.dart';
 import '../../domain/usecases/delete_herd.dart';
 import '../../domain/usecases/get_herds.dart';
@@ -41,16 +42,15 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
     AddHerdEvent event,
     Emitter<HerdState> emit,
   ) async {
-    emit(HerdLoading());
+    final currentHerds = state is HerdLoaded ? (state as HerdLoaded).herds : <Herd>[];
+
+    emit(HerdLoading(herds: currentHerds));
     final result = await addHerd(event.name, event.animalTypeId, event.location, event.userId);
-    await result.fold(
-      (failure) async => emit(const HerdError('Failed to add herd')),
-      (_) async {
-        final getResult = await getHerds(NoParams());
-        getResult.fold(
-          (failure) => emit(const HerdError('Failed to load herds')),
-          (herds) => emit(HerdLoaded(herds)),
-        );
+    result.fold(
+      (failure) => emit(HerdError('Failed to add herd', herds: currentHerds)),
+      (herd) {
+        final updatedHerds = List<Herd>.from(currentHerds)..add(herd);
+        emit(HerdLoaded(updatedHerds));
       },
     );
   }
@@ -59,16 +59,16 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
     UpdateHerdEvent event,
     Emitter<HerdState> emit,
   ) async {
-    emit(HerdLoading());
+    final currentHerds = state.herds;
+    emit(HerdLoading(herds: currentHerds));
     final result = await updateHerd(event.id, event.name, event.animalTypeId, event.location);
-    await result.fold(
-      (failure) async => emit(const HerdError('Failed to update herd')),
-      (_) async {
-        final getResult = await getHerds(NoParams());
-        getResult.fold(
-          (failure) => emit(const HerdError('Failed to load herds')),
-          (herds) => emit(HerdLoaded(herds)),
-        );
+    result.fold(
+      (failure) => emit(HerdError('Failed to update herd', herds: currentHerds)),
+      (updatedHerd) {
+        final updatedHerds = currentHerds.map((herd) {
+          return herd.id == updatedHerd.id ? updatedHerd : herd;
+        }).toList();
+        emit(HerdLoaded(updatedHerds));
       },
     );
   }
@@ -77,16 +77,15 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
     DeleteHerdEvent event,
     Emitter<HerdState> emit,
   ) async {
-    emit(HerdLoading());
+    final currentHerds = state.herds;
+    emit(HerdLoading(herds: currentHerds));
     final result = await deleteHerd(event.id);
-    await result.fold(
-      (failure) async => emit(const HerdError('Failed to delete herd')),
-      (_) async {
-        final getResult = await getHerds(NoParams());
-        getResult.fold(
-          (failure) => emit(const HerdError('Failed to load herds')),
-          (herds) => emit(HerdLoaded(herds)),
-        );
+    result.fold(
+      (failure) => emit(HerdError('Failed to delete herd', herds: currentHerds)),
+      (_) {
+        final updatedHerds =
+            currentHerds.where((herd) => herd.id != event.id).toList();
+        emit(HerdLoaded(updatedHerds));
       },
     );
   }

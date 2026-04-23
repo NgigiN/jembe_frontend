@@ -2,20 +2,21 @@ import 'package:equatable/equatable.dart';
 import '../../domain/entities/cost_category.dart';
 
 abstract class CostCategoryState extends Equatable {
-  const CostCategoryState();
+  final List<CostCategory> categories;
+  const CostCategoryState({this.categories = const []});
 
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [categories];
 }
 
 class CostCategoryInitial extends CostCategoryState {}
 
-class CostCategoryLoading extends CostCategoryState {}
+class CostCategoryLoading extends CostCategoryState {
+  const CostCategoryLoading({super.categories});
+}
 
 class CostCategoryLoaded extends CostCategoryState {
-  final List<CostCategory> categories;
-
-  const CostCategoryLoaded(this.categories);
+  const CostCategoryLoaded(List<CostCategory> categories) : super(categories: categories);
 
   @override
   List<Object?> get props => [categories];
@@ -24,10 +25,12 @@ class CostCategoryLoaded extends CostCategoryState {
 class CostCategoryError extends CostCategoryState {
   final String message;
 
-  const CostCategoryError(this.message);
+  const CostCategoryError(this.message, {super.categories});
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, categories];
 }
 
-class CostCategoryAdded extends CostCategoryState {}
+class CostCategoryAdded extends CostCategoryState {
+  const CostCategoryAdded({super.categories});
+}

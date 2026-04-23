@@ -32,6 +32,10 @@ class PlantBloc extends Bloc<PlantEvent, PlantState> {
     });
 
     on<AddPlantEvent>((event, emit) async {
+      final currentPlants = state is PlantLoaded
+          ? (state as PlantLoaded).plants
+          : <Plant>[];
+
       emit(PlantLoading());
       final result = await addPlant(AddPlantParams(plant: event.plant));
       result.fold(
@@ -40,17 +44,11 @@ class PlantBloc extends Bloc<PlantEvent, PlantState> {
           if (failure is ServerFailure && failure.errorMessage != null) {
             message = failure.errorMessage!;
           }
-          emit(PlantError(message));
+          emit(PlantError(message, plants: currentPlants));
         },
         (plant) {
-          final currentState = state;
-          if (currentState is PlantLoaded) {
-            final updatedPlants = List<Plant>.from(currentState.plants)
-              ..add(plant);
-            emit(PlantLoaded(plants: updatedPlants));
-          } else {
-            emit(PlantLoaded(plants: [plant]));
-          }
+          final updatedPlants = List<Plant>.from(currentPlants)..add(plant);
+          emit(PlantLoaded(plants: updatedPlants));
         },
       );
     });

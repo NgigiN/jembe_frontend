@@ -58,12 +58,9 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     });
 
     on<AddActivityEvent>((event, emit) async {
-      // Store current activities before emitting loading state
-      final currentActivities = state is ActivityLoaded
-          ? (state as ActivityLoaded).activities
-          : <Activity>[];
+      final currentActivities = state.activities;
 
-      emit(ActivityLoading());
+      emit(ActivityLoading(activities: currentActivities));
       final result = await addActivity(
         AddActivityParams(activity: event.activity),
       );
@@ -73,7 +70,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
           if (failure is ServerFailure && failure.errorMessage != null) {
             message = failure.errorMessage!;
           }
-          emit(ActivityError(message));
+          emit(ActivityError(message, activities: currentActivities));
         },
         (activity) {
           final updatedActivities = List<Activity>.from(currentActivities)
