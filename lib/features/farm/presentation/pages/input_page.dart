@@ -8,9 +8,15 @@ import '../bloc/herd_event.dart';
 import '../bloc/herd_state.dart';
 import '../../domain/entities/input.dart';
 import '../../domain/entities/herd.dart';
+import '../../domain/entities/season.dart';
+import '../bloc/cost_category_bloc.dart';
+import '../bloc/cost_category_event.dart';
+import '../bloc/cost_category_state.dart';
+import '../bloc/season_bloc.dart';
+import '../bloc/season_event.dart';
+import '../bloc/season_state.dart';
+import '../../domain/entities/cost_category.dart';
 import '../../data/models/input_model.dart';
-import '../../data/services/farm_data_service.dart';
-import '../../../auth/data/utils/user_utils.dart';
 
 class InputPage extends StatefulWidget {
   final String? sourceType;
@@ -22,34 +28,15 @@ class InputPage extends StatefulWidget {
 }
 
 class _InputPageState extends State<InputPage> {
-  List<Map<String, dynamic>> _plantInputTypes = [];
-  List<Map<String, dynamic>> _animalInputTypes = [];
-
   @override
   void initState() {
     super.initState();
     context.read<InputBloc>().add(GetInputsEvent(sourceType: widget.sourceType));
     context.read<HerdBloc>().add(GetHerdsEvent());
-    _loadCostCategories();
-  }
-
-  Future<void> _loadCostCategories() async {
-    try {
-      final plantInputs = await FarmDataService.getCostCategories(
-        type: 'plant',
-        category: 'input',
-      );
-      final animalInputs = await FarmDataService.getCostCategories(
-        type: 'animal',
-        category: 'input',
-      );
-      setState(() {
-        _plantInputTypes = plantInputs;
-        _animalInputTypes = animalInputs;
-      });
-    } catch (e) {
-      // Silently handle errors
-    }
+    context.read<SeasonBloc>().add(GetSeasonsEvent());
+    context.read<CostCategoryBloc>().add(
+          GetCostCategoriesEvent(category: 'input'),
+        );
   }
 
   @override
@@ -217,20 +204,26 @@ class _InputPageState extends State<InputPage> {
     final quantityController = TextEditingController();
     final costController = TextEditingController();
     final notesController = TextEditingController();
-    DateTime? selectedDate;
+    DateTime? selectedDate = DateTime.now();
     String? selectedSourceType = 'plant';
     String? selectedSeasonId;
     String? selectedHerdId;
 
-    await _loadCostCategories();
+    final seasonState = context.read<SeasonBloc>().state;
+    final seasons = seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
 
-    final seasons = await FarmDataService.getSeasonsForDropdown();
-    final animals = await FarmDataService.getAnimalsForDropdown();
+    final costCategoryState = context.read<CostCategoryBloc>().state;
+    final allCategories = costCategoryState is CostCategoryLoaded
+        ? costCategoryState.categories
+        : <CostCategory>[];
 
-    if (seasons.isEmpty && animals.isEmpty) {
+    final herdState = context.read<HerdBloc>().state;
+    final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
+
+    if (seasons.isEmpty && herds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please add at least one season or animal first'),
+          content: Text('Please add at least one season or herd first'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -294,6 +287,7 @@ class _InputPageState extends State<InputPage> {
                               selectedSourceType = value ?? 'plant';
                               selectedSeasonId = null;
                               selectedHerdId = null;
+                              typeController.clear();
                             });
                           },
                         ),
@@ -305,33 +299,12 @@ class _InputPageState extends State<InputPage> {
                               labelText: 'Select Season *',
                               border: OutlineInputBorder(),
                             ),
-                            items: seasons
-                                .where(
-                                  (season) =>
-                                      season['id'] != null &&
-                                      season['id'].toString().isNotEmpty,
-                                )
-                                .fold<Map<String, Map<String, dynamic>>>({}, (
-                                  map,
-                                  season,
-                                ) {
-                                  final id = season['id']?.toString() ?? '';
-                                  if (id.isNotEmpty && !map.containsKey(id)) {
-                                    map[id] = season;
-                                  }
-                                  return map;
-                                })
-                                .values
-                                .map((season) {
-                                  final id = season['id']?.toString() ?? '';
-                                  return DropdownMenuItem<String>(
-                                    value: id,
-                                    child: Text(
-                                      season['name']?.toString() ?? '',
-                                    ),
-                                  );
-                                })
-                                .toList(),
+                            items: seasons.map((season) {
+                              return DropdownMenuItem<String>(
+                                value: season.id,
+                                child: Text(season.name),
+                              );
+                            }).toList(),
                             onChanged: (value) {
                               setState(() {
                                 selectedSeasonId = value;
@@ -339,32 +312,24 @@ class _InputPageState extends State<InputPage> {
                             },
                           ),
                         if (selectedSourceType == 'animal')
-                          BlocBuilder<HerdBloc, HerdState>(
-                            builder: (context, herdState) {
-                              if (herdState is HerdLoaded) {
-                                final herds = herdState.herds;
-                                return DropdownButtonFormField<String>(
-                                  initialValue: selectedHerdId,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Select Herd *',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  items: herds.map((herd) {
-                                    return DropdownMenuItem<String>(
-                                      value: herd.id,
-                                      child: Text(
-                                        '${herd.name} (${herd.location})',
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      selectedHerdId = value;
-                                    });
-                                  },
-                                );
-                              }
-                              return const CircularProgressIndicator();
+                          DropdownButtonFormField<String>(
+                            initialValue: selectedHerdId,
+                            decoration: const InputDecoration(
+                              labelText: 'Select Herd *',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: herds.map((herd) {
+                              return DropdownMenuItem<String>(
+                                value: herd.id,
+                                child: Text(
+                                  '${herd.name} (${herd.location})',
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                selectedHerdId = value;
+                              });
                             },
                           ),
                         if (selectedSourceType == 'plant' ||
@@ -378,29 +343,14 @@ class _InputPageState extends State<InputPage> {
                                   labelText: 'Input Type *',
                                   border: OutlineInputBorder(),
                                 ),
-                                items:
-                                    (selectedSourceType == 'plant'
-                                            ? _plantInputTypes
-                                            : _animalInputTypes)
-                                        .where(
-                                          (category) =>
-                                              category['name'] != null &&
-                                              category['name']
-                                                  .toString()
-                                                  .isNotEmpty,
-                                        )
-                                        .map((category) {
-                                          return DropdownMenuItem<String>(
-                                            value:
-                                                category['name']?.toString() ??
-                                                '',
-                                            child: Text(
-                                              category['name']?.toString() ??
-                                                  '',
-                                            ),
-                                          );
-                                        })
-                                        .toList(),
+                                items: allCategories
+                                    .where((c) => c.type == selectedSourceType)
+                                    .map((category) {
+                                  return DropdownMenuItem<String>(
+                                    value: category.name,
+                                    child: Text(category.name),
+                                  );
+                                }).toList(),
                                 onChanged: (value) {
                                   setState(() {
                                     typeController.text = value ?? '';
@@ -413,7 +363,6 @@ class _InputPageState extends State<InputPage> {
                               onPressed: () => _showCreateInputTypeDialog(
                                 context,
                                 selectedSourceType!,
-                                () => _loadCostCategories(),
                               ),
                               icon: const Icon(Icons.add_circle_outline),
                               tooltip: 'Add new input type',
@@ -601,9 +550,13 @@ class _InputPageState extends State<InputPage> {
         ? input.sourceId
         : null;
 
-    await _loadCostCategories();
+    final seasonState = context.read<SeasonBloc>().state;
+    final seasons = seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
 
-    final seasons = await FarmDataService.getSeasonsForDropdown();
+    final costCategoryState = context.read<CostCategoryBloc>().state;
+    final allCategories = costCategoryState is CostCategoryLoaded
+        ? costCategoryState.categories
+        : <CostCategory>[];
 
     final herdState = context.read<HerdBloc>().state;
     final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
@@ -685,42 +638,17 @@ class _InputPageState extends State<InputPage> {
                         const SizedBox(height: 16),
                         if (selectedSourceType == 'plant')
                           DropdownButtonFormField<String>(
-                            initialValue:
-                                selectedSeasonId != null &&
-                                    selectedSeasonId.toString().isNotEmpty
-                                ? selectedSeasonId.toString()
-                                : null,
+                            initialValue: selectedSeasonId,
                             decoration: const InputDecoration(
                               labelText: 'Select Season *',
                               border: OutlineInputBorder(),
                             ),
-                            items: seasons
-                                .where(
-                                  (season) =>
-                                      season['id'] != null &&
-                                      season['id'].toString().isNotEmpty,
-                                )
-                                .fold<Map<String, Map<String, dynamic>>>({}, (
-                                  map,
-                                  season,
-                                ) {
-                                  final id = season['id']?.toString() ?? '';
-                                  if (id.isNotEmpty && !map.containsKey(id)) {
-                                    map[id] = season;
-                                  }
-                                  return map;
-                                })
-                                .values
-                                .map((season) {
-                                  final id = season['id']?.toString() ?? '';
-                                  return DropdownMenuItem<String>(
-                                    value: id,
-                                    child: Text(
-                                      season['name']?.toString() ?? '',
-                                    ),
-                                  );
-                                })
-                                .toList(),
+                            items: seasons.map((season) {
+                              return DropdownMenuItem<String>(
+                                value: season.id,
+                                child: Text(season.name),
+                              );
+                            }).toList(),
                             onChanged: (value) {
                               setState(() {
                                 selectedSeasonId = value;
@@ -760,29 +688,14 @@ class _InputPageState extends State<InputPage> {
                                   labelText: 'Input Type *',
                                   border: OutlineInputBorder(),
                                 ),
-                                items:
-                                    (selectedSourceType == 'plant'
-                                            ? _plantInputTypes
-                                            : _animalInputTypes)
-                                        .where(
-                                          (category) =>
-                                              category['name'] != null &&
-                                              category['name']
-                                                  .toString()
-                                                  .isNotEmpty,
-                                        )
-                                        .map((category) {
-                                          return DropdownMenuItem<String>(
-                                            value:
-                                                category['name']?.toString() ??
-                                                '',
-                                            child: Text(
-                                              category['name']?.toString() ??
-                                                  '',
-                                            ),
-                                          );
-                                        })
-                                        .toList(),
+                                items: allCategories
+                                    .where((c) => c.type == selectedSourceType)
+                                    .map((category) {
+                                  return DropdownMenuItem<String>(
+                                    value: category.name,
+                                    child: Text(category.name),
+                                  );
+                                }).toList(),
                                 onChanged: (value) {
                                   setState(() {
                                     typeController.text = value ?? '';
@@ -795,7 +708,6 @@ class _InputPageState extends State<InputPage> {
                               onPressed: () => _showCreateInputTypeDialog(
                                 context,
                                 selectedSourceType!,
-                                () => _loadCostCategories(),
                               ),
                               icon: const Icon(Icons.add_circle_outline),
                               tooltip: 'Add new input type',
@@ -1019,7 +931,6 @@ class _InputPageState extends State<InputPage> {
   void _showCreateInputTypeDialog(
     BuildContext context,
     String sourceType,
-    VoidCallback onCreated,
   ) {
     final nameController = TextEditingController();
     showDialog(
@@ -1054,33 +965,22 @@ class _InputPageState extends State<InputPage> {
                 return;
               }
 
-              final success = await FarmDataService.createCostCategory(
-                name: nameController.text.trim(),
-                type: sourceType,
-                category: 'input',
+              context.read<CostCategoryBloc>().add(
+                    AddCostCategoryEvent(
+                      name: nameController.text.trim(),
+                      type: sourceType,
+                      category: 'input',
+                    ),
+                  );
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '${nameController.text.trim()} added successfully',
+                  ),
+                  backgroundColor: Colors.green,
+                ),
               );
-
-              if (context.mounted) {
-                Navigator.pop(context);
-                if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        '${nameController.text.trim()} added successfully',
-                      ),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  onCreated();
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Failed to add input type'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green.shade600,

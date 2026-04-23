@@ -6,10 +6,17 @@ import '../bloc/activity_state.dart';
 import '../bloc/herd_bloc.dart';
 import '../bloc/herd_event.dart';
 import '../bloc/herd_state.dart';
+import "../../domain/entities/season.dart";
+import "../../domain/entities/herd.dart";
 import '../../domain/entities/activity.dart';
 import '../../data/models/activity_model.dart';
-import '../../data/services/farm_data_service.dart';
-import '../../../auth/data/utils/user_utils.dart';
+import '../bloc/cost_category_bloc.dart';
+import '../bloc/cost_category_event.dart';
+import '../bloc/cost_category_state.dart';
+import '../bloc/season_bloc.dart';
+import '../bloc/season_event.dart';
+import '../bloc/season_state.dart';
+import '../../domain/entities/cost_category.dart';
 
 class ActivityPage extends StatefulWidget {
   final String? sourceType;
@@ -21,8 +28,6 @@ class ActivityPage extends StatefulWidget {
 }
 
 class _ActivityPageState extends State<ActivityPage> {
-  List<Map<String, dynamic>> _plantActivityTypes = [];
-  List<Map<String, dynamic>> _animalActivityTypes = [];
 
   @override
   void initState() {
@@ -31,27 +36,12 @@ class _ActivityPageState extends State<ActivityPage> {
       GetActivitiesEvent(sourceType: widget.sourceType),
     );
     context.read<HerdBloc>().add(GetHerdsEvent());
-    _loadCostCategories();
+    context.read<SeasonBloc>().add(GetSeasonsEvent());
+    context.read<CostCategoryBloc>().add(
+      GetCostCategoriesEvent(category: 'activity'),
+    );
   }
 
-  Future<void> _loadCostCategories() async {
-    try {
-      final plantActivities = await FarmDataService.getCostCategories(
-        type: 'plant',
-        category: 'activity',
-      );
-      final animalActivities = await FarmDataService.getCostCategories(
-        type: 'animal',
-        category: 'activity',
-      );
-      setState(() {
-        _plantActivityTypes = plantActivities;
-        _animalActivityTypes = animalActivities;
-      });
-    } catch (e) {
-      // Silently handle errors
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -222,16 +212,20 @@ class _ActivityPageState extends State<ActivityPage> {
     final typeController = TextEditingController();
     final costController = TextEditingController();
     final detailsController = TextEditingController();
-    DateTime? selectedDate;
+    final seasonState = context.read<SeasonBloc>().state;
+    final seasons = seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
+    
+    final costCategoryState = context.read<CostCategoryBloc>().state;
+    final allCategories = costCategoryState is CostCategoryLoaded 
+        ? costCategoryState.categories 
+        : <CostCategory>[];
+    final herdState = context.read<HerdBloc>().state;
+    final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
+
     String? selectedSourceType = 'plant';
     String? selectedSeasonId;
     String? selectedHerdId;
-
-    await _loadCostCategories();
-
-    final seasons = await FarmDataService.getSeasonsForDropdown();
-    final herdState = context.read<HerdBloc>().state;
-    final herds = herdState is HerdLoaded ? herdState.herds : [];
+    DateTime? selectedDate = DateTime.now();
 
     if (seasons.isEmpty && herds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -312,10 +306,10 @@ class _ActivityPageState extends State<ActivityPage> {
                               labelText: 'Select Season *',
                               border: OutlineInputBorder(),
                             ),
-                            items: seasons.map((season) {
+                            items: seasons.map<DropdownMenuItem<String>>((season) {
                               return DropdownMenuItem<String>(
-                                value: (season['id'] ?? '').toString(),
-                                child: Text((season['name'] ?? '').toString()),
+                                value: season.id,
+                                child: Text(season.name),
                               );
                             }).toList(),
                             onChanged: (value) {
@@ -365,19 +359,14 @@ class _ActivityPageState extends State<ActivityPage> {
                                   border: OutlineInputBorder(),
                                   hintText: 'Select activity type',
                                 ),
-                                items:
-                                    (selectedSourceType == 'plant'
-                                            ? _plantActivityTypes
-                                            : _animalActivityTypes)
-                                        .map((category) {
-                                          return DropdownMenuItem<String>(
-                                            value: category['name'] as String,
-                                            child: Text(
-                                              category['name'] as String,
-                                            ),
-                                          );
-                                        })
-                                        .toList(),
+                                items: allCategories
+                                    .where((c) => c.type == selectedSourceType)
+                                    .map((category) {
+                                  return DropdownMenuItem<String>(
+                                    value: category.name,
+                                    child: Text(category.name),
+                                  );
+                                }).toList(),
                                 onChanged: (value) {
                                   setState(() {
                                     typeController.text = value ?? '';
@@ -390,7 +379,6 @@ class _ActivityPageState extends State<ActivityPage> {
                               onPressed: () => _showCreateActivityTypeDialog(
                                 context,
                                 selectedSourceType!,
-                                () => _loadCostCategories(),
                               ),
                               icon: const Icon(Icons.add_circle_outline),
                               tooltip: 'Add new activity type',
@@ -555,21 +543,21 @@ class _ActivityPageState extends State<ActivityPage> {
     final costController = TextEditingController(
       text: activity.cost.toString(),
     );
-    DateTime? selectedDate = activity.date;
-    String? selectedSourceType = activity.sourceType;
-    String? selectedSeasonId = activity.sourceType == 'plant'
-        ? activity.sourceId
-        : null;
-    String? selectedHerdId = activity.sourceType == 'animal'
-        ? activity.sourceId
-        : null;
-    String? selectedType = activity.type;
+    final seasonState = context.read<SeasonBloc>().state;
+    final seasons = seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
 
-    await _loadCostCategories();
-
-    final seasons = await FarmDataService.getSeasonsForDropdown();
+    final costCategoryState = context.read<CostCategoryBloc>().state;
+    final allCategories = costCategoryState is CostCategoryLoaded
+        ? costCategoryState.categories
+        : <CostCategory>[];
     final herdState = context.read<HerdBloc>().state;
-    final herds = herdState is HerdLoaded ? herdState.herds : [];
+    final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
+
+    String? selectedSourceType = activity.sourceType;
+    String? selectedSeasonId = activity.sourceType == 'plant' ? activity.sourceId : null;
+    String? selectedHerdId = activity.sourceType == 'animal' ? activity.sourceId : null;
+    String? selectedType = activity.type;
+    DateTime? selectedDate = activity.date;
 
     if ((selectedSourceType == 'plant' && seasons.isEmpty) ||
         (selectedSourceType == 'animal' && herds.isEmpty)) {
@@ -653,10 +641,10 @@ class _ActivityPageState extends State<ActivityPage> {
                               labelText: 'Select Season *',
                               border: OutlineInputBorder(),
                             ),
-                            items: seasons.map((season) {
+                            items: seasons.map<DropdownMenuItem<String>>((season) {
                               return DropdownMenuItem<String>(
-                                value: (season['id'] ?? '').toString(),
-                                child: Text((season['name'] ?? '').toString()),
+                                value: season.id,
+                                child: Text(season.name),
                               );
                             }).toList(),
                             onChanged: (value) {
@@ -706,19 +694,14 @@ class _ActivityPageState extends State<ActivityPage> {
                                   labelText: 'Activity Type *',
                                   border: OutlineInputBorder(),
                                 ),
-                                items:
-                                    (selectedSourceType == 'plant'
-                                            ? _plantActivityTypes
-                                            : _animalActivityTypes)
-                                        .map((category) {
-                                          return DropdownMenuItem<String>(
-                                            value: category['name'] as String,
-                                            child: Text(
-                                              category['name'] as String,
-                                            ),
-                                          );
-                                        })
-                                        .toList(),
+                                items: allCategories
+                                    .where((c) => c.type == selectedSourceType)
+                                    .map((category) {
+                                  return DropdownMenuItem<String>(
+                                    value: category.name,
+                                    child: Text(category.name),
+                                  );
+                                }).toList(),
                                 onChanged: (value) {
                                   setState(() {
                                     selectedType = value;
@@ -731,7 +714,6 @@ class _ActivityPageState extends State<ActivityPage> {
                               onPressed: () => _showCreateActivityTypeDialog(
                                 context,
                                 selectedSourceType!,
-                                () => _loadCostCategories(),
                               ),
                               icon: const Icon(Icons.add_circle_outline),
                               tooltip: 'Add new activity type',
@@ -938,7 +920,6 @@ class _ActivityPageState extends State<ActivityPage> {
   void _showCreateActivityTypeDialog(
     BuildContext context,
     String sourceType,
-    VoidCallback onCreated,
   ) {
     final nameController = TextEditingController();
     showDialog(
@@ -973,33 +954,22 @@ class _ActivityPageState extends State<ActivityPage> {
                 return;
               }
 
-              final success = await FarmDataService.createCostCategory(
-                name: nameController.text.trim(),
-                type: sourceType,
-                category: 'activity',
+              context.read<CostCategoryBloc>().add(
+                    AddCostCategoryEvent(
+                      name: nameController.text.trim(),
+                      type: sourceType,
+                      category: 'activity',
+                    ),
+                  );
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '${nameController.text.trim()} added successfully',
+                  ),
+                  backgroundColor: Colors.green,
+                ),
               );
-
-              if (context.mounted) {
-                Navigator.pop(context);
-                if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        '${nameController.text.trim()} added successfully',
-                      ),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  onCreated();
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Failed to add activity type'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green.shade600,

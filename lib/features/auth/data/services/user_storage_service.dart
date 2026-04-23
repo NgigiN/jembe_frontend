@@ -50,12 +50,18 @@ class UserStorageService {
 
   // Get token from shared preferences
   static Future<String?> getToken() async {
-    return _readString(_tokenKey);
+    final token = await _readString(_tokenKey);
+    if (token != null && token.isNotEmpty) return token;
+    final user = await getUserData();
+    return user?.token;
   }
 
   // Get user ID from shared preferences
   static Future<String?> getUserId() async {
-    return _readString(_userIdKey);
+    final id = await _readString(_userIdKey);
+    if (id != null && id.isNotEmpty) return id;
+    final user = await getUserData();
+    return user?.id;
   }
 
   // Check if user is logged in and session is valid (24 hours)

@@ -1,0 +1,16 @@
+import 'package:dartz/dartz.dart';
+import '../../../../core/error/failures.dart';
+import '../entities/cost_category.dart';
+
+abstract class CostCategoryRepository {
+  Future<Either<Failure, List<CostCategory>>> getCostCategories({
+    String? type,
+    String? category,
+  });
+
+  Future<Either<Failure, bool>> addCostCategory({
+    required String name,
+    required String type,
+    required String category,
+  });
+}

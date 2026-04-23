@@ -8,19 +8,21 @@ import 'features/auth/domain/repositories/auth_repository.dart';
 import 'features/auth/domain/usecases/login.dart';
 import 'features/auth/domain/usecases/signup.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
-import 'features/farm/data/datasources/activity_remote_data_source.dart';
-import 'features/farm/data/datasources/plant_remote_data_source.dart';
-import 'features/farm/data/datasources/input_remote_data_source.dart';
+import 'features/farm/data/datasources/revenue_remote_data_source.dart';
+import 'features/farm/data/datasources/cost_category_remote_data_source.dart';
 import 'features/farm/data/datasources/land_remote_data_source.dart';
+import 'features/farm/data/datasources/plant_remote_data_source.dart';
 import 'features/farm/data/datasources/season_remote_data_source.dart';
+import 'features/farm/data/datasources/activity_remote_data_source.dart';
+import 'features/farm/data/datasources/input_remote_data_source.dart';
 import 'features/farm/data/datasources/animal_remote_data_source.dart';
 import 'features/farm/data/datasources/animal_type_remote_data_source.dart';
 import 'features/farm/data/datasources/herd_remote_data_source.dart';
 import 'features/farm/data/datasources/analysis_remote_data_source.dart';
-import 'features/farm/data/datasources/revenue_remote_data_source.dart';
 import 'features/farm/data/repositories/activity_repository_impl.dart';
 import 'features/farm/data/repositories/analysis_repository_impl.dart';
 import 'features/farm/data/repositories/revenue_repository_impl.dart';
+import 'features/farm/data/repositories/cost_category_repository_impl.dart';
 import 'features/farm/data/repositories/plant_repository_impl.dart';
 import 'features/farm/data/repositories/input_repository_impl.dart';
 import 'features/farm/data/repositories/land_repository_impl.dart';
@@ -38,6 +40,7 @@ import 'features/farm/domain/repositories/animal_repository.dart';
 import 'features/farm/domain/repositories/animal_type_repository.dart';
 import 'features/farm/domain/repositories/herd_repository.dart';
 import 'features/farm/domain/repositories/revenue_repository.dart';
+import 'features/farm/domain/repositories/cost_category_repository.dart';
 import 'features/farm/domain/usecases/add_activity.dart';
 import 'features/farm/domain/usecases/add_plant.dart';
 import 'features/farm/domain/usecases/add_input.dart';
@@ -78,6 +81,8 @@ import 'features/farm/domain/usecases/get_revenue_by_id.dart';
 import 'features/farm/domain/usecases/add_revenue.dart';
 import 'features/farm/domain/usecases/update_revenue.dart';
 import 'features/farm/domain/usecases/delete_revenue.dart';
+import 'features/farm/domain/usecases/get_cost_categories.dart';
+import 'features/farm/domain/usecases/add_cost_category.dart';
 import 'features/farm/presentation/bloc/land_bloc.dart';
 import 'features/farm/presentation/bloc/plant_bloc.dart';
 import 'features/farm/presentation/bloc/season_bloc.dart';
@@ -87,6 +92,7 @@ import 'features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'features/farm/presentation/bloc/herd_bloc.dart';
 import 'features/farm/presentation/bloc/analysis_bloc.dart';
 import 'features/farm/presentation/bloc/revenue_bloc.dart';
+import 'features/farm/presentation/bloc/cost_category_bloc.dart';
 import 'features/profile/data/datasources/profile_remote_data_source.dart';
 import 'features/profile/data/repositories/profile_repository_impl.dart';
 import 'features/profile/domain/repositories/profile_repository.dart';
@@ -168,6 +174,12 @@ Future<void> init() async {
     ),
   );
   sl.registerFactory(
+    () => CostCategoryBloc(
+      getCostCategories: sl(),
+      addCostCategory: sl(),
+    ),
+  );
+  sl.registerFactory(
     () => ProfileBloc(
       getProfile: sl(),
       updateProfile: sl(),
@@ -218,6 +230,8 @@ Future<void> init() async {
   sl.registerLazySingleton(() => AddRevenue(sl()));
   sl.registerLazySingleton(() => UpdateRevenue(sl()));
   sl.registerLazySingleton(() => DeleteRevenue(sl()));
+  sl.registerLazySingleton(() => GetCostCategories(sl()));
+  sl.registerLazySingleton(() => AddCostCategory(sl()));
   sl.registerLazySingleton(() => GetProfile(sl()));
   sl.registerLazySingleton(() => UpdateProfile(sl()));
   sl.registerLazySingleton(() => ChangePassword(sl()));
@@ -256,6 +270,9 @@ Future<void> init() async {
   sl.registerLazySingleton<RevenueRepository>(
     () => RevenueRepositoryImpl(remoteDataSource: sl()),
   );
+  sl.registerLazySingleton<CostCategoryRepository>(
+    () => CostCategoryRepositoryImpl(remoteDataSource: sl()),
+  );
   sl.registerLazySingleton<ProfileRepository>(
     () => ProfileRepositoryImpl(remoteDataSource: sl()),
   );
@@ -289,10 +306,13 @@ Future<void> init() async {
     () => HerdRemoteDataSourceImpl(dio: sl()),
   );
   sl.registerLazySingleton<AnalysisRemoteDataSource>(
-    () => AnalysisRemoteDataSourceImpl(),
+    () => AnalysisRemoteDataSourceImpl(dio: sl()),
   );
   sl.registerLazySingleton<RevenueRemoteDataSource>(
     () => RevenueRemoteDataSourceImpl(dio: sl()),
+  );
+  sl.registerLazySingleton<CostCategoryRemoteDataSource>(
+    () => CostCategoryRemoteDataSourceImpl(dio: sl()),
   );
   sl.registerLazySingleton<ProfileRemoteDataSource>(
     () => ProfileRemoteDataSourceImpl(dio: sl()),

@@ -3,9 +3,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/season_bloc.dart';
 import '../bloc/season_event.dart';
 import '../bloc/season_state.dart';
+import '../bloc/land_bloc.dart';
+import '../bloc/land_event.dart';
+import '../bloc/land_state.dart';
+import '../bloc/plant_bloc.dart';
+import '../bloc/plant_event.dart';
+import '../bloc/plant_state.dart';
 import '../../domain/entities/season.dart';
+import '../../domain/entities/land.dart';
+import '../../domain/entities/plant.dart';
 import '../../data/models/season_model.dart';
-import '../../data/services/farm_data_service.dart';
 import '../../../auth/data/utils/user_utils.dart';
 
 class SeasonPage extends StatefulWidget {
@@ -20,6 +27,8 @@ class _SeasonPageState extends State<SeasonPage> {
   void initState() {
     super.initState();
     context.read<SeasonBloc>().add(GetSeasonsEvent());
+    context.read<LandBloc>().add(GetLandsEvent());
+    context.read<PlantBloc>().add(GetPlantsEvent());
   }
 
   @override
@@ -197,9 +206,11 @@ class _SeasonPageState extends State<SeasonPage> {
     String? selectedPlantId;
     String? selectedLandId;
 
-    // Fetch lands and plants for dropdowns
-    final lands = await FarmDataService.getLandsForDropdown();
-    final plants = await FarmDataService.getPlantsForDropdown();
+    final landState = context.read<LandBloc>().state;
+    final lands = landState is LandLoaded ? landState.lands : <Land>[];
+
+    final plantState = context.read<PlantBloc>().state;
+    final plants = plantState is PlantLoaded ? plantState.plants : <Plant>[];
 
     if (lands.isEmpty || plants.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -261,24 +272,17 @@ class _SeasonPageState extends State<SeasonPage> {
                             labelText: 'Select Plant *',
                             border: OutlineInputBorder(),
                           ),
-                          items: plants
-                              .where(
-                                (plant) =>
-                                    (plant['id']?.toString() ?? '').isNotEmpty,
-                              )
-                              .map((plant) {
-                                final name = (plant['name'] ?? '').toString();
-                                final variety = (plant['variety'] ?? '')
-                                    .toString();
-                                final displayName = variety.isNotEmpty
-                                    ? '$name ($variety)'
-                                    : name;
-                                return DropdownMenuItem<String>(
-                                  value: plant['id']?.toString() ?? '',
-                                  child: Text(displayName),
-                                );
-                              })
-                              .toList(),
+                          items: plants.map((plant) {
+                            final name = plant.name;
+                            final variety = plant.variety ?? '';
+                            final displayName = variety.isNotEmpty
+                                ? '$name ($variety)'
+                                : name;
+                            return DropdownMenuItem<String>(
+                              value: plant.id,
+                              child: Text(displayName),
+                            );
+                          }).toList(),
                           onChanged: (value) {
                             setState(() {
                               selectedPlantId = value;
@@ -292,24 +296,17 @@ class _SeasonPageState extends State<SeasonPage> {
                             labelText: 'Select Land *',
                             border: OutlineInputBorder(),
                           ),
-                          items: lands
-                              .where(
-                                (land) =>
-                                    (land['id']?.toString() ?? '').isNotEmpty,
-                              )
-                              .map((land) {
-                                final name = (land['name'] ?? '').toString();
-                                final location = (land['location'] ?? '')
-                                    .toString();
-                                final displayName = location.isNotEmpty
-                                    ? '$name ($location)'
-                                    : name;
-                                return DropdownMenuItem<String>(
-                                  value: land['id']?.toString() ?? '',
-                                  child: Text(displayName),
-                                );
-                              })
-                              .toList(),
+                          items: lands.map((land) {
+                            final name = land.name;
+                            final location = land.location ?? '';
+                            final displayName = location.isNotEmpty
+                                ? '$name ($location)'
+                                : name;
+                            return DropdownMenuItem<String>(
+                              value: land.id,
+                              child: Text(displayName),
+                            );
+                          }).toList(),
                           onChanged: (value) {
                             setState(() {
                               selectedLandId = value;
@@ -463,9 +460,11 @@ class _SeasonPageState extends State<SeasonPage> {
     String? selectedPlantId = season.plantId;
     String? selectedLandId = season.landId;
 
-    // Fetch lands and crops for dropdowns
-    final lands = await FarmDataService.getLandsForDropdown();
-    final plants = await FarmDataService.getPlantsForDropdown();
+    final landState = context.read<LandBloc>().state;
+    final lands = landState is LandLoaded ? landState.lands : <Land>[];
+
+    final plantState = context.read<PlantBloc>().state;
+    final plants = plantState is PlantLoaded ? plantState.plants : <Plant>[];
 
     if (lands.isEmpty || plants.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -527,24 +526,17 @@ class _SeasonPageState extends State<SeasonPage> {
                             labelText: 'Select Plant *',
                             border: OutlineInputBorder(),
                           ),
-                          items: plants
-                              .where(
-                                (plant) =>
-                                    (plant['id']?.toString() ?? '').isNotEmpty,
-                              )
-                              .map((plant) {
-                                final name = (plant['name'] ?? '').toString();
-                                final variety = (plant['variety'] ?? '')
-                                    .toString();
-                                final displayName = variety.isNotEmpty
-                                    ? '$name ($variety)'
-                                    : name;
-                                return DropdownMenuItem<String>(
-                                  value: plant['id']?.toString() ?? '',
-                                  child: Text(displayName),
-                                );
-                              })
-                              .toList(),
+                          items: plants.map((plant) {
+                            final name = plant.name;
+                            final variety = plant.variety ?? '';
+                            final displayName = variety.isNotEmpty
+                                ? '$name ($variety)'
+                                : name;
+                            return DropdownMenuItem<String>(
+                              value: plant.id,
+                              child: Text(displayName),
+                            );
+                          }).toList(),
                           onChanged: (value) {
                             setState(() {
                               selectedPlantId = value;
@@ -558,24 +550,17 @@ class _SeasonPageState extends State<SeasonPage> {
                             labelText: 'Select Land *',
                             border: OutlineInputBorder(),
                           ),
-                          items: lands
-                              .where(
-                                (land) =>
-                                    (land['id']?.toString() ?? '').isNotEmpty,
-                              )
-                              .map((land) {
-                                final name = (land['name'] ?? '').toString();
-                                final location = (land['location'] ?? '')
-                                    .toString();
-                                final displayName = location.isNotEmpty
-                                    ? '$name ($location)'
-                                    : name;
-                                return DropdownMenuItem<String>(
-                                  value: land['id']?.toString() ?? '',
-                                  child: Text(displayName),
-                                );
-                              })
-                              .toList(),
+                          items: lands.map((land) {
+                            final name = land.name;
+                            final location = land.location ?? '';
+                            final displayName = location.isNotEmpty
+                                ? '$name ($location)'
+                                : name;
+                            return DropdownMenuItem<String>(
+                              value: land.id,
+                              child: Text(displayName),
+                            );
+                          }).toList(),
                           onChanged: (value) {
                             setState(() {
                               selectedLandId = value;

@@ -10,8 +10,10 @@ import '../bloc/revenue_state.dart';
 import '../bloc/herd_bloc.dart';
 import '../bloc/herd_event.dart';
 import '../bloc/herd_state.dart';
+import '../bloc/season_bloc.dart';
+import '../bloc/season_event.dart';
+import '../bloc/season_state.dart';
 import '../../domain/entities/revenue.dart';
-import '../../data/services/farm_data_service.dart';
 
 class RevenuePage extends StatelessWidget {
   const RevenuePage({super.key});
@@ -556,8 +558,6 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
   final _unitPriceController = TextEditingController();
   final _notesController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
-  List<Map<String, dynamic>> _seasons = [];
-  bool _isLoadingSeasons = false;
 
   @override
   void initState() {
@@ -566,7 +566,7 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
       _source = widget.defaultSource!;
     }
     context.read<HerdBloc>().add(GetHerdsEvent());
-    _loadSeasons();
+    context.read<SeasonBloc>().add(GetSeasonsEvent());
   }
 
   @override
@@ -578,18 +578,6 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
     super.dispose();
   }
 
-  Future<void> _loadSeasons() async {
-    setState(() => _isLoadingSeasons = true);
-    try {
-      final seasons = await FarmDataService.getSeasonsForDropdown();
-      setState(() {
-        _seasons = seasons;
-        _isLoadingSeasons = false;
-      });
-    } catch (e) {
-      setState(() => _isLoadingSeasons = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -659,31 +647,27 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                         ),
                         const SizedBox(height: 16),
                         if (_source == 'plant')
-                          _isLoadingSeasons
-                              ? const Center(child: CircularProgressIndicator())
-                              : DropdownButtonFormField<String>(
+                          BlocBuilder<SeasonBloc, SeasonState>(
+                            builder: (context, seasonState) {
+                              if (seasonState is SeasonLoading) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+                              if (seasonState is SeasonLoaded) {
+                                final seasons = seasonState.seasons;
+                                return DropdownButtonFormField<String>(
                                   initialValue: _selectedSourceId,
                                   decoration: const InputDecoration(
                                     labelText: 'Select Season *',
                                     border: OutlineInputBorder(),
                                   ),
-                                  items: _seasons
-                                      .where(
-                                        (season) =>
-                                            season['id'] != null &&
-                                            season['id'].toString().isNotEmpty,
-                                      )
-                                      .map((season) {
-                                        final id =
-                                            season['id']?.toString() ?? '';
-                                        return DropdownMenuItem<String>(
-                                          value: id,
-                                          child: Text(
-                                            season['name']?.toString() ?? '',
-                                          ),
-                                        );
-                                      })
-                                      .toList(),
+                                  items: seasons.map((season) {
+                                    return DropdownMenuItem<String>(
+                                      value: season.id,
+                                      child: Text(season.name),
+                                    );
+                                  }).toList(),
                                   onChanged: (value) {
                                     setState(() {
                                       _selectedSourceId = value;
@@ -695,7 +679,11 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                                     }
                                     return null;
                                   },
-                                ),
+                                );
+                              }
+                              return const Text('No seasons available');
+                            },
+                          ),
                         if (_source == 'animal')
                           BlocBuilder<HerdBloc, HerdState>(
                             builder: (context, herdState) {

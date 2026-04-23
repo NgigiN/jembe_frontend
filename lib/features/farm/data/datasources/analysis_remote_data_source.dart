@@ -1,10 +1,9 @@
-import 'dart:convert';
+import 'package:dio/dio.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/features/farm/data/models/farm_detailed_cost_model.dart';
 import 'package:farm_tracker/features/farm/data/models/cost_breakdown_model.dart';
 import 'package:farm_tracker/features/farm/data/models/annual_cost_summary_model.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../../../core/logging/app_logger.dart';
-import '../services/farm_data_service.dart';
 
 abstract class AnalysisRemoteDataSource {
   Future<FarmDetailedCostModel> getTotalCostsBySeason();
@@ -13,24 +12,23 @@ abstract class AnalysisRemoteDataSource {
 }
 
 class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
+  final Dio dio;
+
+  AnalysisRemoteDataSourceImpl({required this.dio});
+
   @override
   Future<FarmDetailedCostModel> getTotalCostsBySeason() async {
     try {
       appLogger.info(LogCategory.farm, 'Fetching unified total costs');
-      final response = await FarmDataService.getTotalCosts();
+      final response = await dio.get('/api/v1/analytics/total-costs');
 
       appLogger.debug(
         LogCategory.http,
         'Unified Total Costs API Response Status: ${response.statusCode}',
       );
-      appLogger.debug(
-        LogCategory.http,
-        'Unified Total Costs API Response Body: ${response.body}',
-      );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final result = FarmDetailedCostModel.fromJson(data);
+        final result = FarmDetailedCostModel.fromJson(response.data);
 
         appLogger.info(
           LogCategory.farm,
@@ -47,9 +45,8 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
         String errorMsg =
             'Failed to load total costs by season (Status: ${response.statusCode})';
         try {
-          final errorData = json.decode(response.body);
-          if (errorData is Map && errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
+          if (response.data is Map && response.data['error'] != null) {
+            errorMsg = response.data['error'].toString();
           }
         } catch (_) {}
         appLogger.error(
@@ -71,19 +68,18 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
   Future<List<CostBreakdownModel>> getCostBreakdownByInputType() async {
     try {
       appLogger.info(LogCategory.farm, 'Fetching cost breakdown by input type');
-      final response = await FarmDataService.getCostBreakdown(type: 'plant');
+      final response = await dio.get(
+        '/api/v1/analytics/cost-breakdown',
+        queryParameters: {'type': 'plant'},
+      );
 
       appLogger.debug(
         LogCategory.http,
         'Cost Breakdown API Response Status: ${response.statusCode}',
       );
-      appLogger.debug(
-        LogCategory.http,
-        'Cost Breakdown API Response Body: ${response.body}',
-      );
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
+        final List<dynamic> data = response.data;
         final List<CostBreakdownModel> breakdowns = data
             .map((item) => CostBreakdownModel.fromJson(item as Map<String, dynamic>))
             .toList();
@@ -103,9 +99,8 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
         String errorMsg =
             'Failed to load cost breakdown (Status: ${response.statusCode})';
         try {
-          final errorData = json.decode(response.body);
-          if (errorData is Map && errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
+          if (response.data is Map && response.data['error'] != null) {
+            errorMsg = response.data['error'].toString();
           }
         } catch (_) {}
         appLogger.error(
@@ -128,21 +123,18 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
     try {
       appLogger.info(LogCategory.farm, 'Fetching annual cost summary');
       final currentYear = DateTime.now().year;
-      final response = await FarmDataService.getMonthlySummary(
-        year: currentYear,
+      final response = await dio.get(
+        '/api/v1/analytics/monthly-summary',
+        queryParameters: {'year': currentYear.toString()},
       );
 
       appLogger.debug(
         LogCategory.http,
         'Annual Cost Summary API Response Status: ${response.statusCode}',
       );
-      appLogger.debug(
-        LogCategory.http,
-        'Annual Cost Summary API Response Body: ${response.body}',
-      );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final data = response.data;
         final List<AnnualCostSummaryModel> summaries = [];
 
         if (data is List) {
@@ -214,9 +206,8 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
         String errorMsg =
             'Failed to load annual cost summary (Status: ${response.statusCode})';
         try {
-          final errorData = json.decode(response.body);
-          if (errorData is Map && errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
+          if (response.data is Map && response.data['error'] != null) {
+            errorMsg = response.data['error'].toString();
           }
         } catch (_) {}
         appLogger.error(

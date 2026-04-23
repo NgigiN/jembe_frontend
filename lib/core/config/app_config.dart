@@ -10,7 +10,7 @@ class AppConfig {
   // Remote server configuration - HTTPS enforced in production
   static const String _remoteBaseUrl = 'https://193.187.129.179:6060';
   // static const String _localBaseUrl = 'http://127.0.0.1:8080';
-  static const String _localBaseUrl = 'http://192.168.0.105:8080';
+  static const String _localBaseUrl = 'http://192.168.122.1:8080';
 
   // Initialize environment based on dart-define flags
   static void initialize() {
