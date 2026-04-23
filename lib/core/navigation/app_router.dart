@@ -30,8 +30,6 @@ class AppRouteName {
   static const totalCosts = 'total-costs';
   static const costBreakdown = 'cost-breakdown';
   static const annualSummary = 'annual-summary';
-  static const revenueAll = 'revenue-all';
-  static const revenueFilter = 'revenue-filter';
   static const revenueAdd = 'revenue-add';
 }
 
@@ -50,13 +48,10 @@ class AppRoutePath {
   static const totalCosts = '/analytics/total-costs';
   static const costBreakdown = '/analytics/cost-breakdown';
   static const annualSummary = '/analytics/annual-summary';
-  static const revenueAll = '/revenue/all';
-  static const revenueFilterTemplate = '/revenue/filter/:source';
   static const revenueAdd = '/revenue/add';
 
   static String inputsFor(String sourceType) => '/inputs/$sourceType';
   static String activitiesFor(String sourceType) => '/activities/$sourceType';
-  static String revenueFilterFor(String source) => '/revenue/filter/$source';
 }
 
 class AppRouter {
@@ -141,19 +136,6 @@ class AppRouter {
         name: AppRouteName.annualSummary,
         path: AppRoutePath.annualSummary,
         builder: (context, state) => const AnnualSummaryPage(),
-      ),
-      GoRoute(
-        name: AppRouteName.revenueAll,
-        path: AppRoutePath.revenueAll,
-        builder: (context, state) => const AllRevenuePage(),
-      ),
-      GoRoute(
-        name: AppRouteName.revenueFilter,
-        path: AppRoutePath.revenueFilterTemplate,
-        builder: (context, state) {
-          final source = state.pathParameters['source'] ?? 'plant';
-          return FilteredRevenuePage(source: source);
-        },
       ),
       GoRoute(
         name: AppRouteName.revenueAdd,

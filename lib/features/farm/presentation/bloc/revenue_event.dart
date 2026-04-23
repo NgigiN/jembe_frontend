@@ -16,14 +16,6 @@ class LoadRevenues extends RevenueEvent {
   List<Object?> get props => [source, startDate, endDate];
 }
 
-class LoadRevenueById extends RevenueEvent {
-  final String id;
-
-  LoadRevenueById(this.id);
-
-  @override
-  List<Object?> get props => [id];
-}
 
 class AddRevenueEvent extends RevenueEvent {
   final String source;

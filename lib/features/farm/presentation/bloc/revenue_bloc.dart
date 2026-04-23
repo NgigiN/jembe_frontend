@@ -25,7 +25,6 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     required this.deleteRevenue,
   }) : super(RevenueInitial()) {
     on<LoadRevenues>(_onLoadRevenues);
-    on<LoadRevenueById>(_onLoadRevenueById);
     on<AddRevenueEvent>(_onAddRevenue);
     on<UpdateRevenueEvent>(_onUpdateRevenue);
     on<DeleteRevenueEvent>(_onDeleteRevenue);
@@ -57,34 +56,6 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     );
   }
 
-  Future<void> _onLoadRevenueById(
-    LoadRevenueById event,
-    Emitter<RevenueState> emit,
-  ) async {
-    emit(RevenueLoading(revenues: state.revenues));
-
-    final result = await getRevenueById(event.id);
-
-    result.fold(
-      (failure) {
-        String message = 'Failed to load revenue';
-        if (failure is ServerFailure && failure.errorMessage != null) {
-          message = failure.errorMessage!;
-        }
-        emit(RevenueError(message, revenues: state.revenues));
-      },
-      (revenue) {
-        final updatedList = List<Revenue>.from(state.revenues);
-        final index = updatedList.indexWhere((r) => r.id == revenue.id);
-        if (index != -1) {
-          updatedList[index] = revenue;
-        } else {
-          updatedList.add(revenue);
-        }
-        emit(RevenueLoaded(revenues: updatedList));
-      },
-    );
-  }
 
   Future<void> _onAddRevenue(
     AddRevenueEvent event,

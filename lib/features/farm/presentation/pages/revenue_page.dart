@@ -15,14 +15,37 @@ import '../bloc/season_event.dart';
 import '../bloc/season_state.dart';
 import '../../domain/entities/revenue.dart';
 
-class RevenuePage extends StatelessWidget {
+class RevenuePage extends StatefulWidget {
   const RevenuePage({super.key});
+
+  @override
+  State<RevenuePage> createState() => _RevenuePageState();
+}
+
+class _RevenuePageState extends State<RevenuePage> {
+  String? _selectedSource; // null for All, 'plant', 'animal'
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRevenues();
+  }
+
+  void _loadRevenues() {
+    context.read<RevenueBloc>().add(LoadRevenues(source: _selectedSource));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Revenue Management'),
+        title: const Text('Revenue'),
+        actions: [
+          IconButton(
+            onPressed: _loadRevenues,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -30,263 +53,218 @@ class RevenuePage extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+              Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.2),
               Theme.of(context).colorScheme.surface
             ],
           ),
         ),
+        child: Column(
+          children: [
+            _buildFilters(),
+            Expanded(
+              child: BlocConsumer<RevenueBloc, RevenueState>(
+                listener: (context, state) {
+                  if (state is RevenueDeleted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Revenue deleted successfully')),
+                    );
+                  }
+                },
+                builder: (context, state) {
+                  if (state is RevenueLoading && state.revenues.isEmpty) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (state is RevenueError && state.revenues.isEmpty) {
+                    return _buildErrorView(state.message);
+                  }
+
+                  final revenues = state.revenues;
+                  if (revenues.isEmpty) {
+                    return _buildEmptyView();
+                  }
+
+                  return ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: context.paddingMedium),
+                    itemCount: revenues.length,
+                    itemBuilder: (context, index) {
+                      final revenue = revenues[index];
+                      return _buildRevenueListItem(context, revenue);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push(AppRoutePath.revenueAdd),
+        label: const Text('Add Revenue'),
+        icon: const Icon(Icons.add),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+      ),
+    );
+  }
+
+  Widget _buildFilters() {
+    return Padding(
+      padding: EdgeInsets.all(context.paddingMedium),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildFilterChip('All', null),
+          const SizedBox(width: 8),
+          _buildFilterChip('Plants', 'plant'),
+          const SizedBox(width: 8),
+          _buildFilterChip('Animals', 'animal'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, String? value) {
+    final isSelected = _selectedSource == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        if (selected) {
+          setState(() {
+            _selectedSource = value;
+          });
+          _loadRevenues();
+        }
+      },
+      selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+      labelStyle: TextStyle(
+        color: isSelected
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.onSurface,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+    );
+  }
+
+  Widget _buildRevenueListItem(BuildContext context, Revenue revenue) {
+    final isPlant = revenue.source == 'plant';
+    final color = isPlant ? AppColors.plantCategory : AppColors.animalCategory;
+    final icon = isPlant ? Icons.eco : Icons.pets;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: InkWell(
+        onTap: () => _showRevenueDetails(context, revenue),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: EdgeInsets.all(context.paddingMedium),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Text(
-                'Farm Revenue',
-                style: Theme.of(context).textTheme.headlineMedium,
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 24),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Track income from plant and animal operations',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              SizedBox(height: context.paddingLarge),
+              const SizedBox(width: 16),
               Expanded(
-                child: GridView.count(
-                  crossAxisCount: context.screenWidth > 600 ? 3 : 2,
-                  crossAxisSpacing: context.paddingMedium,
-                  mainAxisSpacing: context.paddingMedium,
-                  childAspectRatio: 0.85,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildRevenueCard(
-                      context,
-                      'All Revenue',
-                      Icons.monetization_on,
-                      Theme.of(context).colorScheme.primary,
-                      () => _showAllRevenue(context),
+                    Text(
+                      revenue.type,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
-                    _buildRevenueCard(
-                      context,
-                      'Plant Revenue',
-                      Icons.eco,
-                      AppColors.plantCategory,
-                      () => _showPlantRevenue(context),
-                    ),
-                    _buildRevenueCard(
-                      context,
-                      'Animal Revenue',
-                      Icons.pets,
-                      AppColors.animalCategory,
-                      () => _showAnimalRevenue(context),
-                    ),
-                    _buildRevenueCard(
-                      context,
-                      'Add Revenue',
-                      Icons.add_circle,
-                      Theme.of(context).colorScheme.secondary,
-                      () => _showAddRevenue(context),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Qty: ${revenue.quantity} | ${revenue.date.toString().split(' ')[0]}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRevenueCard(
-    BuildContext context,
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: EdgeInsets.all(context.paddingMedium),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                color.withValues(alpha: 0.1),
-                color.withValues(alpha: 0.05),
-              ],
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: context.fontSize(40), color: color),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.bold,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Tap to view',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showAllRevenue(BuildContext context) {
-    context.read<RevenueBloc>().add(LoadRevenues());
-    context.push(AppRoutePath.revenueAll);
-  }
-
-  void _showPlantRevenue(BuildContext context) {
-    context.read<RevenueBloc>().add(LoadRevenues(source: 'plant'));
-    context.push(AppRoutePath.revenueFilterFor('plant'));
-  }
-
-  void _showAnimalRevenue(BuildContext context) {
-    context.read<RevenueBloc>().add(LoadRevenues(source: 'animal'));
-    context.push(AppRoutePath.revenueFilterFor('animal'));
-  }
-
-  void _showAddRevenue(BuildContext context) {
-    context.push(AppRoutePath.revenueAdd);
-  }
-}
-
-class AllRevenuePage extends StatelessWidget {
-  const AllRevenuePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('All Revenue'),
-      ),
-      body: BlocConsumer<RevenueBloc, RevenueState>(
-        listener: (context, state) {
-          if (state is RevenueDeleted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Revenue deleted successfully')),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is RevenueLoading && state.revenues.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state is RevenueError && state.revenues.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Icon(Icons.error, size: 64, color: Colors.red.shade300),
-                  const SizedBox(height: 16),
                   Text(
-                    state.message,
-                    style: const TextStyle(fontSize: 16),
-                    textAlign: TextAlign.center,
+                    'KES ${revenue.total.toStringAsFixed(0)}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                   ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.read<RevenueBloc>().add(LoadRevenues());
-                    },
-                    child: const Text('Retry'),
+                  Text(
+                    '@${revenue.unitPrice.toStringAsFixed(0)}',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                   ),
                 ],
               ),
-            );
-          }
-
-          final revenues = state.revenues;
-          if (revenues.isEmpty) {
-            return const Center(child: Text('No revenue records found'));
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: revenues.length,
-            itemBuilder: (context, index) {
-              final revenue = revenues[index];
-              return _buildRevenueCard(context, revenue);
-            },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push(AppRoutePath.revenueAdd);
-        },
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        child: const Icon(Icons.add),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildRevenueCard(BuildContext context, Revenue revenue) {
-    final color = revenue.source == 'plant' ? Colors.blue : Colors.orange;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.1),
-          child: Icon(
-            revenue.source == 'plant' ? Icons.eco : Icons.pets,
-            color: color,
+  Widget _buildErrorView(String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
+          const SizedBox(height: 16),
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 16),
+          ElevatedButton(onPressed: _loadRevenues, child: const Text('Retry')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.receipt_long_outlined,
+            size: 80,
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
           ),
-        ),
-        title: Text(
-          revenue.type,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Quantity: ${revenue.quantity}'),
-            Text('Date: ${revenue.date.toString().split(' ')[0]}'),
-            if (revenue.notes != null && revenue.notes!.isNotEmpty)
-              Text(
-                'Notes: ${revenue.notes}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-          ],
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              'KES ${revenue.total.toStringAsFixed(2)}',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-            ),
-            Text(
-              '@${revenue.unitPrice.toStringAsFixed(2)}',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+          const SizedBox(height: 16),
+          Text(
+            'No revenue records found',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          if (_selectedSource != null) ...[
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _selectedSource = null;
+                });
+                _loadRevenues();
+              },
+              child: const Text('Clear filters'),
             ),
           ],
-        ),
-        onTap: () {
-          _showRevenueDetails(context, revenue);
-        },
+        ],
       ),
     );
   }
@@ -295,97 +273,8 @@ class AllRevenuePage extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) => RevenueDetailsSheet(revenue: revenue),
-    );
-  }
-}
-
-class FilteredRevenuePage extends StatelessWidget {
-  final String source;
-
-  const FilteredRevenuePage({super.key, required this.source});
-
-  @override
-  Widget build(BuildContext context) {
-    final title = source == 'plant' ? 'Plant Revenue' : 'Animal Revenue';
-    final color = source == 'plant'
-        ? Colors.blue.shade600
-        : Colors.orange.shade600;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-      ),
-      body: BlocBuilder<RevenueBloc, RevenueState>(
-        builder: (context, state) {
-          if (state is RevenueLoading && state.revenues.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state is RevenueError && state.revenues.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error, size: 64, color: Colors.red.shade300),
-                  const SizedBox(height: 16),
-                  Text(
-                    state.message,
-                    style: const TextStyle(fontSize: 16),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final revenues = state.revenues;
-          if (revenues.isEmpty) {
-            return Center(child: Text('No $source revenue records found'));
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: revenues.length,
-            itemBuilder: (context, index) {
-              final revenue = revenues[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  title: Text(
-                    revenue.type,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Quantity: ${revenue.quantity}'),
-                      Text('Date: ${revenue.date.toString().split(' ')[0]}'),
-                    ],
-                  ),
-                  trailing: Text(
-                    'KES ${revenue.total.toStringAsFixed(2)}',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: color,
-                        ),
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push(AppRoutePath.revenueAdd);
-        },
-        backgroundColor: color,
-        child: const Icon(Icons.add),
-      ),
     );
   }
 }
@@ -397,116 +286,146 @@ class RevenueDetailsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.4,
-      maxChildSize: 0.9,
-      expand: false,
-      builder: (context, scrollController) {
-        return SingleChildScrollView(
-          controller: scrollController,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    revenue.type,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Chip(
-                    label: Text(revenue.source.toUpperCase()),
-                    backgroundColor: revenue.source == 'plant'
-                        ? Colors.blue.shade100
-                        : Colors.orange.shade100,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              _buildDetailRow('Quantity', revenue.quantity.toString()),
-              _buildDetailRow(
-                'Unit Price',
-                'KES ${revenue.unitPrice.toStringAsFixed(2)}',
-              ),
-              _buildDetailRow(
-                'Total',
-                'KES ${revenue.total.toStringAsFixed(2)}',
-              ),
-              _buildDetailRow('Date', revenue.date.toString().split(' ')[0]),
-              if (revenue.notes != null && revenue.notes!.isNotEmpty)
-                _buildDetailRow('Notes', revenue.notes!),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Edit'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        _confirmDelete(context, revenue.id);
-                      },
-                      icon: const Icon(Icons.delete),
-                      label: const Text('Delete'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+    final isPlant = revenue.source == 'plant';
+    final color = isPlant ? AppColors.plantCategory : AppColors.animalCategory;
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade700,
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
-          Expanded(child: Text(value, style: const TextStyle(fontSize: 16))),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  revenue.type,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  revenue.source.toUpperCase(),
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildDetailItem(context, 'Quantity', revenue.quantity.toString()),
+          _buildDetailItem(
+            context,
+            'Unit Price',
+            'KES ${revenue.unitPrice.toStringAsFixed(2)}',
+          ),
+          _buildDetailItem(
+            context,
+            'Total Amount',
+            'KES ${revenue.total.toStringAsFixed(2)}',
+            isPrimary: true,
+          ),
+          _buildDetailItem(
+            context,
+            'Date',
+            revenue.date.toString().split(' ')[0],
+          ),
+          if (revenue.notes != null && revenue.notes!.isNotEmpty)
+            _buildDetailItem(context, 'Notes', revenue.notes!),
+          const SizedBox(height: 32),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    // Add edit logic if needed later
+                  },
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Edit'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => _confirmDelete(context, revenue.id),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Delete'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                    foregroundColor: Theme.of(context).colorScheme.onError,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: MediaQuery.of(context).padding.bottom),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailItem(
+    BuildContext context,
+    String label,
+    String value, {
+    bool isPrimary = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: isPrimary ? FontWeight.bold : FontWeight.w500,
+                  color: isPrimary ? Theme.of(context).colorScheme.primary : null,
+                  fontSize: isPrimary ? 18 : null,
+                ),
+          ),
         ],
       ),
     );
@@ -517,21 +436,21 @@ class RevenueDetailsSheet extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Revenue'),
-        content: const Text(
-          'Are you sure you want to delete this revenue record?',
-        ),
+        content: const Text('Are you sure you want to delete this record?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () {
               context.read<RevenueBloc>().add(DeleteRevenueEvent(id));
               Navigator.pop(dialogContext);
               Navigator.pop(context);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -578,14 +497,11 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
     super.dispose();
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Revenue'),
-        backgroundColor: Colors.purple.shade600,
-        foregroundColor: Colors.white,
       ),
       body: BlocListener<RevenueBloc, RevenueState>(
         listener: (context, state) {
@@ -596,47 +512,45 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
             Navigator.pop(context);
             context.read<RevenueBloc>().add(LoadRevenues());
           } else if (state is RevenueError) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('Error: ${state.message}')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error: ${state.message}')),
+            );
           }
         },
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(context.paddingMedium),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Revenue Source',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Text(
+                          'Source',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          initialValue: _source,
+                          value: _source,
                           decoration: const InputDecoration(
-                            labelText: 'Source',
+                            labelText: 'Select Category',
                             border: OutlineInputBorder(),
                           ),
                           items: const [
-                            DropdownMenuItem(
-                              value: 'plant',
-                              child: Text('Plant'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'animal',
-                              child: Text('Animal'),
-                            ),
+                            DropdownMenuItem(value: 'plant', child: Text('Plant')),
+                            DropdownMenuItem(value: 'animal', child: Text('Animal')),
                           ],
                           onChanged: (value) {
                             setState(() {
@@ -648,80 +562,51 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                         const SizedBox(height: 16),
                         if (_source == 'plant')
                           BlocBuilder<SeasonBloc, SeasonState>(
-                            builder: (context, seasonState) {
-                              if (seasonState is SeasonLoading) {
-                                return const Center(
-                                  child: CircularProgressIndicator(),
-                                );
+                            builder: (context, state) {
+                              if (state is SeasonLoading) {
+                                return const Center(child: CircularProgressIndicator());
                               }
-                              if (seasonState is SeasonLoaded) {
-                                final seasons = seasonState.seasons;
+                              if (state is SeasonLoaded) {
                                 return DropdownButtonFormField<String>(
-                                  initialValue: _selectedSourceId,
+                                  value: _selectedSourceId,
                                   decoration: const InputDecoration(
-                                    labelText: 'Select Season *',
+                                    labelText: 'Select Season',
                                     border: OutlineInputBorder(),
                                   ),
-                                  items: seasons.map((season) {
-                                    return DropdownMenuItem<String>(
-                                      value: season.id,
-                                      child: Text(season.name),
-                                    );
+                                  items: state.seasons.map((s) {
+                                    return DropdownMenuItem(value: s.id, child: Text(s.name));
                                   }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _selectedSourceId = value;
-                                    });
-                                  },
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Please select a season';
-                                    }
-                                    return null;
-                                  },
+                                  onChanged: (v) => setState(() => _selectedSourceId = v),
+                                  validator: (v) => v == null ? 'Please select a season' : null,
                                 );
                               }
-                              return const Text('No seasons available');
+                              return const Text('No seasons found');
                             },
                           ),
                         if (_source == 'animal')
                           BlocBuilder<HerdBloc, HerdState>(
-                            builder: (context, herdState) {
-                              if (herdState is HerdLoading) {
-                                return const Center(
-                                  child: CircularProgressIndicator(),
-                                );
+                            builder: (context, state) {
+                              if (state is HerdLoading) {
+                                return const Center(child: CircularProgressIndicator());
                               }
-                              if (herdState is HerdLoaded) {
-                                final herds = herdState.herds;
+                              if (state is HerdLoaded) {
                                 return DropdownButtonFormField<String>(
-                                  initialValue: _selectedSourceId,
+                                  value: _selectedSourceId,
                                   decoration: const InputDecoration(
-                                    labelText: 'Select Herd *',
+                                    labelText: 'Select Herd',
                                     border: OutlineInputBorder(),
                                   ),
-                                  items: herds.map((herd) {
-                                    return DropdownMenuItem<String>(
-                                      value: herd.id,
-                                      child: Text(
-                                        '${herd.name} (${herd.location})',
-                                      ),
+                                  items: state.herds.map((h) {
+                                    return DropdownMenuItem(
+                                      value: h.id,
+                                      child: Text('${h.name} (${h.location})'),
                                     );
                                   }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _selectedSourceId = value;
-                                    });
-                                  },
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Please select a herd';
-                                    }
-                                    return null;
-                                  },
+                                  onChanged: (v) => setState(() => _selectedSourceId = v),
+                                  validator: (v) => v == null ? 'Please select a herd' : null,
                                 );
                               }
-                              return const Text('No herds available');
+                              return const Text('No herds found');
                             },
                           ),
                       ],
@@ -730,68 +615,65 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                 ),
                 const SizedBox(height: 16),
                 Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Revenue Details',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Text(
+                          'Details',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _typeController,
                           decoration: const InputDecoration(
-                            labelText: 'Type',
-                            hintText: 'e.g., Maize Harvest, Milk, Cattle Sale',
+                            labelText: 'Revenue Type',
+                            hintText: 'e.g., Milk Sale, Maize Harvest',
                             border: OutlineInputBorder(),
                           ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter revenue type';
-                            }
-                            return null;
-                          },
+                          validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                         ),
                         const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _quantityController,
-                          decoration: const InputDecoration(
-                            labelText: 'Quantity',
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.number,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter quantity';
-                            }
-                            if (double.tryParse(value) == null) {
-                              return 'Please enter a valid number';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _unitPriceController,
-                          decoration: const InputDecoration(
-                            labelText: 'Unit Price',
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.number,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter unit price';
-                            }
-                            if (double.tryParse(value) == null) {
-                              return 'Please enter a valid number';
-                            }
-                            return null;
-                          },
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _quantityController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Quantity',
+                                  border: OutlineInputBorder(),
+                                ),
+                                keyboardType: TextInputType.number,
+                                validator: (v) => (v == null || double.tryParse(v) == null)
+                                    ? 'Invalid'
+                                    : null,
+                                onChanged: (_) => setState(() {}),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _unitPriceController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Unit Price',
+                                  border: OutlineInputBorder(),
+                                ),
+                                keyboardType: TextInputType.number,
+                                validator: (v) => (v == null || double.tryParse(v) == null)
+                                    ? 'Invalid'
+                                    : null,
+                                onChanged: (_) => setState(() {}),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 16),
                         ListTile(
@@ -800,7 +682,7 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                           subtitle: Text(
                             '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
                           ),
-                          trailing: const Icon(Icons.calendar_today),
+                          trailing: const Icon(Icons.calendar_today_outlined),
                           onTap: () async {
                             final date = await showDatePicker(
                               context: context,
@@ -808,11 +690,7 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                               firstDate: DateTime(2000),
                               lastDate: DateTime.now(),
                             );
-                            if (date != null) {
-                              setState(() {
-                                _selectedDate = date;
-                              });
-                            }
+                            if (date != null) setState(() => _selectedDate = date);
                           },
                         ),
                         const SizedBox(height: 16),
@@ -822,64 +700,46 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                             labelText: 'Notes (Optional)',
                             border: OutlineInputBorder(),
                           ),
-                          maxLines: 3,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Card(
-                  color: Colors.grey.shade100,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Total Revenue',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _calculateTotal(),
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green.shade700,
-                          ),
+                          maxLines: 2,
                         ),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 24),
-                BlocBuilder<RevenueBloc, RevenueState>(
-                  builder: (context, state) {
-                    return ElevatedButton(
-                      onPressed: state is RevenueLoading ? null : _submitForm,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.purple.shade600,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Estimated Total:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      child: state is RevenueLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                              'Add Revenue',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                      Text(
+                        _calculateTotal(),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
-                    );
-                  },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                FilledButton(
+                  onPressed: _submitForm,
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Save Revenue', style: TextStyle(fontSize: 16)),
                 ),
               ],
             ),
@@ -890,42 +750,24 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
   }
 
   String _calculateTotal() {
-    final quantity = double.tryParse(_quantityController.text) ?? 0;
-    final unitPrice = double.tryParse(_unitPriceController.text) ?? 0;
-    final total = quantity * unitPrice;
-    return 'KES ${total.toStringAsFixed(2)}';
+    final q = double.tryParse(_quantityController.text) ?? 0;
+    final p = double.tryParse(_unitPriceController.text) ?? 0;
+    return 'KES ${(q * p).toStringAsFixed(0)}';
   }
 
   void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      if (_selectedSourceId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _source == 'plant'
-                  ? 'Please select a season'
-                  : 'Please select a herd',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      final quantity = double.parse(_quantityController.text);
-      final unitPrice = double.parse(_unitPriceController.text);
-
+    if (_formKey.currentState!.validate() && _selectedSourceId != null) {
       context.read<RevenueBloc>().add(
-        AddRevenueEvent(
-          source: _source,
-          sourceId: _selectedSourceId!,
-          type: _typeController.text,
-          quantity: quantity,
-          unitPrice: unitPrice,
-          date: _selectedDate,
-          notes: _notesController.text.isEmpty ? null : _notesController.text,
-        ),
-      );
+            AddRevenueEvent(
+              source: _source,
+              sourceId: _selectedSourceId!,
+              type: _typeController.text,
+              quantity: double.parse(_quantityController.text),
+              unitPrice: double.parse(_unitPriceController.text),
+              date: _selectedDate,
+              notes: _notesController.text,
+            ),
+          );
     }
   }
 }
