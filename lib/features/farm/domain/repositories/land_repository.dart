@@ -1,6 +1,6 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../entities/land.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 
 abstract class LandRepository {
   Future<Either<Failure, List<Land>>> getLands();

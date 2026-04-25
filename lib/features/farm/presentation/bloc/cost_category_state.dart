@@ -1,9 +1,9 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/cost_category.dart';
+import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
 
 abstract class CostCategoryState extends Equatable {
-  final List<CostCategory> categories;
   const CostCategoryState({this.categories = const []});
+  final List<CostCategory> categories;
 
   @override
   List<Object?> get props => [categories];
@@ -16,16 +16,16 @@ class CostCategoryLoading extends CostCategoryState {
 }
 
 class CostCategoryLoaded extends CostCategoryState {
-  const CostCategoryLoaded(List<CostCategory> categories) : super(categories: categories);
+  const CostCategoryLoaded(List<CostCategory> categories)
+    : super(categories: categories);
 
   @override
   List<Object?> get props => [categories];
 }
 
 class CostCategoryError extends CostCategoryState {
-  final String message;
-
   const CostCategoryError(this.message, {super.categories});
+  final String message;
 
   @override
   List<Object?> get props => [message, categories];

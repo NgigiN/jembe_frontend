@@ -8,25 +8,23 @@ abstract class CostCategoryEvent extends Equatable {
 }
 
 class GetCostCategoriesEvent extends CostCategoryEvent {
+  const GetCostCategoriesEvent({this.type, this.category});
   final String? type;
   final String? category;
-
-  const GetCostCategoriesEvent({this.type, this.category});
 
   @override
   List<Object?> get props => [type, category];
 }
 
 class AddCostCategoryEvent extends CostCategoryEvent {
-  final String name;
-  final String type;
-  final String category;
-
   const AddCostCategoryEvent({
     required this.name,
     required this.type,
     required this.category,
   });
+  final String name;
+  final String type;
+  final String category;
 
   @override
   List<Object?> get props => [name, type, category];

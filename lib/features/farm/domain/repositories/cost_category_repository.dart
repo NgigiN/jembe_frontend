@@ -1,6 +1,6 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../entities/cost_category.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
 
 abstract class CostCategoryRepository {
   Future<Either<Failure, List<CostCategory>>> getCostCategories({

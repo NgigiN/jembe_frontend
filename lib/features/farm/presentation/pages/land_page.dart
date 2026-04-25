@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/land_bloc.dart';
-import '../bloc/land_event.dart';
-import '../bloc/land_state.dart';
-import '../../domain/entities/land.dart';
-import '../../data/models/land_model.dart';
-import '../../../auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
+import 'package:farm_tracker/features/farm/data/models/land_model.dart';
+import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 
 class LandPage extends StatefulWidget {
   const LandPage({super.key});

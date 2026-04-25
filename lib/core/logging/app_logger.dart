@@ -6,9 +6,9 @@ enum LogLevel { debug, info, warning, error }
 enum LogCategory { navigation, http, auth, farm, general }
 
 class AppLogger {
-  static final AppLogger _instance = AppLogger._internal();
   factory AppLogger() => _instance;
   AppLogger._internal();
+  static final AppLogger _instance = AppLogger._internal();
 
   late final Logger _logger;
   bool _isInitialized = false;
@@ -18,11 +18,7 @@ class AppLogger {
 
     _logger = Logger(
       printer: PrettyPrinter(
-        methodCount: 2,
         errorMethodCount: 8,
-        lineLength: 120,
-        colors: true,
-        printEmojis: true,
         dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
       ),
       level: kDebugMode ? Level.debug : Level.warning,
@@ -39,8 +35,7 @@ class AppLogger {
   ]) {
     if (!_isInitialized) initialize();
 
-    final shouldEmit =
-        !kReleaseMode || level.index >= Level.warning.index;
+    final shouldEmit = !kReleaseMode || level.index >= Level.warning.index;
     if (!shouldEmit) return;
 
     final categoryPrefix = '[${category.name.toUpperCase()}]';

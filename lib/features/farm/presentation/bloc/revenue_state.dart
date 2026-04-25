@@ -1,10 +1,9 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/revenue.dart';
+import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
 
 abstract class RevenueState extends Equatable {
-  final List<Revenue> revenues;
-
   const RevenueState({this.revenues = const []});
+  final List<Revenue> revenues;
 
   @override
   List<Object> get props => [revenues];
@@ -21,27 +20,24 @@ class RevenueLoaded extends RevenueState {
 }
 
 class RevenueError extends RevenueState {
-  final String message;
-
   const RevenueError(this.message, {super.revenues});
+  final String message;
 
   @override
   List<Object> get props => [message, revenues];
 }
 
 class RevenueAdded extends RevenueState {
-  final Revenue revenue;
-
   const RevenueAdded({required this.revenue, super.revenues});
+  final Revenue revenue;
 
   @override
   List<Object> get props => [revenue, revenues];
 }
 
 class RevenueUpdated extends RevenueState {
-  final Revenue revenue;
-
   const RevenueUpdated({required this.revenue, super.revenues});
+  final Revenue revenue;
 
   @override
   List<Object> get props => [revenue, revenues];
@@ -50,5 +46,3 @@ class RevenueUpdated extends RevenueState {
 class RevenueDeleted extends RevenueState {
   const RevenueDeleted({super.revenues});
 }
-
-

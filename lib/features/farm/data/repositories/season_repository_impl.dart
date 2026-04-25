@@ -1,15 +1,14 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../domain/entities/season.dart';
-import '../../domain/repositories/season_repository.dart';
-import '../datasources/season_remote_data_source.dart';
-import '../models/season_model.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/season_repository.dart';
+import 'package:farm_tracker/features/farm/data/datasources/season_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/models/season_model.dart';
 
 class SeasonRepositoryImpl implements SeasonRepository {
-  final SeasonRemoteDataSource remoteDataSource;
-
   SeasonRepositoryImpl({required this.remoteDataSource});
+  final SeasonRemoteDataSource remoteDataSource;
 
   @override
   Future<Either<Failure, List<Season>>> getSeasons() async {

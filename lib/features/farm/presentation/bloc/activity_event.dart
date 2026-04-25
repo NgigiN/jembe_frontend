@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/activity.dart';
+import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
 
 abstract class ActivityEvent extends Equatable {
   @override
@@ -7,36 +7,32 @@ abstract class ActivityEvent extends Equatable {
 }
 
 class GetActivitiesEvent extends ActivityEvent {
-  final String? sourceType;
-
   GetActivitiesEvent({this.sourceType});
+  final String? sourceType;
 
   @override
   List<Object> get props => [sourceType ?? ''];
 }
 
 class AddActivityEvent extends ActivityEvent {
-  final Activity activity;
-
   AddActivityEvent(this.activity);
+  final Activity activity;
 
   @override
   List<Object> get props => [activity];
 }
 
 class UpdateActivityEvent extends ActivityEvent {
-  final Activity activity;
-
   UpdateActivityEvent(this.activity);
+  final Activity activity;
 
   @override
   List<Object> get props => [activity];
 }
 
 class DeleteActivityEvent extends ActivityEvent {
-  final String id;
-
   DeleteActivityEvent(this.id);
+  final String id;
 
   @override
   List<Object> get props => [id];

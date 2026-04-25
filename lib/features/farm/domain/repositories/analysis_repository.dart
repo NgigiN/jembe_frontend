@@ -1,8 +1,8 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../entities/farm_detailed_cost.dart';
-import '../entities/cost_breakdown.dart';
-import '../entities/monthly_summary.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
+import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
+import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 
 abstract class AnalysisRepository {
   Future<Either<Failure, FarmDetailedCost>> getTotalCostsBySeason();

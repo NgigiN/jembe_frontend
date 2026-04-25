@@ -1,4 +1,4 @@
-import '../../domain/entities/farm_detailed_cost.dart';
+import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
 
 class FarmDetailedCostModel extends FarmDetailedCost {
   const FarmDetailedCostModel({
@@ -9,7 +9,8 @@ class FarmDetailedCostModel extends FarmDetailedCost {
   factory FarmDetailedCostModel.fromJson(Map<String, dynamic> json) {
     return FarmDetailedCostModel(
       totalOverallCost: (json['total_overall_cost'] ?? 0.0).toDouble(),
-      details: (json['details'] as List<dynamic>?)
+      details:
+          (json['details'] as List<dynamic>?)
               ?.map((e) => CostDetailModel.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
@@ -19,9 +20,7 @@ class FarmDetailedCostModel extends FarmDetailedCost {
   Map<String, dynamic> toJson() {
     return {
       'total_overall_cost': totalOverallCost,
-      'details': details
-          .map((e) => (e as CostDetailModel).toJson())
-          .toList(),
+      'details': details.map((e) => (e as CostDetailModel).toJson()).toList(),
     };
   }
 }
@@ -34,10 +33,10 @@ class CostDetailModel extends CostDetail {
     required super.category,
     required super.location,
     required super.startDate,
-    super.endDate,
     required super.inputCost,
     required super.activityCost,
     required super.totalCost,
+    super.endDate,
   });
 
   factory CostDetailModel.fromJson(Map<String, dynamic> json) {
@@ -47,8 +46,12 @@ class CostDetailModel extends CostDetail {
       name: json['name'] ?? '',
       category: json['category'] ?? '',
       location: json['location'] ?? '',
-      startDate: DateTime.parse(json['start_date'] ?? DateTime.now().toIso8601String()),
-      endDate: json['end_date'] != null ? DateTime.parse(json['end_date']) : null,
+      startDate: DateTime.parse(
+        json['start_date'] ?? DateTime.now().toIso8601String(),
+      ),
+      endDate: json['end_date'] != null
+          ? DateTime.parse(json['end_date'])
+          : null,
       inputCost: (json['input_cost'] ?? 0.0).toDouble(),
       activityCost: (json['activity_cost'] ?? 0.0).toDouble(),
       totalCost: (json['total_cost'] ?? 0.0).toDouble(),

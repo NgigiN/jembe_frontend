@@ -1,14 +1,12 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../repositories/herd_repository.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/herd_repository.dart';
 
 class DeleteHerd {
+  DeleteHerd(this.repository);
   final HerdRepository repository;
 
-  DeleteHerd(this.repository);
-
   Future<Either<Failure, void>> call(String id) async {
-    return await repository.deleteHerd(id);
+    return repository.deleteHerd(id);
   }
 }
-

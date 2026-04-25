@@ -1,4 +1,4 @@
-import '../../domain/entities/cost_category.dart';
+import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
 
 class CostCategoryModel extends CostCategory {
   const CostCategoryModel({

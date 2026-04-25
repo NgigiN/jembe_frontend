@@ -1,13 +1,28 @@
-import '../../domain/entities/animal_type.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 
 class AnimalTypeModel extends AnimalType {
+  factory AnimalTypeModel.create({
+    required String userId,
+    required String name,
+    String? notes,
+  }) {
+    final now = DateTime.now();
+    return AnimalTypeModel(
+      id: '',
+      userId: userId,
+      name: name,
+      notes: notes,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
   const AnimalTypeModel({
     required super.id,
     required super.userId,
     required super.name,
-    super.notes,
     required super.createdAt,
     required super.updatedAt,
+    super.notes,
   });
 
   factory AnimalTypeModel.fromJson(Map<String, dynamic> json) {
@@ -17,7 +32,7 @@ class AnimalTypeModel extends AnimalType {
       id: (json['ID'] ?? json['id'] ?? '').toString(),
       userId: (json['user_id'] ?? json['UserID'] ?? '').toString(),
       name: (json['name'] ?? json['Name'] ?? '').toString(),
-      notes: notesValue != null ? notesValue.toString() : null,
+      notes: notesValue?.toString(),
       createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
       updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );
@@ -37,21 +52,4 @@ class AnimalTypeModel extends AnimalType {
       if (notes != null && notes!.isNotEmpty) 'notes': notes,
     };
   }
-
-  factory AnimalTypeModel.create({
-    required String userId,
-    required String name,
-    String? notes,
-  }) {
-    final now = DateTime.now();
-    return AnimalTypeModel(
-      id: '',
-      userId: userId,
-      name: name,
-      notes: notes,
-      createdAt: now,
-      updatedAt: now,
-    );
-  }
 }
-

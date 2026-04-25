@@ -1,22 +1,19 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/usecases/usecase.dart';
-import '../repositories/plant_repository.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/usecases/usecase.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/plant_repository.dart';
 
 class DeletePlant implements UseCase<void, DeletePlantParams> {
-  final PlantRepository repository;
-
   DeletePlant(this.repository);
+  final PlantRepository repository;
 
   @override
   Future<Either<Failure, void>> call(DeletePlantParams params) async {
-    return await repository.deletePlant(params.id);
+    return repository.deletePlant(params.id);
   }
 }
 
 class DeletePlantParams {
-  final String id;
-
   DeletePlantParams({required this.id});
+  final String id;
 }
-

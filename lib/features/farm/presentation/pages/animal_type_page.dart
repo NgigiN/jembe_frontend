@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/animal_type_bloc.dart';
-import '../bloc/animal_type_event.dart';
-import '../bloc/animal_type_state.dart';
-import '../../domain/entities/animal_type.dart';
-import '../../../auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
+import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 
 class AnimalTypePage extends StatefulWidget {
   const AnimalTypePage({super.key});
@@ -115,7 +115,8 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (animalType.notes != null && animalType.notes!.isNotEmpty)
+                        if (animalType.notes != null &&
+                            animalType.notes!.isNotEmpty)
                           Text('Notes: ${animalType.notes}'),
                         Text(
                           'Created: ${_formatDate(animalType.createdAt)}',
@@ -202,12 +203,12 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                    Text(
-                      'Add Animal Type',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  Text(
+                    'Add Animal Type',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
+                  ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
@@ -285,10 +286,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
                   ),
                   child: const Text(
                     'Add Animal Type',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -393,10 +391,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
                   ),
                   child: const Text(
                     'Update Animal Type',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -424,7 +419,9 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                context.read<AnimalTypeBloc>().add(DeleteAnimalTypeEvent(animalType.id));
+                context.read<AnimalTypeBloc>().add(
+                  DeleteAnimalTypeEvent(animalType.id),
+                );
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('${animalType.name} deleted successfully'),
@@ -441,4 +438,3 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
     );
   }
 }
-

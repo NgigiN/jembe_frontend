@@ -1,15 +1,14 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../domain/entities/revenue.dart';
-import '../../domain/repositories/revenue_repository.dart';
-import '../datasources/revenue_remote_data_source.dart';
-import '../models/revenue_model.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/revenue_repository.dart';
+import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/models/revenue_model.dart';
 
 class RevenueRepositoryImpl implements RevenueRepository {
-  final RevenueRemoteDataSource remoteDataSource;
-
   RevenueRepositoryImpl({required this.remoteDataSource});
+  final RevenueRemoteDataSource remoteDataSource;
 
   @override
   Future<Either<Failure, List<Revenue>>> getRevenues({
@@ -46,8 +45,8 @@ class RevenueRepositoryImpl implements RevenueRepository {
     required String type,
     required double quantity,
     required double unitPrice,
-    double? total,
     required DateTime date,
+    double? total,
     String? notes,
   }) async {
     try {
@@ -112,5 +111,3 @@ class RevenueRepositoryImpl implements RevenueRepository {
     }
   }
 }
-
-

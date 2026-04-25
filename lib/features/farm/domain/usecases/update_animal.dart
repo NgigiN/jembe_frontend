@@ -1,23 +1,20 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/usecases/usecase.dart';
-import '../entities/animal.dart';
-import '../repositories/animal_repository.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/usecases/usecase.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/animal_repository.dart';
 
 class UpdateAnimal implements UseCase<Animal, UpdateAnimalParams> {
-  final AnimalRepository repository;
-
   UpdateAnimal(this.repository);
+  final AnimalRepository repository;
 
   @override
   Future<Either<Failure, Animal>> call(UpdateAnimalParams params) async {
-    return await repository.updateAnimal(params.animal);
+    return repository.updateAnimal(params.animal);
   }
 }
 
 class UpdateAnimalParams {
-  final Animal animal;
-
   UpdateAnimalParams({required this.animal});
+  final Animal animal;
 }
-

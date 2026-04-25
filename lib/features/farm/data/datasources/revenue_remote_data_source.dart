@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import '../../../../core/error/exceptions.dart';
-import '../models/revenue_model.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/features/farm/data/models/revenue_model.dart';
 
 abstract class RevenueRemoteDataSource {
   Future<List<RevenueModel>> getRevenues({
@@ -15,9 +15,8 @@ abstract class RevenueRemoteDataSource {
 }
 
 class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
-  final Dio dio;
-
   RevenueRemoteDataSourceImpl({required this.dio});
+  final Dio dio;
 
   @override
   Future<List<RevenueModel>> getRevenues({
@@ -47,12 +46,14 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
         if (data == null) return [];
         if (data is List) {
           return data
-              .map((json) => RevenueModel.fromJson(json as Map<String, dynamic>))
+              .map(
+                (json) => RevenueModel.fromJson(json as Map<String, dynamic>),
+              )
               .toList();
         }
         return [];
       } else {
-        String errorMsg = 'Failed to load revenues';
+        var errorMsg = 'Failed to load revenues';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -62,7 +63,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to load revenues';
+      var errorMsg = 'Failed to load revenues';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -84,7 +85,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return RevenueModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to load revenue';
+        var errorMsg = 'Failed to load revenue';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -94,7 +95,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to load revenue';
+      var errorMsg = 'Failed to load revenue';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -119,7 +120,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return RevenueModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to add revenue';
+        var errorMsg = 'Failed to add revenue';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -129,7 +130,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to add revenue';
+      var errorMsg = 'Failed to add revenue';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -154,7 +155,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return RevenueModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to update revenue';
+        var errorMsg = 'Failed to update revenue';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -164,7 +165,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to update revenue';
+      var errorMsg = 'Failed to update revenue';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -183,7 +184,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
       final response = await dio.delete('/api/v1/revenue/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
-        String errorMsg = 'Failed to delete revenue';
+        var errorMsg = 'Failed to delete revenue';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -193,7 +194,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to delete revenue';
+      var errorMsg = 'Failed to delete revenue';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;

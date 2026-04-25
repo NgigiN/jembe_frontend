@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/plant_bloc.dart';
-import '../bloc/plant_event.dart';
-import '../bloc/plant_state.dart';
-import '../../domain/entities/plant.dart';
-import '../../data/models/plant_model.dart';
-import '../../../auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/plant_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/plant_state.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
+import 'package:farm_tracker/features/farm/data/models/plant_model.dart';
+import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 
 class PlantPage extends StatefulWidget {
   const PlantPage({super.key});
@@ -374,7 +374,9 @@ class _PlantPageState extends State<PlantPage> {
                       createdAt: plant.createdAt,
                       updatedAt: DateTime.now(),
                     );
-                    context.read<PlantBloc>().add(UpdatePlantEvent(updatedPlant));
+                    context.read<PlantBloc>().add(
+                      UpdatePlantEvent(updatedPlant),
+                    );
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(

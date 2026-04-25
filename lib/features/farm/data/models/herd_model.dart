@@ -1,6 +1,23 @@
-import '../../domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 
 class HerdModel extends Herd {
+  factory HerdModel.create({
+    required String userId,
+    required String name,
+    required String animalTypeId,
+    required String location,
+  }) {
+    final now = DateTime.now();
+    return HerdModel(
+      id: '',
+      userId: userId,
+      name: name,
+      animalTypeId: animalTypeId,
+      location: location,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
   const HerdModel({
     required super.id,
     required super.userId,
@@ -16,7 +33,8 @@ class HerdModel extends Herd {
       id: (json['ID'] ?? json['id'] ?? '').toString(),
       userId: (json['user_id'] ?? json['UserID'] ?? '').toString(),
       name: (json['name'] ?? json['Name'] ?? '').toString(),
-      animalTypeId: (json['animal_type_id'] ?? json['AnimalTypeID'] ?? '').toString(),
+      animalTypeId: (json['animal_type_id'] ?? json['AnimalTypeID'] ?? '')
+          .toString(),
       location: (json['location'] ?? json['Location'] ?? '').toString(),
       createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
       updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
@@ -38,23 +56,4 @@ class HerdModel extends Herd {
       'location': location,
     };
   }
-
-  factory HerdModel.create({
-    required String userId,
-    required String name,
-    required String animalTypeId,
-    required String location,
-  }) {
-    final now = DateTime.now();
-    return HerdModel(
-      id: '',
-      userId: userId,
-      name: name,
-      animalTypeId: animalTypeId,
-      location: location,
-      createdAt: now,
-      updatedAt: now,
-    );
-  }
 }
-

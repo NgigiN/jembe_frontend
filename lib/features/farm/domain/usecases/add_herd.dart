@@ -1,15 +1,18 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../entities/herd.dart';
-import '../repositories/herd_repository.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/herd_repository.dart';
 
 class AddHerd {
+  AddHerd(this.repository);
   final HerdRepository repository;
 
-  AddHerd(this.repository);
-
-  Future<Either<Failure, Herd>> call(String name, String animalTypeId, String location, String userId) async {
-    return await repository.addHerd(name, animalTypeId, location, userId);
+  Future<Either<Failure, Herd>> call(
+    String name,
+    String animalTypeId,
+    String location,
+    String userId,
+  ) async {
+    return repository.addHerd(name, animalTypeId, location, userId);
   }
 }
-

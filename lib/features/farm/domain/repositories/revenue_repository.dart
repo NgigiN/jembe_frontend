@@ -1,6 +1,6 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../entities/revenue.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
 
 abstract class RevenueRepository {
   Future<Either<Failure, List<Revenue>>> getRevenues({
@@ -15,8 +15,8 @@ abstract class RevenueRepository {
     required String type,
     required double quantity,
     required double unitPrice,
-    double? total,
     required DateTime date,
+    double? total,
     String? notes,
   });
   Future<Either<Failure, Revenue>> updateRevenue({
@@ -32,5 +32,3 @@ abstract class RevenueRepository {
   });
   Future<Either<Failure, void>> deleteRevenue(String id);
 }
-
-

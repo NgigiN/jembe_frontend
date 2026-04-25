@@ -1,15 +1,14 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../domain/entities/land.dart';
-import '../../domain/repositories/land_repository.dart';
-import '../datasources/land_remote_data_source.dart';
-import '../models/land_model.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/land_repository.dart';
+import 'package:farm_tracker/features/farm/data/datasources/land_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/models/land_model.dart';
 
 class LandRepositoryImpl implements LandRepository {
-  final LandRemoteDataSource remoteDataSource;
-
   LandRepositoryImpl({required this.remoteDataSource});
+  final LandRemoteDataSource remoteDataSource;
 
   @override
   Future<Either<Failure, List<Land>>> getLands() async {

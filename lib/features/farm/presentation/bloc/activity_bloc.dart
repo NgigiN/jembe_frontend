@@ -1,28 +1,22 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/logging/app_logger.dart';
-import '../../domain/entities/activity.dart';
-import '../../domain/usecases/get_activities.dart';
-import '../../domain/usecases/get_activities_params.dart';
-import '../../domain/usecases/add_activity.dart';
-import '../../domain/usecases/update_activity.dart';
-import '../../domain/usecases/delete_activity.dart';
-import '../bloc/activity_event.dart';
-import '../bloc/activity_state.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_activities.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_activities_params.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/add_activity.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/update_activity.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/delete_activity.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/activity_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/activity_state.dart';
 
 class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
-  final GetActivities getActivities;
-  final AddActivity addActivity;
-  final UpdateActivity updateActivity;
-  final DeleteActivity deleteActivity;
-
   ActivityBloc({
     required this.getActivities,
     required this.addActivity,
     required this.updateActivity,
     required this.deleteActivity,
-  })
-    : super(ActivityInitial()) {
+  }) : super(ActivityInitial()) {
     on<GetActivitiesEvent>((event, emit) async {
       appLogger.debug(LogCategory.farm, 'GetActivitiesEvent triggered');
       emit(ActivityLoading());
@@ -132,4 +126,8 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       );
     });
   }
+  final GetActivities getActivities;
+  final AddActivity addActivity;
+  final UpdateActivity updateActivity;
+  final DeleteActivity deleteActivity;
 }

@@ -1,10 +1,9 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/plant.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 
 abstract class PlantState extends Equatable {
-  final List<Plant> plants;
-
   const PlantState({this.plants = const []});
+  final List<Plant> plants;
 
   @override
   List<Object> get props => [plants];
@@ -24,9 +23,8 @@ class PlantLoaded extends PlantState {
 }
 
 class PlantError extends PlantState {
-  final String message;
-
   const PlantError(this.message, {super.plants});
+  final String message;
 
   @override
   List<Object> get props => [message, plants];

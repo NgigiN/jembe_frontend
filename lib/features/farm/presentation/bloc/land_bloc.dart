@@ -1,19 +1,15 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/usecases/usecase.dart';
-import '../../domain/entities/land.dart';
-import '../../domain/usecases/get_lands.dart';
-import '../../domain/usecases/add_land.dart';
-import '../../domain/usecases/update_land.dart';
-import '../../domain/usecases/delete_land.dart';
-import '../bloc/land_event.dart';
-import '../bloc/land_state.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/usecases/usecase.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_lands.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/add_land.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/update_land.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/delete_land.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
 
 class LandBloc extends Bloc<LandEvent, LandState> {
-  final GetLands getLands;
-  final AddLand addLand;
-  final UpdateLand updateLand;
-  final DeleteLand deleteLand;
 
   LandBloc({
     required this.getLands,
@@ -100,4 +96,8 @@ class LandBloc extends Bloc<LandEvent, LandState> {
       );
     });
   }
+  final GetLands getLands;
+  final AddLand addLand;
+  final UpdateLand updateLand;
+  final DeleteLand deleteLand;
 }

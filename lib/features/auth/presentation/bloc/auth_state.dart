@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/user.dart';
+import 'package:farm_tracker/features/auth/domain/entities/user.dart';
 
 abstract class AuthState extends Equatable {
   @override
@@ -11,21 +11,17 @@ class AuthInitial extends AuthState {}
 class AuthLoading extends AuthState {}
 
 class AuthAuthenticated extends AuthState {
-  final User user;
-
   AuthAuthenticated(this.user);
+  final User user;
 
   @override
   List<Object> get props => [user];
 }
 
 class AuthError extends AuthState {
-  final String message;
-
   AuthError(this.message);
+  final String message;
 
   @override
   List<Object> get props => [message];
 }
-
-class SignupSuccess extends AuthState {}

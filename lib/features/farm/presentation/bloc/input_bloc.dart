@@ -1,28 +1,22 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/logging/app_logger.dart';
-import '../../domain/entities/input.dart';
-import '../../domain/usecases/get_inputs.dart';
-import '../../domain/usecases/get_inputs_params.dart';
-import '../../domain/usecases/add_input.dart';
-import '../../domain/usecases/update_input.dart';
-import '../../domain/usecases/delete_input.dart';
-import '../bloc/input_event.dart';
-import '../bloc/input_state.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/features/farm/domain/entities/input.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_inputs.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_inputs_params.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/add_input.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/update_input.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/delete_input.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/input_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/input_state.dart';
 
 class InputBloc extends Bloc<InputEvent, InputState> {
-  final GetInputs getInputs;
-  final AddInput addInput;
-  final UpdateInput updateInput;
-  final DeleteInput deleteInput;
-
   InputBloc({
     required this.getInputs,
     required this.addInput,
     required this.updateInput,
     required this.deleteInput,
-  })
-    : super(InputInitial()) {
+  }) : super(InputInitial()) {
     on<GetInputsEvent>((event, emit) async {
       appLogger.debug(LogCategory.farm, 'GetInputsEvent triggered');
       emit(InputLoading());
@@ -111,11 +105,16 @@ class InputBloc extends Bloc<InputEvent, InputState> {
           emit(InputError(message, inputs: currentInputs));
         },
         (_) {
-          final updatedInputs =
-              currentInputs.where((input) => input.id != event.id).toList();
+          final updatedInputs = currentInputs
+              .where((input) => input.id != event.id)
+              .toList();
           emit(InputLoaded(inputs: updatedInputs));
         },
       );
     });
   }
+  final GetInputs getInputs;
+  final AddInput addInput;
+  final UpdateInput updateInput;
+  final DeleteInput deleteInput;
 }

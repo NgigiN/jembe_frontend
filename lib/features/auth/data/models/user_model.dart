@@ -1,4 +1,4 @@
-import '../../domain/entities/user.dart';
+import 'package:farm_tracker/features/auth/domain/entities/user.dart';
 
 class UserModel extends User {
   const UserModel({
@@ -8,6 +8,7 @@ class UserModel extends User {
     required super.lastName,
     required super.farmName,
     required super.location,
+    required super.pictureUrl,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -18,6 +19,7 @@ class UserModel extends User {
       lastName: (json['last_name'] ?? '').toString(),
       farmName: (json['farm_name'] ?? '').toString(),
       location: (json['location'] ?? '').toString(),
+      pictureUrl: (json['picture_url'] ?? '').toString(),
     );
   }
 
@@ -29,6 +31,7 @@ class UserModel extends User {
       'last_name': lastName,
       'farm_name': farmName,
       'location': location,
+      'picture_url': pictureUrl,
     };
   }
 }

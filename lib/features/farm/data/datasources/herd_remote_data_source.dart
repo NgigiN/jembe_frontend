@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import '../../../../core/error/exceptions.dart';
-import '../models/herd_model.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
 
 abstract class HerdRemoteDataSource {
   Future<List<HerdModel>> getHerds();
@@ -10,9 +10,8 @@ abstract class HerdRemoteDataSource {
 }
 
 class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
-  final Dio dio;
-
   HerdRemoteDataSourceImpl({required this.dio});
+  final Dio dio;
 
   @override
   Future<List<HerdModel>> getHerds() async {
@@ -29,7 +28,7 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
         }
         return [];
       } else {
-        String errorMsg = 'Failed to load herds';
+        var errorMsg = 'Failed to load herds';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -39,7 +38,7 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to load herds';
+      var errorMsg = 'Failed to load herds';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -55,16 +54,13 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
   @override
   Future<HerdModel> addHerd(HerdModel herd) async {
     try {
-      final response = await dio.post(
-        '/api/v1/herds',
-        data: herd.toJson(),
-      );
+      final response = await dio.post('/api/v1/herds', data: herd.toJson());
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
         return HerdModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to add herd';
+        var errorMsg = 'Failed to add herd';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -74,7 +70,7 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to add herd';
+      var errorMsg = 'Failed to add herd';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -99,7 +95,7 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return HerdModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to update herd';
+        var errorMsg = 'Failed to update herd';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -109,7 +105,7 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to update herd';
+      var errorMsg = 'Failed to update herd';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -128,7 +124,7 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
       final response = await dio.delete('/api/v1/herds/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
-        String errorMsg = 'Failed to delete herd';
+        var errorMsg = 'Failed to delete herd';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -138,7 +134,7 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to delete herd';
+      var errorMsg = 'Failed to delete herd';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;

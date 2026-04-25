@@ -1,10 +1,9 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 
 abstract class SeasonState extends Equatable {
-  final List<Season> seasons;
-
   const SeasonState({this.seasons = const []});
+  final List<Season> seasons;
 
   @override
   List<Object> get props => [seasons];
@@ -24,9 +23,8 @@ class SeasonLoaded extends SeasonState {
 }
 
 class SeasonError extends SeasonState {
-  final String message;
-
   const SeasonError(this.message, {super.seasons});
+  final String message;
 
   @override
   List<Object> get props => [message, seasons];

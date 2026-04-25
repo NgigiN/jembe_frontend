@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../../../core/logging/app_logger.dart';
-import '../models/input_model.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/features/farm/data/models/input_model.dart';
 
 abstract class InputRemoteDataSource {
   Future<List<InputModel>> getInputs({String? sourceType});
@@ -11,9 +11,8 @@ abstract class InputRemoteDataSource {
 }
 
 class InputRemoteDataSourceImpl implements InputRemoteDataSource {
-  final Dio dio;
-
   InputRemoteDataSourceImpl({required this.dio});
+  final Dio dio;
 
   @override
   Future<List<InputModel>> getInputs({String? sourceType}) async {
@@ -47,14 +46,13 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
           return [];
         }
 
-        final items = data as List;
+        final items = data;
         appLogger.info(LogCategory.farm, 'Found ${items.length} inputs');
         return items
             .map((json) => InputModel.fromJson(json as Map<String, dynamic>))
             .toList();
       } else {
-        String errorMsg =
-            'Failed to load inputs (Status: ${response.statusCode})';
+        var errorMsg = 'Failed to load inputs (Status: ${response.statusCode})';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -65,7 +63,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
       }
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'Error in getInputs', e);
-      String errorMsg = 'Network error';
+      var errorMsg = 'Network error';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -94,16 +92,13 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
         requestBody['animal_id'] = input.animalId;
       }
 
-      final response = await dio.post(
-        '/api/v1/inputs',
-        data: requestBody,
-      );
+      final response = await dio.post('/api/v1/inputs', data: requestBody);
 
       if (response.statusCode == 201) {
         final data = response.data as Map<String, dynamic>;
         return InputModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to add input';
+        var errorMsg = 'Failed to add input';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -113,7 +108,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to add input';
+      var errorMsg = 'Failed to add input';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -151,7 +146,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return InputModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to update input';
+        var errorMsg = 'Failed to update input';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -161,7 +156,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to update input';
+      var errorMsg = 'Failed to update input';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -180,7 +175,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
       final response = await dio.delete('/api/v1/inputs/$id');
 
       if (response.statusCode != 200) {
-        String errorMsg = 'Failed to delete input';
+        var errorMsg = 'Failed to delete input';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -190,7 +185,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to delete input';
+      var errorMsg = 'Failed to delete input';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;

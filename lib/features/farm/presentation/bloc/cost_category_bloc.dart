@@ -1,14 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../domain/entities/cost_category.dart';
-import '../../domain/usecases/get_cost_categories.dart';
-import '../../domain/usecases/add_cost_category.dart';
-import 'cost_category_event.dart';
-import 'cost_category_state.dart';
+import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_cost_categories.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/add_cost_category.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_state.dart';
 
 class CostCategoryBloc extends Bloc<CostCategoryEvent, CostCategoryState> {
-  final GetCostCategories getCostCategories;
-  final AddCostCategory addCostCategory;
-
   CostCategoryBloc({
     required this.getCostCategories,
     required this.addCostCategory,
@@ -16,12 +13,14 @@ class CostCategoryBloc extends Bloc<CostCategoryEvent, CostCategoryState> {
     on<GetCostCategoriesEvent>(_onGetCostCategories);
     on<AddCostCategoryEvent>(_onAddCostCategory);
   }
+  final GetCostCategories getCostCategories;
+  final AddCostCategory addCostCategory;
 
   Future<void> _onGetCostCategories(
     GetCostCategoriesEvent event,
     Emitter<CostCategoryState> emit,
   ) async {
-    emit(CostCategoryLoading());
+    emit(const CostCategoryLoading());
     final result = await getCostCategories(
       GetCostCategoriesParams(type: event.type, category: event.category),
     );
@@ -47,7 +46,9 @@ class CostCategoryBloc extends Bloc<CostCategoryEvent, CostCategoryState> {
     );
 
     result.fold(
-      (failure) => emit(CostCategoryError(failure.message, categories: currentCategories)),
+      (failure) => emit(
+        CostCategoryError(failure.message, categories: currentCategories),
+      ),
       (success) {
         emit(CostCategoryAdded(categories: currentCategories));
         // Reload categories after adding to get the full list with IDs

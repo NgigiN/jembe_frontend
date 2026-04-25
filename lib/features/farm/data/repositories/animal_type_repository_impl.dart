@@ -1,15 +1,14 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../../../core/error/failures.dart';
-import '../../domain/entities/animal_type.dart';
-import '../../domain/repositories/animal_type_repository.dart';
-import '../datasources/animal_type_remote_data_source.dart';
-import '../models/animal_type_model.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/animal_type_repository.dart';
+import 'package:farm_tracker/features/farm/data/datasources/animal_type_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/models/animal_type_model.dart';
 
 class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
-  final AnimalTypeRemoteDataSource remoteDataSource;
-
   AnimalTypeRepositoryImpl({required this.remoteDataSource});
+  final AnimalTypeRemoteDataSource remoteDataSource;
 
   @override
   Future<Either<Failure, List<AnimalType>>> getAnimalTypes() async {
@@ -19,7 +18,7 @@ class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e.toString()}'));
+      return Left(ServerFailure('Unexpected error: ${e}'));
     }
   }
 
@@ -31,12 +30,16 @@ class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e.toString()}'));
+      return Left(ServerFailure('Unexpected error: ${e}'));
     }
   }
 
   @override
-  Future<Either<Failure, AnimalType>> addAnimalType(String name, String? notes, String userId) async {
+  Future<Either<Failure, AnimalType>> addAnimalType(
+    String name,
+    String? notes,
+    String userId,
+  ) async {
     try {
       final animalTypeModel = AnimalTypeModel.create(
         userId: userId,
@@ -48,12 +51,16 @@ class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e.toString()}'));
+      return Left(ServerFailure('Unexpected error: ${e}'));
     }
   }
 
   @override
-  Future<Either<Failure, AnimalType>> updateAnimalType(String id, String name, String? notes) async {
+  Future<Either<Failure, AnimalType>> updateAnimalType(
+    String id,
+    String name,
+    String? notes,
+  ) async {
     try {
       final animalTypeModel = await remoteDataSource.getAnimalType(id);
       final updatedModel = AnimalTypeModel(
@@ -69,7 +76,7 @@ class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e.toString()}'));
+      return Left(ServerFailure('Unexpected error: ${e}'));
     }
   }
 
@@ -81,8 +88,7 @@ class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e.toString()}'));
+      return Left(ServerFailure('Unexpected error: ${e}'));
     }
   }
 }
-

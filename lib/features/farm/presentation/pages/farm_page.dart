@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/navigation/app_router.dart';
-import '../../../../core/utils/responsive_utils.dart';
+import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/utils/responsive_utils.dart';
 
 class FarmPage extends StatefulWidget {
   const FarmPage({super.key});
@@ -35,7 +35,9 @@ class _FarmPageState extends State<FarmPage>
           controller: _tabController,
           indicatorColor: Theme.of(context).colorScheme.onPrimary,
           labelColor: Theme.of(context).colorScheme.onPrimary,
-          unselectedLabelColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
+          unselectedLabelColor: Theme.of(
+            context,
+          ).colorScheme.onPrimary.withValues(alpha: 0.7),
           tabAlignment: TabAlignment.center,
           isScrollable: true,
           tabs: const [
@@ -50,8 +52,10 @@ class _FarmPageState extends State<FarmPage>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-              Theme.of(context).colorScheme.surface
+              Theme.of(
+                context,
+              ).colorScheme.primaryContainer.withValues(alpha: 0.3),
+              Theme.of(context).colorScheme.surface,
             ],
           ),
         ),
@@ -77,8 +81,8 @@ class _FarmPageState extends State<FarmPage>
           Text(
             'Manage your crops, seasons, and plant-related activities',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           SizedBox(height: context.paddingLarge),
           Expanded(
@@ -149,8 +153,8 @@ class _FarmPageState extends State<FarmPage>
           Text(
             'Manage your herds, animals, and animal-related activities',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           SizedBox(height: context.paddingLarge),
           Expanded(
@@ -219,8 +223,16 @@ class _FarmPageState extends State<FarmPage>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                backgroundColor.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.3 : 1.0),
-                backgroundColor.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.1 : 0.7),
+                backgroundColor.withValues(
+                  alpha: Theme.of(context).brightness == Brightness.dark
+                      ? 0.3
+                      : 1.0,
+                ),
+                backgroundColor.withValues(
+                  alpha: Theme.of(context).brightness == Brightness.dark
+                      ? 0.1
+                      : 0.7,
+                ),
               ],
             ),
           ),
@@ -230,7 +242,9 @@ class _FarmPageState extends State<FarmPage>
               Container(
                 padding: EdgeInsets.all(context.paddingSmall),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surface.withValues(alpha: 0.9),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, size: context.fontSize(32), color: iconColor),
@@ -239,9 +253,11 @@ class _FarmPageState extends State<FarmPage>
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
-                    ),
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black87,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],

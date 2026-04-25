@@ -2,9 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
-import '../config/app_config.dart';
-import '../logging/app_logger.dart';
-import '../../features/auth/data/services/user_storage_service.dart';
+import 'package:farm_tracker/core/config/app_config.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 
 /// Factory for creating configured Dio instances
 class DioClientFactory {
@@ -51,7 +51,6 @@ class DioClientFactory {
         DioCacheInterceptor(
           options: CacheOptions(
             store: MemCacheStore(),
-            policy: CachePolicy.request,
             maxStale: const Duration(minutes: 5),
           ),
         ),
@@ -61,15 +60,7 @@ class DioClientFactory {
     // Add logging interceptor (only in debug mode)
     if (enableLogging && kDebugMode) {
       dio.interceptors.add(
-        PrettyDioLogger(
-          requestHeader: true,
-          requestBody: true,
-          responseBody: true,
-          responseHeader: false,
-          error: true,
-          compact: true,
-          maxWidth: 90,
-        ),
+        PrettyDioLogger(requestHeader: true, requestBody: true),
       );
     }
 
@@ -80,7 +71,7 @@ class DioClientFactory {
 /// Interceptor that adds authentication token to requests
 class _AuthInterceptor extends Interceptor {
   @override
-  void onRequest(
+  Future<void> onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
@@ -103,4 +94,3 @@ class _AuthInterceptor extends Interceptor {
     handler.next(err);
   }
 }
-

@@ -1,16 +1,16 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../domain/entities/farm_detailed_cost.dart';
-import '../../domain/entities/cost_breakdown.dart';
-import '../../domain/entities/monthly_summary.dart';
-import '../../domain/repositories/analysis_repository.dart';
-import '../datasources/analysis_remote_data_source.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
+import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
+import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/analysis_repository.dart';
+import 'package:farm_tracker/features/farm/data/datasources/analysis_remote_data_source.dart';
 
 class AnalysisRepositoryImpl implements AnalysisRepository {
-  final AnalysisRemoteDataSource remoteDataSource;
 
   AnalysisRepositoryImpl({required this.remoteDataSource});
+  final AnalysisRemoteDataSource remoteDataSource;
 
   @override
   Future<Either<Failure, FarmDetailedCost>> getTotalCostsBySeason() async {

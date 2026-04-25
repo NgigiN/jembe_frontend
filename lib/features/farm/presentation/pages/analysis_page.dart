@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../../../core/utils/responsive_utils.dart';
+import 'package:farm_tracker/core/utils/responsive_utils.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/navigation/app_router.dart';
-import '../bloc/analysis_bloc.dart';
-import '../../domain/entities/farm_detailed_cost.dart';
-import '../../domain/entities/monthly_summary.dart';
+import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
+import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
+import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 
 class AnalysisPage extends StatelessWidget {
   const AnalysisPage({super.key});
@@ -300,9 +300,9 @@ class TotalCostsBySeasonPage extends StatelessWidget {
   }
 
   Widget _buildCostDetailItem(BuildContext context, CostDetail detail) {
-    final bool isPlant = detail.type.toLowerCase() == 'plant';
+    final isPlant = detail.type.toLowerCase() == 'plant';
     final Color itemColor = isPlant ? Colors.green : Colors.blue;
-    final IconData icon = isPlant ? Icons.grass : Icons.pets;
+    final icon = isPlant ? Icons.grass : Icons.pets;
 
     return Card(
       elevation: 2,
@@ -560,7 +560,7 @@ class AnnualSummaryPage extends StatelessWidget {
   Widget _buildAnnualOverview(BuildContext context, List<MonthlySummary> summaries) {
     double totalAnnualCosts = 0;
     double totalAnnualRevenue = 0;
-    for (var s in summaries) {
+    for (final s in summaries) {
       totalAnnualCosts += s.totalCosts;
       totalAnnualRevenue += s.totalRevenue;
     }
@@ -638,8 +638,8 @@ class AnnualSummaryPage extends StatelessWidget {
   }
 
   Widget _buildMonthlyPerformanceCard(BuildContext context, MonthlySummary summary) {
-    final DateTime date = DateTime.tryParse('${summary.month}-01') ?? DateTime.now();
-    final String monthName = _getMonthName(date.month);
+    final date = DateTime.tryParse('${summary.month}-01') ?? DateTime.now();
+    final monthName = _getMonthName(date.month);
     final isProfit = summary.profit >= 0;
 
     return Card(
@@ -778,7 +778,7 @@ class AnnualSummaryPage extends StatelessWidget {
 
   Widget _buildSubLabel(String label) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         label,
         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
@@ -788,7 +788,7 @@ class AnnualSummaryPage extends StatelessWidget {
 
   Widget _buildMiniBreakdownRow(String label, double value, Color color) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4.0),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         children: [
           Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),

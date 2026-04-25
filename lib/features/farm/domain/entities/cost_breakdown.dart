@@ -1,12 +1,6 @@
 import 'package:equatable/equatable.dart';
 
 class CostBreakdown extends Equatable {
-  final String category;
-  final String type; // 'plant' or 'animal'
-  final String origin;
-  final double totalCost;
-  final double percentage;
-
   const CostBreakdown({
     required this.category,
     required this.type,
@@ -14,13 +8,12 @@ class CostBreakdown extends Equatable {
     required this.totalCost,
     required this.percentage,
   });
+  final String category;
+  final String type; // 'plant' or 'animal'
+  final String origin;
+  final double totalCost;
+  final double percentage;
 
   @override
-  List<Object?> get props => [
-    category,
-    type,
-    origin,
-    totalCost,
-    percentage,
-  ];
+  List<Object?> get props => [category, type, origin, totalCost, percentage];
 }

@@ -1,15 +1,14 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../domain/entities/animal.dart';
-import '../../domain/repositories/animal_repository.dart';
-import '../datasources/animal_remote_data_source.dart';
-import '../models/animal_model.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/animal_repository.dart';
+import 'package:farm_tracker/features/farm/data/datasources/animal_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/models/animal_model.dart';
 
 class AnimalRepositoryImpl implements AnimalRepository {
-  final AnimalRemoteDataSource remoteDataSource;
-
   AnimalRepositoryImpl({required this.remoteDataSource});
+  final AnimalRemoteDataSource remoteDataSource;
 
   @override
   Future<Either<Failure, List<Animal>>> getAnimals() async {
@@ -67,4 +66,3 @@ class AnimalRepositoryImpl implements AnimalRepository {
     }
   }
 }
-

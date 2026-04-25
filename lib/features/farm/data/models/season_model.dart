@@ -1,6 +1,27 @@
-import '../../domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 
 class SeasonModel extends Season {
+  factory SeasonModel.create({
+    required String userId,
+    required String name,
+    required String plantId,
+    required String landId,
+    required DateTime startDate,
+    DateTime? endDate,
+  }) {
+    final now = DateTime.now();
+    return SeasonModel(
+      id: '',
+      userId: userId,
+      name: name,
+      plantId: plantId,
+      landId: landId,
+      startDate: startDate,
+      endDate: endDate,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
   const SeasonModel({
     required super.id,
     required super.userId,
@@ -8,9 +29,9 @@ class SeasonModel extends Season {
     required super.plantId,
     required super.landId,
     required super.startDate,
-    super.endDate,
     required super.createdAt,
     required super.updatedAt,
+    super.endDate,
   });
 
   factory SeasonModel.fromJson(Map<String, dynamic> json) {
@@ -50,27 +71,5 @@ class SeasonModel extends Season {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
-
-  factory SeasonModel.create({
-    required String userId,
-    required String name,
-    required String plantId,
-    required String landId,
-    required DateTime startDate,
-    DateTime? endDate,
-  }) {
-    final now = DateTime.now();
-    return SeasonModel(
-      id: '',
-      userId: userId,
-      name: name,
-      plantId: plantId,
-      landId: landId,
-      startDate: startDate,
-      endDate: endDate,
-      createdAt: now,
-      updatedAt: now,
-    );
   }
 }

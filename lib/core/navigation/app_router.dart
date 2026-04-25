@@ -1,24 +1,24 @@
 import 'package:go_router/go_router.dart';
 
-import '../../features/auth/presentation/pages/login_page.dart';
-import '../../features/auth/presentation/pages/signup_page.dart';
-import '../../features/auth/presentation/pages/splash_page.dart';
-import '../../features/farm/presentation/pages/activity_page.dart';
-import '../../features/farm/presentation/pages/analysis_page.dart';
-import '../../features/farm/presentation/pages/animal_type_page.dart';
-import '../../features/farm/presentation/pages/herd_page.dart';
-import '../../features/farm/presentation/pages/input_page.dart';
-import '../../features/farm/presentation/pages/land_page.dart';
-import '../../features/farm/presentation/pages/landing_page.dart';
-import '../../features/farm/presentation/pages/plant_page.dart';
-import '../../features/farm/presentation/pages/revenue_page.dart';
-import '../../features/farm/presentation/pages/season_page.dart';
-import '../logging/logging_navigator.dart';
+import 'package:farm_tracker/features/auth/presentation/pages/google_login_page.dart';
+import 'package:farm_tracker/features/auth/presentation/pages/onboarding_page.dart';
+import 'package:farm_tracker/features/auth/presentation/pages/splash_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/activity_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/analysis_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/animal_type_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/input_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/land_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/landing_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/plant_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/revenue_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/season_page.dart';
+import 'package:farm_tracker/core/logging/logging_navigator.dart';
 
 class AppRouteName {
   static const splash = 'splash';
-  static const login = 'login';
-  static const signup = 'signup';
+  static const googleLogin = 'google-login';
+  static const onboarding = 'onboarding';
   static const landing = 'landing';
   static const lands = 'lands';
   static const plants = 'plants';
@@ -35,8 +35,8 @@ class AppRouteName {
 
 class AppRoutePath {
   static const splash = '/';
-  static const login = '/login';
-  static const signup = '/signup';
+  static const googleLogin = '/google-login';
+  static const onboarding = '/onboarding';
   static const landing = '/landing';
   static const lands = '/lands';
   static const plants = '/plants';
@@ -67,14 +67,14 @@ class AppRouter {
         builder: (context, state) => const SplashPage(),
       ),
       GoRoute(
-        name: AppRouteName.login,
-        path: AppRoutePath.login,
-        builder: (context, state) => LoginPage(),
+        name: AppRouteName.googleLogin,
+        path: AppRoutePath.googleLogin,
+        builder: (context, state) => const GoogleLoginPage(),
       ),
       GoRoute(
-        name: AppRouteName.signup,
-        path: AppRoutePath.signup,
-        builder: (context, state) => SignupPage(),
+        name: AppRouteName.onboarding,
+        path: AppRoutePath.onboarding,
+        builder: (context, state) => const OnboardingPage(),
       ),
       GoRoute(
         name: AppRouteName.landing,

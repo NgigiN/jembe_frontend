@@ -1,10 +1,9 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/activity.dart';
+import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
 
 abstract class ActivityState extends Equatable {
-  final List<Activity> activities;
-
   const ActivityState({this.activities = const []});
+  final List<Activity> activities;
 
   @override
   List<Object> get props => [activities];
@@ -24,9 +23,8 @@ class ActivityLoaded extends ActivityState {
 }
 
 class ActivityError extends ActivityState {
-  final String message;
-
   const ActivityError(this.message, {super.activities});
+  final String message;
 
   @override
   List<Object> get props => [message, activities];

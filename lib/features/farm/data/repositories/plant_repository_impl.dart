@@ -1,15 +1,14 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../domain/entities/plant.dart';
-import '../../domain/repositories/plant_repository.dart';
-import '../datasources/plant_remote_data_source.dart';
-import '../models/plant_model.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/plant_repository.dart';
+import 'package:farm_tracker/features/farm/data/datasources/plant_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/models/plant_model.dart';
 
 class PlantRepositoryImpl implements PlantRepository {
-  final PlantRemoteDataSource remoteDataSource;
-
   PlantRepositoryImpl({required this.remoteDataSource});
+  final PlantRemoteDataSource remoteDataSource;
 
   @override
   Future<Either<Failure, List<Plant>>> getPlants() async {
@@ -65,4 +64,3 @@ class PlantRepositoryImpl implements PlantRepository {
     }
   }
 }
-

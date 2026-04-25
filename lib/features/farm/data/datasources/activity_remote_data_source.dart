@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../../../core/logging/app_logger.dart';
-import '../models/activity_model.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
 
 abstract class ActivityRemoteDataSource {
   Future<List<ActivityModel>> getActivities({String? sourceType});
@@ -11,9 +11,8 @@ abstract class ActivityRemoteDataSource {
 }
 
 class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
-  final Dio dio;
-
   ActivityRemoteDataSourceImpl({required this.dio});
+  final Dio dio;
 
   @override
   Future<List<ActivityModel>> getActivities({String? sourceType}) async {
@@ -47,17 +46,19 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
           return [];
         }
 
-        final items = data as List;
+        final items = data;
         appLogger.info(LogCategory.farm, 'Found ${items.length} activities');
         return items
             .map((json) => ActivityModel.fromJson(json as Map<String, dynamic>))
             .toList();
       } else {
-        String errorMsg =
+        var errorMsg =
             'Failed to load activities (Status: ${response.statusCode})';
         try {
           final errorData = response.data;
-          if (errorData != null && errorData is Map<String, dynamic> && errorData['error'] != null) {
+          if (errorData != null &&
+              errorData is Map<String, dynamic> &&
+              errorData['error'] != null) {
             errorMsg = errorData['error'].toString();
           }
         } catch (_) {}
@@ -65,7 +66,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       }
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'Error in getActivities', e);
-      String errorMsg = 'Network error';
+      var errorMsg = 'Network error';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -100,12 +101,12 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       );
 
       if (response.statusCode == 201) {
-        final data = response.data as Map<String, dynamic>;
+        final data = response.data! as Map<String, dynamic>;
         return ActivityModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to add activity';
+        var errorMsg = 'Failed to add activity';
         try {
-          final errorData = response.data as Map<String, dynamic>?;
+          final errorData = response.data;
           if (errorData != null && errorData['error'] != null) {
             errorMsg = errorData['error'].toString();
           }
@@ -113,7 +114,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to add activity';
+      var errorMsg = 'Failed to add activity';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -148,12 +149,12 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       );
 
       if (response.statusCode == 200) {
-        final data = response.data as Map<String, dynamic>;
+        final data = response.data! as Map<String, dynamic>;
         return ActivityModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to update activity';
+        var errorMsg = 'Failed to update activity';
         try {
-          final errorData = response.data as Map<String, dynamic>?;
+          final errorData = response.data;
           if (errorData != null && errorData['error'] != null) {
             errorMsg = errorData['error'].toString();
           }
@@ -161,7 +162,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to update activity';
+      var errorMsg = 'Failed to update activity';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -177,12 +178,14 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
   @override
   Future<void> deleteActivity(String id) async {
     try {
-      final response = await dio.delete<Map<String, dynamic>>('/api/v1/activities/$id');
+      final response = await dio.delete<Map<String, dynamic>>(
+        '/api/v1/activities/$id',
+      );
 
       if (response.statusCode != 200) {
-        String errorMsg = 'Failed to delete activity';
+        var errorMsg = 'Failed to delete activity';
         try {
-          final errorData = response.data as Map<String, dynamic>?;
+          final errorData = response.data;
           if (errorData != null && errorData['error'] != null) {
             errorMsg = errorData['error'].toString();
           }
@@ -190,7 +193,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to delete activity';
+      var errorMsg = 'Failed to delete activity';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;

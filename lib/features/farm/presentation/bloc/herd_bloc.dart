@@ -1,18 +1,14 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/usecases/usecase.dart';
-import '../../domain/entities/herd.dart';
-import '../../domain/usecases/add_herd.dart';
-import '../../domain/usecases/delete_herd.dart';
-import '../../domain/usecases/get_herds.dart';
-import '../../domain/usecases/update_herd.dart';
-import 'herd_event.dart';
-import 'herd_state.dart';
+import 'package:farm_tracker/core/usecases/usecase.dart';
+import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/add_herd.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/delete_herd.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_herds.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/update_herd.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
 
 class HerdBloc extends Bloc<HerdEvent, HerdState> {
-  final GetHerds getHerds;
-  final AddHerd addHerd;
-  final UpdateHerd updateHerd;
-  final DeleteHerd deleteHerd;
 
   HerdBloc({
     required this.getHerds,
@@ -25,12 +21,16 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
     on<UpdateHerdEvent>(_onUpdateHerd);
     on<DeleteHerdEvent>(_onDeleteHerd);
   }
+  final GetHerds getHerds;
+  final AddHerd addHerd;
+  final UpdateHerd updateHerd;
+  final DeleteHerd deleteHerd;
 
   Future<void> _onGetHerds(
     GetHerdsEvent event,
     Emitter<HerdState> emit,
   ) async {
-    emit(HerdLoading());
+    emit(const HerdLoading());
     final result = await getHerds(NoParams());
     result.fold(
       (failure) => emit(const HerdError('Failed to load herds')),

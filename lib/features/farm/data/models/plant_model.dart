@@ -1,13 +1,28 @@
-import '../../domain/entities/plant.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 
 class PlantModel extends Plant {
+  factory PlantModel.create({
+    required String userId,
+    required String name,
+    String? variety,
+  }) {
+    final now = DateTime.now();
+    return PlantModel(
+      id: '',
+      userId: userId,
+      name: name,
+      variety: variety,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
   const PlantModel({
     required super.id,
     required super.userId,
     required super.name,
-    super.variety,
     required super.createdAt,
     required super.updatedAt,
+    super.variety,
   });
 
   factory PlantModel.fromJson(Map<String, dynamic> json) {
@@ -17,7 +32,7 @@ class PlantModel extends Plant {
       id: (json['ID'] ?? json['id'] ?? '').toString(),
       userId: (json['UserID'] ?? json['user_id'] ?? '').toString(),
       name: (json['Name'] ?? json['name'] ?? '').toString(),
-      variety: varietyValue != null ? varietyValue.toString() : null,
+      variety: varietyValue?.toString(),
       createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
       updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );
@@ -41,21 +56,4 @@ class PlantModel extends Plant {
       'updated_at': updatedAt.toIso8601String(),
     };
   }
-
-  factory PlantModel.create({
-    required String userId,
-    required String name,
-    String? variety,
-  }) {
-    final now = DateTime.now();
-    return PlantModel(
-      id: '',
-      userId: userId,
-      name: name,
-      variety: variety,
-      createdAt: now,
-      updatedAt: now,
-    );
-  }
 }
-

@@ -1,6 +1,6 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../entities/input.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/features/farm/domain/entities/input.dart';
 
 abstract class InputRepository {
   Future<Either<Failure, List<Input>>> getInputs({String? sourceType});

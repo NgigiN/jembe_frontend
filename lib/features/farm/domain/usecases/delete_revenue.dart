@@ -1,17 +1,14 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/usecases/usecase.dart';
-import '../repositories/revenue_repository.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/usecases/usecase.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/revenue_repository.dart';
 
 class DeleteRevenue implements UseCase<void, String> {
-  final RevenueRepository repository;
-
   DeleteRevenue(this.repository);
+  final RevenueRepository repository;
 
   @override
   Future<Either<Failure, void>> call(String id) async {
-    return await repository.deleteRevenue(id);
+    return repository.deleteRevenue(id);
   }
 }
-
-

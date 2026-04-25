@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'farm_page.dart';
-import 'analysis_page.dart';
-import 'revenue_page.dart';
-import 'settings_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/farm_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/analysis_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/revenue_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/settings_page.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});

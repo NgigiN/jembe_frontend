@@ -1,10 +1,9 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/land.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 
 abstract class LandState extends Equatable {
-  final List<Land> lands;
-
   const LandState({this.lands = const []});
+  final List<Land> lands;
 
   @override
   List<Object> get props => [lands];
@@ -24,9 +23,8 @@ class LandLoaded extends LandState {
 }
 
 class LandError extends LandState {
-  final String message;
-
   const LandError(this.message, {super.lands});
+  final String message;
 
   @override
   List<Object> get props => [message, lands];

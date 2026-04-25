@@ -1,6 +1,6 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../entities/plant.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 
 abstract class PlantRepository {
   Future<Either<Failure, List<Plant>>> getPlants();
@@ -8,4 +8,3 @@ abstract class PlantRepository {
   Future<Either<Failure, Plant>> updatePlant(Plant plant);
   Future<Either<Failure, void>> deletePlant(String id);
 }
-

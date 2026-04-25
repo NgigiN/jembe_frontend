@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import '../logging/app_logger.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
 
 enum Environment { local, remote }
 
@@ -12,6 +12,11 @@ class AppConfig {
   // static const String _localBaseUrl = 'http://127.0.0.1:8080';
   static const String _localBaseUrl = 'http://192.168.122.1:8080';
 
+  // Google Sign-In Configuration
+  // Note: This must be the "Web Client ID" from Google Cloud Console
+  static const String googleServerClientId =
+      '429420927444-v5pdh3k3e7a8jhth5fuq1bq6ie49mam4.apps.googleusercontent.com';
+
   // Initialize environment based on dart-define flags
   static void initialize() {
     // Check for ENV dart-define flag
@@ -20,11 +25,9 @@ class AppConfig {
     switch (envValue.toLowerCase()) {
       case 'local':
         _currentEnvironment = Environment.local;
-        break;
       case 'remote':
       case 'production':
         _currentEnvironment = Environment.remote;
-        break;
       default:
         _currentEnvironment = Environment.local; // Default to local
     }

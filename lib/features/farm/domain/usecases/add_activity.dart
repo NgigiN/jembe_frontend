@@ -1,22 +1,20 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/usecases/usecase.dart';
-import '../entities/activity.dart';
-import '../repositories/activity_repository.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/usecases/usecase.dart';
+import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/activity_repository.dart';
 
 class AddActivity implements UseCase<Activity, AddActivityParams> {
-  final ActivityRepository repository;
-
   AddActivity(this.repository);
+  final ActivityRepository repository;
 
   @override
   Future<Either<Failure, Activity>> call(AddActivityParams params) async {
-    return await repository.addActivity(params.activity);
+    return repository.addActivity(params.activity);
   }
 }
 
 class AddActivityParams {
-  final Activity activity;
-
   AddActivityParams({required this.activity});
+  final Activity activity;
 }

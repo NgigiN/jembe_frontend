@@ -5,13 +5,12 @@ import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/profile/domain/repositories/profile_repository.dart';
 
 class UpdateProfile implements UseCase<void, UpdateProfileParams> {
-  final ProfileRepository repository;
-
   UpdateProfile(this.repository);
+  final ProfileRepository repository;
 
   @override
   Future<Either<Failure, void>> call(UpdateProfileParams params) async {
-    return await repository.updateProfile(
+    return repository.updateProfile(
       firstName: params.firstName,
       lastName: params.lastName,
       farmName: params.farmName,

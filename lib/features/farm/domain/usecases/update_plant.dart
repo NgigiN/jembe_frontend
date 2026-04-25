@@ -1,23 +1,20 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/usecases/usecase.dart';
-import '../entities/plant.dart';
-import '../repositories/plant_repository.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/usecases/usecase.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/plant_repository.dart';
 
 class UpdatePlant implements UseCase<Plant, UpdatePlantParams> {
-  final PlantRepository repository;
-
   UpdatePlant(this.repository);
+  final PlantRepository repository;
 
   @override
   Future<Either<Failure, Plant>> call(UpdatePlantParams params) async {
-    return await repository.updatePlant(params.plant);
+    return repository.updatePlant(params.plant);
   }
 }
 
 class UpdatePlantParams {
-  final Plant plant;
-
   UpdatePlantParams({required this.plant});
+  final Plant plant;
 }
-

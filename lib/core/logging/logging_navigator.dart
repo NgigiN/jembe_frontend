@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../logging/app_logger.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
 
 /// Navigator observer for GoRouter that logs all navigation events
 class LoggingNavigatorObserver extends NavigatorObserver {
@@ -88,11 +88,7 @@ class LoggingGoRouterObserver extends NavigatorObserver {
     _logNavigation('REPLACE', oldRoute, newRoute);
   }
 
-  void _logNavigation(
-    String action,
-    Route<dynamic>? from,
-    Route<dynamic>? to,
-  ) {
+  void _logNavigation(String action, Route<dynamic>? from, Route<dynamic>? to) {
     final fromName = from?.settings.name ?? 'unknown';
     final toName = to?.settings.name ?? 'unknown';
     final args = to?.settings.arguments;
@@ -108,14 +104,6 @@ class LoggingGoRouterObserver extends NavigatorObserver {
 /// Legacy MaterialApp wrapper - deprecated, use GoRouter instead
 @Deprecated('Use GoRouter from app_router.dart instead')
 class LoggingMaterialApp extends StatelessWidget {
-  final String title;
-  final ThemeData? theme;
-  final String? initialRoute;
-  final Map<String, WidgetBuilder>? routes;
-  final Widget? home;
-  final List<NavigatorObserver>? navigatorObservers;
-  final bool debugShowCheckedModeBanner;
-
   const LoggingMaterialApp({
     super.key,
     required this.title,
@@ -126,6 +114,13 @@ class LoggingMaterialApp extends StatelessWidget {
     this.navigatorObservers,
     this.debugShowCheckedModeBanner = true,
   });
+  final String title;
+  final ThemeData? theme;
+  final String? initialRoute;
+  final Map<String, WidgetBuilder>? routes;
+  final Widget? home;
+  final List<NavigatorObserver>? navigatorObservers;
+  final bool debugShowCheckedModeBanner;
 
   @override
   Widget build(BuildContext context) {

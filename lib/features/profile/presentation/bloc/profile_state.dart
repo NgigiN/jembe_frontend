@@ -13,27 +13,24 @@ class ProfileInitial extends ProfileState {}
 class ProfileLoading extends ProfileState {}
 
 class ProfileLoaded extends ProfileState {
-  final User user;
-
   const ProfileLoaded({required this.user});
+  final User user;
 
   @override
   List<Object?> get props => [user];
 }
 
 class ProfileOperationSuccess extends ProfileState {
-  final String message;
-
   const ProfileOperationSuccess(this.message);
+  final String message;
 
   @override
   List<Object?> get props => [message];
 }
 
 class ProfileError extends ProfileState {
-  final String message;
-
   const ProfileError({required this.message});
+  final String message;
 
   @override
   List<Object?> get props => [message];

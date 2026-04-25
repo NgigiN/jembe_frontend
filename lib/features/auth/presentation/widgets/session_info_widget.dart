@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/services/user_storage_service.dart';
+import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 
 class SessionInfoWidget extends StatefulWidget {
   const SessionInfoWidget({super.key});

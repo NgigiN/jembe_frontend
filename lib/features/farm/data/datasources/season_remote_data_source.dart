@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../../../core/logging/app_logger.dart';
-import '../models/season_model.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/features/farm/data/models/season_model.dart';
 
 abstract class SeasonRemoteDataSource {
   Future<List<SeasonModel>> getSeasons();
@@ -11,9 +11,8 @@ abstract class SeasonRemoteDataSource {
 }
 
 class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
-  final Dio dio;
-
   SeasonRemoteDataSourceImpl({required this.dio});
+  final Dio dio;
 
   @override
   Future<List<SeasonModel>> getSeasons() async {
@@ -36,7 +35,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
         }
         return [];
       } else {
-        String errorMsg =
+        var errorMsg =
             'Failed to load seasons (Status: ${response.statusCode})';
         try {
           final errorData = response.data as Map<String, dynamic>?;
@@ -48,7 +47,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
       }
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'Error in getSeasons', e);
-      String errorMsg = 'Network error';
+      var errorMsg = 'Network error';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -79,7 +78,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return SeasonModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to add season';
+        var errorMsg = 'Failed to add season';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -89,7 +88,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to add season';
+      var errorMsg = 'Failed to add season';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -120,7 +119,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return SeasonModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to update season';
+        var errorMsg = 'Failed to update season';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -130,7 +129,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to update season';
+      var errorMsg = 'Failed to update season';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -149,7 +148,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
       final response = await dio.delete('/api/v1/seasons/$id');
 
       if (response.statusCode != 200) {
-        String errorMsg = 'Failed to delete season';
+        var errorMsg = 'Failed to delete season';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -159,7 +158,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to delete season';
+      var errorMsg = 'Failed to delete season';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;

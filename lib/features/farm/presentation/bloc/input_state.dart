@@ -1,10 +1,9 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/input.dart';
+import 'package:farm_tracker/features/farm/domain/entities/input.dart';
 
 abstract class InputState extends Equatable {
-  final List<Input> inputs;
-
   const InputState({this.inputs = const []});
+  final List<Input> inputs;
 
   @override
   List<Object> get props => [inputs];
@@ -24,9 +23,8 @@ class InputLoaded extends InputState {
 }
 
 class InputError extends InputState {
-  final String message;
-
   const InputError(this.message, {super.inputs});
+  final String message;
 
   @override
   List<Object> get props => [message, inputs];

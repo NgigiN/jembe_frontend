@@ -1,6 +1,6 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../entities/activity.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
 
 abstract class ActivityRepository {
   Future<Either<Failure, List<Activity>>> getActivities({String? sourceType});

@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../../core/logging/app_logger.dart';
-import '../models/user_storage_model.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/features/auth/data/models/user_storage_model.dart';
 
 class UserStorageService {
   static const String _userKey = 'user_data';
@@ -12,10 +12,6 @@ class UserStorageService {
   static const _secureStorage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-    lOptions: LinuxOptions(),
-    mOptions: MacOsOptions(),
-    wOptions: WindowsOptions(),
-    webOptions: WebOptions(),
   );
 
   static bool get _shouldUseSecureStorage => !kIsWeb;
@@ -122,6 +118,7 @@ class UserStorageService {
         name: field == 'name' ? value : user.name,
         token: field == 'token' ? value : user.token,
         loginTime: user.loginTime,
+        pictureUrl: field == 'picture_url' ? value : user.pictureUrl,
       );
       await saveUserData(updatedUser);
     }

@@ -1,18 +1,14 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/usecases/usecase.dart';
-import '../../domain/entities/animal_type.dart';
-import '../../domain/usecases/add_animal_type.dart';
-import '../../domain/usecases/delete_animal_type.dart';
-import '../../domain/usecases/get_animal_types.dart';
-import '../../domain/usecases/update_animal_type.dart';
-import 'animal_type_event.dart';
-import 'animal_type_state.dart';
+import 'package:farm_tracker/core/usecases/usecase.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/add_animal_type.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/delete_animal_type.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_animal_types.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/update_animal_type.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
 
 class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
-  final GetAnimalTypes getAnimalTypes;
-  final AddAnimalType addAnimalType;
-  final UpdateAnimalType updateAnimalType;
-  final DeleteAnimalType deleteAnimalType;
 
   AnimalTypeBloc({
     required this.getAnimalTypes,
@@ -25,12 +21,16 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
     on<UpdateAnimalTypeEvent>(_onUpdateAnimalType);
     on<DeleteAnimalTypeEvent>(_onDeleteAnimalType);
   }
+  final GetAnimalTypes getAnimalTypes;
+  final AddAnimalType addAnimalType;
+  final UpdateAnimalType updateAnimalType;
+  final DeleteAnimalType deleteAnimalType;
 
   Future<void> _onGetAnimalTypes(
     GetAnimalTypesEvent event,
     Emitter<AnimalTypeState> emit,
   ) async {
-    emit(AnimalTypeLoading());
+    emit(const AnimalTypeLoading());
     final result = await getAnimalTypes(NoParams());
     result.fold(
       (failure) => emit(const AnimalTypeError('Failed to load animal types')),

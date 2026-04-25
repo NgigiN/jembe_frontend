@@ -1,12 +1,6 @@
 import 'package:equatable/equatable.dart';
 
 class CostBreakdownModel extends Equatable {
-  final String category;
-  final String type;
-  final String origin;
-  final double totalCost;
-  final double percentage;
-
   const CostBreakdownModel({
     required this.category,
     required this.type,
@@ -24,6 +18,11 @@ class CostBreakdownModel extends Equatable {
       percentage: (json['percentage'] ?? 0.0).toDouble(),
     );
   }
+  final String category;
+  final String type;
+  final String origin;
+  final double totalCost;
+  final double percentage;
 
   Map<String, dynamic> toJson() {
     return {
@@ -36,11 +35,5 @@ class CostBreakdownModel extends Equatable {
   }
 
   @override
-  List<Object?> get props => [
-    category,
-    type,
-    origin,
-    totalCost,
-    percentage,
-  ];
+  List<Object?> get props => [category, type, origin, totalCost, percentage];
 }

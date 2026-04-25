@@ -1,15 +1,15 @@
 import 'package:equatable/equatable.dart';
 
 abstract class Exceptions extends Equatable {
-  const Exceptions([List<dynamic> properties = const <dynamic>[]]);
+  const Exceptions();
 
   @override
   List<Object?> get props => [];
 }
 
 class ServerException extends Exceptions {
-  final String? message;
   const ServerException([this.message]);
+  final String? message;
   @override
   List<Object?> get props => [message];
 }

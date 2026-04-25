@@ -1,21 +1,16 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/error/failures.dart';
-import '../../domain/entities/revenue.dart';
-import '../../domain/usecases/get_revenues.dart';
-import '../../domain/usecases/get_revenues_params.dart';
-import '../../domain/usecases/get_revenue_by_id.dart';
-import '../../domain/usecases/add_revenue.dart';
-import '../../domain/usecases/update_revenue.dart';
-import '../../domain/usecases/delete_revenue.dart';
-import 'revenue_event.dart';
-import 'revenue_state.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_revenues.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_revenues_params.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_revenue_by_id.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/add_revenue.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/update_revenue.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/delete_revenue.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/revenue_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/revenue_state.dart';
 
 class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
-  final GetRevenues getRevenues;
-  final GetRevenueById getRevenueById;
-  final AddRevenue addRevenue;
-  final UpdateRevenue updateRevenue;
-  final DeleteRevenue deleteRevenue;
 
   RevenueBloc({
     required this.getRevenues,
@@ -29,6 +24,11 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     on<UpdateRevenueEvent>(_onUpdateRevenue);
     on<DeleteRevenueEvent>(_onDeleteRevenue);
   }
+  final GetRevenues getRevenues;
+  final GetRevenueById getRevenueById;
+  final AddRevenue addRevenue;
+  final UpdateRevenue updateRevenue;
+  final DeleteRevenue deleteRevenue;
 
   Future<void> _onLoadRevenues(
     LoadRevenues event,
@@ -46,7 +46,7 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
     result.fold(
       (failure) {
-        String message = 'Failed to load revenues';
+        var message = 'Failed to load revenues';
         if (failure is ServerFailure && failure.errorMessage != null) {
           message = failure.errorMessage!;
         }
@@ -79,7 +79,7 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
     result.fold(
       (failure) {
-        String message = 'Failed to add revenue';
+        var message = 'Failed to add revenue';
         if (failure is ServerFailure && failure.errorMessage != null) {
           message = failure.errorMessage!;
         }
@@ -115,7 +115,7 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
     result.fold(
       (failure) {
-        String message = 'Failed to update revenue';
+        var message = 'Failed to update revenue';
         if (failure is ServerFailure && failure.errorMessage != null) {
           message = failure.errorMessage!;
         }
@@ -143,7 +143,7 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
     result.fold(
       (failure) {
-        String message = 'Failed to delete revenue';
+        var message = 'Failed to delete revenue';
         if (failure is ServerFailure && failure.errorMessage != null) {
           message = failure.errorMessage!;
         }

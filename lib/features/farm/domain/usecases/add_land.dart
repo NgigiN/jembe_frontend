@@ -1,22 +1,20 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/usecases/usecase.dart';
-import '../entities/land.dart';
-import '../repositories/land_repository.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/usecases/usecase.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/land_repository.dart';
 
 class AddLand implements UseCase<Land, AddLandParams> {
-  final LandRepository repository;
-
   AddLand(this.repository);
+  final LandRepository repository;
 
   @override
   Future<Either<Failure, Land>> call(AddLandParams params) async {
-    return await repository.addLand(params.land);
+    return repository.addLand(params.land);
   }
 }
 
 class AddLandParams {
-  final Land land;
-
   AddLandParams({required this.land});
+  final Land land;
 }

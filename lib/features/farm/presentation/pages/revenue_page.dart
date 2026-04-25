@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import '../../../../core/utils/responsive_utils.dart';
-import '../../../../core/theme/app_colors.dart';
+import 'package:farm_tracker/core/utils/responsive_utils.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/navigation/app_router.dart';
-import '../bloc/revenue_bloc.dart';
-import '../bloc/revenue_event.dart';
-import '../bloc/revenue_state.dart';
-import '../bloc/herd_bloc.dart';
-import '../bloc/herd_event.dart';
-import '../bloc/herd_state.dart';
-import '../bloc/season_bloc.dart';
-import '../bloc/season_event.dart';
-import '../bloc/season_state.dart';
-import '../../domain/entities/revenue.dart';
+import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/revenue_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/revenue_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/revenue_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
+import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
 
 class RevenuePage extends StatefulWidget {
   const RevenuePage({super.key});
@@ -280,9 +280,9 @@ class _RevenuePageState extends State<RevenuePage> {
 }
 
 class RevenueDetailsSheet extends StatelessWidget {
-  final Revenue revenue;
 
   const RevenueDetailsSheet({super.key, required this.revenue});
+  final Revenue revenue;
 
   @override
   Widget build(BuildContext context) {
@@ -460,9 +460,9 @@ class RevenueDetailsSheet extends StatelessWidget {
 }
 
 class AddRevenuePage extends StatefulWidget {
-  final String? defaultSource;
 
   const AddRevenuePage({super.key, this.defaultSource});
+  final String? defaultSource;
 
   @override
   State<AddRevenuePage> createState() => _AddRevenuePageState();
@@ -543,7 +543,7 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: _source,
+                          initialValue: _source,
                           decoration: const InputDecoration(
                             labelText: 'Select Category',
                             border: OutlineInputBorder(),
@@ -568,7 +568,7 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                               }
                               if (state is SeasonLoaded) {
                                 return DropdownButtonFormField<String>(
-                                  value: _selectedSourceId,
+                                  initialValue: _selectedSourceId,
                                   decoration: const InputDecoration(
                                     labelText: 'Select Season',
                                     border: OutlineInputBorder(),
@@ -591,7 +591,7 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                               }
                               if (state is HerdLoaded) {
                                 return DropdownButtonFormField<String>(
-                                  value: _selectedSourceId,
+                                  initialValue: _selectedSourceId,
                                   decoration: const InputDecoration(
                                     labelText: 'Select Herd',
                                     border: OutlineInputBorder(),

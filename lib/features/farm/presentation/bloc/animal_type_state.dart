@@ -1,9 +1,9 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/animal_type.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 
 abstract class AnimalTypeState extends Equatable {
-  final List<AnimalType> animalTypes;
   const AnimalTypeState({this.animalTypes = const []});
+  final List<AnimalType> animalTypes;
 
   @override
   List<Object?> get props => [animalTypes];
@@ -23,9 +23,9 @@ class AnimalTypeLoaded extends AnimalTypeState {
 }
 
 class AnimalTypeError extends AnimalTypeState {
-  final String message;
 
   const AnimalTypeError(this.message, {super.animalTypes});
+  final String message;
 
   @override
   List<Object?> get props => [message, animalTypes];

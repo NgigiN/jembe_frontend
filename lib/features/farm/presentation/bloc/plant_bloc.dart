@@ -1,19 +1,15 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/usecases/usecase.dart';
-import '../../domain/entities/plant.dart';
-import '../../domain/usecases/get_plants.dart';
-import '../../domain/usecases/add_plant.dart';
-import '../../domain/usecases/update_plant.dart';
-import '../../domain/usecases/delete_plant.dart';
-import '../bloc/plant_event.dart';
-import '../bloc/plant_state.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/usecases/usecase.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_plants.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/add_plant.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/update_plant.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/delete_plant.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/plant_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/plant_state.dart';
 
 class PlantBloc extends Bloc<PlantEvent, PlantState> {
-  final GetPlants getPlants;
-  final AddPlant addPlant;
-  final UpdatePlant updatePlant;
-  final DeletePlant deletePlant;
 
   PlantBloc({
     required this.getPlants,
@@ -100,4 +96,8 @@ class PlantBloc extends Bloc<PlantEvent, PlantState> {
       );
     });
   }
+  final GetPlants getPlants;
+  final AddPlant addPlant;
+  final UpdatePlant updatePlant;
+  final DeletePlant deletePlant;
 }

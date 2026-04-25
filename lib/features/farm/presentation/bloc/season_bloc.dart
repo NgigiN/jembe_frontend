@@ -1,28 +1,22 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/logging/app_logger.dart';
-import '../../../../core/usecases/usecase.dart';
-import '../../domain/entities/season.dart';
-import '../../domain/usecases/get_seasons.dart';
-import '../../domain/usecases/add_season.dart';
-import '../../domain/usecases/update_season.dart';
-import '../../domain/usecases/delete_season.dart';
-import '../bloc/season_event.dart';
-import '../bloc/season_state.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/usecases/usecase.dart';
+import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_seasons.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/add_season.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/update_season.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/delete_season.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 
 class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
-  final GetSeasons getSeasons;
-  final AddSeason addSeason;
-  final UpdateSeason updateSeason;
-  final DeleteSeason deleteSeason;
-
   SeasonBloc({
     required this.getSeasons,
     required this.addSeason,
     required this.updateSeason,
     required this.deleteSeason,
-  })
-    : super(SeasonInitial()) {
+  }) : super(SeasonInitial()) {
     on<GetSeasonsEvent>((event, emit) async {
       appLogger.debug(LogCategory.farm, 'GetSeasonsEvent triggered');
       emit(SeasonLoading());
@@ -78,8 +72,9 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
           : <Season>[];
 
       emit(SeasonLoading());
-      final result =
-          await updateSeason(UpdateSeasonParams(season: event.season));
+      final result = await updateSeason(
+        UpdateSeasonParams(season: event.season),
+      );
       result.fold(
         (failure) {
           String message = 'Failed to update season';
@@ -113,11 +108,16 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
           emit(SeasonError(message, seasons: currentSeasons));
         },
         (_) {
-          final updatedSeasons =
-              currentSeasons.where((season) => season.id != event.id).toList();
+          final updatedSeasons = currentSeasons
+              .where((season) => season.id != event.id)
+              .toList();
           emit(SeasonLoaded(seasons: updatedSeasons));
         },
       );
     });
   }
+  final GetSeasons getSeasons;
+  final AddSeason addSeason;
+  final UpdateSeason updateSeason;
+  final DeleteSeason deleteSeason;
 }

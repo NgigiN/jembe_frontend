@@ -1,9 +1,9 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 
 abstract class HerdState extends Equatable {
-  final List<Herd> herds;
   const HerdState({this.herds = const []});
+  final List<Herd> herds;
 
   @override
   List<Object?> get props => [herds];
@@ -23,9 +23,9 @@ class HerdLoaded extends HerdState {
 }
 
 class HerdError extends HerdState {
-  final String message;
 
   const HerdError(this.message, {super.herds});
+  final String message;
 
   @override
   List<Object?> get props => [message, herds];

@@ -17,9 +17,8 @@ abstract class ProfileRemoteDataSource {
 }
 
 class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
-  final Dio dio;
-
   ProfileRemoteDataSourceImpl({required this.dio});
+  final Dio dio;
 
   @override
   Future<UserModel> getProfile() async {
@@ -31,13 +30,17 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
         if (data['profile'] != null) {
           return UserModel.fromJson(data['profile'] as Map<String, dynamic>);
         } else {
-          throw ServerException('Invalid response format');
+          throw const ServerException('Invalid response format');
         }
       } else {
-        throw ServerException(_extractErrorMessage(response.data) ?? 'Failed to get profile');
+        throw ServerException(
+          _extractErrorMessage(response.data) ?? 'Failed to get profile',
+        );
       }
     } on DioException catch (e) {
-      throw ServerException(_extractErrorMessage(e.response?.data) ?? 'Failed to get profile');
+      throw ServerException(
+        _extractErrorMessage(e.response?.data) ?? 'Failed to get profile',
+      );
     }
   }
 
@@ -60,10 +63,14 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
       );
 
       if (response.statusCode != 200) {
-        throw ServerException(_extractErrorMessage(response.data) ?? 'Failed to update profile');
+        throw ServerException(
+          _extractErrorMessage(response.data) ?? 'Failed to update profile',
+        );
       }
     } on DioException catch (e) {
-      throw ServerException(_extractErrorMessage(e.response?.data) ?? 'Failed to update profile');
+      throw ServerException(
+        _extractErrorMessage(e.response?.data) ?? 'Failed to update profile',
+      );
     }
   }
 
@@ -75,17 +82,18 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
     try {
       final response = await dio.put(
         '/api/v1/profile/password',
-        data: {
-          'old_password': oldPassword,
-          'new_password': newPassword,
-        },
+        data: {'old_password': oldPassword, 'new_password': newPassword},
       );
 
       if (response.statusCode != 200) {
-        throw ServerException(_extractErrorMessage(response.data) ?? 'Failed to change password');
+        throw ServerException(
+          _extractErrorMessage(response.data) ?? 'Failed to change password',
+        );
       }
     } on DioException catch (e) {
-      throw ServerException(_extractErrorMessage(e.response?.data) ?? 'Failed to change password');
+      throw ServerException(
+        _extractErrorMessage(e.response?.data) ?? 'Failed to change password',
+      );
     }
   }
 

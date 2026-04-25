@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import '../../../../core/error/exceptions.dart';
-import '../models/animal_model.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/features/farm/data/models/animal_model.dart';
 
 abstract class AnimalRemoteDataSource {
   Future<List<AnimalModel>> getAnimals();
@@ -10,9 +10,8 @@ abstract class AnimalRemoteDataSource {
 }
 
 class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
-  final Dio dio;
-
   AnimalRemoteDataSourceImpl({required this.dio});
+  final Dio dio;
 
   @override
   Future<List<AnimalModel>> getAnimals() async {
@@ -28,7 +27,7 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
         }
         return [];
       } else {
-        String errorMsg = 'Failed to load animals';
+        var errorMsg = 'Failed to load animals';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -38,7 +37,7 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to load animals';
+      var errorMsg = 'Failed to load animals';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -67,7 +66,7 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return AnimalModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to add animal';
+        var errorMsg = 'Failed to add animal';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -77,7 +76,7 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to add animal';
+      var errorMsg = 'Failed to add animal';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -106,7 +105,7 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return AnimalModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to update animal';
+        var errorMsg = 'Failed to update animal';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -116,7 +115,7 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to update animal';
+      var errorMsg = 'Failed to update animal';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -135,7 +134,7 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
       final response = await dio.delete('/api/v1/animals/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
-        String errorMsg = 'Failed to delete animal';
+        var errorMsg = 'Failed to delete animal';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -145,7 +144,7 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to delete animal';
+      var errorMsg = 'Failed to delete animal';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;

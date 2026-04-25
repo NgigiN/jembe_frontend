@@ -1,4 +1,4 @@
-import '../../domain/entities/monthly_summary.dart';
+import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 
 class MonthlySummaryModel extends MonthlySummary {
   const MonthlySummaryModel({

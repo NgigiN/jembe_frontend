@@ -6,11 +6,11 @@ abstract class RevenueEvent extends Equatable {
 }
 
 class LoadRevenues extends RevenueEvent {
+
+  LoadRevenues({this.source, this.startDate, this.endDate});
   final String? source;
   final DateTime? startDate;
   final DateTime? endDate;
-
-  LoadRevenues({this.source, this.startDate, this.endDate});
 
   @override
   List<Object?> get props => [source, startDate, endDate];
@@ -18,14 +18,6 @@ class LoadRevenues extends RevenueEvent {
 
 
 class AddRevenueEvent extends RevenueEvent {
-  final String source;
-  final String sourceId;
-  final String type;
-  final double quantity;
-  final double unitPrice;
-  final double? total;
-  final DateTime date;
-  final String? notes;
 
   AddRevenueEvent({
     required this.source,
@@ -37,6 +29,14 @@ class AddRevenueEvent extends RevenueEvent {
     required this.date,
     this.notes,
   });
+  final String source;
+  final String sourceId;
+  final String type;
+  final double quantity;
+  final double unitPrice;
+  final double? total;
+  final DateTime date;
+  final String? notes;
 
   @override
   List<Object?> get props => [
@@ -52,15 +52,6 @@ class AddRevenueEvent extends RevenueEvent {
 }
 
 class UpdateRevenueEvent extends RevenueEvent {
-  final String id;
-  final String source;
-  final String sourceId;
-  final String type;
-  final double quantity;
-  final double unitPrice;
-  final double total;
-  final DateTime date;
-  final String? notes;
 
   UpdateRevenueEvent({
     required this.id,
@@ -73,6 +64,15 @@ class UpdateRevenueEvent extends RevenueEvent {
     required this.date,
     this.notes,
   });
+  final String id;
+  final String source;
+  final String sourceId;
+  final String type;
+  final double quantity;
+  final double unitPrice;
+  final double total;
+  final DateTime date;
+  final String? notes;
 
   @override
   List<Object?> get props => [
@@ -89,9 +89,9 @@ class UpdateRevenueEvent extends RevenueEvent {
 }
 
 class DeleteRevenueEvent extends RevenueEvent {
-  final String id;
 
   DeleteRevenueEvent(this.id);
+  final String id;
 
   @override
   List<Object?> get props => [id];

@@ -1,27 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/input_bloc.dart';
-import '../bloc/input_event.dart';
-import '../bloc/input_state.dart';
-import '../bloc/herd_bloc.dart';
-import '../bloc/herd_event.dart';
-import '../bloc/herd_state.dart';
-import '../../domain/entities/input.dart';
-import '../../domain/entities/herd.dart';
-import '../../domain/entities/season.dart';
-import '../bloc/cost_category_bloc.dart';
-import '../bloc/cost_category_event.dart';
-import '../bloc/cost_category_state.dart';
-import '../bloc/season_bloc.dart';
-import '../bloc/season_event.dart';
-import '../bloc/season_state.dart';
-import '../../domain/entities/cost_category.dart';
-import '../../data/models/input_model.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/input_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/input_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/input_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
+import 'package:farm_tracker/features/farm/domain/entities/input.dart';
+import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
+import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
+import 'package:farm_tracker/features/farm/data/models/input_model.dart';
 
 class InputPage extends StatefulWidget {
-  final String? sourceType;
 
   const InputPage({super.key, this.sourceType});
+  final String? sourceType;
 
   @override
   State<InputPage> createState() => _InputPageState();
@@ -35,7 +35,7 @@ class _InputPageState extends State<InputPage> {
     context.read<HerdBloc>().add(GetHerdsEvent());
     context.read<SeasonBloc>().add(GetSeasonsEvent());
     context.read<CostCategoryBloc>().add(
-          GetCostCategoriesEvent(category: 'input'),
+          const GetCostCategoriesEvent(category: 'input'),
         );
   }
 
@@ -199,7 +199,7 @@ class _InputPageState extends State<InputPage> {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  void _showAddInputDialog(BuildContext context) async {
+  Future<void> _showAddInputDialog(BuildContext context) async {
     final typeController = TextEditingController();
     final quantityController = TextEditingController();
     final costController = TextEditingController();
@@ -534,7 +534,7 @@ class _InputPageState extends State<InputPage> {
     );
   }
 
-  void _showEditInputDialog(BuildContext context, Input input) async {
+  Future<void> _showEditInputDialog(BuildContext context, Input input) async {
     final typeController = TextEditingController(text: input.type);
     final quantityController = TextEditingController(
       text: input.quantity?.toString() ?? '',
@@ -543,10 +543,10 @@ class _InputPageState extends State<InputPage> {
     final notesController = TextEditingController(text: input.notes ?? '');
     DateTime? selectedDate = input.date;
     String? selectedSourceType = input.sourceType;
-    String? selectedSeasonId = input.sourceType == 'plant'
+    var selectedSeasonId = input.sourceType == 'plant'
         ? input.sourceId
         : null;
-    String? selectedHerdId = input.sourceType == 'animal'
+    var selectedHerdId = input.sourceType == 'animal'
         ? input.sourceId
         : null;
 

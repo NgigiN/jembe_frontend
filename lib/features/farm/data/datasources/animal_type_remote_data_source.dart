@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import '../../../../core/error/exceptions.dart';
-import '../models/animal_type_model.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/features/farm/data/models/animal_type_model.dart';
 
 abstract class AnimalTypeRemoteDataSource {
   Future<List<AnimalTypeModel>> getAnimalTypes();
@@ -11,9 +11,8 @@ abstract class AnimalTypeRemoteDataSource {
 }
 
 class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
-  final Dio dio;
-
   AnimalTypeRemoteDataSourceImpl({required this.dio});
+  final Dio dio;
 
   @override
   Future<List<AnimalTypeModel>> getAnimalTypes() async {
@@ -25,12 +24,15 @@ class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
         if (data == null) return [];
         if (data is List) {
           return data
-              .map((json) => AnimalTypeModel.fromJson(json as Map<String, dynamic>))
+              .map(
+                (json) =>
+                    AnimalTypeModel.fromJson(json as Map<String, dynamic>),
+              )
               .toList();
         }
         return [];
       } else {
-        String errorMsg = 'Failed to load animal types';
+        var errorMsg = 'Failed to load animal types';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -40,7 +42,7 @@ class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to load animal types';
+      var errorMsg = 'Failed to load animal types';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -62,7 +64,7 @@ class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return AnimalTypeModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to load animal type';
+        var errorMsg = 'Failed to load animal type';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -72,7 +74,7 @@ class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to load animal type';
+      var errorMsg = 'Failed to load animal type';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -97,7 +99,7 @@ class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return AnimalTypeModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to add animal type';
+        var errorMsg = 'Failed to add animal type';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -107,7 +109,7 @@ class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to add animal type';
+      var errorMsg = 'Failed to add animal type';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -132,7 +134,7 @@ class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return AnimalTypeModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to update animal type';
+        var errorMsg = 'Failed to update animal type';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -142,7 +144,7 @@ class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to update animal type';
+      var errorMsg = 'Failed to update animal type';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -161,7 +163,7 @@ class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
       final response = await dio.delete('/api/v1/animal-types/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
-        String errorMsg = 'Failed to delete animal type';
+        var errorMsg = 'Failed to delete animal type';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -171,7 +173,7 @@ class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to delete animal type';
+      var errorMsg = 'Failed to delete animal type';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;

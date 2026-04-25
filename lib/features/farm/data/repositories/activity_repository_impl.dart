@@ -1,20 +1,23 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../domain/entities/activity.dart';
-import '../../domain/repositories/activity_repository.dart';
-import '../datasources/activity_remote_data_source.dart';
-import '../models/activity_model.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/activity_repository.dart';
+import 'package:farm_tracker/features/farm/data/datasources/activity_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
 
 class ActivityRepositoryImpl implements ActivityRepository {
+  ActivityRepositoryImpl({required this.remoteDataSource});
   final ActivityRemoteDataSource remoteDataSource;
 
-  ActivityRepositoryImpl({required this.remoteDataSource});
-
   @override
-  Future<Either<Failure, List<Activity>>> getActivities({String? sourceType}) async {
+  Future<Either<Failure, List<Activity>>> getActivities({
+    String? sourceType,
+  }) async {
     try {
-      final activities = await remoteDataSource.getActivities(sourceType: sourceType);
+      final activities = await remoteDataSource.getActivities(
+        sourceType: sourceType,
+      );
       return Right(activities);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));

@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/plant.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 
 abstract class PlantEvent extends Equatable {
   @override
@@ -9,27 +9,24 @@ abstract class PlantEvent extends Equatable {
 class GetPlantsEvent extends PlantEvent {}
 
 class AddPlantEvent extends PlantEvent {
-  final Plant plant;
-
   AddPlantEvent(this.plant);
+  final Plant plant;
 
   @override
   List<Object> get props => [plant];
 }
 
 class UpdatePlantEvent extends PlantEvent {
-  final Plant plant;
-
   UpdatePlantEvent(this.plant);
+  final Plant plant;
 
   @override
   List<Object> get props => [plant];
 }
 
 class DeletePlantEvent extends PlantEvent {
-  final String id;
-
   DeletePlantEvent(this.id);
+  final String id;
 
   @override
   List<Object> get props => [id];

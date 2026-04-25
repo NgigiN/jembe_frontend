@@ -1,11 +1,4 @@
 class UserStorageModel {
-  final String email;
-  final String farmName;
-  final String id;
-  final String location;
-  final String name;
-  final String token;
-  final DateTime loginTime;
 
   UserStorageModel({
     required this.email,
@@ -15,6 +8,7 @@ class UserStorageModel {
     required this.name,
     required this.token,
     required this.loginTime,
+    required this.pictureUrl,
   });
 
   factory UserStorageModel.fromJson(Map<String, dynamic> json) {
@@ -31,19 +25,8 @@ class UserStorageModel {
       loginTime: json['login_time'] != null
           ? DateTime.parse(json['login_time'].toString())
           : DateTime.now(),
+      pictureUrl: (json['picture_url'] ?? '').toString(),
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'email': email,
-      'farm_name': farmName,
-      'id': id,
-      'location': location,
-      'name': name,
-      'token': token,
-      'login_time': loginTime.toIso8601String(),
-    };
   }
 
   factory UserStorageModel.fromAuthResponse(
@@ -61,6 +44,28 @@ class UserStorageModel {
       name: fullName.isNotEmpty ? fullName : (record['name'] ?? '').toString(),
       token: token,
       loginTime: DateTime.now(),
+      pictureUrl: (record['picture_url'] ?? '').toString(),
     );
+  }
+  final String email;
+  final String farmName;
+  final String id;
+  final String location;
+  final String name;
+  final String token;
+  final DateTime loginTime;
+  final String pictureUrl;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'email': email,
+      'farm_name': farmName,
+      'id': id,
+      'location': location,
+      'name': name,
+      'token': token,
+      'login_time': loginTime.toIso8601String(),
+      'picture_url': pictureUrl,
+    };
   }
 }

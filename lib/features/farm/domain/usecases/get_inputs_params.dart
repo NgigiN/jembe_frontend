@@ -1,5 +1,4 @@
 class GetInputsParams {
-  final String? sourceType;
-
   GetInputsParams({this.sourceType});
+  final String? sourceType;
 }

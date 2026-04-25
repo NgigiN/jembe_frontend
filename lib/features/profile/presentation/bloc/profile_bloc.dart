@@ -8,10 +8,6 @@ import 'package:farm_tracker/features/profile/presentation/bloc/profile_event.da
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_state.dart';
 
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
-  final GetProfile getProfile;
-  final UpdateProfile updateProfile;
-  final ChangePassword changePassword;
-
   ProfileBloc({
     required this.getProfile,
     required this.updateProfile,
@@ -21,6 +17,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<UpdateProfileEvent>(_onUpdateProfile);
     on<ChangePasswordEvent>(_onChangePassword);
   }
+  final GetProfile getProfile;
+  final UpdateProfile updateProfile;
+  final ChangePassword changePassword;
 
   Future<void> _onFetchProfile(
     FetchProfileEvent event,
@@ -51,7 +50,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
 
     failureOrSuccess.fold(
       (failure) => emit(ProfileError(message: _mapFailureToMessage(failure))),
-      (_) => emit(const ProfileOperationSuccess('Profile updated successfully')),
+      (_) =>
+          emit(const ProfileOperationSuccess('Profile updated successfully')),
     );
   }
 
@@ -69,7 +69,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
 
     failureOrSuccess.fold(
       (failure) => emit(ProfileError(message: _mapFailureToMessage(failure))),
-      (_) => emit(const ProfileOperationSuccess('Password changed successfully')),
+      (_) =>
+          emit(const ProfileOperationSuccess('Password changed successfully')),
     );
   }
 

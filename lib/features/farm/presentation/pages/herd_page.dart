@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/herd_bloc.dart';
-import '../bloc/herd_event.dart';
-import '../bloc/herd_state.dart';
-import '../bloc/animal_type_bloc.dart';
-import '../bloc/animal_type_event.dart';
-import '../bloc/animal_type_state.dart';
-import '../../domain/entities/herd.dart';
-import '../../domain/entities/animal_type.dart';
-import '../../../auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
+import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
+import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 
 class HerdPage extends StatefulWidget {
   const HerdPage({super.key});
@@ -99,9 +99,9 @@ class _HerdPageState extends State<HerdPage> {
 
             return BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
               builder: (context, animalTypeState) {
-                Map<String, String> animalTypeMap = {};
+                var animalTypeMap = <String, String>{};
                 if (animalTypeState is AnimalTypeLoaded) {
-                  for (var at in animalTypeState.animalTypes) {
+                  for (final at in animalTypeState.animalTypes) {
                     animalTypeMap[at.id] = at.name;
                   }
                 }
@@ -215,7 +215,7 @@ class _HerdPageState extends State<HerdPage> {
         builder: (context, setState) =>
             BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
               builder: (context, animalTypeState) {
-                final List<AnimalType> animalTypes = [];
+                final animalTypes = <AnimalType>[];
                 if (animalTypeState is AnimalTypeLoaded) {
                   animalTypes.addAll(animalTypeState.animalTypes);
                 }
@@ -238,9 +238,8 @@ class _HerdPageState extends State<HerdPage> {
                           children: [
                             Text(
                               'Register New Herd',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                             IconButton(
                               onPressed: () => Navigator.pop(context),
@@ -432,7 +431,7 @@ class _HerdPageState extends State<HerdPage> {
         builder: (context, setState) =>
             BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
               builder: (context, animalTypeState) {
-                final List<AnimalType> animalTypes = [];
+                final animalTypes = <AnimalType>[];
                 if (animalTypeState is AnimalTypeLoaded) {
                   animalTypes.addAll(animalTypeState.animalTypes);
                 }
@@ -455,9 +454,8 @@ class _HerdPageState extends State<HerdPage> {
                           children: [
                             Text(
                               'Edit Herd',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                             IconButton(
                               onPressed: () => Navigator.pop(context),
@@ -554,8 +552,12 @@ class _HerdPageState extends State<HerdPage> {
                               Navigator.pop(context);
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).colorScheme.primary,
-                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
+                              foregroundColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimary,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
                             child: const Text(

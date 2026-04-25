@@ -1,15 +1,34 @@
-import '../../domain/entities/land.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 
 class LandModel extends Land {
+  factory LandModel.create({
+    required String userId,
+    required String name,
+    double? size,
+    String? location,
+    String? soilType,
+  }) {
+    final now = DateTime.now();
+    return LandModel(
+      id: '', // Will be set by the server
+      userId: userId,
+      name: name,
+      size: size,
+      location: location,
+      soilType: soilType,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
   const LandModel({
     required super.id,
     required super.userId,
     required super.name,
+    required super.createdAt,
+    required super.updatedAt,
     super.size,
     super.location,
     super.soilType,
-    required super.createdAt,
-    required super.updatedAt,
   });
 
   factory LandModel.fromJson(Map<String, dynamic> json) {
@@ -22,8 +41,8 @@ class LandModel extends Land {
       userId: (json['UserID'] ?? json['user_id'] ?? '').toString(),
       name: (json['Name'] ?? json['name'] ?? '').toString(),
       size: sizeValue != null ? (sizeValue as num).toDouble() : null,
-      location: locationValue != null ? locationValue.toString() : null,
-      soilType: soilTypeValue != null ? soilTypeValue.toString() : null,
+      location: locationValue?.toString(),
+      soilType: soilTypeValue?.toString(),
       createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
       updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );
@@ -48,25 +67,5 @@ class LandModel extends Land {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
-
-  factory LandModel.create({
-    required String userId,
-    required String name,
-    double? size,
-    String? location,
-    String? soilType,
-  }) {
-    final now = DateTime.now();
-    return LandModel(
-      id: '', // Will be set by the server
-      userId: userId,
-      name: name,
-      size: size,
-      location: location,
-      soilType: soilType,
-      createdAt: now,
-      updatedAt: now,
-    );
   }
 }

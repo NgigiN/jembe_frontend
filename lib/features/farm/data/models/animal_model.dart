@@ -1,14 +1,31 @@
-import '../../domain/entities/animal.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
 
 class AnimalModel extends Animal {
+  factory AnimalModel.create({
+    required String userId,
+    required String name,
+    required String type,
+    int? number,
+  }) {
+    final now = DateTime.now();
+    return AnimalModel(
+      id: '',
+      userId: userId,
+      name: name,
+      type: type,
+      number: number,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
   const AnimalModel({
     required super.id,
     required super.userId,
     required super.name,
     required super.type,
-    super.number,
     required super.createdAt,
     required super.updatedAt,
+    super.number,
   });
 
   factory AnimalModel.fromJson(Map<String, dynamic> json) {
@@ -44,23 +61,4 @@ class AnimalModel extends Animal {
       'updated_at': updatedAt.toIso8601String(),
     };
   }
-
-  factory AnimalModel.create({
-    required String userId,
-    required String name,
-    required String type,
-    int? number,
-  }) {
-    final now = DateTime.now();
-    return AnimalModel(
-      id: '',
-      userId: userId,
-      name: name,
-      type: type,
-      number: number,
-      createdAt: now,
-      updatedAt: now,
-    );
-  }
 }
-

@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/season_bloc.dart';
-import '../bloc/season_event.dart';
-import '../bloc/season_state.dart';
-import '../bloc/land_bloc.dart';
-import '../bloc/land_event.dart';
-import '../bloc/land_state.dart';
-import '../bloc/plant_bloc.dart';
-import '../bloc/plant_event.dart';
-import '../bloc/plant_state.dart';
-import '../../domain/entities/season.dart';
-import '../../domain/entities/land.dart';
-import '../../domain/entities/plant.dart';
-import '../../data/models/season_model.dart';
-import '../../../auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/plant_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/plant_state.dart';
+import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
+import 'package:farm_tracker/features/farm/data/models/season_model.dart';
+import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 
 class SeasonPage extends StatefulWidget {
   const SeasonPage({super.key});
@@ -199,7 +199,7 @@ class _SeasonPageState extends State<SeasonPage> {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  void _showAddSeasonDialog(BuildContext context) async {
+  Future<void> _showAddSeasonDialog(BuildContext context) async {
     final nameController = TextEditingController();
     DateTime? selectedStartDate;
     DateTime? selectedEndDate;
@@ -450,11 +450,13 @@ class _SeasonPageState extends State<SeasonPage> {
     );
   }
 
-  void _showEditSeasonDialog(BuildContext context, Season season) async {
+  Future<void> _showEditSeasonDialog(
+    BuildContext context,
+    Season season,
+  ) async {
     final nameController = TextEditingController(text: season.name);
     DateTime? selectedStartDate = season.startDate;
-    DateTime? selectedEndDate =
-        season.endDate != null && season.endDate!.year > 2000
+    var selectedEndDate = season.endDate != null && season.endDate!.year > 2000
         ? season.endDate
         : null;
     String? selectedPlantId = season.plantId;

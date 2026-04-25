@@ -1,11 +1,11 @@
 abstract class Failure {
-  final String message;
   const Failure([this.message = 'An unexpected error occurred']);
+  final String message;
 }
 
 class ServerFailure extends Failure {
-  final String? errorMessage;
   const ServerFailure([this.errorMessage]) : super(errorMessage ?? 'Server error occurred');
+  final String? errorMessage;
 }
 
 class CacheFailure extends Failure {

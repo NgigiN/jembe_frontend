@@ -1,16 +1,6 @@
 import 'package:equatable/equatable.dart';
 
 class Season extends Equatable {
-  final String id;
-  final String userId;
-  final String name;
-  final String plantId;
-  final String landId;
-  final DateTime startDate;
-  final DateTime? endDate;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-
   const Season({
     required this.id,
     required this.userId,
@@ -22,6 +12,15 @@ class Season extends Equatable {
     required this.createdAt,
     required this.updatedAt,
   });
+  final String id;
+  final String userId;
+  final String name;
+  final String plantId;
+  final String landId;
+  final DateTime startDate;
+  final DateTime? endDate;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   @override
   List<Object?> get props => [

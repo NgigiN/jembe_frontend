@@ -1,14 +1,14 @@
-import '../services/user_storage_service.dart';
+import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 
 class UserUtils {
   // Get current user ID
   static Future<String?> getCurrentUserId() async {
-    return await UserStorageService.getUserId();
+    return UserStorageService.getUserId();
   }
 
   // Get current user token
   static Future<String?> getCurrentUserToken() async {
-    return await UserStorageService.getToken();
+    return UserStorageService.getToken();
   }
 
   // Get complete user data
@@ -19,8 +19,12 @@ class UserUtils {
         'id': user.id,
         'email': user.email,
         'name': user.name,
-        'first_name': user.name.split(' ').isNotEmpty ? user.name.split(' ')[0] : '',
-        'last_name': user.name.split(' ').length > 1 ? user.name.split(' ').sublist(1).join(' ') : '',
+        'first_name': user.name.split(' ').isNotEmpty
+            ? user.name.split(' ')[0]
+            : '',
+        'last_name': user.name.split(' ').length > 1
+            ? user.name.split(' ').sublist(1).join(' ')
+            : '',
         'farm_name': user.farmName,
         'location': user.location,
         'token': user.token,
@@ -31,7 +35,7 @@ class UserUtils {
 
   // Check if user is logged in
   static Future<bool> isUserLoggedIn() async {
-    return await UserStorageService.isLoggedIn();
+    return UserStorageService.isLoggedIn();
   }
 
   // Get user's farm name

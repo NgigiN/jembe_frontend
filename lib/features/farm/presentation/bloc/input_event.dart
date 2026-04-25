@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/input.dart';
+import 'package:farm_tracker/features/farm/domain/entities/input.dart';
 
 abstract class InputEvent extends Equatable {
   @override
@@ -7,36 +7,32 @@ abstract class InputEvent extends Equatable {
 }
 
 class GetInputsEvent extends InputEvent {
-  final String? sourceType;
-
   GetInputsEvent({this.sourceType});
+  final String? sourceType;
 
   @override
   List<Object> get props => [sourceType ?? ''];
 }
 
 class AddInputEvent extends InputEvent {
-  final Input input;
-
   AddInputEvent(this.input);
+  final Input input;
 
   @override
   List<Object> get props => [input];
 }
 
 class UpdateInputEvent extends InputEvent {
-  final Input input;
-
   UpdateInputEvent(this.input);
+  final Input input;
 
   @override
   List<Object> get props => [input];
 }
 
 class DeleteInputEvent extends InputEvent {
-  final String id;
-
   DeleteInputEvent(this.id);
+  final String id;
 
   @override
   List<Object> get props => [id];

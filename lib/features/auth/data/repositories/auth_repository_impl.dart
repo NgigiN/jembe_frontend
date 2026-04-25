@@ -1,22 +1,21 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../domain/entities/user.dart';
-import '../../domain/repositories/auth_repository.dart';
-import '../datasources/auth_remote_data_source.dart';
-import '../models/user_model.dart';
-import '../models/user_storage_model.dart';
-import '../services/user_storage_service.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/features/auth/domain/entities/user.dart';
+import 'package:farm_tracker/features/auth/domain/repositories/auth_repository.dart';
+import 'package:farm_tracker/features/auth/data/datasources/auth_remote_data_source.dart';
+import 'package:farm_tracker/features/auth/data/models/user_model.dart';
+import 'package:farm_tracker/features/auth/data/models/user_storage_model.dart';
+import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
+  AuthRepositoryImpl({required this.remoteDataSource});
   final AuthRemoteDataSource remoteDataSource;
 
-  AuthRepositoryImpl({required this.remoteDataSource});
-
   @override
-  Future<Either<Failure, User>> login(String email, String password) async {
+  Future<Either<Failure, User>> googleSignIn(String idToken) async {
     try {
-      final response = await remoteDataSource.login(email, password);
+      final response = await remoteDataSource.googleSignIn(idToken);
       final userModel = response['user'] as UserModel;
       final token = response['token'] as String;
       final record = response['record'] as Map<String, dynamic>;
@@ -25,30 +24,6 @@ class AuthRepositoryImpl implements AuthRepository {
       final userStorage = UserStorageModel.fromAuthResponse(record, token);
       await UserStorageService.saveUserData(userStorage);
 
-      return Right(userModel);
-    } on ServerException {
-      return Left(ServerFailure());
-    }
-  }
-
-  @override
-  Future<Either<Failure, User>> signup(
-    String email,
-    String password,
-    String firstName,
-    String lastName,
-    String farmName,
-    String location,
-  ) async {
-    try {
-      final userModel = await remoteDataSource.signup(
-        email,
-        password,
-        firstName,
-        lastName,
-        farmName,
-        location,
-      );
       return Right(userModel);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));

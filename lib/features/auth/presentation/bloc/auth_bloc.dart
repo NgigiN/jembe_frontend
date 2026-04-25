@@ -1,82 +1,65 @@
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../domain/usecases/login.dart';
-import '../../domain/usecases/signup.dart';
-import '../../data/services/user_storage_service.dart';
-import '../../domain/entities/user.dart';
+import 'package:google_sign_in/google_sign_in.dart' as auth_google;
+import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
+import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
+import 'package:farm_tracker/features/auth/domain/entities/user.dart';
 
-import 'auth_event.dart';
-import 'auth_state.dart';
+import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
+import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final Login login;
-  final Signup signup;
-
-  AuthBloc({required this.login, required this.signup}) : super(AuthInitial()) {
-    on<LoginEvent>((event, emit) async {
+  AuthBloc({required this.googleSignInUseCase}) : super(AuthInitial()) {
+    on<GoogleSignInRequested>((event, emit) async {
       emit(AuthLoading());
-      appLogger.logAuthEvent('Login attempt', details: {'email': event.email});
+      appLogger.logAuthEvent('Google Sign-In attempt');
 
       try {
-        final result = await login(
-          LoginParams(email: event.email, password: event.password),
-        );
+        final auth_google.GoogleSignIn googleSignIn = auth_google.GoogleSignIn.instance;
+
+        final auth_google.GoogleSignInAccount? account = await googleSignIn.authenticate();
+
+        if (account == null) {
+          appLogger.logAuthEvent('Google Sign-In cancelled by user');
+          emit(AuthError('Sign-in cancelled'));
+          return;
+        }
+
+        final auth_google.GoogleSignInAuthentication auth = await account.authentication;
+        final String? idToken = auth.idToken;
+
+        if (idToken == null) {
+          emit(AuthError('Failed to retrieve ID Token from Google'));
+          return;
+        }
+
+        final result = await googleSignInUseCase(idToken);
+        
         await result.fold(
           (failure) async {
-            String message = 'Login failed';
+            String message = 'Google Sign-In failed';
             if (failure is ServerFailure && failure.errorMessage != null) {
               message = failure.errorMessage!;
             }
             appLogger.logAuthEvent(
-              'Login failed',
-              details: {'email': event.email, 'error': message},
+              'Google Sign-In failed',
+              details: {'error': message},
             );
             emit(AuthError(message));
           },
           (user) async {
             appLogger.logAuthEvent(
-              'Login successful',
+              'Google Sign-In successful',
               userId: user.id,
-              details: {'email': event.email, 'name': user.fullName},
+              details: {'email': user.email, 'name': user.fullName},
             );
             emit(AuthAuthenticated(user));
           },
         );
       } catch (e) {
-        appLogger.logError('LoginEvent', e);
-        emit(AuthError('Login failed: ${e.toString()}'));
-      }
-    });
-
-    on<SignupEvent>((event, emit) async {
-      emit(AuthLoading());
-      try {
-        final result = await signup(
-          SignupParams(
-            email: event.email,
-            password: event.password,
-            firstName: event.firstName,
-            lastName: event.lastName,
-            farmName: event.farmName,
-            location: event.location,
-          ),
-        );
-        await result.fold(
-          (failure) async {
-            // Try to extract a message from the failure if possible
-            String message = 'Signup failed';
-            if (failure is ServerFailure && failure.errorMessage != null) {
-              message = failure.errorMessage!;
-            }
-            emit(AuthError(message));
-          },
-          (user) async {
-            emit(SignupSuccess());
-          },
-        );
-      } catch (e) {
-        emit(AuthError('Signup failed: ${e.toString()}'));
+        appLogger.logError('GoogleSignInRequested', e);
+        emit(AuthError('Google Sign-In failed: ${e.toString()}'));
       }
     });
 
@@ -87,6 +70,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LogoutEvent>((event, emit) async {
       appLogger.logAuthEvent('Logout');
       await UserStorageService.clearUserData();
+      final auth_google.GoogleSignIn googleSignIn = auth_google.GoogleSignIn.instance;
+      try {
+        await googleSignIn.signOut();
+      } catch (_) {}
       emit(AuthInitial());
     });
 
@@ -108,6 +95,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             lastName: lastName,
             farmName: userData.farmName,
             location: userData.location,
+            pictureUrl: userData.pictureUrl,
           );
           appLogger.logAuthEvent(
             'Existing login found',
@@ -128,4 +116,5 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     });
   }
+  final GoogleSignInUseCase googleSignInUseCase;
 }

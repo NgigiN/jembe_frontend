@@ -1,18 +1,6 @@
 import 'package:equatable/equatable.dart';
 
 class Input extends Equatable {
-  final String id;
-  final String sourceType;
-  final String sourceId;
-  final int? animalId;
-  final String type;
-  final double? quantity;
-  final double cost;
-  final DateTime date;
-  final String? notes;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-
   const Input({
     required this.id,
     required this.sourceType,
@@ -26,6 +14,17 @@ class Input extends Equatable {
     required this.createdAt,
     required this.updatedAt,
   });
+  final String id;
+  final String sourceType;
+  final String sourceId;
+  final int? animalId;
+  final String type;
+  final double? quantity;
+  final double cost;
+  final DateTime date;
+  final String? notes;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   @override
   List<Object?> get props => [

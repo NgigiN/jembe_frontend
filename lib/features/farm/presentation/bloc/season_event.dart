@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 
 abstract class SeasonEvent extends Equatable {
   @override
@@ -9,27 +9,24 @@ abstract class SeasonEvent extends Equatable {
 class GetSeasonsEvent extends SeasonEvent {}
 
 class AddSeasonEvent extends SeasonEvent {
-  final Season season;
-
   AddSeasonEvent(this.season);
+  final Season season;
 
   @override
   List<Object> get props => [season];
 }
 
 class UpdateSeasonEvent extends SeasonEvent {
-  final Season season;
-
   UpdateSeasonEvent(this.season);
+  final Season season;
 
   @override
   List<Object> get props => [season];
 }
 
 class DeleteSeasonEvent extends SeasonEvent {
-  final String id;
-
   DeleteSeasonEvent(this.id);
+  final String id;
 
   @override
   List<Object> get props => [id];

@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import '../../../../core/error/exceptions.dart';
-import '../models/cost_category_model.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/features/farm/data/models/cost_category_model.dart';
 
 abstract class CostCategoryRemoteDataSource {
   Future<List<CostCategoryModel>> getCostCategories({
@@ -16,9 +16,8 @@ abstract class CostCategoryRemoteDataSource {
 }
 
 class CostCategoryRemoteDataSourceImpl implements CostCategoryRemoteDataSource {
-  final Dio dio;
-
   CostCategoryRemoteDataSourceImpl({required this.dio});
+  final Dio dio;
 
   @override
   Future<List<CostCategoryModel>> getCostCategories({
@@ -38,7 +37,7 @@ class CostCategoryRemoteDataSourceImpl implements CostCategoryRemoteDataSource {
         final List<dynamic> data = response.data;
         return data.map((json) => CostCategoryModel.fromJson(json)).toList();
       } else {
-        throw ServerException('Failed to load cost categories');
+        throw const ServerException('Failed to load cost categories');
       }
     } on DioException catch (e) {
       throw ServerException(e.message ?? 'Failed to load cost categories');

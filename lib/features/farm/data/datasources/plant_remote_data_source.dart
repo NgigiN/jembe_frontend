@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import '../../../../core/error/exceptions.dart';
-import '../models/plant_model.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/features/farm/data/models/plant_model.dart';
 
 abstract class PlantRemoteDataSource {
   Future<List<PlantModel>> getPlants();
@@ -10,9 +10,8 @@ abstract class PlantRemoteDataSource {
 }
 
 class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
-  final Dio dio;
-
   PlantRemoteDataSourceImpl({required this.dio});
+  final Dio dio;
 
   @override
   Future<List<PlantModel>> getPlants() async {
@@ -28,7 +27,7 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
         }
         return [];
       } else {
-        String errorMsg = 'Failed to load plants';
+        var errorMsg = 'Failed to load plants';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -38,7 +37,7 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to load plants';
+      var errorMsg = 'Failed to load plants';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -56,17 +55,14 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
     try {
       final response = await dio.post(
         '/api/v1/plants',
-        data: {
-          'name': plant.name,
-          'variety': plant.variety,
-        },
+        data: {'name': plant.name, 'variety': plant.variety},
       );
 
       if (response.statusCode == 201) {
         final data = response.data as Map<String, dynamic>;
         return PlantModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to add plant';
+        var errorMsg = 'Failed to add plant';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -76,7 +72,7 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to add plant';
+      var errorMsg = 'Failed to add plant';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -101,7 +97,7 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return PlantModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to update plant';
+        var errorMsg = 'Failed to update plant';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -111,7 +107,7 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to update plant';
+      var errorMsg = 'Failed to update plant';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -130,7 +126,7 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
       final response = await dio.delete('/api/v1/plants/$id');
 
       if (response.statusCode != 200) {
-        String errorMsg = 'Failed to delete plant';
+        var errorMsg = 'Failed to delete plant';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -140,7 +136,7 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to delete plant';
+      var errorMsg = 'Failed to delete plant';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;

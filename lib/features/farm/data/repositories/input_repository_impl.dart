@@ -1,15 +1,14 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../domain/entities/input.dart';
-import '../../domain/repositories/input_repository.dart';
-import '../datasources/input_remote_data_source.dart';
-import '../models/input_model.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/features/farm/domain/entities/input.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/input_repository.dart';
+import 'package:farm_tracker/features/farm/data/datasources/input_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/models/input_model.dart';
 
 class InputRepositoryImpl implements InputRepository {
-  final InputRemoteDataSource remoteDataSource;
-
   InputRepositoryImpl({required this.remoteDataSource});
+  final InputRemoteDataSource remoteDataSource;
 
   @override
   Future<Either<Failure, List<Input>>> getInputs({String? sourceType}) async {

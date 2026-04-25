@@ -1,14 +1,13 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../../../core/error/failures.dart';
-import '../../domain/entities/cost_category.dart';
-import '../../domain/repositories/cost_category_repository.dart';
-import '../datasources/cost_category_remote_data_source.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/cost_category_repository.dart';
+import 'package:farm_tracker/features/farm/data/datasources/cost_category_remote_data_source.dart';
 
 class CostCategoryRepositoryImpl implements CostCategoryRepository {
-  final CostCategoryRemoteDataSource remoteDataSource;
-
   CostCategoryRepositoryImpl({required this.remoteDataSource});
+  final CostCategoryRemoteDataSource remoteDataSource;
 
   @override
   Future<Either<Failure, List<CostCategory>>> getCostCategories({

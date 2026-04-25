@@ -1,15 +1,14 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../../../core/error/failures.dart';
-import '../../domain/entities/herd.dart';
-import '../../domain/repositories/herd_repository.dart';
-import '../datasources/herd_remote_data_source.dart';
-import '../models/herd_model.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/herd_repository.dart';
+import 'package:farm_tracker/features/farm/data/datasources/herd_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
 
 class HerdRepositoryImpl implements HerdRepository {
-  final HerdRemoteDataSource remoteDataSource;
-
   HerdRepositoryImpl({required this.remoteDataSource});
+  final HerdRemoteDataSource remoteDataSource;
 
   @override
   Future<Either<Failure, List<Herd>>> getHerds() async {
@@ -19,12 +18,17 @@ class HerdRepositoryImpl implements HerdRepository {
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e.toString()}'));
+      return Left(ServerFailure('Unexpected error: ${e}'));
     }
   }
 
   @override
-  Future<Either<Failure, Herd>> addHerd(String name, String animalTypeId, String location, String userId) async {
+  Future<Either<Failure, Herd>> addHerd(
+    String name,
+    String animalTypeId,
+    String location,
+    String userId,
+  ) async {
     try {
       final herdModel = HerdModel.create(
         userId: userId,
@@ -37,12 +41,17 @@ class HerdRepositoryImpl implements HerdRepository {
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e.toString()}'));
+      return Left(ServerFailure('Unexpected error: ${e}'));
     }
   }
 
   @override
-  Future<Either<Failure, Herd>> updateHerd(String id, String name, String animalTypeId, String location) async {
+  Future<Either<Failure, Herd>> updateHerd(
+    String id,
+    String name,
+    String animalTypeId,
+    String location,
+  ) async {
     try {
       final herdModel = await remoteDataSource.getHerds();
       final existingHerd = herdModel.firstWhere((h) => h.id == id);
@@ -60,7 +69,7 @@ class HerdRepositoryImpl implements HerdRepository {
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e.toString()}'));
+      return Left(ServerFailure('Unexpected error: ${e}'));
     }
   }
 
@@ -72,8 +81,7 @@ class HerdRepositoryImpl implements HerdRepository {
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e.toString()}'));
+      return Left(ServerFailure('Unexpected error: ${e}'));
     }
   }
 }
-

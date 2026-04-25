@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/navigation/app_router.dart';
-import '../bloc/auth_bloc.dart';
-import '../bloc/auth_event.dart';
-import '../bloc/auth_state.dart';
+import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
+import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -31,8 +31,8 @@ class _SplashPageState extends State<SplashPage> {
           // User is logged in, navigate to landing page
           context.go(AppRoutePath.landing);
         } else if (state is AuthInitial) {
-          // User is not logged in, navigate to login page
-          context.go(AppRoutePath.login);
+          // User is not logged in, navigate to google login page
+          context.go(AppRoutePath.googleLogin);
         }
       },
       child: Scaffold(

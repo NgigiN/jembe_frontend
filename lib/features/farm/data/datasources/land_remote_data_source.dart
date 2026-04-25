@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import '../../../../core/error/exceptions.dart';
-import '../models/land_model.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/features/farm/data/models/land_model.dart';
 
 abstract class LandRemoteDataSource {
   Future<List<LandModel>> getLands();
@@ -10,9 +10,8 @@ abstract class LandRemoteDataSource {
 }
 
 class LandRemoteDataSourceImpl implements LandRemoteDataSource {
-  final Dio dio;
-
   LandRemoteDataSourceImpl({required this.dio});
+  final Dio dio;
 
   @override
   Future<List<LandModel>> getLands() async {
@@ -28,7 +27,7 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
         }
         return [];
       } else {
-        String errorMsg = 'Failed to load lands';
+        var errorMsg = 'Failed to load lands';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -38,7 +37,7 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to load lands';
+      var errorMsg = 'Failed to load lands';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -68,7 +67,7 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return LandModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to add land';
+        var errorMsg = 'Failed to add land';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -78,7 +77,7 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to add land';
+      var errorMsg = 'Failed to add land';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -108,7 +107,7 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return LandModel.fromJson(data);
       } else {
-        String errorMsg = 'Failed to update land';
+        var errorMsg = 'Failed to update land';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -118,7 +117,7 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to update land';
+      var errorMsg = 'Failed to update land';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -137,7 +136,7 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
       final response = await dio.delete('/api/v1/lands/$id');
 
       if (response.statusCode != 200) {
-        String errorMsg = 'Failed to delete land';
+        var errorMsg = 'Failed to delete land';
         try {
           final errorData = response.data as Map<String, dynamic>?;
           if (errorData != null && errorData['error'] != null) {
@@ -147,7 +146,7 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      String errorMsg = 'Failed to delete land';
+      var errorMsg = 'Failed to delete land';
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
