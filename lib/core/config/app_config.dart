@@ -10,12 +10,14 @@ class AppConfig {
   // Remote server configuration - HTTPS enforced in production
   static const String _remoteBaseUrl = 'https://193.187.129.179:6060';
   // static const String _localBaseUrl = 'http://127.0.0.1:8080';
-  static const String _localBaseUrl = 'http://192.168.122.1:8080';
+  static const String _localBaseUrl = 'http://192.168.100.5:8080';
 
   // Google Sign-In Configuration
   // Note: This must be the "Web Client ID" from Google Cloud Console
+  // static const String googleServerClientId =
+  //     '429420927444-v5pdh3k3e7a8jhth5fuq1bq6ie49mam4.apps.googleusercontent.com';
   static const String googleServerClientId =
-      '429420927444-v5pdh3k3e7a8jhth5fuq1bq6ie49mam4.apps.googleusercontent.com';
+      '429420927444-bnhb3nvfu3ten0mb77hi8k30q8a67m3h.apps.googleusercontent.com';
 
   // Initialize environment based on dart-define flags
   static void initialize() {

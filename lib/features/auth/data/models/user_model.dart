@@ -11,15 +11,27 @@ class UserModel extends User {
     required super.pictureUrl,
   });
 
+  factory UserModel.empty() {
+    return const UserModel(
+      id: '',
+      email: '',
+      firstName: '',
+      lastName: '',
+      farmName: '',
+      location: '',
+      pictureUrl: '',
+    );
+  }
+
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: (json['id'] ?? '').toString(),
+      id: (json['id'] ?? json['ID'] ?? '').toString(),
       email: (json['email'] ?? '').toString(),
       firstName: (json['first_name'] ?? '').toString(),
       lastName: (json['last_name'] ?? '').toString(),
       farmName: (json['farm_name'] ?? '').toString(),
       location: (json['location'] ?? '').toString(),
-      pictureUrl: (json['picture_url'] ?? '').toString(),
+      pictureUrl: (json['picture_url'] ?? json['profile_picture'] ?? '').toString(),
     );
   }
 

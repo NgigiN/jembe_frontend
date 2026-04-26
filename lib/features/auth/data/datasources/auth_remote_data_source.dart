@@ -23,11 +23,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = response.data! as Map<String, dynamic>;
+        final data = Map<String, dynamic>.from(response.data as Map);
         final token = (data['token'] ?? '').toString();
 
         if (data['user'] != null) {
-          final userData = data['user'] as Map<String, dynamic>;
+          final userData = Map<String, dynamic>.from(data['user'] as Map);
           return {
             'user': UserModel.fromJson(userData),
             'token': token,
@@ -35,17 +35,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           };
         } else {
           return {
-            'user': UserModel(
-              id: '',
-              email: '',
-              firstName: '',
-              lastName: '',
-              farmName: '',
-              location: '',
-              pictureUrl: '',
-            ),
+            'user': UserModel.empty(),
             'token': token,
-            'record': {},
+            'record': <String, dynamic>{},
           };
         }
       } else {

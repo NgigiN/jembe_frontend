@@ -186,6 +186,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               TextFormField(
+                                key: ValueKey('email_$_email'),
                                 initialValue: _email,
                                 readOnly: true,
                                 decoration: const InputDecoration(
@@ -201,6 +202,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 children: [
                                   Expanded(
                                     child: TextFormField(
+                                      key: ValueKey('first_name_$_firstName'),
                                       initialValue: _firstName,
                                       readOnly: true,
                                       decoration: const InputDecoration(
@@ -215,6 +217,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   const SizedBox(width: 16),
                                   Expanded(
                                     child: TextFormField(
+                                      key: ValueKey('last_name_$_lastName'),
                                       initialValue: _lastName,
                                       readOnly: true,
                                       decoration: const InputDecoration(
