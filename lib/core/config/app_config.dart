@@ -8,7 +8,7 @@ class AppConfig {
   static late Environment _currentEnvironment;
 
   // Remote server configuration - HTTPS enforced in production
-  static const String _remoteBaseUrl = 'https://193.187.129.179:6060';
+  static const String _remoteBaseUrl = 'https://farmtracker.samtama.lol';
   // static const String _localBaseUrl = 'http://127.0.0.1:8080';
   static const String _localBaseUrl = 'http://192.168.100.5:8080';
 

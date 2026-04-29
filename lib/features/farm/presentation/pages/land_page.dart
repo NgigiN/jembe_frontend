@@ -197,7 +197,7 @@ class _LandPageState extends State<LandPage> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).viewPadding.bottom),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -331,7 +331,7 @@ class _LandPageState extends State<LandPage> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).viewPadding.bottom),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
