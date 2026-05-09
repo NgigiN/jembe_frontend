@@ -6,8 +6,22 @@ import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
 
-class GoogleLoginPage extends StatelessWidget {
+class GoogleLoginPage extends StatefulWidget {
   const GoogleLoginPage({super.key});
+
+  @override
+  State<GoogleLoginPage> createState() => _GoogleLoginPageState();
+}
+
+class _GoogleLoginPageState extends State<GoogleLoginPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Check if user is already logged in
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthBloc>().add(CheckExistingLoginEvent());
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,12 +29,7 @@ class GoogleLoginPage extends StatelessWidget {
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
-            final user = state.user;
-            if (user.farmName.isEmpty || user.location.isEmpty) {
-              context.go(AppRoutePath.onboarding);
-            } else {
-              context.go(AppRoutePath.landing);
-            }
+            context.go(AppRoutePath.landing);
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(

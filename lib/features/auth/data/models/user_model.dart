@@ -27,11 +27,11 @@ class UserModel extends User {
     return UserModel(
       id: (json['id'] ?? json['ID'] ?? '').toString(),
       email: (json['email'] ?? '').toString(),
-      firstName: (json['first_name'] ?? '').toString(),
-      lastName: (json['last_name'] ?? '').toString(),
-      farmName: (json['farm_name'] ?? '').toString(),
+      firstName: (json['first_name'] ?? json['firstName'] ?? '').toString(),
+      lastName: (json['last_name'] ?? json['lastName'] ?? '').toString(),
+      farmName: (json['farm_name'] ?? json['farmName'] ?? '').toString(),
       location: (json['location'] ?? '').toString(),
-      pictureUrl: (json['picture_url'] ?? json['profile_picture'] ?? '').toString(),
+      pictureUrl: (json['picture_url'] ?? json['profile_picture'] ?? json['pictureUrl'] ?? '').toString(),
     );
   }
 

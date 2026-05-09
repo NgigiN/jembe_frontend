@@ -1,8 +1,6 @@
 import 'package:go_router/go_router.dart';
 
 import 'package:farm_tracker/features/auth/presentation/pages/google_login_page.dart';
-import 'package:farm_tracker/features/auth/presentation/pages/onboarding_page.dart';
-import 'package:farm_tracker/features/auth/presentation/pages/splash_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/activity_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/analysis_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animal_type_page.dart';
@@ -58,23 +56,13 @@ class AppRouter {
   AppRouter();
 
   final GoRouter router = GoRouter(
-    initialLocation: AppRoutePath.splash,
+    initialLocation: AppRoutePath.googleLogin,
     observers: [LoggingGoRouterObserver()],
     routes: [
-      GoRoute(
-        name: AppRouteName.splash,
-        path: AppRoutePath.splash,
-        builder: (context, state) => const SplashPage(),
-      ),
       GoRoute(
         name: AppRouteName.googleLogin,
         path: AppRoutePath.googleLogin,
         builder: (context, state) => const GoogleLoginPage(),
-      ),
-      GoRoute(
-        name: AppRouteName.onboarding,
-        path: AppRoutePath.onboarding,
-        builder: (context, state) => const OnboardingPage(),
       ),
       GoRoute(
         name: AppRouteName.landing,
