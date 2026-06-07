@@ -18,7 +18,7 @@ class HerdRepositoryImpl implements HerdRepository {
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e}'));
+      return Left(ServerFailure('Unexpected error: $e'));
     }
   }
 
@@ -28,6 +28,7 @@ class HerdRepositoryImpl implements HerdRepository {
     String animalTypeId,
     String location,
     String userId,
+    int initialHeadCount,
   ) async {
     try {
       final herdModel = HerdModel.create(
@@ -35,13 +36,14 @@ class HerdRepositoryImpl implements HerdRepository {
         name: name,
         animalTypeId: animalTypeId,
         location: location,
+        initialHeadCount: initialHeadCount,
       );
       final result = await remoteDataSource.addHerd(herdModel);
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e}'));
+      return Left(ServerFailure('Unexpected error: $e'));
     }
   }
 
@@ -51,6 +53,7 @@ class HerdRepositoryImpl implements HerdRepository {
     String name,
     String animalTypeId,
     String location,
+    int initialHeadCount,
   ) async {
     try {
       final herdModel = await remoteDataSource.getHerds();
@@ -61,6 +64,8 @@ class HerdRepositoryImpl implements HerdRepository {
         name: name,
         animalTypeId: animalTypeId,
         location: location,
+        initialHeadCount: initialHeadCount,
+        currentHeadCount: existingHerd.currentHeadCount,
         createdAt: existingHerd.createdAt,
         updatedAt: DateTime.now(),
       );
@@ -69,7 +74,7 @@ class HerdRepositoryImpl implements HerdRepository {
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e}'));
+      return Left(ServerFailure('Unexpected error: $e'));
     }
   }
 
@@ -81,7 +86,7 @@ class HerdRepositoryImpl implements HerdRepository {
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e}'));
+      return Left(ServerFailure('Unexpected error: $e'));
     }
   }
 }

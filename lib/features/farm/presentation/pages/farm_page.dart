@@ -151,7 +151,7 @@ class _FarmPageState extends State<FarmPage>
           ),
           const SizedBox(height: 8),
           Text(
-            'Manage your herds, animals, and animal-related activities',
+            'Manage your herds, animals, activities, and infrastructure',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -178,6 +178,22 @@ class _FarmPageState extends State<FarmPage>
                   Colors.orange.shade100,
                   Colors.orange.shade700,
                   () => context.push(AppRoutePath.herds),
+                ),
+                _buildCard(
+                  context,
+                  'Herd Activities',
+                  Icons.health_and_safety,
+                  Colors.indigo.shade100,
+                  Colors.indigo.shade700,
+                  () => context.push(AppRoutePath.herdActivities),
+                ),
+                _buildCard(
+                  context,
+                  'Infrastructure',
+                  Icons.foundation,
+                  Colors.teal.shade100,
+                  Colors.teal.shade700,
+                  () => context.push(AppRoutePath.infrastructure),
                 ),
                 _buildCard(
                   context,

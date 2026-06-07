@@ -69,6 +69,7 @@ class UserStorageService {
 
     // Check if login was within the last 24 hours
     final now = DateTime.now();
+    final difference = now.difference(user.loginTime);
     // Session expires after 7 days
     if (difference.inDays >= 7) {
       await clearUserData();
@@ -83,8 +84,9 @@ class UserStorageService {
     final user = await getUserData();
     if (user == null) return 0;
 
+    final now = DateTime.now();
     final difference = now.difference(user.loginTime);
-    final remainingHours = (7 * 24) - difference.inHours;
+    final int remainingHours = (7 * 24) - difference.inHours;
 
     return remainingHours > 0 ? remainingHours : 0;
   }

@@ -11,6 +11,8 @@ import 'package:farm_tracker/features/farm/presentation/pages/landing_page.dart'
 import 'package:farm_tracker/features/farm/presentation/pages/plant_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/revenue_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/season_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/infrastructure_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/herd_activity_page.dart';
 import 'package:farm_tracker/core/logging/logging_navigator.dart';
 
 class AppRouteName {
@@ -29,6 +31,8 @@ class AppRouteName {
   static const costBreakdown = 'cost-breakdown';
   static const annualSummary = 'annual-summary';
   static const revenueAdd = 'revenue-add';
+  static const infrastructure = 'infrastructure';
+  static const herdActivities = 'herd-activities';
 }
 
 class AppRoutePath {
@@ -47,6 +51,8 @@ class AppRoutePath {
   static const costBreakdown = '/analytics/cost-breakdown';
   static const annualSummary = '/analytics/annual-summary';
   static const revenueAdd = '/revenue/add';
+  static const infrastructure = '/infrastructure';
+  static const herdActivities = '/herd-activities';
 
   static String inputsFor(String sourceType) => '/inputs/$sourceType';
   static String activitiesFor(String sourceType) => '/activities/$sourceType';
@@ -129,6 +135,16 @@ class AppRouter {
         name: AppRouteName.revenueAdd,
         path: AppRoutePath.revenueAdd,
         builder: (context, state) => const AddRevenuePage(),
+      ),
+      GoRoute(
+        name: AppRouteName.infrastructure,
+        path: AppRoutePath.infrastructure,
+        builder: (context, state) => const InfrastructurePage(),
+      ),
+      GoRoute(
+        name: AppRouteName.herdActivities,
+        path: AppRoutePath.herdActivities,
+        builder: (context, state) => const HerdActivityPage(),
       ),
     ],
   );

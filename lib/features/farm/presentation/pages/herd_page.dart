@@ -137,6 +137,25 @@ class _HerdPageState extends State<HerdPage> {
                           children: [
                             Text('Type: $animalTypeName'),
                             Text('Location: ${herd.location}'),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                _buildHeadCountChip(
+                                  context,
+                                  'Initial',
+                                  herd.initialHeadCount,
+                                  Colors.blue,
+                                ),
+                                const SizedBox(width: 8),
+                                _buildHeadCountChip(
+                                  context,
+                                  'Current',
+                                  herd.currentHeadCount,
+                                  Colors.green,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
                             Text(
                               'Created: ${_formatDate(herd.createdAt)}',
                               style: TextStyle(
@@ -198,6 +217,30 @@ class _HerdPageState extends State<HerdPage> {
     );
   }
 
+  Widget _buildHeadCountChip(
+    BuildContext context,
+    String label,
+    int count,
+    MaterialColor color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.shade200),
+      ),
+      child: Text(
+        '$label: $count',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color.shade700,
+        ),
+      ),
+    );
+  }
+
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
@@ -205,6 +248,7 @@ class _HerdPageState extends State<HerdPage> {
   void _showAddHerdDialog(BuildContext context) {
     final nameController = TextEditingController();
     final locationController = TextEditingController();
+    final headCountController = TextEditingController();
     String? selectedAnimalTypeId;
 
     showModalBottomSheet(
@@ -221,7 +265,7 @@ class _HerdPageState extends State<HerdPage> {
                 }
 
                 return Container(
-                  height: MediaQuery.of(context).size.height * 0.7,
+                  height: MediaQuery.of(context).size.height * 0.75,
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
                     borderRadius: const BorderRadius.vertical(
@@ -291,7 +335,7 @@ class _HerdPageState extends State<HerdPage> {
                                   )
                                 else
                                   DropdownButtonFormField<String>(
-                                    initialValue: selectedAnimalTypeId,
+                                    value: selectedAnimalTypeId,
                                     decoration: const InputDecoration(
                                       labelText: 'Animal Type *',
                                       border: OutlineInputBorder(),
@@ -315,6 +359,16 @@ class _HerdPageState extends State<HerdPage> {
                                     labelText: 'Location *',
                                     border: OutlineInputBorder(),
                                     hintText: 'e.g., North Field A',
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                TextField(
+                                  controller: headCountController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Initial Head Count *',
+                                    border: OutlineInputBorder(),
+                                    hintText: 'e.g., 50',
                                   ),
                                 ),
                               ],
@@ -370,6 +424,23 @@ class _HerdPageState extends State<HerdPage> {
                                       return;
                                     }
 
+                                    final headCount = int.tryParse(
+                                      headCountController.text.trim(),
+                                    );
+                                    if (headCount == null || headCount <= 0) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Initial head count must be a positive number',
+                                          ),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
                                     final userId =
                                         await UserUtils.getCurrentUserId();
                                     if (userId == null) {
@@ -392,6 +463,7 @@ class _HerdPageState extends State<HerdPage> {
                                         selectedAnimalTypeId!,
                                         locationController.text.trim(),
                                         userId,
+                                        headCount,
                                       ),
                                     );
                                     Navigator.pop(context);
@@ -421,6 +493,9 @@ class _HerdPageState extends State<HerdPage> {
   void _showEditHerdDialog(BuildContext context, Herd herd) {
     final nameController = TextEditingController(text: herd.name);
     final locationController = TextEditingController(text: herd.location);
+    final headCountController = TextEditingController(
+      text: herd.initialHeadCount.toString(),
+    );
     String? selectedAnimalTypeId = herd.animalTypeId;
 
     showModalBottomSheet(
@@ -437,7 +512,7 @@ class _HerdPageState extends State<HerdPage> {
                 }
 
                 return Container(
-                  height: MediaQuery.of(context).size.height * 0.7,
+                  height: MediaQuery.of(context).size.height * 0.75,
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
                     borderRadius: const BorderRadius.vertical(
@@ -477,7 +552,7 @@ class _HerdPageState extends State<HerdPage> {
                                 ),
                                 const SizedBox(height: 16),
                                 DropdownButtonFormField<String>(
-                                  initialValue: selectedAnimalTypeId,
+                                  value: selectedAnimalTypeId,
                                   decoration: const InputDecoration(
                                     labelText: 'Animal Type *',
                                     border: OutlineInputBorder(),
@@ -499,6 +574,15 @@ class _HerdPageState extends State<HerdPage> {
                                   controller: locationController,
                                   decoration: const InputDecoration(
                                     labelText: 'Location *',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                TextField(
+                                  controller: headCountController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Initial Head Count *',
                                     border: OutlineInputBorder(),
                                   ),
                                 ),
@@ -541,12 +625,28 @@ class _HerdPageState extends State<HerdPage> {
                                 return;
                               }
 
+                              final headCount = int.tryParse(
+                                headCountController.text.trim(),
+                              );
+                              if (headCount == null || headCount <= 0) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Initial head count must be a positive number',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+
                               context.read<HerdBloc>().add(
                                 UpdateHerdEvent(
                                   herd.id,
                                   nameController.text.trim(),
                                   selectedAnimalTypeId!,
                                   locationController.text.trim(),
+                                  headCount,
                                 ),
                               );
                               Navigator.pop(context);
