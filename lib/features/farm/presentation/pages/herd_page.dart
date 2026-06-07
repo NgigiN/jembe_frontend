@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
+import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
-import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
-import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
-import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
 
 class HerdPage extends StatefulWidget {
   const HerdPage({super.key});
@@ -55,7 +56,7 @@ class _HerdPageState extends State<HerdPage> {
 
           if (state is HerdLoaded) {
             if (state.herds.isEmpty) {
-              return EntityEmptyView(
+              return const EntityEmptyView(
                 icon: Icons.pets,
                 title: 'No herds registered yet',
                 subtitle: 'Tap the + button to register your first herd',
@@ -64,10 +65,10 @@ class _HerdPageState extends State<HerdPage> {
 
             return BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
               builder: (context, animalTypeState) {
-                var animalTypeMap = <String, String>{};
+                final animalTypeMap = <String, String>{};
                 if (animalTypeState is AnimalTypeLoaded) {
-                  for (final at in animalTypeState.animalTypes) {
-                    animalTypeMap[at.id] = at.name;
+                  for (final animalType in animalTypeState.animalTypes) {
+                    animalTypeMap[animalType.id] = animalType.name;
                   }
                 }
 
@@ -87,8 +88,31 @@ class _HerdPageState extends State<HerdPage> {
                       subtitleFields: [
                         Text('Type: $animalTypeName'),
                         Text('Location: ${herd.location}'),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            _buildHeadCountChip(
+                              'Initial',
+                              herd.initialHeadCount,
+                              Colors.blue,
+                            ),
+                            const SizedBox(width: 8),
+                            _buildHeadCountChip(
+                              'Current',
+                              herd.currentHeadCount,
+                              Colors.green,
+                            ),
+                          ],
+                        ),
+                        Text(
+                          'Created: ${_formatDate(herd.createdAt)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
                       ],
-                      onEdit: () => _showEditHerdDialog(context, herd),
+                      onEdit: () => _showEditHerdDialog(herd),
                       onDelete: () => _showDeleteConfirmation(herd),
                     );
                   },
@@ -101,38 +125,57 @@ class _HerdPageState extends State<HerdPage> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddHerdDialog(context),
+        onPressed: _showAddHerdDialog,
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  void _showAddHerdDialog(BuildContext context) {
+  Widget _buildHeadCountChip(String label, int count, MaterialColor color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.shade200),
+      ),
+      child: Text(
+        '$label: $count',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color.shade700,
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  void _showAddHerdDialog() {
     final nameController = TextEditingController();
     final locationController = TextEditingController();
+    final headCountController = TextEditingController();
     String? selectedAnimalTypeId;
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) =>
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) =>
             BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
           builder: (context, animalTypeState) {
-            final animalTypes = <AnimalType>[];
-            if (animalTypeState is AnimalTypeLoaded) {
-              animalTypes.addAll(animalTypeState.animalTypes);
-            }
+            final animalTypes = animalTypeState is AnimalTypeLoaded
+                ? animalTypeState.animalTypes
+                : <AnimalType>[];
 
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.7,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20),
-                ),
-              ),
+            return EntityFormSheet.container(
+              context: sheetContext,
+              heightFactor: 0.75,
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -143,20 +186,21 @@ class _HerdPageState extends State<HerdPage> {
                       children: [
                         Text(
                           'Register New Herd',
-                          style: Theme.of(context)
+                          style: Theme.of(sheetContext)
                               .textTheme
                               .titleLarge
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         IconButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () => Navigator.pop(sheetContext),
                           icon: const Icon(Icons.close),
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
                     Expanded(
-                      child: SingleChildScrollView(
+                      child: EntityFormSheet.scrollableForm(
+                        context: sheetContext,
                         child: Column(
                           children: [
                             TextField(
@@ -169,46 +213,24 @@ class _HerdPageState extends State<HerdPage> {
                             ),
                             const SizedBox(height: 16),
                             if (animalTypes.isEmpty)
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.shade50,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: Colors.orange.shade200,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.info_outline,
-                                        color: Colors.orange.shade700),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'No animal types available. Please add animal types first.',
-                                        style: TextStyle(
-                                          color: Colors.orange.shade900,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
+                              _buildNoAnimalTypesWarning()
                             else
                               DropdownButtonFormField<String>(
-                                initialValue: selectedAnimalTypeId,
+                                value: selectedAnimalTypeId,
                                 decoration: const InputDecoration(
                                   labelText: 'Animal Type *',
                                   border: OutlineInputBorder(),
                                 ),
-                                items: animalTypes.map((type) {
-                                  return DropdownMenuItem<String>(
-                                    value: type.id,
-                                    child: Text(type.name),
-                                  );
-                                }).toList(),
+                                items: animalTypes
+                                    .map(
+                                      (type) => DropdownMenuItem<String>(
+                                        value: type.id,
+                                        child: Text(type.name),
+                                      ),
+                                    )
+                                    .toList(),
                                 onChanged: (value) {
-                                  setState(() {
+                                  setSheetState(() {
                                     selectedAnimalTypeId = value;
                                   });
                                 },
@@ -222,6 +244,16 @@ class _HerdPageState extends State<HerdPage> {
                                 hintText: 'e.g., North Field A',
                               ),
                             ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: headCountController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Initial Head Count *',
+                                border: OutlineInputBorder(),
+                                hintText: 'e.g., 50',
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -232,64 +264,15 @@ class _HerdPageState extends State<HerdPage> {
                       child: ElevatedButton(
                         onPressed: animalTypes.isEmpty
                             ? null
-                            : () async {
-                                if (nameController.text.trim().isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Herd name is required'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                  return;
-                                }
-
-                                if (selectedAnimalTypeId == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                          'Animal type is required'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                  return;
-                                }
-
-                                if (locationController.text.trim().isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Location is required'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                  return;
-                                }
-
-                                final userId =
-                                    await UserUtils.getCurrentUserId();
-                                if (userId == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content:
-                                          Text('User not authenticated'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                  return;
-                                }
-
-                                context.read<HerdBloc>().add(
-                                  AddHerdEvent(
-                                    nameController.text.trim(),
-                                    selectedAnimalTypeId!,
-                                    locationController.text.trim(),
-                                    userId,
-                                  ),
-                                );
-                                Navigator.pop(context);
-                              },
+                            : () => _submitAddHerd(
+                                  sheetContext,
+                                  nameController,
+                                  locationController,
+                                  headCountController,
+                                  selectedAnimalTypeId,
+                                ),
                         style: ElevatedButton.styleFrom(
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 16),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
                         child: const Text(
                           'Register Herd',
@@ -310,32 +293,79 @@ class _HerdPageState extends State<HerdPage> {
     );
   }
 
-  void _showEditHerdDialog(BuildContext context, Herd herd) {
+  Future<void> _submitAddHerd(
+    BuildContext sheetContext,
+    TextEditingController nameController,
+    TextEditingController locationController,
+    TextEditingController headCountController,
+    String? selectedAnimalTypeId,
+  ) async {
+    if (nameController.text.trim().isEmpty) {
+      _showSheetError(sheetContext, 'Herd name is required');
+      return;
+    }
+
+    if (selectedAnimalTypeId == null) {
+      _showSheetError(sheetContext, 'Animal type is required');
+      return;
+    }
+
+    if (locationController.text.trim().isEmpty) {
+      _showSheetError(sheetContext, 'Location is required');
+      return;
+    }
+
+    final headCount = int.tryParse(headCountController.text.trim());
+    if (headCount == null || headCount <= 0) {
+      _showSheetError(
+        sheetContext,
+        'Initial head count must be a positive number',
+      );
+      return;
+    }
+
+    final userId = await UserUtils.getCurrentUserId();
+    if (userId == null) {
+      _showSheetError(sheetContext, 'User not authenticated');
+      return;
+    }
+
+    context.read<HerdBloc>().add(
+      AddHerdEvent(
+        nameController.text.trim(),
+        selectedAnimalTypeId,
+        locationController.text.trim(),
+        userId,
+        headCount,
+      ),
+    );
+    Navigator.pop(sheetContext);
+  }
+
+  void _showEditHerdDialog(Herd herd) {
     final nameController = TextEditingController(text: herd.name);
     final locationController = TextEditingController(text: herd.location);
+    final headCountController = TextEditingController(
+      text: herd.initialHeadCount.toString(),
+    );
     String? selectedAnimalTypeId = herd.animalTypeId;
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) =>
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) =>
             BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
           builder: (context, animalTypeState) {
-            final animalTypes = <AnimalType>[];
-            if (animalTypeState is AnimalTypeLoaded) {
-              animalTypes.addAll(animalTypeState.animalTypes);
-            }
+            final animalTypes = animalTypeState is AnimalTypeLoaded
+                ? animalTypeState.animalTypes
+                : <AnimalType>[];
 
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.7,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20),
-                ),
-              ),
+            return EntityFormSheet.container(
+              context: sheetContext,
+              heightFactor: 0.75,
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -346,20 +376,21 @@ class _HerdPageState extends State<HerdPage> {
                       children: [
                         Text(
                           'Edit Herd',
-                          style: Theme.of(context)
+                          style: Theme.of(sheetContext)
                               .textTheme
                               .titleLarge
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         IconButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () => Navigator.pop(sheetContext),
                           icon: const Icon(Icons.close),
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
                     Expanded(
-                      child: SingleChildScrollView(
+                      child: EntityFormSheet.scrollableForm(
+                        context: sheetContext,
                         child: Column(
                           children: [
                             TextField(
@@ -371,19 +402,21 @@ class _HerdPageState extends State<HerdPage> {
                             ),
                             const SizedBox(height: 16),
                             DropdownButtonFormField<String>(
-                              initialValue: selectedAnimalTypeId,
+                              value: selectedAnimalTypeId,
                               decoration: const InputDecoration(
                                 labelText: 'Animal Type *',
                                 border: OutlineInputBorder(),
                               ),
-                              items: animalTypes.map((type) {
-                                return DropdownMenuItem<String>(
-                                  value: type.id,
-                                  child: Text(type.name),
-                                );
-                              }).toList(),
+                              items: animalTypes
+                                  .map(
+                                    (type) => DropdownMenuItem<String>(
+                                      value: type.id,
+                                      child: Text(type.name),
+                                    ),
+                                  )
+                                  .toList(),
                               onChanged: (value) {
-                                setState(() {
+                                setSheetState(() {
                                   selectedAnimalTypeId = value;
                                 });
                               },
@@ -396,6 +429,15 @@ class _HerdPageState extends State<HerdPage> {
                                 border: OutlineInputBorder(),
                               ),
                             ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: headCountController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Initial Head Count *',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -404,54 +446,20 @@ class _HerdPageState extends State<HerdPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                          if (nameController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Herd name is required'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          if (selectedAnimalTypeId == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Animal type is required'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          if (locationController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Location is required'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          context.read<HerdBloc>().add(
-                            UpdateHerdEvent(
-                              herd.id,
-                              nameController.text.trim(),
-                              selectedAnimalTypeId!,
-                              locationController.text.trim(),
-                            ),
-                          );
-                          Navigator.pop(context);
-                        },
+                        onPressed: () => _submitEditHerd(
+                          sheetContext,
+                          herd,
+                          nameController,
+                          locationController,
+                          headCountController,
+                          selectedAnimalTypeId,
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
-                              Theme.of(context).colorScheme.primary,
+                              Theme.of(sheetContext).colorScheme.primary,
                           foregroundColor:
-                              Theme.of(context).colorScheme.onPrimary,
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 16),
+                              Theme.of(sheetContext).colorScheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
                         child: const Text(
                           'Update Herd',
@@ -472,7 +480,83 @@ class _HerdPageState extends State<HerdPage> {
     );
   }
 
-  void _showDeleteConfirmation(Herd herd) async {
+  void _submitEditHerd(
+    BuildContext sheetContext,
+    Herd herd,
+    TextEditingController nameController,
+    TextEditingController locationController,
+    TextEditingController headCountController,
+    String? selectedAnimalTypeId,
+  ) {
+    if (nameController.text.trim().isEmpty) {
+      _showSheetError(sheetContext, 'Herd name is required');
+      return;
+    }
+
+    if (selectedAnimalTypeId == null) {
+      _showSheetError(sheetContext, 'Animal type is required');
+      return;
+    }
+
+    if (locationController.text.trim().isEmpty) {
+      _showSheetError(sheetContext, 'Location is required');
+      return;
+    }
+
+    final headCount = int.tryParse(headCountController.text.trim());
+    if (headCount == null || headCount <= 0) {
+      _showSheetError(
+        sheetContext,
+        'Initial head count must be a positive number',
+      );
+      return;
+    }
+
+    context.read<HerdBloc>().add(
+      UpdateHerdEvent(
+        herd.id,
+        nameController.text.trim(),
+        selectedAnimalTypeId,
+        locationController.text.trim(),
+        headCount,
+      ),
+    );
+    Navigator.pop(sheetContext);
+  }
+
+  Widget _buildNoAnimalTypesWarning() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: Colors.orange.shade700),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'No animal types available. Please add animal types first.',
+              style: TextStyle(color: Colors.orange.shade900),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSheetError(BuildContext sheetContext, String message) {
+    ScaffoldMessenger.of(sheetContext).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  Future<void> _showDeleteConfirmation(Herd herd) async {
     final confirmed = await EntityDeleteDialog.show(
       context: context,
       title: 'Delete Herd',

@@ -12,7 +12,8 @@ class AddHerd {
     String animalTypeId,
     String location,
     String userId,
+    int initialHeadCount,
   ) async {
-    return repository.addHerd(name, animalTypeId, location, userId);
+    return repository.addHerd(name, animalTypeId, location, userId, initialHeadCount);
   }
 }

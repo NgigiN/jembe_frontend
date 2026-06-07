@@ -45,7 +45,13 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
     final currentHerds = state is HerdLoaded ? (state as HerdLoaded).herds : <Herd>[];
 
     emit(HerdLoading(herds: currentHerds));
-    final result = await addHerd(event.name, event.animalTypeId, event.location, event.userId);
+    final result = await addHerd(
+      event.name,
+      event.animalTypeId,
+      event.location,
+      event.userId,
+      event.initialHeadCount,
+    );
     result.fold(
       (failure) => emit(HerdError('Failed to add herd', herds: currentHerds)),
       (herd) {
@@ -61,7 +67,13 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
   ) async {
     final currentHerds = state.herds;
     emit(HerdLoading(herds: currentHerds));
-    final result = await updateHerd(event.id, event.name, event.animalTypeId, event.location);
+    final result = await updateHerd(
+      event.id,
+      event.name,
+      event.animalTypeId,
+      event.location,
+      event.initialHeadCount,
+    );
     result.fold(
       (failure) => emit(HerdError('Failed to update herd', herds: currentHerds)),
       (updatedHerd) {
@@ -90,4 +102,3 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
     );
   }
 }
-

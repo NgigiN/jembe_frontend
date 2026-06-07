@@ -8,7 +8,9 @@ import 'package:farm_tracker/features/farm/presentation/pages/activity_page.dart
 import 'package:farm_tracker/features/farm/presentation/pages/analysis_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animal_type_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animals_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/herd_activity_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/infrastructure_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/input_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/land_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/landing_page.dart';
@@ -39,6 +41,8 @@ class AppRouteName {
   static const costBreakdown = 'cost-breakdown';
   static const annualSummary = 'annual-summary';
   static const revenueAdd = 'revenue-add';
+  static const infrastructure = 'infrastructure';
+  static const herdActivities = 'herd-activities';
 }
 
 class AppRoutePath {
@@ -61,6 +65,8 @@ class AppRoutePath {
   static const costBreakdown = '/analytics/cost-breakdown';
   static const annualSummary = '/analytics/annual-summary';
   static const revenueAdd = '/revenue/add';
+  static const infrastructure = '/infrastructure';
+  static const herdActivities = '/herd-activities';
 
   static String inputsFor(String sourceType) => '/inputs/$sourceType';
   static String activitiesFor(String sourceType) => '/activities/$sourceType';
@@ -179,11 +185,21 @@ class AppRouter {
         path: AppRoutePath.revenueAdd,
         pageBuilder: (context, state) => _slidePage(const AddRevenuePage(), state),
       ),
+      GoRoute(
+        name: AppRouteName.infrastructure,
+        path: AppRoutePath.infrastructure,
+        pageBuilder: (context, state) => _slidePage(const InfrastructurePage(), state),
+      ),
+      GoRoute(
+        name: AppRouteName.herdActivities,
+        path: AppRoutePath.herdActivities,
+        pageBuilder: (context, state) => _slidePage(const HerdActivityPage(), state),
+      ),
     ],
   );
 
-  static CustomTransitionPage _slidePage(Widget child, GoRouterState state) {
-    return CustomTransitionPage(
+  static CustomTransitionPage<void> _slidePage(Widget child, GoRouterState state) {
+    return CustomTransitionPage<void>(
       key: state.pageKey,
       child: child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -201,8 +217,8 @@ class AppRouter {
     );
   }
 
-  static CustomTransitionPage _fadePage(Widget child, GoRouterState state) {
-    return CustomTransitionPage(
+  static CustomTransitionPage<void> _fadePage(Widget child, GoRouterState state) {
+    return CustomTransitionPage<void>(
       key: state.pageKey,
       child: child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {

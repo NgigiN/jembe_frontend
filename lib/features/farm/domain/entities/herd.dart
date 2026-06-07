@@ -7,6 +7,8 @@ class Herd extends Equatable {
     required this.name,
     required this.animalTypeId,
     required this.location,
+    required this.initialHeadCount,
+    required this.currentHeadCount,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -15,6 +17,8 @@ class Herd extends Equatable {
   final String name;
   final String animalTypeId;
   final String location;
+  final int initialHeadCount;
+  final int currentHeadCount;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -25,6 +29,8 @@ class Herd extends Equatable {
     name,
     animalTypeId,
     location,
+    initialHeadCount,
+    currentHeadCount,
     createdAt,
     updatedAt,
   ];

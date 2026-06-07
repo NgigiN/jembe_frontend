@@ -135,6 +135,17 @@ class _AnimalsPageState extends State<AnimalsPage> {
                       StepConnector(isActive: hasHerd),
                       SetupStepCard(
                         stepNumber: 3,
+                        title: 'Record Herd Events',
+                        subtitle: 'Log births and fatalities to update headcount',
+                        status: hasHerd
+                            ? StepStatus.available
+                            : StepStatus.locked,
+                        onTap: () =>
+                            context.push(AppRoutePath.herdActivities),
+                      ),
+                      StepConnector(isActive: hasHerd),
+                      SetupStepCard(
+                        stepNumber: 4,
                         title: 'Track Inputs',
                         subtitle: 'Log feed, medicine, and supplies',
                         status: hasHerd
@@ -145,7 +156,7 @@ class _AnimalsPageState extends State<AnimalsPage> {
                       ),
                       StepConnector(isActive: false),
                       SetupStepCard(
-                        stepNumber: 4,
+                        stepNumber: 5,
                         title: 'Log Activities',
                         subtitle: 'Record health checks, breeding, and more',
                         status: hasHerd
@@ -153,6 +164,17 @@ class _AnimalsPageState extends State<AnimalsPage> {
                             : StepStatus.locked,
                         onTap: () => context.push(
                             AppRoutePath.activitiesFor('animal')),
+                      ),
+                      StepConnector(isActive: hasAnimalType),
+                      SetupStepCard(
+                        stepNumber: 6,
+                        title: 'Manage Infrastructure',
+                        subtitle: 'Track barns, fences, stores, and other assets',
+                        status: hasAnimalType
+                            ? StepStatus.available
+                            : StepStatus.locked,
+                        onTap: () =>
+                            context.push(AppRoutePath.infrastructure),
                       ),
                     ],
                   ),

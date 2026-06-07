@@ -6,6 +6,7 @@ class HerdModel extends Herd {
     required String name,
     required String animalTypeId,
     required String location,
+    required int initialHeadCount,
   }) {
     final now = DateTime.now();
     return HerdModel(
@@ -14,6 +15,8 @@ class HerdModel extends Herd {
       name: name,
       animalTypeId: animalTypeId,
       location: location,
+      initialHeadCount: initialHeadCount,
+      currentHeadCount: initialHeadCount,
       createdAt: now,
       updatedAt: now,
     );
@@ -24,6 +27,8 @@ class HerdModel extends Herd {
     required super.name,
     required super.animalTypeId,
     required super.location,
+    required super.initialHeadCount,
+    required super.currentHeadCount,
     required super.createdAt,
     required super.updatedAt,
   });
@@ -36,9 +41,18 @@ class HerdModel extends Herd {
       animalTypeId: (json['animal_type_id'] ?? json['AnimalTypeID'] ?? '')
           .toString(),
       location: (json['location'] ?? json['Location'] ?? '').toString(),
+      initialHeadCount: _parseInt(json['initial_head_count'] ?? json['InitialHeadCount']),
+      currentHeadCount: _parseInt(json['current_head_count'] ?? json['CurrentHeadCount']),
       createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
       updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString()) ?? 0;
   }
 
   static DateTime _parseDate(dynamic dateValue) {
@@ -54,6 +68,7 @@ class HerdModel extends Herd {
       'name': name,
       'animal_type_id': int.tryParse(animalTypeId) ?? animalTypeId,
       'location': location,
+      'initial_head_count': initialHeadCount,
     };
   }
 }
