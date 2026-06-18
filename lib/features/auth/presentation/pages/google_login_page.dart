@@ -19,7 +19,7 @@ class GoogleLoginPage extends StatelessWidget {
             if (user.farmName.isEmpty || user.location.isEmpty) {
               context.go(AppRoutePath.onboarding);
             } else {
-              context.go(AppRoutePath.landing);
+              context.go(AppRoutePath.home);
             }
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(

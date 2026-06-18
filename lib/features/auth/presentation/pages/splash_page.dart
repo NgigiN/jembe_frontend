@@ -29,7 +29,7 @@ class _SplashPageState extends State<SplashPage> {
       listener: (context, state) {
         if (state is AuthAuthenticated) {
           // User is logged in, navigate to landing page
-          context.go(AppRoutePath.landing);
+          context.go(AppRoutePath.home);
         } else if (state is AuthInitial) {
           // User is not logged in, navigate to google login page
           context.go(AppRoutePath.googleLogin);

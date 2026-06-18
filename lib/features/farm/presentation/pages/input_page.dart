@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_state.dart';
@@ -19,7 +24,6 @@ import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
 import 'package:farm_tracker/features/farm/data/models/input_model.dart';
 
 class InputPage extends StatefulWidget {
-
   const InputPage({super.key, this.sourceType});
   final String? sourceType;
 
@@ -57,135 +61,49 @@ class _InputPageState extends State<InputPage> {
           }
 
           if (state is InputError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red.shade300,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    state.message,
-                    style: TextStyle(fontSize: 16, color: Colors.red.shade600),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.read<InputBloc>().add(
-                        GetInputsEvent(sourceType: widget.sourceType),
-                      );
-                    },
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
+            return EntityErrorView(
+              message: state.message,
+              onRetry: () =>
+                  context.read<InputBloc>().add(GetInputsEvent(sourceType: widget.sourceType)),
             );
           }
 
           if (state is InputLoaded) {
             final inputs = state.inputs;
             if (inputs.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.input, size: 64, color: Colors.grey.shade400),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'No inputs registered yet',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tap the + button to add your first input',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
+              return EntityEmptyView(
+                icon: Icons.input,
+                title: 'No inputs registered yet',
+                subtitle: 'Tap the + button to add your first input',
               );
             }
 
             return ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: state.inputs.length,
+              itemCount: inputs.length,
               itemBuilder: (context, index) {
-                final input = state.inputs[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  elevation: 2,
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.purple.shade100,
-                      child: Icon(Icons.input, color: Colors.purple.shade700),
-                    ),
-                    title: Text(
-                      input.type,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Cost: Ksh ${input.cost.toStringAsFixed(2)}'),
-                        if (input.quantity != null)
-                          Text('Quantity: ${input.quantity}'),
-                        Text('Date: ${_formatDate(input.date)}'),
-                        if (input.notes != null && input.notes!.isNotEmpty)
-                          Text('Notes: ${input.notes}'),
-                      ],
-                    ),
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'edit') {
-                          _showEditInputDialog(context, input);
-                        } else if (value == 'delete') {
-                          _showDeleteConfirmation(context, input);
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit),
-                              SizedBox(width: 8),
-                              Text('Edit'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text(
-                                'Delete',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                final input = inputs[index];
+                return EntityListTile(
+                  leadingIcon: Icons.input,
+                  leadingBackgroundColor: Colors.purple.shade100,
+                  leadingIconColor: Colors.purple.shade700,
+                  title: input.type,
+                  subtitleFields: [
+                    Text('Cost: Ksh ${input.cost.toStringAsFixed(2)}'),
+                    if (input.quantity != null)
+                      Text('Quantity: ${input.quantity}'),
+                    Text('Date: ${_formatDate(input.date)}'),
+                    if (input.notes != null && input.notes!.isNotEmpty)
+                      Text('Notes: ${input.notes}'),
+                  ],
+                  onEdit: () => _showEditInputDialog(context, input),
+                  onDelete: () => _showDeleteConfirmation(context, input),
                 );
               },
             );
           }
 
-          return const Center(child: Text('Something went wrong'));
+          return const SizedBox.shrink();
         },
       ),
       floatingActionButton: FloatingActionButton(
@@ -233,14 +151,12 @@ class _InputPageState extends State<InputPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Container(
-          height: MediaQuery.of(context).size.height * 0.9,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
+        builder: (context, setState) => EntityFormSheet.container(
+          context: context,
+          heightFactor: 0.9,
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -251,9 +167,10 @@ class _InputPageState extends State<InputPage> {
                   children: [
                     Text(
                       'Add New Input',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
@@ -263,7 +180,8 @@ class _InputPageState extends State<InputPage> {
                 ),
                 const SizedBox(height: 20),
                 Expanded(
-                  child: SingleChildScrollView(
+                  child: EntityFormSheet.scrollableForm(
+                    context: context,
                     child: Column(
                       children: [
                         DropdownButtonFormField<String>(
@@ -344,7 +262,8 @@ class _InputPageState extends State<InputPage> {
                                   border: OutlineInputBorder(),
                                 ),
                                 items: allCategories
-                                    .where((c) => c.type == selectedSourceType)
+                                    .where(
+                                        (c) => c.type == selectedSourceType)
                                     .map((category) {
                                   return DropdownMenuItem<String>(
                                     value: category.name,
@@ -474,7 +393,8 @@ class _InputPageState extends State<InputPage> {
                         return;
                       }
 
-                      final cost = double.tryParse(costController.text.trim());
+                      final cost =
+                          double.tryParse(costController.text.trim());
                       if (cost == null || cost <= 0) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -502,9 +422,11 @@ class _InputPageState extends State<InputPage> {
                       final input = InputModel.create(
                         sourceType: selectedSourceType!,
                         sourceId: sourceId,
-                        animalId: selectedSourceType == 'animal' ? 0 : null,
+                        animalId:
+                            selectedSourceType == 'animal' ? 0 : null,
                         type: typeController.text.trim(),
-                        quantity: double.tryParse(quantityController.text.trim()),
+                        quantity:
+                            double.tryParse(quantityController.text.trim()),
                         cost: cost,
                         date: selectedDate!,
                         notes: notesController.text.trim().isEmpty
@@ -543,15 +465,14 @@ class _InputPageState extends State<InputPage> {
     final notesController = TextEditingController(text: input.notes ?? '');
     DateTime? selectedDate = input.date;
     String? selectedSourceType = input.sourceType;
-    var selectedSeasonId = input.sourceType == 'plant'
-        ? input.sourceId
-        : null;
-    var selectedHerdId = input.sourceType == 'animal'
-        ? input.sourceId
-        : null;
+    var selectedSeasonId =
+        input.sourceType == 'plant' ? input.sourceId : null;
+    var selectedHerdId =
+        input.sourceType == 'animal' ? input.sourceId : null;
 
     final seasonState = context.read<SeasonBloc>().state;
-    final seasons = seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
+    final seasons =
+        seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
 
     final costCategoryState = context.read<CostCategoryBloc>().state;
     final allCategories = costCategoryState is CostCategoryLoaded
@@ -575,14 +496,12 @@ class _InputPageState extends State<InputPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Container(
-          height: MediaQuery.of(context).size.height * 0.9,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
+        builder: (context, setState) => EntityFormSheet.container(
+          context: context,
+          heightFactor: 0.9,
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -593,9 +512,10 @@ class _InputPageState extends State<InputPage> {
                   children: [
                     Text(
                       'Edit Input',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
@@ -605,7 +525,8 @@ class _InputPageState extends State<InputPage> {
                 ),
                 const SizedBox(height: 20),
                 Expanded(
-                  child: SingleChildScrollView(
+                  child: EntityFormSheet.scrollableForm(
+                    context: context,
                     child: Column(
                       children: [
                         DropdownButtonFormField<String>(
@@ -662,10 +583,12 @@ class _InputPageState extends State<InputPage> {
                               labelText: 'Select Herd *',
                               border: OutlineInputBorder(),
                             ),
-                            items: herds.map<DropdownMenuItem<String>>((herd) {
+                            items: herds
+                                .map<DropdownMenuItem<String>>((herd) {
                               return DropdownMenuItem<String>(
                                 value: herd.id,
-                                child: Text('${herd.name} (${herd.location})'),
+                                child: Text(
+                                    '${herd.name} (${herd.location})'),
                               );
                             }).toList(),
                             onChanged: (value) {
@@ -689,7 +612,8 @@ class _InputPageState extends State<InputPage> {
                                   border: OutlineInputBorder(),
                                 ),
                                 items: allCategories
-                                    .where((c) => c.type == selectedSourceType)
+                                    .where(
+                                        (c) => c.type == selectedSourceType)
                                     .map((category) {
                                   return DropdownMenuItem<String>(
                                     value: category.name,
@@ -705,7 +629,8 @@ class _InputPageState extends State<InputPage> {
                             ),
                             const SizedBox(width: 8),
                             IconButton(
-                              onPressed: () => _showCreateInputTypeDialog(
+                              onPressed: () =>
+                                  _showCreateInputTypeDialog(
                                 context,
                                 selectedSourceType!,
                               ),
@@ -750,7 +675,8 @@ class _InputPageState extends State<InputPage> {
                           onTap: () async {
                             final date = await showDatePicker(
                               context: context,
-                              initialDate: selectedDate ?? DateTime.now(),
+                              initialDate:
+                                  selectedDate ?? DateTime.now(),
                               firstDate: DateTime(2020),
                               lastDate: DateTime(2030),
                             );
@@ -822,7 +748,8 @@ class _InputPageState extends State<InputPage> {
                         return;
                       }
 
-                      final cost = double.tryParse(costController.text.trim());
+                      final cost =
+                          double.tryParse(costController.text.trim());
                       if (cost == null || cost <= 0) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -851,9 +778,11 @@ class _InputPageState extends State<InputPage> {
                         id: input.id,
                         sourceType: selectedSourceType!,
                         sourceId: sourceId,
-                        animalId: selectedSourceType == 'animal' ? 0 : null,
+                        animalId:
+                            selectedSourceType == 'animal' ? 0 : null,
                         type: typeController.text.trim(),
-                        quantity: double.tryParse(quantityController.text.trim()),
+                        quantity: double.tryParse(
+                            quantityController.text.trim()),
                         cost: cost,
                         date: selectedDate!,
                         notes: notesController.text.trim().isEmpty
@@ -863,7 +792,9 @@ class _InputPageState extends State<InputPage> {
                         updatedAt: DateTime.now(),
                       );
 
-                      context.read<InputBloc>().add(UpdateInputEvent(updatedInput));
+                      context
+                          .read<InputBloc>()
+                          .add(UpdateInputEvent(updatedInput));
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -873,8 +804,10 @@ class _InputPageState extends State<InputPage> {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primary,
+                      foregroundColor:
+                          Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child: const Text(
@@ -894,38 +827,24 @@ class _InputPageState extends State<InputPage> {
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, Input input) {
-    showDialog(
+  void _showDeleteConfirmation(BuildContext context, Input input) async {
+    final confirmed = await EntityDeleteDialog.show(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Input'),
-          content: Text(
-            'Are you sure you want to delete this ${input.type.toLowerCase()} input? This action cannot be undone.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                context.read<InputBloc>().add(DeleteInputEvent(input.id));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${input.type} input deleted successfully'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
+      title: 'Delete Input',
+      message:
+          'Are you sure you want to delete this ${input.type.toLowerCase()} input? This action cannot be undone.',
     );
+    if (confirmed == true) {
+      context.read<InputBloc>().add(DeleteInputEvent(input.id));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${input.type} input deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
   }
 
   void _showCreateInputTypeDialog(

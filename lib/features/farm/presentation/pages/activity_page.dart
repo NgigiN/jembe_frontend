@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_state.dart';
@@ -58,59 +63,20 @@ class _ActivityPageState extends State<ActivityPage> {
           }
 
           if (state is ActivityError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red.shade300,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    state.message,
-                    style: TextStyle(fontSize: 16, color: Colors.red.shade600),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.read<ActivityBloc>().add(
-                        GetActivitiesEvent(sourceType: widget.sourceType),
-                      );
-                    },
-                    child: const Text('Retry'),
-                  ),
-                ],
+            return EntityErrorView(
+              message: state.message,
+              onRetry: () => context.read<ActivityBloc>().add(
+                GetActivitiesEvent(sourceType: widget.sourceType),
               ),
             );
           }
 
           if (state is ActivityLoaded) {
             if (state.activities.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.work, size: 64, color: Colors.grey.shade400),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'No activities registered yet',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tap the + button to add your first activity',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
+              return EntityEmptyView(
+                icon: Icons.work,
+                title: 'No activities registered yet',
+                subtitle: 'Tap the + button to add your first activity',
               );
             }
 
@@ -119,79 +85,26 @@ class _ActivityPageState extends State<ActivityPage> {
               itemCount: state.activities.length,
               itemBuilder: (context, index) {
                 final activity = state.activities[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  elevation: 2,
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.red.shade100,
-                      child: Icon(Icons.work, color: Colors.red.shade700),
-                    ),
-                    title: Text(
-                      activity.type,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Date: ${_formatDate(activity.date)}'),
-                        Text('Cost: Ksh ${activity.cost.toStringAsFixed(2)}'),
-                        if (activity.details != null &&
-                            activity.details!.isNotEmpty)
-                          Text('Details: ${activity.details}'),
-                        Text(
-                          'Created: ${_formatDate(activity.createdAt)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'edit') {
-                          _showEditActivityDialog(context, activity);
-                        } else if (value == 'delete') {
-                          _showDeleteConfirmation(context, activity);
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit),
-                              SizedBox(width: 8),
-                              Text('Edit'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text(
-                                'Delete',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                return EntityListTile(
+                  leadingIcon: Icons.work,
+                  leadingBackgroundColor: Colors.red.shade100,
+                  leadingIconColor: Colors.red.shade700,
+                  title: activity.type,
+                  subtitleFields: [
+                    Text('Date: ${_formatDate(activity.date)}'),
+                    Text('Cost: Ksh ${activity.cost.toStringAsFixed(2)}'),
+                    if (activity.details != null &&
+                        activity.details!.isNotEmpty)
+                      Text('Details: ${activity.details}'),
+                  ],
+                  onEdit: () => _showEditActivityDialog(context, activity),
+                  onDelete: () => _showDeleteConfirmation(context, activity),
                 );
               },
             );
           }
 
-          return const Center(child: Text('Something went wrong'));
+          return const SizedBox.shrink();
         },
       ),
       floatingActionButton: FloatingActionButton(
@@ -239,14 +152,12 @@ class _ActivityPageState extends State<ActivityPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Container(
-          height: MediaQuery.of(context).size.height * 0.8,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
+        builder: (context, setState) => EntityFormSheet.container(
+          context: context,
+          heightFactor: 0.85,
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -257,9 +168,10 @@ class _ActivityPageState extends State<ActivityPage> {
                   children: [
                     Text(
                       'Add New Activity',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
@@ -269,7 +181,8 @@ class _ActivityPageState extends State<ActivityPage> {
                 ),
                 const SizedBox(height: 20),
                 Expanded(
-                  child: SingleChildScrollView(
+                  child: EntityFormSheet.scrollableForm(
+                    context: context,
                     child: Column(
                       children: [
                         DropdownButtonFormField<String>(
@@ -305,9 +218,8 @@ class _ActivityPageState extends State<ActivityPage> {
                               labelText: 'Select Season *',
                               border: OutlineInputBorder(),
                             ),
-                            items: seasons.map<DropdownMenuItem<String>>((
-                              season,
-                            ) {
+                            items: seasons
+                                .map<DropdownMenuItem<String>>((season) {
                               return DropdownMenuItem<String>(
                                 value: season.id,
                                 child: Text(season.name),
@@ -361,14 +273,14 @@ class _ActivityPageState extends State<ActivityPage> {
                                   hintText: 'Select activity type',
                                 ),
                                 items: allCategories
-                                    .where((c) => c.type == selectedSourceType)
+                                    .where(
+                                        (c) => c.type == selectedSourceType)
                                     .map((category) {
-                                      return DropdownMenuItem<String>(
-                                        value: category.name,
-                                        child: Text(category.name),
-                                      );
-                                    })
-                                    .toList(),
+                                  return DropdownMenuItem<String>(
+                                    value: category.name,
+                                    child: Text(category.name),
+                                  );
+                                }).toList(),
                                 onChanged: (value) {
                                   setState(() {
                                     typeController.text = value ?? '';
@@ -378,7 +290,8 @@ class _ActivityPageState extends State<ActivityPage> {
                             ),
                             const SizedBox(width: 8),
                             IconButton(
-                              onPressed: () => _showCreateActivityTypeDialog(
+                              onPressed: () =>
+                                  _showCreateActivityTypeDialog(
                                 context,
                                 selectedSourceType!,
                               ),
@@ -468,7 +381,8 @@ class _ActivityPageState extends State<ActivityPage> {
                       if (typeController.text.trim().isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Please select an activity type'),
+                            content: Text(
+                                'Please select an activity type'),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -485,8 +399,9 @@ class _ActivityPageState extends State<ActivityPage> {
                         return;
                       }
 
-                      final cost =
-                          double.tryParse(costController.text.trim()) ?? 0.0;
+                      final cost = double.tryParse(
+                              costController.text.trim()) ??
+                          0.0;
                       if (cost < 0) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -504,7 +419,8 @@ class _ActivityPageState extends State<ActivityPage> {
                       final activity = ActivityModel.create(
                         sourceType: selectedSourceType!,
                         sourceId: sourceId,
-                        animalId: selectedSourceType == 'animal' ? 0 : null,
+                        animalId:
+                            selectedSourceType == 'animal' ? 0 : null,
                         type: typeController.text.trim(),
                         details: detailsController.text.trim().isEmpty
                             ? null
@@ -586,14 +502,12 @@ class _ActivityPageState extends State<ActivityPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Container(
-          height: MediaQuery.of(context).size.height * 0.8,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
+        builder: (context, setState) => EntityFormSheet.container(
+          context: context,
+          heightFactor: 0.85,
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -604,9 +518,10 @@ class _ActivityPageState extends State<ActivityPage> {
                   children: [
                     Text(
                       'Edit Activity',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
@@ -616,7 +531,8 @@ class _ActivityPageState extends State<ActivityPage> {
                 ),
                 const SizedBox(height: 20),
                 Expanded(
-                  child: SingleChildScrollView(
+                  child: EntityFormSheet.scrollableForm(
+                    context: context,
                     child: Column(
                       children: [
                         DropdownButtonFormField<String>(
@@ -654,9 +570,8 @@ class _ActivityPageState extends State<ActivityPage> {
                               labelText: 'Select Season *',
                               border: OutlineInputBorder(),
                             ),
-                            items: seasons.map<DropdownMenuItem<String>>((
-                              season,
-                            ) {
+                            items: seasons
+                                .map<DropdownMenuItem<String>>((season) {
                               return DropdownMenuItem<String>(
                                 value: season.id,
                                 child: Text(season.name),
@@ -710,14 +625,14 @@ class _ActivityPageState extends State<ActivityPage> {
                                   border: OutlineInputBorder(),
                                 ),
                                 items: allCategories
-                                    .where((c) => c.type == selectedSourceType)
+                                    .where(
+                                        (c) => c.type == selectedSourceType)
                                     .map((category) {
-                                      return DropdownMenuItem<String>(
-                                        value: category.name,
-                                        child: Text(category.name),
-                                      );
-                                    })
-                                    .toList(),
+                                  return DropdownMenuItem<String>(
+                                    value: category.name,
+                                    child: Text(category.name),
+                                  );
+                                }).toList(),
                                 onChanged: (value) {
                                   setState(() {
                                     selectedType = value;
@@ -727,7 +642,8 @@ class _ActivityPageState extends State<ActivityPage> {
                             ),
                             const SizedBox(width: 8),
                             IconButton(
-                              onPressed: () => _showCreateActivityTypeDialog(
+                              onPressed: () =>
+                                  _showCreateActivityTypeDialog(
                                 context,
                                 selectedSourceType!,
                               ),
@@ -745,7 +661,8 @@ class _ActivityPageState extends State<ActivityPage> {
                           decoration: const InputDecoration(
                             labelText: 'Description',
                             border: OutlineInputBorder(),
-                            hintText: 'Enter activity description (optional)',
+                            hintText:
+                                'Enter activity description (optional)',
                           ),
                           maxLines: 3,
                         ),
@@ -772,7 +689,8 @@ class _ActivityPageState extends State<ActivityPage> {
                           onTap: () async {
                             final date = await showDatePicker(
                               context: context,
-                              initialDate: selectedDate ?? DateTime.now(),
+                              initialDate:
+                                  selectedDate ?? DateTime.now(),
                               firstDate: DateTime(2020),
                               lastDate: DateTime(2030),
                             );
@@ -817,7 +735,8 @@ class _ActivityPageState extends State<ActivityPage> {
                       if (selectedType == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Please select an activity type'),
+                            content: Text(
+                                'Please select an activity type'),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -834,8 +753,9 @@ class _ActivityPageState extends State<ActivityPage> {
                         return;
                       }
 
-                      final cost =
-                          double.tryParse(costController.text.trim()) ?? 0.0;
+                      final cost = double.tryParse(
+                              costController.text.trim()) ??
+                          0.0;
                       if (cost < 0) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -854,14 +774,15 @@ class _ActivityPageState extends State<ActivityPage> {
                         id: activity.id,
                         sourceType: selectedSourceType!,
                         sourceId: sourceId,
-                        animalId: selectedSourceType == 'animal' ? 0 : null,
+                        animalId:
+                            selectedSourceType == 'animal' ? 0 : null,
                         type: selectedType!,
                         details: descriptionController.text.trim().isEmpty
                             ? null
                             : descriptionController.text.trim(),
                         cost: cost,
                         date: selectedDate!,
-                        notes: activity.notes, // Preserve existing notes
+                        notes: activity.notes,
                         createdAt: activity.createdAt,
                         updatedAt: DateTime.now(),
                       );
@@ -878,8 +799,10 @@ class _ActivityPageState extends State<ActivityPage> {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade600,
-                      foregroundColor: Colors.white,
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primary,
+                      foregroundColor:
+                          Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child: const Text(
@@ -899,45 +822,32 @@ class _ActivityPageState extends State<ActivityPage> {
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, Activity activity) {
-    showDialog(
+  void _showDeleteConfirmation(
+      BuildContext context, Activity activity) async {
+    final confirmed = await EntityDeleteDialog.show(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Activity'),
-          content: Text(
-            'Are you sure you want to delete this ${activity.type.toLowerCase()} activity? This action cannot be undone.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                context.read<ActivityBloc>().add(
-                  DeleteActivityEvent(activity.id),
-                );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '${activity.type} activity deleted successfully',
-                    ),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
+      title: 'Delete Activity',
+      message:
+          'Are you sure you want to delete this ${activity.type.toLowerCase()} activity? This action cannot be undone.',
     );
+    if (confirmed == true) {
+      context.read<ActivityBloc>().add(
+        DeleteActivityEvent(activity.id),
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                '${activity.type} activity deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
   }
 
-  void _showCreateActivityTypeDialog(BuildContext context, String sourceType) {
+  void _showCreateActivityTypeDialog(
+      BuildContext context, String sourceType) {
     final nameController = TextEditingController();
     showDialog(
       context: context,

@@ -1,5 +1,6 @@
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart' as auth_google;
 import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
@@ -14,6 +15,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<GoogleSignInRequested>((event, emit) async {
       emit(AuthLoading());
       appLogger.logAuthEvent('Google Sign-In attempt');
+
+      if (!_supportsGoogleSignIn) {
+        const message =
+            'Google Sign-In is only available on Android. '
+            'Connect a phone or emulator, then run ./run_local.sh.';
+        appLogger.warning(LogCategory.auth, message);
+        emit(AuthError(message));
+        return;
+      }
 
       try {
         final auth_google.GoogleSignIn googleSignIn = auth_google.GoogleSignIn.instance;
@@ -117,4 +127,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     });
   }
   final GoogleSignInUseCase googleSignInUseCase;
+
+  static bool get _supportsGoogleSignIn =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 }

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/features/auth/data/models/user_model.dart';
 
 abstract class AuthRemoteDataSource {
@@ -55,7 +56,21 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
+      final requestUrl = e.requestOptions.uri.toString();
       var errorMsg = 'Google Sign-In failed';
+
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout) {
+        errorMsg =
+            'Backend unreachable at $requestUrl (${e.type.name}). '
+            'Check that the server is running and LOCAL_API_HOST is correct.';
+      } else if (e.type == DioExceptionType.connectionError) {
+        errorMsg =
+            'Cannot connect to backend at $requestUrl. '
+            'Verify network and firewall settings.';
+      }
+
       if (e.response?.data != null) {
         try {
           final errorData = e.response!.data as Map<String, dynamic>;
@@ -66,6 +81,12 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           }
         } catch (_) {}
       }
+
+      appLogger.error(
+        LogCategory.http,
+        'Google auth request failed: $requestUrl (${e.type.name})',
+        e,
+      );
       throw ServerException(errorMsg);
     }
   }

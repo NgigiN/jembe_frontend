@@ -7,10 +7,11 @@ enum Environment { local, remote }
 class AppConfig {
   static late Environment _currentEnvironment;
 
-  // Remote server configuration - HTTPS enforced in production
-  static const String _remoteBaseUrl = 'https://193.187.129.179:6060';
-  // static const String _localBaseUrl = 'http://127.0.0.1:8080';
-  static const String _localBaseUrl = 'http://192.168.100.5:8080';
+  // Remote server configuration (plain HTTP; backend does not terminate TLS)
+  static const String _remoteBaseUrl = 'http://193.187.129.179:6060';
+  // Android emulator host loopback; override via --dart-define=LOCAL_API_HOST for devices
+  static const String _defaultLocalApiHost = '10.0.2.2';
+  static const int _defaultLocalApiPort = 8080;
 
   // Google Sign-In Configuration
   // Note: This must be the "Web Client ID" from Google Cloud Console
@@ -49,11 +50,29 @@ class AppConfig {
   // Getter for current environment
   static Environment get currentEnvironment => _currentEnvironment;
 
+  // Override at run time, e.g.:
+  // flutter run --dart-define=LOCAL_API_HOST=192.168.100.2
+  static String get localApiHost {
+    const host = String.fromEnvironment(
+      'LOCAL_API_HOST',
+      defaultValue: _defaultLocalApiHost,
+    );
+    return host.trim();
+  }
+
+  static int get localApiPort {
+    const port = String.fromEnvironment(
+      'LOCAL_API_PORT',
+      defaultValue: '$_defaultLocalApiPort',
+    );
+    return int.tryParse(port) ?? _defaultLocalApiPort;
+  }
+
   // Getter for base URL based on current environment
   static String get baseUrl {
     switch (_currentEnvironment) {
       case Environment.local:
-        return _localBaseUrl;
+        return 'http://${localApiHost}:${localApiPort}';
       case Environment.remote:
         return _remoteBaseUrl;
     }
