@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
@@ -49,61 +53,18 @@ class _SeasonPageState extends State<SeasonPage> {
           }
 
           if (state is SeasonError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red.shade300,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    state.message,
-                    style: TextStyle(fontSize: 16, color: Colors.red.shade600),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.read<SeasonBloc>().add(GetSeasonsEvent());
-                    },
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
+            return EntityErrorView(
+              message: state.message,
+              onRetry: () => context.read<SeasonBloc>().add(GetSeasonsEvent()),
             );
           }
 
           if (state is SeasonLoaded) {
             if (state.seasons.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.calendar_today,
-                      size: 64,
-                      color: Colors.grey.shade400,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'No seasons registered yet',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tap the + button to add your first season',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
+              return EntityEmptyView(
+                icon: Icons.calendar_today,
+                title: 'No seasons registered yet',
+                subtitle: 'Tap the + button to add your first season',
               );
             }
 
@@ -112,84 +73,28 @@ class _SeasonPageState extends State<SeasonPage> {
               itemCount: state.seasons.length,
               itemBuilder: (context, index) {
                 final season = state.seasons[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  elevation: 2,
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.orange.shade100,
-                      child: Icon(
-                        Icons.calendar_today,
-                        color: Colors.orange.shade700,
-                      ),
-                    ),
-                    title: Text(
-                      season.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Start Date: ${_formatDate(season.startDate)}'),
-                        if (season.endDate != null)
-                          Text('End Date: ${_formatDate(season.endDate!)}'),
-                        Text(
-                          'Created: ${_formatDate(season.createdAt)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'edit') {
-                          _showEditSeasonDialog(context, season);
-                        } else if (value == 'delete') {
-                          _showDeleteConfirmation(context, season);
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit),
-                              SizedBox(width: 8),
-                              Text('Edit'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text(
-                                'Delete',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                return EntityListTile(
+                  leadingIcon: Icons.calendar_today,
+                  leadingBackgroundColor: Colors.orange.shade100,
+                  leadingIconColor: Colors.orange.shade700,
+                  title: season.name,
+                  subtitleFields: [
+                    Text('Start: ${_formatDate(season.startDate)}'),
+                    if (season.endDate != null)
+                      Text('End: ${_formatDate(season.endDate!)}'),
+                  ],
+                  onEdit: () => _showEditSeasonDialog(season),
+                  onDelete: () => _showDeleteConfirmation(season),
                 );
               },
             );
           }
 
-          return const Center(child: Text('Something went wrong'));
+          return const SizedBox.shrink();
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddSeasonDialog(context),
+        onPressed: () => _showAddSeasonDialog(),
         child: const Icon(Icons.add),
       ),
     );
@@ -199,7 +104,7 @@ class _SeasonPageState extends State<SeasonPage> {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  Future<void> _showAddSeasonDialog(BuildContext context) async {
+  void _showAddSeasonDialog() {
     final nameController = TextEditingController();
     DateTime? selectedStartDate;
     DateTime? selectedEndDate;
@@ -231,10 +136,11 @@ class _SeasonPageState extends State<SeasonPage> {
           height: MediaQuery.of(context).size.height * 0.9,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).viewPadding.bottom),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -243,9 +149,10 @@ class _SeasonPageState extends State<SeasonPage> {
                   children: [
                     Text(
                       'Add New Season',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
@@ -348,8 +255,10 @@ class _SeasonPageState extends State<SeasonPage> {
                           onTap: () async {
                             final date = await showDatePicker(
                               context: context,
-                              initialDate: selectedStartDate ?? DateTime.now(),
-                              firstDate: selectedStartDate ?? DateTime(2020),
+                              initialDate:
+                                  selectedStartDate ?? DateTime.now(),
+                              firstDate:
+                                  selectedStartDate ?? DateTime(2020),
                               lastDate: DateTime(2030),
                             );
                             if (date != null) {
@@ -450,10 +359,7 @@ class _SeasonPageState extends State<SeasonPage> {
     );
   }
 
-  Future<void> _showEditSeasonDialog(
-    BuildContext context,
-    Season season,
-  ) async {
+  void _showEditSeasonDialog(Season season) {
     final nameController = TextEditingController(text: season.name);
     DateTime? selectedStartDate = season.startDate;
     var selectedEndDate = season.endDate != null && season.endDate!.year > 2000
@@ -487,10 +393,11 @@ class _SeasonPageState extends State<SeasonPage> {
           height: MediaQuery.of(context).size.height * 0.9,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).viewPadding.bottom),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -499,9 +406,10 @@ class _SeasonPageState extends State<SeasonPage> {
                   children: [
                     Text(
                       'Edit Season',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
@@ -581,7 +489,8 @@ class _SeasonPageState extends State<SeasonPage> {
                           onTap: () async {
                             final date = await showDatePicker(
                               context: context,
-                              initialDate: selectedStartDate ?? DateTime.now(),
+                              initialDate:
+                                  selectedStartDate ?? DateTime.now(),
                               firstDate: DateTime(2020),
                               lastDate: DateTime(2030),
                             );
@@ -607,7 +516,8 @@ class _SeasonPageState extends State<SeasonPage> {
                               if (selectedEndDate != null &&
                                   selectedEndDate!.year > 2000)
                                 IconButton(
-                                  icon: const Icon(Icons.clear, size: 20),
+                                  icon:
+                                      const Icon(Icons.clear, size: 20),
                                   onPressed: () {
                                     setState(() {
                                       selectedEndDate = null;
@@ -620,11 +530,10 @@ class _SeasonPageState extends State<SeasonPage> {
                           onTap: () async {
                             final validEndDate =
                                 selectedEndDate != null &&
-                                    selectedEndDate!.year > 2000
-                                ? selectedEndDate
-                                : null;
-                            final initialDate =
-                                validEndDate ??
+                                        selectedEndDate!.year > 2000
+                                    ? selectedEndDate
+                                    : null;
+                            final initialDate = validEndDate ??
                                 selectedStartDate ??
                                 DateTime.now();
                             final firstDate =
@@ -729,8 +638,10 @@ class _SeasonPageState extends State<SeasonPage> {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primary,
+                      foregroundColor:
+                          Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child: const Text(
@@ -750,37 +661,23 @@ class _SeasonPageState extends State<SeasonPage> {
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, Season season) {
-    showDialog(
+  void _showDeleteConfirmation(Season season) async {
+    final confirmed = await EntityDeleteDialog.show(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Season'),
-          content: Text(
-            'Are you sure you want to delete "${season.name}"? This action cannot be undone.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                context.read<SeasonBloc>().add(DeleteSeasonEvent(season.id));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${season.name} deleted successfully'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
+      title: 'Delete Season',
+      message:
+          'Are you sure you want to delete "${season.name}"? This action cannot be undone.',
     );
+    if (confirmed == true) {
+      context.read<SeasonBloc>().add(DeleteSeasonEvent(season.id));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${season.name} deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
   }
 }

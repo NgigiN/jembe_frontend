@@ -4,33 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
-import 'package:farm_tracker/features/farm/presentation/pages/farm_page.dart';
-import 'package:farm_tracker/features/farm/presentation/pages/analysis_page.dart';
-import 'package:farm_tracker/features/farm/presentation/pages/revenue_page.dart';
-import 'package:farm_tracker/features/farm/presentation/pages/settings_page.dart';
 
-class LandingPage extends StatefulWidget {
-  const LandingPage({super.key});
-
-  @override
-  State<LandingPage> createState() => _LandingPageState();
-}
-
-class _LandingPageState extends State<LandingPage> {
-  int _selectedIndex = 0;
-
-  static final List<Widget> _pages = <Widget>[
-    const FarmPage(),
-    const AnalysisPage(),
-    const RevenuePage(),
-    const SettingsPage(),
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+class LandingPage extends StatelessWidget {
+  const LandingPage({super.key, required this.child});
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -41,25 +18,22 @@ class _LandingPageState extends State<LandingPage> {
         }
       },
       child: Scaffold(
-        body: _pages[_selectedIndex],
-        bottomNavigationBar: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-          selectedItemColor: Theme.of(context).colorScheme.primary,
-          unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.agriculture), label: 'Farm'),
-            BottomNavigationBarItem(
+        body: child,
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _calculateIndex(context),
+          onDestinationSelected: (index) => _onTabSelected(index, context),
+          destinations: const [
+            NavigationDestination(icon: Icon(Icons.eco), label: 'Plants'),
+            NavigationDestination(
               icon: Icon(Icons.analytics),
               label: 'Analytics',
             ),
-            BottomNavigationBarItem(
+            NavigationDestination(icon: Icon(Icons.pets), label: 'Animals'),
+            NavigationDestination(
               icon: Icon(Icons.monetization_on),
               label: 'Revenue',
             ),
-            BottomNavigationBarItem(
+            NavigationDestination(
               icon: Icon(Icons.settings),
               label: 'Settings',
             ),
@@ -67,5 +41,29 @@ class _LandingPageState extends State<LandingPage> {
         ),
       ),
     );
+  }
+
+  int _calculateIndex(BuildContext context) {
+    final uri = GoRouterState.of(context).uri.toString();
+    if (uri.startsWith('/analytics')) return 1;
+    if (uri.startsWith('/animals')) return 2;
+    if (uri.startsWith('/revenue')) return 3;
+    if (uri.startsWith('/settings')) return 4;
+    return 0;
+  }
+
+  void _onTabSelected(int index, BuildContext context) {
+    switch (index) {
+      case 0:
+        context.go('/');
+      case 1:
+        context.go('/analytics');
+      case 2:
+        context.go('/animals');
+      case 3:
+        context.go('/revenue');
+      case 4:
+        context.go('/settings');
+    }
   }
 }

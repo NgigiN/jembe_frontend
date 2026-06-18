@@ -1,45 +1,42 @@
 import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
 
 class AnimalModel extends Animal {
-  const AnimalModel({
-    required super.id,
-    required super.userId,
-    required super.name,
-    required super.animalTypeId,
-    required super.herdId,
-    required super.birthDate,
-    required super.createdAt,
-    required super.updatedAt,
-  });
-
   factory AnimalModel.create({
     required String userId,
     required String name,
-    required String animalTypeId,
-    required String herdId,
-    required DateTime birthDate,
+    required String type,
+    int? number,
   }) {
     final now = DateTime.now();
     return AnimalModel(
       id: '',
       userId: userId,
       name: name,
-      animalTypeId: animalTypeId,
-      herdId: herdId,
-      birthDate: birthDate,
+      type: type,
+      number: number,
       createdAt: now,
       updatedAt: now,
     );
   }
+  const AnimalModel({
+    required super.id,
+    required super.userId,
+    required super.name,
+    required super.type,
+    required super.createdAt,
+    required super.updatedAt,
+    super.number,
+  });
 
   factory AnimalModel.fromJson(Map<String, dynamic> json) {
+    final numberValue = json['Number'] ?? json['number'];
+
     return AnimalModel(
       id: (json['ID'] ?? json['id'] ?? '').toString(),
       userId: (json['UserID'] ?? json['user_id'] ?? '').toString(),
       name: (json['Name'] ?? json['name'] ?? '').toString(),
-      animalTypeId: (json['animal_type_id'] ?? json['AnimalTypeID'] ?? '').toString(),
-      herdId: (json['herd_id'] ?? json['HerdID'] ?? '').toString(),
-      birthDate: _parseDate(json['birth_date'] ?? json['BirthDate']),
+      type: (json['Type'] ?? json['type'] ?? '').toString(),
+      number: numberValue != null ? (numberValue as num).toInt() : null,
       createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
       updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );
@@ -55,10 +52,13 @@ class AnimalModel extends Animal {
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
+      'user_id': userId,
       'name': name,
-      'animal_type_id': int.tryParse(animalTypeId) ?? animalTypeId,
-      'herd_id': int.tryParse(herdId) ?? herdId,
-      'birth_date': birthDate.toUtc().toIso8601String(),
+      'type': type,
+      'number': number,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 }

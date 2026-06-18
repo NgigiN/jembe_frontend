@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
@@ -39,61 +44,18 @@ class _LandPageState extends State<LandPage> {
           }
 
           if (state is LandError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red.shade300,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    state.message,
-                    style: TextStyle(fontSize: 16, color: Colors.red.shade600),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.read<LandBloc>().add(GetLandsEvent());
-                    },
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
+            return EntityErrorView(
+              message: state.message,
+              onRetry: () => context.read<LandBloc>().add(GetLandsEvent()),
             );
           }
 
           if (state is LandLoaded) {
             if (state.lands.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.landscape,
-                      size: 64,
-                      color: Colors.grey.shade400,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'No lands registered yet',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tap the + button to add your first land',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
+              return EntityEmptyView(
+                icon: Icons.landscape,
+                title: 'No lands registered yet',
+                subtitle: 'Tap the + button to add your first land',
               );
             }
 
@@ -102,217 +64,119 @@ class _LandPageState extends State<LandPage> {
               itemCount: state.lands.length,
               itemBuilder: (context, index) {
                 final land = state.lands[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  elevation: 2,
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.green.shade100,
-                      child: Icon(
-                        Icons.landscape,
-                        color: Colors.green.shade700,
-                      ),
-                    ),
-                    title: Text(
-                      land.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (land.size != null) Text('Size: ${land.size} acres'),
-                        if (land.location != null && land.location!.isNotEmpty)
-                          Text('Location: ${land.location}'),
-                        if (land.soilType != null && land.soilType!.isNotEmpty)
-                          Text('Soil Type: ${land.soilType}'),
-                      ],
-                    ),
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'edit') {
-                          _showEditLandDialog(context, land);
-                        } else if (value == 'delete') {
-                          _showDeleteConfirmation(context, land);
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit),
-                              SizedBox(width: 8),
-                              Text('Edit'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text(
-                                'Delete',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                return EntityListTile(
+                  leadingIcon: Icons.landscape,
+                  leadingBackgroundColor: Colors.green.shade100,
+                  leadingIconColor: Colors.green.shade700,
+                  title: land.name,
+                  subtitleFields: [
+                    if (land.size != null)
+                      Text('Size: ${land.size} acres'),
+                    if (land.location != null && land.location!.isNotEmpty)
+                      Text('Location: ${land.location}'),
+                    if (land.soilType != null && land.soilType!.isNotEmpty)
+                      Text('Soil Type: ${land.soilType}'),
+                  ],
+                  onEdit: () => _showEditLandDialog(land),
+                  onDelete: () => _showDeleteConfirmation(land),
                 );
               },
             );
           }
 
-          return const Center(child: Text('Something went wrong'));
+          return const SizedBox.shrink();
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddLandDialog(context),
+        onPressed: () => _showAddLandDialog(),
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  void _showAddLandDialog(BuildContext context) {
+  void _showAddLandDialog() {
     final nameController = TextEditingController();
     final sizeController = TextEditingController();
     final locationController = TextEditingController();
     final soilTypeController = TextEditingController();
 
-    showModalBottomSheet(
+    EntityFormSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).viewPadding.bottom),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Add New Land',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Land Name *',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: sizeController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Size (acres)',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: locationController,
-                        decoration: const InputDecoration(
-                          labelText: 'Location',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: soilTypeController,
-                        decoration: const InputDecoration(
-                          labelText: 'Soil Type',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    if (nameController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Land name is required'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      return;
-                    }
-
-                    final userId = await UserUtils.getCurrentUserId();
-                    if (userId == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('User not authenticated'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      return;
-                    }
-                    final land = LandModel.create(
-                      userId: userId,
-                      name: nameController.text.trim(),
-                      size: double.tryParse(sizeController.text.trim()),
-                      location: locationController.text.trim().isEmpty
-                          ? null
-                          : locationController.text.trim(),
-                      soilType: soilTypeController.text.trim().isEmpty
-                          ? null
-                          : soilTypeController.text.trim(),
-                    );
-                    context.read<LandBloc>().add(AddLandEvent(land));
-                    Navigator.pop(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: const Text(
-                    'Add Land',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-            ],
+      title: 'Add New Land',
+      submitLabel: 'Add Land',
+      fields: [
+        TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: 'Land Name *',
+            border: OutlineInputBorder(),
           ),
         ),
-      ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: sizeController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Size (acres)',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: locationController,
+          decoration: const InputDecoration(
+            labelText: 'Location',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: soilTypeController,
+          decoration: const InputDecoration(
+            labelText: 'Soil Type',
+            border: OutlineInputBorder(),
+          ),
+        ),
+      ],
+      onSubmit: (sheetContext) async {
+        if (nameController.text.trim().isEmpty) {
+          ScaffoldMessenger.of(sheetContext).showSnackBar(
+            const SnackBar(
+              content: Text('Land name is required'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+
+        final userId = await UserUtils.getCurrentUserId();
+        if (userId == null) {
+          ScaffoldMessenger.of(sheetContext).showSnackBar(
+            const SnackBar(
+              content: Text('User not authenticated'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+        final land = LandModel.create(
+          userId: userId,
+          name: nameController.text.trim(),
+          size: double.tryParse(sizeController.text.trim()),
+          location: locationController.text.trim().isEmpty
+              ? null
+              : locationController.text.trim(),
+          soilType: soilTypeController.text.trim().isEmpty
+              ? null
+              : soilTypeController.text.trim(),
+        );
+        context.read<LandBloc>().add(AddLandEvent(land));
+        Navigator.pop(sheetContext);
+      },
     );
   }
 
-  void _showEditLandDialog(BuildContext context, Land land) {
+  void _showEditLandDialog(Land land) {
     final nameController = TextEditingController(text: land.name);
     final sizeController = TextEditingController(
       text: land.size?.toString() ?? '',
@@ -320,167 +184,102 @@ class _LandPageState extends State<LandPage> {
     final locationController = TextEditingController(text: land.location ?? '');
     final soilTypeController = TextEditingController(text: land.soilType ?? '');
 
-    showModalBottomSheet(
+    EntityFormSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.6,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).viewPadding.bottom),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Edit Land',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Land Name *',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: sizeController,
-                        decoration: const InputDecoration(
-                          labelText: 'Size (Acres)',
-                          border: OutlineInputBorder(),
-                          hintText: 'Enter land size in acres',
-                        ),
-                        keyboardType: TextInputType.number,
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: locationController,
-                        decoration: const InputDecoration(
-                          labelText: 'Location',
-                          border: OutlineInputBorder(),
-                          hintText: 'Enter land location (optional)',
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: soilTypeController,
-                        decoration: const InputDecoration(
-                          labelText: 'Soil Type',
-                          border: OutlineInputBorder(),
-                          hintText: 'Enter soil type (optional)',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    if (nameController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Land name is required'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      return;
-                    }
-
-                    final updatedLand = LandModel(
-                      id: land.id,
-                      userId: land.userId,
-                      name: nameController.text.trim(),
-                      size: double.tryParse(sizeController.text.trim()),
-                      location: locationController.text.trim().isEmpty
-                          ? null
-                          : locationController.text.trim(),
-                      soilType: soilTypeController.text.trim().isEmpty
-                          ? null
-                          : soilTypeController.text.trim(),
-                      createdAt: land.createdAt,
-                      updatedAt: DateTime.now(),
-                    );
-                    context.read<LandBloc>().add(UpdateLandEvent(updatedLand));
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Land updated successfully'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: const Text(
-                    'Update Land',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-            ],
+      title: 'Edit Land',
+      heightFactor: 0.6,
+      submitLabel: 'Update Land',
+      fields: [
+        TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: 'Land Name *',
+            border: OutlineInputBorder(),
           ),
         ),
-      ),
-    );
-  }
-
-  void _showDeleteConfirmation(BuildContext context, Land land) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Land'),
-          content: Text(
-            'Are you sure you want to delete "${land.name}"${land.location != null ? ' (${land.location})' : ''}? This action cannot be undone.',
+        const SizedBox(height: 16),
+        TextField(
+          controller: sizeController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Size (Acres)',
+            border: OutlineInputBorder(),
+            hintText: 'Enter land size in acres',
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: locationController,
+          decoration: const InputDecoration(
+            labelText: 'Location',
+            border: OutlineInputBorder(),
+            hintText: 'Enter land location (optional)',
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: soilTypeController,
+          decoration: const InputDecoration(
+            labelText: 'Soil Type',
+            border: OutlineInputBorder(),
+            hintText: 'Enter soil type (optional)',
+          ),
+        ),
+      ],
+      onSubmit: (sheetContext) async {
+        if (nameController.text.trim().isEmpty) {
+          ScaffoldMessenger.of(sheetContext).showSnackBar(
+            const SnackBar(
+              content: Text('Land name is required'),
+              backgroundColor: Colors.red,
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                context.read<LandBloc>().add(DeleteLandEvent(land.id));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${land.name} deleted successfully'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
-            ),
-          ],
+          );
+          return;
+        }
+
+        final updatedLand = LandModel(
+          id: land.id,
+          userId: land.userId,
+          name: nameController.text.trim(),
+          size: double.tryParse(sizeController.text.trim()),
+          location: locationController.text.trim().isEmpty
+              ? null
+              : locationController.text.trim(),
+          soilType: soilTypeController.text.trim().isEmpty
+              ? null
+              : soilTypeController.text.trim(),
+          createdAt: land.createdAt,
+          updatedAt: DateTime.now(),
+        );
+        context.read<LandBloc>().add(UpdateLandEvent(updatedLand));
+        Navigator.pop(sheetContext);
+        ScaffoldMessenger.of(sheetContext).showSnackBar(
+          const SnackBar(
+            content: Text('Land updated successfully'),
+            backgroundColor: Colors.green,
+          ),
         );
       },
     );
+  }
+
+  void _showDeleteConfirmation(Land land) async {
+    final confirmed = await EntityDeleteDialog.show(
+      context: context,
+      title: 'Delete Land',
+      message:
+          'Are you sure you want to delete "${land.name}"${land.location != null ? ' (${land.location})' : ''}? This action cannot be undone.',
+    );
+    if (confirmed == true) {
+      context.read<LandBloc>().add(DeleteLandEvent(land.id));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${land.name} deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
   }
 }

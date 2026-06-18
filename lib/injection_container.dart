@@ -18,8 +18,6 @@ import 'package:farm_tracker/features/farm/data/datasources/land_remote_data_sou
 import 'package:farm_tracker/features/farm/data/datasources/plant_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/season_remote_data_source.dart';
-import 'package:farm_tracker/features/farm/data/datasources/herd_activity_remote_data_source.dart';
-import 'package:farm_tracker/features/farm/data/datasources/infrastructure_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/repositories/activity_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/analysis_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/animal_repository_impl.dart';
@@ -31,8 +29,6 @@ import 'package:farm_tracker/features/farm/data/repositories/land_repository_imp
 import 'package:farm_tracker/features/farm/data/repositories/plant_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/revenue_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/season_repository_impl.dart';
-import 'package:farm_tracker/features/farm/data/repositories/herd_activity_repository_impl.dart';
-import 'package:farm_tracker/features/farm/data/repositories/infrastructure_repository_impl.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/activity_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/analysis_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/animal_repository.dart';
@@ -44,8 +40,6 @@ import 'package:farm_tracker/features/farm/domain/repositories/land_repository.d
 import 'package:farm_tracker/features/farm/domain/repositories/plant_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/revenue_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/season_repository.dart';
-import 'package:farm_tracker/features/farm/domain/repositories/herd_activity_repository.dart';
-import 'package:farm_tracker/features/farm/domain/repositories/infrastructure_repository.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_activity.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_animal.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_animal_type.dart';
@@ -88,11 +82,6 @@ import 'package:farm_tracker/features/farm/domain/usecases/update_land.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_plant.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_revenue.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_season.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_herd_activity.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_infrastructure.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
@@ -103,8 +92,6 @@ import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_bloc.dart';
 import 'package:farm_tracker/features/profile/data/datasources/profile_remote_data_source.dart';
 import 'package:farm_tracker/features/profile/data/repositories/profile_repository_impl.dart';
 import 'package:farm_tracker/features/profile/domain/repositories/profile_repository.dart';
@@ -191,19 +178,6 @@ Future<void> init() async {
       ),
     )
     ..registerFactory(
-      () => HerdActivityBloc(
-        addHerdActivity: sl(),
-      ),
-    )
-    ..registerFactory(
-      () => InfrastructureBloc(
-        getInfrastructure: sl(),
-        addInfrastructure: sl(),
-        updateInfrastructure: sl(),
-        deleteInfrastructure: sl(),
-      ),
-    )
-    ..registerFactory(
       () => AnalysisBloc(
         getTotalCostsBySeason: sl(),
         getCostBreakdown: sl(),
@@ -263,11 +237,6 @@ Future<void> init() async {
     ..registerLazySingleton(() => AddHerd(sl()))
     ..registerLazySingleton(() => UpdateHerd(sl()))
     ..registerLazySingleton(() => DeleteHerd(sl()))
-    ..registerLazySingleton(() => AddHerdActivity(sl()))
-    ..registerLazySingleton(() => GetInfrastructure(sl()))
-    ..registerLazySingleton(() => AddInfrastructure(sl()))
-    ..registerLazySingleton(() => UpdateInfrastructure(sl()))
-    ..registerLazySingleton(() => DeleteInfrastructure(sl()))
     ..registerLazySingleton(() => GetTotalCostsBySeason(sl()))
     ..registerLazySingleton(() => GetCostBreakdown(sl()))
     ..registerLazySingleton(() => GetAnnualCostSummary(sl()))
@@ -309,12 +278,6 @@ Future<void> init() async {
     ..registerLazySingleton<HerdRepository>(
       () => HerdRepositoryImpl(remoteDataSource: sl()),
     )
-    ..registerLazySingleton<HerdActivityRepository>(
-      () => HerdActivityRepositoryImpl(remoteDataSource: sl()),
-    )
-    ..registerLazySingleton<InfrastructureRepository>(
-      () => InfrastructureRepositoryImpl(remoteDataSource: sl()),
-    )
     ..registerLazySingleton<AnalysisRepository>(
       () => AnalysisRepositoryImpl(remoteDataSource: sl()),
     )
@@ -354,12 +317,6 @@ Future<void> init() async {
     )
     ..registerLazySingleton<HerdRemoteDataSource>(
       () => HerdRemoteDataSourceImpl(dio: sl()),
-    )
-    ..registerLazySingleton<HerdActivityRemoteDataSource>(
-      () => HerdActivityRemoteDataSourceImpl(dio: sl()),
-    )
-    ..registerLazySingleton<InfrastructureRemoteDataSource>(
-      () => InfrastructureRemoteDataSourceImpl(dio: sl()),
     )
     ..registerLazySingleton<AnalysisRemoteDataSource>(
       () => AnalysisRemoteDataSourceImpl(dio: sl()),

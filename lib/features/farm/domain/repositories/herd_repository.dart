@@ -9,14 +9,12 @@ abstract class HerdRepository {
     String animalTypeId,
     String location,
     String userId,
-    int initialHeadCount,
   );
   Future<Either<Failure, Herd>> updateHerd(
     String id,
     String name,
     String animalTypeId,
     String location,
-    int initialHeadCount,
   );
   Future<Either<Failure, void>> deleteHerd(String id);
 }

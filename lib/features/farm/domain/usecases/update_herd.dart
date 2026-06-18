@@ -12,8 +12,7 @@ class UpdateHerd {
     String name,
     String animalTypeId,
     String location,
-    int initialHeadCount,
   ) async {
-    return repository.updateHerd(id, name, animalTypeId, location, initialHeadCount);
+    return repository.updateHerd(id, name, animalTypeId, location);
   }
 }

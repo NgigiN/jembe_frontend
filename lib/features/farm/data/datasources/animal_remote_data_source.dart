@@ -55,7 +55,11 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
     try {
       final response = await dio.post(
         '/api/v1/animals',
-        data: animal.toJson(),
+        data: {
+          'name': animal.name,
+          'type': animal.type,
+          'number': animal.number,
+        },
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
@@ -90,7 +94,11 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
     try {
       final response = await dio.put(
         '/api/v1/animals/${animal.id}',
-        data: animal.toJson(),
+        data: {
+          'name': animal.name,
+          'type': animal.type,
+          'number': animal.number,
+        },
       );
 
       if (response.statusCode == 200) {

@@ -10,39 +10,25 @@ abstract class HerdEvent extends Equatable {
 class GetHerdsEvent extends HerdEvent {}
 
 class AddHerdEvent extends HerdEvent {
-  const AddHerdEvent(
-    this.name,
-    this.animalTypeId,
-    this.location,
-    this.userId,
-    this.initialHeadCount,
-  );
+  const AddHerdEvent(this.name, this.animalTypeId, this.location, this.userId);
   final String name;
   final String animalTypeId;
   final String location;
   final String userId;
-  final int initialHeadCount;
 
   @override
-  List<Object?> get props => [name, animalTypeId, location, userId, initialHeadCount];
+  List<Object?> get props => [name, animalTypeId, location, userId];
 }
 
 class UpdateHerdEvent extends HerdEvent {
-  const UpdateHerdEvent(
-    this.id,
-    this.name,
-    this.animalTypeId,
-    this.location,
-    this.initialHeadCount,
-  );
+  const UpdateHerdEvent(this.id, this.name, this.animalTypeId, this.location);
   final String id;
   final String name;
   final String animalTypeId;
   final String location;
-  final int initialHeadCount;
 
   @override
-  List<Object?> get props => [id, name, animalTypeId, location, initialHeadCount];
+  List<Object?> get props => [id, name, animalTypeId, location];
 }
 
 class DeleteHerdEvent extends HerdEvent {

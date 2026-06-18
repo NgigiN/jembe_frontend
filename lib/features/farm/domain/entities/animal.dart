@@ -5,31 +5,27 @@ class Animal extends Equatable {
     required this.id,
     required this.userId,
     required this.name,
-    required this.animalTypeId,
-    required this.herdId,
-    required this.birthDate,
+    required this.type,
+    this.number,
     required this.createdAt,
     required this.updatedAt,
   });
-
   final String id;
   final String userId;
   final String name;
-  final String animalTypeId;
-  final String herdId;
-  final DateTime birthDate;
+  final String type;
+  final int? number;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   @override
   List<Object?> get props => [
-        id,
-        userId,
-        name,
-        animalTypeId,
-        herdId,
-        birthDate,
-        createdAt,
-        updatedAt,
-      ];
+    id,
+    userId,
+    name,
+    type,
+    number,
+    createdAt,
+    updatedAt,
+  ];
 }
