@@ -11,6 +11,7 @@ import 'package:farm_tracker/features/farm/data/datasources/analysis_remote_data
 import 'package:farm_tracker/features/farm/data/datasources/animal_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/animal_type_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/cost_category_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/harvest_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/infrastructure_remote_data_source.dart';
@@ -24,6 +25,7 @@ import 'package:farm_tracker/features/farm/data/repositories/analysis_repository
 import 'package:farm_tracker/features/farm/data/repositories/animal_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/animal_type_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/cost_category_repository_impl.dart';
+import 'package:farm_tracker/features/farm/data/repositories/harvest_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/herd_activity_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/herd_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/infrastructure_repository_impl.dart';
@@ -37,6 +39,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/analysis_reposito
 import 'package:farm_tracker/features/farm/domain/repositories/animal_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/animal_type_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/cost_category_repository.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/harvest_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/herd_activity_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/herd_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/infrastructure_repository.dart';
@@ -49,6 +52,8 @@ import 'package:farm_tracker/features/farm/domain/usecases/add_activity.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_animal.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_cost_category.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/delete_cost_category.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/add_harvest.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_herd.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_herd_activity.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_infrastructure.dart';
@@ -60,6 +65,7 @@ import 'package:farm_tracker/features/farm/domain/usecases/add_season.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_activity.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_animal.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_animal_type.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/delete_harvest.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_herd.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_infrastructure.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_input.dart';
@@ -73,6 +79,7 @@ import 'package:farm_tracker/features/farm/domain/usecases/get_animals.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_annual_cost_summary.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_cost_breakdown.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_cost_categories.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_harvests.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_herds.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_infrastructure.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_inputs.dart';
@@ -85,6 +92,7 @@ import 'package:farm_tracker/features/farm/domain/usecases/get_total_costs_by_se
 import 'package:farm_tracker/features/farm/domain/usecases/update_activity.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_animal.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_animal_type.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/update_harvest.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_herd.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_infrastructure.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_input.dart';
@@ -96,6 +104,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart'
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_bloc.dart';
@@ -164,6 +173,14 @@ Future<void> init() async {
       ),
     )
     ..registerFactory(
+      () => HarvestBloc(
+        getHarvests: sl(),
+        addHarvest: sl(),
+        updateHarvest: sl(),
+        deleteHarvest: sl(),
+      ),
+    )
+    ..registerFactory(
       () => AnimalTypeBloc(
         getAnimalTypes: sl(),
         addAnimalType: sl(),
@@ -205,7 +222,11 @@ Future<void> init() async {
       ),
     )
     ..registerFactory(
-      () => CostCategoryBloc(getCostCategories: sl(), addCostCategory: sl()),
+      () => CostCategoryBloc(
+        getCostCategories: sl(),
+        addCostCategory: sl(),
+        deleteCostCategory: sl(),
+      ),
     )
     ..registerFactory(
       () => ProfileBloc(
@@ -236,6 +257,10 @@ Future<void> init() async {
     ..registerLazySingleton(() => AddInput(sl()))
     ..registerLazySingleton(() => UpdateInput(sl()))
     ..registerLazySingleton(() => DeleteInput(sl()))
+    ..registerLazySingleton(() => GetHarvests(sl()))
+    ..registerLazySingleton(() => AddHarvest(sl()))
+    ..registerLazySingleton(() => UpdateHarvest(sl()))
+    ..registerLazySingleton(() => DeleteHarvest(sl()))
     ..registerLazySingleton(() => GetAnimals(sl()))
     ..registerLazySingleton(() => AddAnimal(sl()))
     ..registerLazySingleton(() => UpdateAnimal(sl()))
@@ -263,6 +288,7 @@ Future<void> init() async {
     ..registerLazySingleton(() => DeleteRevenue(sl()))
     ..registerLazySingleton(() => GetCostCategories(sl()))
     ..registerLazySingleton(() => AddCostCategory(sl()))
+    ..registerLazySingleton(() => DeleteCostCategory(sl()))
     ..registerLazySingleton(() => GetProfile(sl()))
     ..registerLazySingleton(() => UpdateProfile(sl()))
     ..registerLazySingleton(() => ChangePassword(sl()))
@@ -284,6 +310,9 @@ Future<void> init() async {
     )
     ..registerLazySingleton<InputRepository>(
       () => InputRepositoryImpl(remoteDataSource: sl()),
+    )
+    ..registerLazySingleton<HarvestRepository>(
+      () => HarvestRepositoryImpl(remoteDataSource: sl()),
     )
     ..registerLazySingleton<AnimalRepository>(
       () => AnimalRepositoryImpl(remoteDataSource: sl()),
@@ -330,6 +359,9 @@ Future<void> init() async {
     )
     ..registerLazySingleton<InputRemoteDataSource>(
       () => InputRemoteDataSourceImpl(dio: sl()),
+    )
+    ..registerLazySingleton<HarvestRemoteDataSource>(
+      () => HarvestRemoteDataSourceImpl(dio: sl()),
     )
     ..registerLazySingleton<AnimalRemoteDataSource>(
       () => AnimalRemoteDataSourceImpl(dio: sl()),

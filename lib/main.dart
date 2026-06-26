@@ -9,6 +9,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart'
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_bloc.dart';
@@ -51,6 +52,7 @@ class MyApp extends StatelessWidget {
         BlocProvider<SeasonBloc>(create: (_) => di.sl<SeasonBloc>()),
         BlocProvider<ActivityBloc>(create: (_) => di.sl<ActivityBloc>()),
         BlocProvider<InputBloc>(create: (_) => di.sl<InputBloc>()),
+        BlocProvider<HarvestBloc>(create: (_) => di.sl<HarvestBloc>()),
         BlocProvider<AnimalTypeBloc>(create: (_) => di.sl<AnimalTypeBloc>()),
         BlocProvider<HerdBloc>(create: (_) => di.sl<HerdBloc>()),
         BlocProvider<HerdActivityBloc>(

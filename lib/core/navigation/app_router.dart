@@ -8,6 +8,7 @@ import 'package:farm_tracker/features/farm/presentation/pages/activity_page.dart
 import 'package:farm_tracker/features/farm/presentation/pages/analysis_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animal_type_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animals_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/harvest_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/herd_activity_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/infrastructure_page.dart';
@@ -43,6 +44,7 @@ class AppRouteName {
   static const revenueAdd = 'revenue-add';
   static const infrastructure = 'infrastructure';
   static const herdActivities = 'herd-activities';
+  static const harvests = 'harvests';
 }
 
 class AppRoutePath {
@@ -67,6 +69,7 @@ class AppRoutePath {
   static const revenueAdd = '/revenue/add';
   static const infrastructure = '/infrastructure';
   static const herdActivities = '/herd-activities';
+  static const harvests = '/harvests';
 
   static String inputsFor(String sourceType) => '/inputs/$sourceType';
   static String activitiesFor(String sourceType) => '/activities/$sourceType';
@@ -194,6 +197,11 @@ class AppRouter {
         name: AppRouteName.herdActivities,
         path: AppRoutePath.herdActivities,
         pageBuilder: (context, state) => _slidePage(const HerdActivityPage(), state),
+      ),
+      GoRoute(
+        name: AppRouteName.harvests,
+        path: AppRoutePath.harvests,
+        pageBuilder: (context, state) => _slidePage(const HarvestPage(), state),
       ),
     ],
   );

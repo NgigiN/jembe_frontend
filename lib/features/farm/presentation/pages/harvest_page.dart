@@ -1,0 +1,398 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/constants/harvest_units.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/harvest.dart';
+import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
+
+class HarvestPage extends StatefulWidget {
+  const HarvestPage({super.key, this.seasonId});
+  final String? seasonId;
+
+  @override
+  State<HarvestPage> createState() => _HarvestPageState();
+}
+
+class _HarvestPageState extends State<HarvestPage> {
+  @override
+  void initState() {
+    super.initState();
+    context.read<HarvestBloc>().add(GetHarvestsEvent(seasonId: widget.seasonId));
+    context.read<SeasonBloc>().add(GetSeasonsEvent());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final seasons = context.watch<SeasonBloc>().state;
+    final seasonList =
+        seasons is SeasonLoaded ? seasons.seasons : <Season>[];
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Harvest Records'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: BlocBuilder<HarvestBloc, HarvestState>(
+        builder: (context, state) {
+          if (state is HarvestLoading && state.harvests.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state is HarvestError && state.harvests.isEmpty) {
+            return EntityErrorView(
+              message: state.message,
+              onRetry: () => context.read<HarvestBloc>().add(
+                    GetHarvestsEvent(seasonId: widget.seasonId),
+                  ),
+            );
+          }
+
+          if (state is HarvestLoaded || state is HarvestLoading) {
+            final harvests = state.harvests;
+            if (harvests.isEmpty) {
+              return EntityEmptyView(
+                icon: Icons.agriculture,
+                title: 'No harvests recorded yet',
+                subtitle: 'Tap + to record your first harvest',
+              );
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: harvests.length,
+              itemBuilder: (context, index) {
+                final harvest = harvests[index];
+                final seasonName = _seasonName(seasonList, harvest.seasonId);
+                return EntityListTile(
+                  leadingIcon: Icons.agriculture,
+                  leadingBackgroundColor: Colors.amber.shade100,
+                  leadingIconColor: Colors.amber.shade800,
+                  title: '${_formatQuantity(harvest.quantity)} ${harvest.unit}',
+                  subtitleFields: [
+                    Text('Season: $seasonName'),
+                    Text('Date: ${_formatDate(harvest.date)}'),
+                    if (harvest.notes != null && harvest.notes!.isNotEmpty)
+                      Text('Notes: ${harvest.notes}'),
+                  ],
+                  onEdit: () => _showHarvestForm(context, harvest: harvest),
+                  onDelete: () => _confirmDelete(context, harvest),
+                );
+              },
+            );
+          }
+
+          return const SizedBox.shrink();
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showHarvestForm(context),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  String _seasonName(List<Season> seasons, String seasonId) {
+    for (final season in seasons) {
+      if (season.id == seasonId) return season.name;
+    }
+    return 'Unknown season';
+  }
+
+  String _formatQuantity(double quantity) {
+    if (quantity == quantity.roundToDouble()) {
+      return quantity.toStringAsFixed(0);
+    }
+    return quantity.toStringAsFixed(2);
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Future<void> _confirmDelete(BuildContext context, Harvest harvest) async {
+    final confirmed = await EntityDeleteDialog.show(
+      context: context,
+      title: 'Delete Harvest',
+      message:
+          'Delete ${_formatQuantity(harvest.quantity)} ${harvest.unit}? This cannot be undone.',
+    );
+    if (confirmed == true && context.mounted) {
+      context.read<HarvestBloc>().add(DeleteHarvestEvent(harvest.id));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Harvest deleted successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showHarvestForm(
+    BuildContext context, {
+    Harvest? harvest,
+  }) async {
+    final seasonState = context.read<SeasonBloc>().state;
+    final seasons =
+        seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
+
+    if (seasons.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add at least one season first'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final quantityController = TextEditingController(
+      text: harvest != null ? _formatQuantity(harvest.quantity) : '',
+    );
+    final notesController = TextEditingController(text: harvest?.notes ?? '');
+    final customUnitController = TextEditingController();
+    String? selectedSeasonId = harvest?.seasonId ?? widget.seasonId ?? seasons.first.id;
+    String selectedUnit = harvest?.unit ?? harvestUnitPresets.first;
+    if (!harvestUnitPresets.contains(selectedUnit)) {
+      customUnitController.text = selectedUnit;
+      selectedUnit = harvestUnitOther;
+    }
+    DateTime selectedDate = harvest?.date ?? DateTime.now();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setState) => EntityFormSheet.container(
+          context: context,
+          heightFactor: 0.85,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      harvest == null ? 'Record Harvest' : 'Edit Harvest',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: EntityFormSheet.scrollableForm(
+                    context: context,
+                    child: Column(
+                      children: [
+                        DropdownButtonFormField<String>(
+                          initialValue: selectedSeasonId,
+                          decoration: const InputDecoration(
+                            labelText: 'Season *',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: seasons.map((season) {
+                            return DropdownMenuItem<String>(
+                              value: season.id,
+                              child: Text(season.name),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() => selectedSeasonId = value);
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: quantityController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Quantity *',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          initialValue: selectedUnit,
+                          decoration: const InputDecoration(
+                            labelText: 'Unit *',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: [
+                            ...harvestUnitPresets.map(
+                              (unit) => DropdownMenuItem<String>(
+                                value: unit,
+                                child: Text(unit),
+                              ),
+                            ),
+                            const DropdownMenuItem<String>(
+                              value: harvestUnitOther,
+                              child: Text('Other'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            setState(() => selectedUnit = value ?? 'kg');
+                          },
+                        ),
+                        if (selectedUnit == harvestUnitOther) ...[
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: customUnitController,
+                            decoration: const InputDecoration(
+                              labelText: 'Custom Unit *',
+                              border: OutlineInputBorder(),
+                              hintText: 'e.g., baskets',
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        ListTile(
+                          title: const Text('Harvest Date *'),
+                          subtitle: Text(_formatDate(selectedDate)),
+                          trailing: const Icon(Icons.calendar_today),
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: selectedDate,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2035),
+                            );
+                            if (date != null) {
+                              setState(() => selectedDate = date);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: notesController,
+                          decoration: const InputDecoration(
+                            labelText: 'Notes (Optional)',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 3,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final quantity =
+                          double.tryParse(quantityController.text.trim());
+                      final unit = selectedUnit == harvestUnitOther
+                          ? customUnitController.text.trim()
+                          : selectedUnit;
+
+                      if (selectedSeasonId == null) {
+                        _showError(context, 'Please select a season');
+                        return;
+                      }
+                      if (quantity == null || quantity <= 0) {
+                        _showError(context, 'Please enter a valid quantity');
+                        return;
+                      }
+                      if (unit.isEmpty) {
+                        _showError(context, 'Please enter a unit');
+                        return;
+                      }
+
+                      if (harvest == null) {
+                        final newHarvest = HarvestModel.create(
+                          seasonId: selectedSeasonId!,
+                          quantity: quantity,
+                          unit: unit,
+                          date: selectedDate,
+                          notes: notesController.text.trim().isEmpty
+                              ? null
+                              : notesController.text.trim(),
+                        );
+                        context
+                            .read<HarvestBloc>()
+                            .add(AddHarvestEvent(newHarvest));
+                      } else {
+                        final updatedHarvest = HarvestModel(
+                          id: harvest.id,
+                          seasonId: selectedSeasonId!,
+                          quantity: quantity,
+                          unit: unit,
+                          date: selectedDate,
+                          notes: notesController.text.trim().isEmpty
+                              ? null
+                              : notesController.text.trim(),
+                          revenueId: harvest.revenueId,
+                          createdAt: harvest.createdAt,
+                          updatedAt: DateTime.now(),
+                        );
+                        context
+                            .read<HarvestBloc>()
+                            .add(UpdateHarvestEvent(updatedHarvest));
+                      }
+
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            harvest == null
+                                ? 'Harvest recorded successfully'
+                                : 'Harvest updated successfully',
+                          ),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor:
+                          Theme.of(context).colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: Text(
+                      harvest == null ? 'Record Harvest' : 'Update Harvest',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showError(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+}
