@@ -24,7 +24,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = Map<String, dynamic>.from(response.data as Map);
+        final data = Map<String, dynamic>.from(response.data! as Map);
         final token = (data['token'] ?? '').toString();
 
         if (data['user'] != null) {

@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Production API uses plain HTTP until TLS is configured on the server. -->
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">193.187.129.179</domain>
-    </domain-config>
+    <!-- Production API uses HTTPS via farmtracker.samtama.lol -->
     <base-config cleartextTrafficPermitted="false" />
 </network-security-config>

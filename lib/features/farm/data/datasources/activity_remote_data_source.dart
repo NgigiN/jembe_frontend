@@ -101,7 +101,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       );
 
       if (response.statusCode == 201) {
-        final data = response.data! as Map<String, dynamic>;
+        final data = response.data!;
         return ActivityModel.fromJson(data);
       } else {
         var errorMsg = 'Failed to add activity';
@@ -149,7 +149,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       );
 
       if (response.statusCode == 200) {
-        final data = response.data! as Map<String, dynamic>;
+        final data = response.data!;
         return ActivityModel.fromJson(data);
       } else {
         var errorMsg = 'Failed to update activity';

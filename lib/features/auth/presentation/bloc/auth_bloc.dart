@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart' as auth_google;
 import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
+import 'package:farm_tracker/features/auth/data/services/google_sign_in_service.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:farm_tracker/features/auth/domain/entities/user.dart';
 
@@ -26,6 +27,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
 
       try {
+        await GoogleSignInService.ensureInitialized();
+
         final auth_google.GoogleSignIn googleSignIn = auth_google.GoogleSignIn.instance;
 
         final auth_google.GoogleSignInAccount? account = await googleSignIn.authenticate();

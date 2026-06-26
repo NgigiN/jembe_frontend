@@ -52,7 +52,7 @@ class CostCategoryBloc extends Bloc<CostCategoryEvent, CostCategoryState> {
       (success) {
         emit(CostCategoryAdded(categories: currentCategories));
         // Reload categories after adding to get the full list with IDs
-        add(GetCostCategoriesEvent(type: event.type, category: event.category));
+        add(GetCostCategoriesEvent(category: event.category));
       },
     );
   }

@@ -26,6 +26,7 @@ analyzer:
     - "**/*.freezed.dart"
   errors:
     invalid_annotation_target: ignore
+    lines_longer_than_80_chars: ignore
     public_member_api_docs: ignore
   strong-mode:
     implicit-casts: false

@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 
 class EntityErrorView extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-
   const EntityErrorView({
-    super.key,
     required this.message,
     required this.onRetry,
+    super.key,
   });
+  final String message;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -26,10 +25,7 @@ class EntityErrorView extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: onRetry,
-              child: const Text('Retry'),
-            ),
+            ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
           ],
         ),
       ),

@@ -4,10 +4,10 @@ class EntityFormSheet {
   static Future<void> show({
     required BuildContext context,
     required String title,
-    double heightFactor = 0.8,
     required List<Widget> fields,
     required String submitLabel,
     required void Function(BuildContext sheetContext) onSubmit,
+    double heightFactor = 0.8,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -27,9 +27,8 @@ class EntityFormSheet {
                 children: [
                   Text(
                     title,
-                    style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(sheetContext).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(sheetContext),
@@ -41,9 +40,7 @@ class EntityFormSheet {
               Expanded(
                 child: scrollableForm(
                   context: sheetContext,
-                  child: Column(
-                    children: fields,
-                  ),
+                  child: Column(children: fields),
                 ),
               ),
               const SizedBox(height: 20),
@@ -78,7 +75,8 @@ class EntityFormSheet {
     double heightFactor = 0.8,
   }) {
     final viewInsets = MediaQuery.viewInsetsOf(context);
-    final availableHeight = MediaQuery.sizeOf(context).height - viewInsets.bottom;
+    final availableHeight =
+        MediaQuery.sizeOf(context).height - viewInsets.bottom;
 
     return Padding(
       padding: EdgeInsets.only(bottom: viewInsets.bottom),
@@ -88,9 +86,7 @@ class EntityFormSheet {
         height: availableHeight * heightFactor,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(20),
-          ),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: child,
       ),
@@ -108,3 +104,4 @@ class EntityFormSheet {
     );
   }
 }
+

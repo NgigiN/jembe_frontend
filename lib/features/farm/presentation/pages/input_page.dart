@@ -20,7 +20,6 @@ import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_state
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
-import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
 import 'package:farm_tracker/features/farm/data/models/input_model.dart';
 
 class InputPage extends StatefulWidget {
@@ -129,11 +128,6 @@ class _InputPageState extends State<InputPage> {
 
     final seasonState = context.read<SeasonBloc>().state;
     final seasons = seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
-
-    final costCategoryState = context.read<CostCategoryBloc>().state;
-    final allCategories = costCategoryState is CostCategoryLoaded
-        ? costCategoryState.categories
-        : <CostCategory>[];
 
     final herdState = context.read<HerdBloc>().state;
     final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
@@ -253,43 +247,70 @@ class _InputPageState extends State<InputPage> {
                         if (selectedSourceType == 'plant' ||
                             selectedSourceType == 'animal')
                           const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                decoration: const InputDecoration(
-                                  labelText: 'Input Type *',
-                                  border: OutlineInputBorder(),
+                        BlocBuilder<CostCategoryBloc, CostCategoryState>(
+                          builder: (context, costCategoryState) {
+                            final categories = costCategoryState.categories
+                                .where((c) => c.type == selectedSourceType)
+                                .toList();
+
+                            return Row(
+                              children: [
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    value: typeController.text.isEmpty
+                                        ? null
+                                        : typeController.text,
+                                    decoration: InputDecoration(
+                                      labelText: 'Input Type *',
+                                      border: const OutlineInputBorder(),
+                                      suffixIcon:
+                                          costCategoryState
+                                              is CostCategoryLoading
+                                          ? const Padding(
+                                              padding: EdgeInsets.all(12),
+                                              child: SizedBox(
+                                                width: 16,
+                                                height: 16,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                    items: _buildTypeDropdownItems(
+                                      categories
+                                          .map((category) => category.name),
+                                      typeController.text,
+                                    ),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        typeController.text = value ?? '';
+                                      });
+                                    },
+                                  ),
                                 ),
-                                items: allCategories
-                                    .where(
-                                        (c) => c.type == selectedSourceType)
-                                    .map((category) {
-                                  return DropdownMenuItem<String>(
-                                    value: category.name,
-                                    child: Text(category.name),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    typeController.text = value ?? '';
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              onPressed: () => _showCreateInputTypeDialog(
-                                context,
-                                selectedSourceType!,
-                              ),
-                              icon: const Icon(Icons.add_circle_outline),
-                              tooltip: 'Add new input type',
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.green.shade50,
-                              ),
-                            ),
-                          ],
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  onPressed: () => _showCreateInputTypeDialog(
+                                    context,
+                                    selectedSourceType!,
+                                    onCategoryAdded: (name) {
+                                      setState(() {
+                                        typeController.text = name;
+                                      });
+                                    },
+                                  ),
+                                  icon: const Icon(Icons.add_circle_outline),
+                                  tooltip: 'Add new input type',
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.green.shade50,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                         const SizedBox(height: 16),
                         TextField(
@@ -474,11 +495,6 @@ class _InputPageState extends State<InputPage> {
     final seasons =
         seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
 
-    final costCategoryState = context.read<CostCategoryBloc>().state;
-    final allCategories = costCategoryState is CostCategoryLoaded
-        ? costCategoryState.categories
-        : <CostCategory>[];
-
     final herdState = context.read<HerdBloc>().state;
     final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
 
@@ -600,47 +616,70 @@ class _InputPageState extends State<InputPage> {
                         if (selectedSourceType == 'plant' ||
                             selectedSourceType == 'animal')
                           const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                initialValue: typeController.text.isEmpty
-                                    ? null
-                                    : typeController.text,
-                                decoration: const InputDecoration(
-                                  labelText: 'Input Type *',
-                                  border: OutlineInputBorder(),
+                        BlocBuilder<CostCategoryBloc, CostCategoryState>(
+                          builder: (context, costCategoryState) {
+                            final categories = costCategoryState.categories
+                                .where((c) => c.type == selectedSourceType)
+                                .toList();
+
+                            return Row(
+                              children: [
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    value: typeController.text.isEmpty
+                                        ? null
+                                        : typeController.text,
+                                    decoration: InputDecoration(
+                                      labelText: 'Input Type *',
+                                      border: const OutlineInputBorder(),
+                                      suffixIcon:
+                                          costCategoryState
+                                              is CostCategoryLoading
+                                          ? const Padding(
+                                              padding: EdgeInsets.all(12),
+                                              child: SizedBox(
+                                                width: 16,
+                                                height: 16,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                    items: _buildTypeDropdownItems(
+                                      categories
+                                          .map((category) => category.name),
+                                      typeController.text,
+                                    ),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        typeController.text = value ?? '';
+                                      });
+                                    },
+                                  ),
                                 ),
-                                items: allCategories
-                                    .where(
-                                        (c) => c.type == selectedSourceType)
-                                    .map((category) {
-                                  return DropdownMenuItem<String>(
-                                    value: category.name,
-                                    child: Text(category.name),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    typeController.text = value ?? '';
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              onPressed: () =>
-                                  _showCreateInputTypeDialog(
-                                context,
-                                selectedSourceType!,
-                              ),
-                              icon: const Icon(Icons.add_circle_outline),
-                              tooltip: 'Add new input type',
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.blue.shade50,
-                              ),
-                            ),
-                          ],
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  onPressed: () => _showCreateInputTypeDialog(
+                                    context,
+                                    selectedSourceType!,
+                                    onCategoryAdded: (name) {
+                                      setState(() {
+                                        typeController.text = name;
+                                      });
+                                    },
+                                  ),
+                                  icon: const Icon(Icons.add_circle_outline),
+                                  tooltip: 'Add new input type',
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.blue.shade50,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                         const SizedBox(height: 16),
                         TextField(
@@ -847,10 +886,30 @@ class _InputPageState extends State<InputPage> {
     }
   }
 
+  List<DropdownMenuItem<String>> _buildTypeDropdownItems(
+    Iterable<String> categoryNames,
+    String selectedName,
+  ) {
+    final names = List<String>.from(categoryNames);
+    if (selectedName.isNotEmpty && !names.contains(selectedName)) {
+      names.add(selectedName);
+    }
+
+    return names
+        .map(
+          (name) => DropdownMenuItem<String>(
+            value: name,
+            child: Text(name),
+          ),
+        )
+        .toList();
+  }
+
   void _showCreateInputTypeDialog(
     BuildContext context,
-    String sourceType,
-  ) {
+    String sourceType, {
+    void Function(String name)? onCategoryAdded,
+  }) {
     final nameController = TextEditingController();
     showDialog(
       context: context,
@@ -884,19 +943,19 @@ class _InputPageState extends State<InputPage> {
                 return;
               }
 
+              final name = nameController.text.trim();
               context.read<CostCategoryBloc>().add(
                     AddCostCategoryEvent(
-                      name: nameController.text.trim(),
+                      name: name,
                       type: sourceType,
                       category: 'input',
                     ),
                   );
               Navigator.pop(context);
+              onCategoryAdded?.call(name);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(
-                    '${nameController.text.trim()} added successfully',
-                  ),
+                  content: Text('$name added successfully'),
                   backgroundColor: Colors.green,
                 ),
               );

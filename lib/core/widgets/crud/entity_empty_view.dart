@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 
 class EntityEmptyView extends StatelessWidget {
+  const EntityEmptyView({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    super.key,
+    this.onAction,
+    this.actionLabel,
+  });
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback? onAction;
   final String? actionLabel;
-
-  const EntityEmptyView({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.onAction,
-    this.actionLabel,
-  });
 
   @override
   Widget build(BuildContext context) {
@@ -28,10 +27,7 @@ class EntityEmptyView extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
