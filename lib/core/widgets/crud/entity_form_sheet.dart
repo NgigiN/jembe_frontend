@@ -75,11 +75,15 @@ class EntityFormSheet {
     double heightFactor = 0.8,
   }) {
     final viewInsets = MediaQuery.viewInsetsOf(context);
-    final availableHeight =
-        MediaQuery.sizeOf(context).height - viewInsets.bottom;
+    final systemPadding = MediaQuery.paddingOf(context);
+    final availableHeight = MediaQuery.sizeOf(context).height -
+        viewInsets.bottom -
+        systemPadding.bottom;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: viewInsets.bottom + systemPadding.bottom,
+      ),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOut,
