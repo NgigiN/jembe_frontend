@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
@@ -69,7 +71,7 @@ class _SeasonPageState extends State<SeasonPage> {
             }
 
             return ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: context.scrollListPadding(forFab: true),
               itemCount: state.seasons.length,
               itemBuilder: (context, index) {
                 final season = state.seasons[index];
@@ -93,9 +95,11 @@ class _SeasonPageState extends State<SeasonPage> {
           return const SizedBox.shrink();
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddSeasonDialog(),
-        child: const Icon(Icons.add),
+      floatingActionButton: SafeFloatingActionButton(
+        child: FloatingActionButton(
+          onPressed: () => _showAddSeasonDialog(),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }

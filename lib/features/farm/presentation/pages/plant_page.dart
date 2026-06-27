@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
@@ -60,7 +62,7 @@ class _PlantPageState extends State<PlantPage> {
             }
 
             return ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: context.scrollListPadding(forFab: true),
               itemCount: state.plants.length,
               itemBuilder: (context, index) {
                 final plant = state.plants[index];
@@ -90,9 +92,11 @@ class _PlantPageState extends State<PlantPage> {
           return const SizedBox.shrink();
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddPlantDialog(),
-        child: const Icon(Icons.add),
+      floatingActionButton: SafeFloatingActionButton(
+        child: FloatingActionButton(
+          onPressed: () => _showAddPlantDialog(),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }

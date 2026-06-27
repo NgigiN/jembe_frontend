@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:farm_tracker/core/utils/responsive_utils.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -83,7 +85,10 @@ class _RevenuePageState extends State<RevenuePage> {
                   }
 
                   return ListView.builder(
-                    padding: EdgeInsets.symmetric(horizontal: context.paddingMedium),
+                    padding: context.scrollListPadding(forFab: true).copyWith(
+                      left: context.paddingMedium,
+                      right: context.paddingMedium,
+                    ),
                     itemCount: revenues.length,
                     itemBuilder: (context, index) {
                       final revenue = revenues[index];
@@ -96,12 +101,14 @@ class _RevenuePageState extends State<RevenuePage> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push(AppRoutePath.revenueAdd),
-        label: const Text('Add Revenue'),
-        icon: const Icon(Icons.add),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+      floatingActionButton: SafeFloatingActionButton(
+        child: FloatingActionButton.extended(
+          onPressed: () => context.push(AppRoutePath.revenueAdd),
+          label: const Text('Add Revenue'),
+          icon: const Icon(Icons.add),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        ),
       ),
     );
   }

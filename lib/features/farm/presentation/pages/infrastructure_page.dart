@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
@@ -70,7 +72,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: context.scrollListPadding(forFab: true),
             itemCount: infrastructures.length,
             itemBuilder: (context, index) {
               final item = infrastructures[index];
@@ -97,9 +99,11 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddOrEditDialog(),
-        child: const Icon(Icons.add),
+      floatingActionButton: SafeFloatingActionButton(
+        child: FloatingActionButton(
+          onPressed: () => _showAddOrEditDialog(),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
