@@ -29,3 +29,15 @@ class AddCostCategoryEvent extends CostCategoryEvent {
   @override
   List<Object?> get props => [name, type, category];
 }
+
+class DeleteCostCategoryEvent extends CostCategoryEvent {
+  const DeleteCostCategoryEvent({
+    required this.id,
+    required this.category,
+  });
+  final String id;
+  final String category;
+
+  @override
+  List<Object?> get props => [id, category];
+}

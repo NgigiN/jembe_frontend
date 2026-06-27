@@ -1,27 +1,26 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/widgets/crud/cost_category_type_selector.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
+import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
-import '../../domain/entities/season.dart';
-import '../../domain/entities/herd.dart';
-import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
-import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
-class ActivityPage extends StatefulWidget {
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloctends StatefulWidget {
   const ActivityPage({super.key, this.sourceType});
   final String? sourceType;
 
@@ -71,7 +70,7 @@ class _ActivityPageState extends State<ActivityPage> {
 
           if (state is ActivityLoaded) {
             if (state.activities.isEmpty) {
-              return EntityEmptyView(
+              return const EntityEmptyView(
                 icon: Icons.work,
                 title: 'No activities registered yet',
                 subtitle: 'Tap the + button to add your first activity',
@@ -257,71 +256,17 @@ class _ActivityPageState extends State<ActivityPage> {
                         if (selectedSourceType == 'plant' ||
                             selectedSourceType == 'animal')
                           const SizedBox(height: 16),
-                        BlocBuilder<CostCategoryBloc, CostCategoryState>(
-                          builder: (context, costCategoryState) {
-                            final categories = costCategoryState.categories
-                                .where((c) => c.type == selectedSourceType)
-                                .toList();
-
-                            return Row(
-                              children: [
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: typeController.text.isEmpty
-                                        ? null
-                                        : typeController.text,
-                                    decoration: InputDecoration(
-                                      labelText: 'Activity Type *',
-                                      border: const OutlineInputBorder(),
-                                      hintText: 'Select activity type',
-                                      suffixIcon:
-                                          costCategoryState
-                                              is CostCategoryLoading
-                                          ? const Padding(
-                                              padding: EdgeInsets.all(12),
-                                              child: SizedBox(
-                                                width: 16,
-                                                height: 16,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                ),
-                                              ),
-                                            )
-                                          : null,
-                                    ),
-                                    items: _buildTypeDropdownItems(
-                                      categories
-                                          .map((category) => category.name),
-                                      typeController.text,
-                                    ),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        typeController.text = value ?? '';
-                                      });
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  onPressed: () =>
-                                      _showCreateActivityTypeDialog(
-                                    context,
-                                    selectedSourceType!,
-                                    onCategoryAdded: (name) {
-                                      setState(() {
-                                        typeController.text = name;
-                                      });
-                                    },
-                                  ),
-                                  icon: const Icon(Icons.add_circle_outline),
-                                  tooltip: 'Add new activity type',
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Colors.green.shade50,
-                                  ),
-                                ),
-                              ],
-                            );
+                        CostCategoryTypeSelector(
+                          categoryKind: 'activity',
+                          sourceType: selectedSourceType!,
+                          selectedType: typeController.text,
+                          labelText: 'Activity Type *',
+                          hintText: 'Select activity type',
+                          addButtonBackgroundColor: Colors.green.shade50,
+                          onTypeChanged: (value) {
+                            setState(() {
+                              typeController.text = value;
+                            });
                           },
                         ),
                         const SizedBox(height: 16),
@@ -632,68 +577,16 @@ class _ActivityPageState extends State<ActivityPage> {
                         if (selectedSourceType == 'plant' ||
                             selectedSourceType == 'animal')
                           const SizedBox(height: 16),
-                        BlocBuilder<CostCategoryBloc, CostCategoryState>(
-                          builder: (context, costCategoryState) {
-                            final categories = costCategoryState.categories
-                                .where((c) => c.type == selectedSourceType)
-                                .toList();
-
-                            return Row(
-                              children: [
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: selectedType,
-                                    decoration: InputDecoration(
-                                      labelText: 'Activity Type *',
-                                      border: const OutlineInputBorder(),
-                                      suffixIcon:
-                                          costCategoryState
-                                              is CostCategoryLoading
-                                          ? const Padding(
-                                              padding: EdgeInsets.all(12),
-                                              child: SizedBox(
-                                                width: 16,
-                                                height: 16,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                ),
-                                              ),
-                                            )
-                                          : null,
-                                    ),
-                                    items: _buildTypeDropdownItems(
-                                      categories
-                                          .map((category) => category.name),
-                                      selectedType ?? '',
-                                    ),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        selectedType = value;
-                                      });
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  onPressed: () =>
-                                      _showCreateActivityTypeDialog(
-                                    context,
-                                    selectedSourceType!,
-                                    onCategoryAdded: (name) {
-                                      setState(() {
-                                        selectedType = name;
-                                      });
-                                    },
-                                  ),
-                                  icon: const Icon(Icons.add_circle_outline),
-                                  tooltip: 'Add new activity type',
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Colors.blue.shade50,
-                                  ),
-                                ),
-                              ],
-                            );
+                        CostCategoryTypeSelector(
+                          categoryKind: 'activity',
+                          sourceType: selectedSourceType!,
+                          selectedType: selectedType ?? '',
+                          labelText: 'Activity Type *',
+                          addButtonBackgroundColor: Colors.blue.shade50,
+                          onTypeChanged: (value) {
+                            setState(() {
+                              selectedType = value.isEmpty ? null : value;
+                            });
                           },
                         ),
                         const SizedBox(height: 16),
@@ -863,7 +756,7 @@ class _ActivityPageState extends State<ActivityPage> {
     );
   }
 
-  void _showDeleteConfirmation(
+  Future<void> _showDeleteConfirmation(
       BuildContext context, Activity activity) async {
     final confirmed = await EntityDeleteDialog.show(
       context: context,
@@ -871,7 +764,7 @@ class _ActivityPageState extends State<ActivityPage> {
       message:
           'Are you sure you want to delete this ${activity.type.toLowerCase()} activity? This action cannot be undone.',
     );
-    if (confirmed == true) {
+    if (confirmed ?? false) {
       context.read<ActivityBloc>().add(
         DeleteActivityEvent(activity.id),
       );
@@ -887,88 +780,4 @@ class _ActivityPageState extends State<ActivityPage> {
     }
   }
 
-  List<DropdownMenuItem<String>> _buildTypeDropdownItems(
-    Iterable<String> categoryNames,
-    String selectedName,
-  ) {
-    final names = List<String>.from(categoryNames);
-    if (selectedName.isNotEmpty && !names.contains(selectedName)) {
-      names.add(selectedName);
-    }
-
-    return names
-        .map(
-          (name) => DropdownMenuItem<String>(
-            value: name,
-            child: Text(name),
-          ),
-        )
-        .toList();
-  }
-
-  void _showCreateActivityTypeDialog(
-    BuildContext context,
-    String sourceType, {
-    void Function(String name)? onCategoryAdded,
-  }) {
-    final nameController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Add New ${sourceType == 'plant' ? 'Plant' : 'Animal'} Activity Type',
-        ),
-        content: TextField(
-          controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Activity Type Name',
-            hintText: 'e.g., Custom Activity',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please enter a name'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                return;
-              }
-
-              final name = nameController.text.trim();
-              context.read<CostCategoryBloc>().add(
-                AddCostCategoryEvent(
-                  name: name,
-                  type: sourceType,
-                  category: 'activity',
-                ),
-              );
-              Navigator.pop(context);
-              onCategoryAdded?.call(name);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('$name added successfully'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade600,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-  }
 }

@@ -46,4 +46,16 @@ class CostCategoryRepositoryImpl implements CostCategoryRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, void>> deleteCostCategory(String id) async {
+    try {
+      await remoteDataSource.deleteCostCategory(id);
+      return const Right(null);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }

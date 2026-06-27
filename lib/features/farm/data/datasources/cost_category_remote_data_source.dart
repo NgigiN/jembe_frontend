@@ -13,6 +13,8 @@ abstract class CostCategoryRemoteDataSource {
     required String type,
     required String category,
   });
+
+  Future<void> deleteCostCategory(String id);
 }
 
 class CostCategoryRemoteDataSourceImpl implements CostCategoryRemoteDataSource {
@@ -61,6 +63,21 @@ class CostCategoryRemoteDataSourceImpl implements CostCategoryRemoteDataSource {
       return response.statusCode == 201 || response.statusCode == 200;
     } on DioException catch (e) {
       throw ServerException(e.message ?? 'Failed to add cost category');
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<void> deleteCostCategory(String id) async {
+    try {
+      final response = await dio.delete('/api/v1/cost-categories/$id');
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw const ServerException('Failed to delete cost category');
+      }
+    } on DioException catch (e) {
+      throw ServerException(e.message ?? 'Failed to delete cost category');
     } catch (e) {
       throw ServerException(e.toString());
     }

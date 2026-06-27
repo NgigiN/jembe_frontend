@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:farm_tracker/core/utils/responsive_utils.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
+import 'package:farm_tracker/core/utils/responsive_utils.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
 import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class AnalysisPage extends StatelessWidget {
   const AnalysisPage({super.key});
@@ -13,17 +13,17 @@ class AnalysisPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Farm Analysis'),
-      ),
+      appBar: AppBar(title: const Text('Farm Analysis')),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-              Theme.of(context).colorScheme.surface
+              Theme.of(
+                context,
+              ).colorScheme.primaryContainer.withValues(alpha: 0.3),
+              Theme.of(context).colorScheme.surface,
             ],
           ),
         ),
@@ -40,8 +40,8 @@ class AnalysisPage extends StatelessWidget {
               Text(
                 'Track your farm performance and costs',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               SizedBox(height: context.paddingLarge),
               Expanded(
@@ -121,15 +121,17 @@ class AnalysisPage extends StatelessWidget {
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
                 'Tap to view',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: color),
               ),
             ],
           ),
@@ -167,9 +169,7 @@ class TotalCostsBySeasonPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Unified Farm Costs'),
-      ),
+      appBar: AppBar(title: const Text('Unified Farm Costs')),
       body: BlocBuilder<AnalysisBloc, AnalysisState>(
         builder: (context, state) {
           if (state is AnalysisLoading) {
@@ -181,12 +181,16 @@ class TotalCostsBySeasonPage extends StatelessWidget {
               },
               child: ListView(
                 children: [
-                   SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.3),
                   Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           state.message,
@@ -196,7 +200,9 @@ class TotalCostsBySeasonPage extends StatelessWidget {
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () {
-                            context.read<AnalysisBloc>().add(LoadTotalCostsBySeason());
+                            context.read<AnalysisBloc>().add(
+                              LoadTotalCostsBySeason(),
+                            );
                           },
                           child: const Text('Retry'),
                         ),
@@ -222,15 +228,15 @@ class TotalCostsBySeasonPage extends StatelessWidget {
                     child: _buildTotalHeader(context, data.totalOverallCost),
                   ),
                   SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final detail = data.details[index];
-                          return _buildCostDetailItem(context, detail);
-                        },
-                        childCount: data.details.length,
-                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final detail = data.details[index];
+                        return _buildCostDetailItem(context, detail);
+                      }, childCount: data.details.length),
                     ),
                   ),
                 ],
@@ -337,7 +343,11 @@ class TotalCostsBySeasonPage extends StatelessWidget {
               children: [
                 _buildBreakdownRow(context, 'Input Costs', detail.inputCost),
                 const SizedBox(height: 8),
-                _buildBreakdownRow(context, 'Activity Costs', detail.activityCost),
+                _buildBreakdownRow(
+                  context,
+                  'Activity Costs',
+                  detail.activityCost,
+                ),
                 const Divider(height: 24),
                 _buildBreakdownRow(
                   context,
@@ -382,7 +392,9 @@ class TotalCostsBySeasonPage extends StatelessWidget {
           label,
           style: TextStyle(
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            color: isBold ? null : Theme.of(context).colorScheme.onSurfaceVariant,
+            color: isBold
+                ? null
+                : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
         Text(
@@ -403,9 +415,7 @@ class CostBreakdownPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Cost Breakdown by Input Type'),
-      ),
+      appBar: AppBar(title: const Text('Cost Breakdown by Input Type')),
       body: BlocBuilder<AnalysisBloc, AnalysisState>(
         builder: (context, state) {
           if (state is AnalysisLoading) {
@@ -497,7 +507,11 @@ class AnnualSummaryPage extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           state.message,
@@ -507,7 +521,9 @@ class AnnualSummaryPage extends StatelessWidget {
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () {
-                            context.read<AnalysisBloc>().add(LoadAnnualCostSummary());
+                            context.read<AnalysisBloc>().add(
+                              LoadAnnualCostSummary(),
+                            );
                           },
                           child: const Text('Retry'),
                         ),
@@ -519,7 +535,9 @@ class AnnualSummaryPage extends StatelessWidget {
             );
           } else if (state is AnnualCostSummaryLoaded) {
             if (state.summaries.isEmpty) {
-              return const Center(child: Text('No performance data available for this year'));
+              return const Center(
+                child: Text('No performance data available for this year'),
+              );
             }
 
             // Sort summaries by month string (e.g. "2026-01")
@@ -538,13 +556,10 @@ class AnnualSummaryPage extends StatelessWidget {
                   SliverPadding(
                     padding: const EdgeInsets.all(16),
                     sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final summary = sortedSummaries[index];
-                          return _buildMonthlyPerformanceCard(context, summary);
-                        },
-                        childCount: sortedSummaries.length,
-                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final summary = sortedSummaries[index];
+                        return _buildMonthlyPerformanceCard(context, summary);
+                      }, childCount: sortedSummaries.length),
                     ),
                   ),
                 ],
@@ -557,7 +572,10 @@ class AnnualSummaryPage extends StatelessWidget {
     );
   }
 
-  Widget _buildAnnualOverview(BuildContext context, List<MonthlySummary> summaries) {
+  Widget _buildAnnualOverview(
+    BuildContext context,
+    List<MonthlySummary> summaries,
+  ) {
     double totalAnnualCosts = 0;
     double totalAnnualRevenue = 0;
     for (final s in summaries) {
@@ -611,8 +629,18 @@ class AnnualSummaryPage extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildOverviewStat('Total Revenue', totalAnnualRevenue, Icons.trending_up, Colors.greenAccent),
-              _buildOverviewStat('Total Costs', totalAnnualCosts, Icons.trending_down, Colors.orangeAccent),
+              _buildOverviewStat(
+                'Total Revenue',
+                totalAnnualRevenue,
+                Icons.trending_up,
+                Colors.greenAccent,
+              ),
+              _buildOverviewStat(
+                'Total Costs',
+                totalAnnualCosts,
+                Icons.trending_down,
+                Colors.orangeAccent,
+              ),
             ],
           ),
         ],
@@ -620,24 +648,39 @@ class AnnualSummaryPage extends StatelessWidget {
     );
   }
 
-  Widget _buildOverviewStat(String label, double value, IconData icon, Color color) {
+  Widget _buildOverviewStat(
+    String label,
+    double value,
+    IconData icon,
+    Color color,
+  ) {
     return Column(
       children: [
         Icon(icon, color: color, size: 24),
         const SizedBox(height: 8),
         Text(
           'KES ${value.toStringAsFixed(0)}',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
         ),
         Text(
           label,
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.7),
+            fontSize: 12,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildMonthlyPerformanceCard(BuildContext context, MonthlySummary summary) {
+  Widget _buildMonthlyPerformanceCard(
+    BuildContext context,
+    MonthlySummary summary,
+  ) {
     final date = DateTime.tryParse('${summary.month}-01') ?? DateTime.now();
     final monthName = _getMonthName(date.month);
     final isProfit = summary.profit >= 0;
@@ -651,7 +694,9 @@ class AnnualSummaryPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
@@ -665,7 +710,10 @@ class AnnualSummaryPage extends StatelessWidget {
                   children: [
                     Text(
                       monthName,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
                     ),
                     Text(
                       date.year.toString(),
@@ -674,9 +722,14 @@ class AnnualSummaryPage extends StatelessWidget {
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: (isProfit ? Colors.green : Colors.red).withValues(alpha: 0.1),
+                    color: (isProfit ? Colors.green : Colors.red).withValues(
+                      alpha: 0.1,
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -698,8 +751,18 @@ class AnnualSummaryPage extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildCompactStat(context, 'Revenue', summary.totalRevenue, Colors.green),
-                    _buildCompactStat(context, 'Costs', summary.totalCosts, Colors.orange),
+                    _buildCompactStat(
+                      context,
+                      'Revenue',
+                      summary.totalRevenue,
+                      Colors.green,
+                    ),
+                    _buildCompactStat(
+                      context,
+                      'Costs',
+                      summary.totalCosts,
+                      Colors.orange,
+                    ),
                     _buildCompactStat(
                       context,
                       'Net',
@@ -718,7 +781,12 @@ class AnnualSummaryPage extends StatelessWidget {
     );
   }
 
-  Widget _buildCompactStat(BuildContext context, String label, double value, Color color) {
+  Widget _buildCompactStat(
+    BuildContext context,
+    String label,
+    double value,
+    Color color,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -753,9 +821,21 @@ class AnnualSummaryPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSubLabel('Costs'),
-                  _buildMiniBreakdownRow('Plant', summary.breakdown.costs.plant, Colors.green.shade300),
-                  _buildMiniBreakdownRow('Animal', summary.breakdown.costs.animal, Colors.blue.shade300),
-                  _buildMiniBreakdownRow('Infra', summary.breakdown.costs.infrastructure, Colors.brown.shade300),
+                  _buildMiniBreakdownRow(
+                    'Plant',
+                    summary.breakdown.costs.plant,
+                    Colors.green.shade300,
+                  ),
+                  _buildMiniBreakdownRow(
+                    'Animal',
+                    summary.breakdown.costs.animal,
+                    Colors.blue.shade300,
+                  ),
+                  _buildMiniBreakdownRow(
+                    'Infra',
+                    summary.breakdown.costs.infrastructure,
+                    Colors.brown.shade300,
+                  ),
                 ],
               ),
             ),
@@ -765,8 +845,16 @@ class AnnualSummaryPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSubLabel('Revenue'),
-                  _buildMiniBreakdownRow('Plant', summary.breakdown.revenue.plant, Colors.green),
-                  _buildMiniBreakdownRow('Animal', summary.breakdown.revenue.animal, Colors.blue),
+                  _buildMiniBreakdownRow(
+                    'Plant',
+                    summary.breakdown.revenue.plant,
+                    Colors.green,
+                  ),
+                  _buildMiniBreakdownRow(
+                    'Animal',
+                    summary.breakdown.revenue.animal,
+                    Colors.blue,
+                  ),
                 ],
               ),
             ),
@@ -781,7 +869,11 @@ class AnnualSummaryPage extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: Colors.grey,
+        ),
       ),
     );
   }
@@ -791,7 +883,11 @@ class AnnualSummaryPage extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -811,8 +907,18 @@ class AnnualSummaryPage extends StatelessWidget {
 
   String _getMonthName(int month) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return months[month - 1];
   }

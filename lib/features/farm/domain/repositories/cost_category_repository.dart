@@ -13,4 +13,6 @@ abstract class CostCategoryRepository {
     required String type,
     required String category,
   });
+
+  Future<Either<Failure, void>> deleteCostCategory(String id);
 }

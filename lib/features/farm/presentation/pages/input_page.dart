@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
+import 'package:farm_tracker/core/widgets/crud/cost_category_type_selector.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_bloc.dart';
@@ -16,7 +17,7 @@ import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_state.dart';
+
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
@@ -247,69 +248,16 @@ class _InputPageState extends State<InputPage> {
                         if (selectedSourceType == 'plant' ||
                             selectedSourceType == 'animal')
                           const SizedBox(height: 16),
-                        BlocBuilder<CostCategoryBloc, CostCategoryState>(
-                          builder: (context, costCategoryState) {
-                            final categories = costCategoryState.categories
-                                .where((c) => c.type == selectedSourceType)
-                                .toList();
-
-                            return Row(
-                              children: [
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: typeController.text.isEmpty
-                                        ? null
-                                        : typeController.text,
-                                    decoration: InputDecoration(
-                                      labelText: 'Input Type *',
-                                      border: const OutlineInputBorder(),
-                                      suffixIcon:
-                                          costCategoryState
-                                              is CostCategoryLoading
-                                          ? const Padding(
-                                              padding: EdgeInsets.all(12),
-                                              child: SizedBox(
-                                                width: 16,
-                                                height: 16,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                ),
-                                              ),
-                                            )
-                                          : null,
-                                    ),
-                                    items: _buildTypeDropdownItems(
-                                      categories
-                                          .map((category) => category.name),
-                                      typeController.text,
-                                    ),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        typeController.text = value ?? '';
-                                      });
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  onPressed: () => _showCreateInputTypeDialog(
-                                    context,
-                                    selectedSourceType!,
-                                    onCategoryAdded: (name) {
-                                      setState(() {
-                                        typeController.text = name;
-                                      });
-                                    },
-                                  ),
-                                  icon: const Icon(Icons.add_circle_outline),
-                                  tooltip: 'Add new input type',
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Colors.green.shade50,
-                                  ),
-                                ),
-                              ],
-                            );
+                        CostCategoryTypeSelector(
+                          categoryKind: 'input',
+                          sourceType: selectedSourceType!,
+                          selectedType: typeController.text,
+                          labelText: 'Input Type *',
+                          addButtonBackgroundColor: Colors.green.shade50,
+                          onTypeChanged: (value) {
+                            setState(() {
+                              typeController.text = value;
+                            });
                           },
                         ),
                         const SizedBox(height: 16),
@@ -616,69 +564,16 @@ class _InputPageState extends State<InputPage> {
                         if (selectedSourceType == 'plant' ||
                             selectedSourceType == 'animal')
                           const SizedBox(height: 16),
-                        BlocBuilder<CostCategoryBloc, CostCategoryState>(
-                          builder: (context, costCategoryState) {
-                            final categories = costCategoryState.categories
-                                .where((c) => c.type == selectedSourceType)
-                                .toList();
-
-                            return Row(
-                              children: [
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: typeController.text.isEmpty
-                                        ? null
-                                        : typeController.text,
-                                    decoration: InputDecoration(
-                                      labelText: 'Input Type *',
-                                      border: const OutlineInputBorder(),
-                                      suffixIcon:
-                                          costCategoryState
-                                              is CostCategoryLoading
-                                          ? const Padding(
-                                              padding: EdgeInsets.all(12),
-                                              child: SizedBox(
-                                                width: 16,
-                                                height: 16,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                ),
-                                              ),
-                                            )
-                                          : null,
-                                    ),
-                                    items: _buildTypeDropdownItems(
-                                      categories
-                                          .map((category) => category.name),
-                                      typeController.text,
-                                    ),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        typeController.text = value ?? '';
-                                      });
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  onPressed: () => _showCreateInputTypeDialog(
-                                    context,
-                                    selectedSourceType!,
-                                    onCategoryAdded: (name) {
-                                      setState(() {
-                                        typeController.text = name;
-                                      });
-                                    },
-                                  ),
-                                  icon: const Icon(Icons.add_circle_outline),
-                                  tooltip: 'Add new input type',
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Colors.blue.shade50,
-                                  ),
-                                ),
-                              ],
-                            );
+                        CostCategoryTypeSelector(
+                          categoryKind: 'input',
+                          sourceType: selectedSourceType!,
+                          selectedType: typeController.text,
+                          labelText: 'Input Type *',
+                          addButtonBackgroundColor: Colors.blue.shade50,
+                          onTypeChanged: (value) {
+                            setState(() {
+                              typeController.text = value;
+                            });
                           },
                         ),
                         const SizedBox(height: 16),
@@ -886,88 +781,4 @@ class _InputPageState extends State<InputPage> {
     }
   }
 
-  List<DropdownMenuItem<String>> _buildTypeDropdownItems(
-    Iterable<String> categoryNames,
-    String selectedName,
-  ) {
-    final names = List<String>.from(categoryNames);
-    if (selectedName.isNotEmpty && !names.contains(selectedName)) {
-      names.add(selectedName);
-    }
-
-    return names
-        .map(
-          (name) => DropdownMenuItem<String>(
-            value: name,
-            child: Text(name),
-          ),
-        )
-        .toList();
-  }
-
-  void _showCreateInputTypeDialog(
-    BuildContext context,
-    String sourceType, {
-    void Function(String name)? onCategoryAdded,
-  }) {
-    final nameController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Add New ${sourceType == 'plant' ? 'Plant' : 'Animal'} Input Type',
-        ),
-        content: TextField(
-          controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Input Type Name',
-            hintText: 'e.g., Custom Fertilizer',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please enter a name'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                return;
-              }
-
-              final name = nameController.text.trim();
-              context.read<CostCategoryBloc>().add(
-                    AddCostCategoryEvent(
-                      name: name,
-                      type: sourceType,
-                      category: 'input',
-                    ),
-                  );
-              Navigator.pop(context);
-              onCategoryAdded?.call(name);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('$name added successfully'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade600,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-  }
 }
