@@ -27,7 +27,9 @@ import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloctends StatefulWidget {
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+class ActivityPage extends StatefulWidget {
   const ActivityPage({super.key, this.sourceType});
   final String? sourceType;
 
