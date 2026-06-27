@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/cost_category_type_selector.dart';
@@ -14,7 +16,12 @@ import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
 import 'package:farm_tracker/features/farm/domain/entities/input.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
+import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event.dart';
 
@@ -38,6 +45,7 @@ class _InputPageState extends State<InputPage> {
     context.read<InputBloc>().add(GetInputsEvent(sourceType: widget.sourceType));
     context.read<HerdBloc>().add(GetHerdsEvent());
     context.read<SeasonBloc>().add(GetSeasonsEvent());
+    context.read<LandBloc>().add(GetLandsEvent());
     context.read<CostCategoryBloc>().add(
           const GetCostCategoriesEvent(category: 'input'),
         );
@@ -45,6 +53,14 @@ class _InputPageState extends State<InputPage> {
 
   @override
   Widget build(BuildContext context) {
+    final seasonState = context.watch<SeasonBloc>().state;
+    final seasons =
+        seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
+    final landState = context.watch<LandBloc>().state;
+    final lands = landState is LandLoaded ? landState.lands : <Land>[];
+    final herdState = context.watch<HerdBloc>().state;
+    final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Input Management'),
@@ -79,16 +95,31 @@ class _InputPageState extends State<InputPage> {
             }
 
             return ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: context.scrollListPadding(forFab: true),
               itemCount: inputs.length,
               itemBuilder: (context, index) {
                 final input = inputs[index];
+                final sourceFields = input.sourceType == 'plant'
+                    ? [
+                        Text(
+                          'Season: ${seasonName(seasons, input.sourceId)}',
+                        ),
+                        Text(
+                          'Land: ${landNameForSeason(seasons, lands, input.sourceId)}',
+                        ),
+                      ]
+                    : [
+                        Text(
+                          'Herd: ${herdName(herds, input.sourceId)}',
+                        ),
+                      ];
                 return EntityListTile(
                   leadingIcon: Icons.input,
                   leadingBackgroundColor: Colors.purple.shade100,
                   leadingIconColor: Colors.purple.shade700,
                   title: input.type,
                   subtitleFields: [
+                    ...sourceFields,
                     Text('Cost: Ksh ${input.cost.toStringAsFixed(2)}'),
                     if (input.quantity != null)
                       Text('Quantity: ${input.quantity}'),
@@ -106,9 +137,11 @@ class _InputPageState extends State<InputPage> {
           return const SizedBox.shrink();
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddInputDialog(context),
-        child: const Icon(Icons.add),
+      floatingActionButton: SafeFloatingActionButton(
+        child: FloatingActionButton(
+          onPressed: () => _showAddInputDialog(context),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
@@ -129,6 +162,9 @@ class _InputPageState extends State<InputPage> {
 
     final seasonState = context.read<SeasonBloc>().state;
     final seasons = seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
+
+    final landState = context.read<LandBloc>().state;
+    final lands = landState is LandLoaded ? landState.lands : <Land>[];
 
     final herdState = context.read<HerdBloc>().state;
     final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
@@ -215,7 +251,7 @@ class _InputPageState extends State<InputPage> {
                             items: seasons.map((season) {
                               return DropdownMenuItem<String>(
                                 value: season.id,
-                                child: Text(season.name),
+                                child: Text(seasonDropdownLabel(season, lands)),
                               );
                             }).toList(),
                             onChanged: (value) {
@@ -443,6 +479,9 @@ class _InputPageState extends State<InputPage> {
     final seasons =
         seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
 
+    final landState = context.read<LandBloc>().state;
+    final lands = landState is LandLoaded ? landState.lands : <Land>[];
+
     final herdState = context.read<HerdBloc>().state;
     final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
 
@@ -531,7 +570,7 @@ class _InputPageState extends State<InputPage> {
                             items: seasons.map((season) {
                               return DropdownMenuItem<String>(
                                 value: season.id,
-                                child: Text(season.name),
+                                child: Text(seasonDropdownLabel(season, lands)),
                               );
                             }).toList(),
                             onChanged: (value) {

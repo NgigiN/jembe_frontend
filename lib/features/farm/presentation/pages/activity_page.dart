@@ -1,13 +1,20 @@
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/crud/cost_category_type_selector.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
+import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_state.dart';
@@ -37,6 +44,7 @@ class _ActivityPageState extends State<ActivityPage> {
     );
     context.read<HerdBloc>().add(GetHerdsEvent());
     context.read<SeasonBloc>().add(GetSeasonsEvent());
+    context.read<LandBloc>().add(GetLandsEvent());
     context.read<CostCategoryBloc>().add(
       const GetCostCategoriesEvent(category: 'activity'),
     );
@@ -44,6 +52,14 @@ class _ActivityPageState extends State<ActivityPage> {
 
   @override
   Widget build(BuildContext context) {
+    final seasonState = context.watch<SeasonBloc>().state;
+    final seasons =
+        seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
+    final landState = context.watch<LandBloc>().state;
+    final lands = landState is LandLoaded ? landState.lands : <Land>[];
+    final herdState = context.watch<HerdBloc>().state;
+    final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Activity Management'),
@@ -78,16 +94,31 @@ class _ActivityPageState extends State<ActivityPage> {
             }
 
             return ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: context.scrollListPadding(forFab: true),
               itemCount: state.activities.length,
               itemBuilder: (context, index) {
                 final activity = state.activities[index];
+                final sourceFields = activity.sourceType == 'plant'
+                    ? [
+                        Text(
+                          'Season: ${seasonName(seasons, activity.sourceId)}',
+                        ),
+                        Text(
+                          'Land: ${landNameForSeason(seasons, lands, activity.sourceId)}',
+                        ),
+                      ]
+                    : [
+                        Text(
+                          'Herd: ${herdName(herds, activity.sourceId)}',
+                        ),
+                      ];
                 return EntityListTile(
                   leadingIcon: Icons.work,
                   leadingBackgroundColor: Colors.red.shade100,
                   leadingIconColor: Colors.red.shade700,
                   title: activity.type,
                   subtitleFields: [
+                    ...sourceFields,
                     Text('Date: ${_formatDate(activity.date)}'),
                     Text('Cost: Ksh ${activity.cost.toStringAsFixed(2)}'),
                     if (activity.details != null &&
@@ -104,9 +135,11 @@ class _ActivityPageState extends State<ActivityPage> {
           return const SizedBox.shrink();
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddActivityDialog(context),
-        child: const Icon(Icons.add),
+      floatingActionButton: SafeFloatingActionButton(
+        child: FloatingActionButton(
+          onPressed: () => _showAddActivityDialog(context),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
@@ -123,6 +156,9 @@ class _ActivityPageState extends State<ActivityPage> {
     final seasons = seasonState is SeasonLoaded
         ? seasonState.seasons
         : <Season>[];
+
+    final landState = context.read<LandBloc>().state;
+    final lands = landState is LandLoaded ? landState.lands : <Land>[];
 
     final herdState = context.read<HerdBloc>().state;
     final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
@@ -215,7 +251,7 @@ class _ActivityPageState extends State<ActivityPage> {
                                 .map<DropdownMenuItem<String>>((season) {
                               return DropdownMenuItem<String>(
                                 value: season.id,
-                                child: Text(season.name),
+                                child: Text(seasonDropdownLabel(season, lands)),
                               );
                             }).toList(),
                             onChanged: (value) {
@@ -437,6 +473,9 @@ class _ActivityPageState extends State<ActivityPage> {
         ? seasonState.seasons
         : <Season>[];
 
+    final landState = context.read<LandBloc>().state;
+    final lands = landState is LandLoaded ? landState.lands : <Land>[];
+
     final herdState = context.read<HerdBloc>().state;
     final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
 
@@ -536,7 +575,7 @@ class _ActivityPageState extends State<ActivityPage> {
                                 .map<DropdownMenuItem<String>>((season) {
                               return DropdownMenuItem<String>(
                                 value: season.id,
-                                child: Text(season.name),
+                                child: Text(seasonDropdownLabel(season, lands)),
                               );
                             }).toList(),
                             onChanged: (value) {
