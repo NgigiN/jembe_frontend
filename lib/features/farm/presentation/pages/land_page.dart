@@ -4,7 +4,10 @@ import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
@@ -66,21 +69,12 @@ class _LandPageState extends State<LandPage> {
               itemCount: state.lands.length,
               itemBuilder: (context, index) {
                 final land = state.lands[index];
-                return EntityListTile(
-                  leadingIcon: Icons.landscape,
-                  leadingBackgroundColor: Colors.green.shade100,
-                  leadingIconColor: Colors.green.shade700,
+                return EntityCard(
+                  icon: Icons.landscape,
+                  iconColor: AppColors.plantCategory,
                   title: land.name,
-                  subtitleFields: [
-                    if (land.size != null)
-                      Text('Size: ${land.size} acres'),
-                    if (land.location != null && land.location!.isNotEmpty)
-                      Text('Location: ${land.location}'),
-                    if (land.soilType != null && land.soilType!.isNotEmpty)
-                      Text('Soil Type: ${land.soilType}'),
-                  ],
-                  onEdit: () => _showEditLandDialog(land),
-                  onDelete: () => _showDeleteConfirmation(land),
+                  subtitle: _landSubtitle(land),
+                  onTap: () => _showLandDetails(land),
                 );
               },
             );
@@ -95,6 +89,36 @@ class _LandPageState extends State<LandPage> {
           child: const Icon(Icons.add),
         ),
       ),
+    );
+  }
+
+  String _landSubtitle(Land land) {
+    final parts = <String>[];
+    if (land.size != null) parts.add('${land.size} acres');
+    if (land.location != null && land.location!.isNotEmpty) {
+      parts.add(land.location!);
+    }
+    return parts.isEmpty ? 'No details' : parts.join(' · ');
+  }
+
+  void _showLandDetails(Land land) {
+    EntityDetailsSheet.show(
+      context: context,
+      title: land.name,
+      details: [
+        if (land.size != null)
+          EntityDetailRow('Size', '${land.size} acres'),
+        EntityDetailRow(
+          'Location',
+          land.location?.isNotEmpty == true ? land.location! : '—',
+        ),
+        EntityDetailRow(
+          'Soil Type',
+          land.soilType?.isNotEmpty == true ? land.soilType! : '—',
+        ),
+      ],
+      onEdit: () => _showEditLandDialog(land),
+      onDelete: () => _showDeleteConfirmation(land),
     );
   }
 
