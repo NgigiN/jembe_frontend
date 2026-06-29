@@ -4,7 +4,10 @@ import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
@@ -66,24 +69,14 @@ class _PlantPageState extends State<PlantPage> {
               itemCount: state.plants.length,
               itemBuilder: (context, index) {
                 final plant = state.plants[index];
-                return EntityListTile(
-                  leadingIcon: Icons.eco,
-                  leadingBackgroundColor: Colors.green.shade100,
-                  leadingIconColor: Colors.green.shade700,
+                return EntityCard(
+                  icon: Icons.eco,
+                  iconColor: AppColors.plantCategory,
                   title: plant.name,
-                  subtitleFields: [
-                    if (plant.variety != null && plant.variety!.isNotEmpty)
-                      Text('Variety: ${plant.variety}'),
-                    Text(
-                      'Created: ${_formatDate(plant.createdAt)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                  onEdit: () => _showEditPlantDialog(plant),
-                  onDelete: () => _showDeleteConfirmation(plant),
+                  subtitle: plant.variety?.isNotEmpty == true
+                      ? plant.variety!
+                      : 'Added ${_formatDate(plant.createdAt)}',
+                  onTap: () => _showPlantDetails(plant),
                 );
               },
             );
@@ -103,6 +96,22 @@ class _PlantPageState extends State<PlantPage> {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  void _showPlantDetails(Plant plant) {
+    EntityDetailsSheet.show(
+      context: context,
+      title: plant.name,
+      details: [
+        EntityDetailRow(
+          'Variety',
+          plant.variety?.isNotEmpty == true ? plant.variety! : '—',
+        ),
+        EntityDetailRow('Created', _formatDate(plant.createdAt)),
+      ],
+      onEdit: () => _showEditPlantDialog(plant),
+      onDelete: () => _showDeleteConfirmation(plant),
+    );
   }
 
   void _showAddPlantDialog() {
