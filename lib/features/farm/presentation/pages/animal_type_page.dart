@@ -4,7 +4,10 @@ import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
@@ -66,25 +69,14 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
               itemCount: state.animalTypes.length,
               itemBuilder: (context, index) {
                 final animalType = state.animalTypes[index];
-                return EntityListTile(
-                  leadingIcon: Icons.category,
-                  leadingBackgroundColor: Colors.blue.shade100,
-                  leadingIconColor: Colors.blue.shade700,
+                return EntityCard(
+                  icon: Icons.category,
+                  iconColor: AppColors.animalCategory,
                   title: animalType.name,
-                  subtitleFields: [
-                    if (animalType.notes != null &&
-                        animalType.notes!.isNotEmpty)
-                      Text('Notes: ${animalType.notes}'),
-                    Text(
-                      'Created: ${_formatDate(animalType.createdAt)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                  onEdit: () => _showEditAnimalTypeDialog(animalType),
-                  onDelete: () => _showDeleteConfirmation(animalType),
+                  subtitle: animalType.notes?.isNotEmpty == true
+                      ? animalType.notes!
+                      : 'Added ${_formatDate(animalType.createdAt)}',
+                  onTap: () => _showAnimalTypeDetails(animalType),
                 );
               },
             );
@@ -104,6 +96,22 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  void _showAnimalTypeDetails(AnimalType animalType) {
+    EntityDetailsSheet.show(
+      context: context,
+      title: animalType.name,
+      details: [
+        EntityDetailRow(
+          'Notes',
+          animalType.notes?.isNotEmpty == true ? animalType.notes! : '—',
+        ),
+        EntityDetailRow('Created', _formatDate(animalType.createdAt)),
+      ],
+      onEdit: () => _showEditAnimalTypeDialog(animalType),
+      onDelete: () => _showDeleteConfirmation(animalType),
+    );
   }
 
   void _showAddAnimalTypeDialog() {

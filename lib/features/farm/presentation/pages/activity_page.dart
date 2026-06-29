@@ -4,7 +4,10 @@ import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
@@ -100,35 +103,33 @@ class _ActivityPageState extends State<ActivityPage> {
               itemCount: state.activities.length,
               itemBuilder: (context, index) {
                 final activity = state.activities[index];
-                final sourceFields = activity.sourceType == 'plant'
-                    ? [
-                        Text(
-                          'Season: ${seasonName(seasons, activity.sourceId)}',
-                        ),
-                        Text(
-                          'Land: ${landNameForSeason(seasons, lands, activity.sourceId)}',
-                        ),
-                      ]
-                    : [
-                        Text(
-                          'Herd: ${herdName(herds, activity.sourceId)}',
-                        ),
-                      ];
-                return EntityListTile(
-                  leadingIcon: Icons.work,
-                  leadingBackgroundColor: Colors.red.shade100,
-                  leadingIconColor: Colors.red.shade700,
+                final isPlant = activity.sourceType == 'plant';
+                final categoryColor = isPlant
+                    ? AppColors.plantCategory
+                    : AppColors.animalCategory;
+                final subtitle = isPlant
+                    ? '${seasonName(seasons, activity.sourceId)} · ${landNameForSeason(seasons, lands, activity.sourceId)}'
+                    : herdName(herds, activity.sourceId);
+
+                return EntityCard(
+                  icon: Icons.work,
+                  iconColor: categoryColor,
                   title: activity.type,
-                  subtitleFields: [
-                    ...sourceFields,
-                    Text('Date: ${_formatDate(activity.date)}'),
-                    Text('Cost: Ksh ${activity.cost.toStringAsFixed(2)}'),
-                    if (activity.details != null &&
-                        activity.details!.isNotEmpty)
-                      Text('Details: ${activity.details}'),
-                  ],
-                  onEdit: () => _showEditActivityDialog(context, activity),
-                  onDelete: () => _showDeleteConfirmation(context, activity),
+                  subtitle: '$subtitle · ${_formatDate(activity.date)}',
+                  trailing: Text(
+                    'Ksh ${activity.cost.toStringAsFixed(0)}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                  ),
+                  onTap: () => _showActivityDetails(
+                    context,
+                    activity,
+                    seasons: seasons,
+                    lands: lands,
+                    herds: herds,
+                  ),
                 );
               },
             );
@@ -148,6 +149,45 @@ class _ActivityPageState extends State<ActivityPage> {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  void _showActivityDetails(
+    BuildContext context,
+    Activity activity, {
+    required List<Season> seasons,
+    required List<Land> lands,
+    required List<Herd> herds,
+  }) {
+    final isPlant = activity.sourceType == 'plant';
+    EntityDetailsSheet.show(
+      context: context,
+      title: activity.type,
+      badgeLabel: activity.sourceType.toUpperCase(),
+      badgeColor:
+          isPlant ? AppColors.plantCategory : AppColors.animalCategory,
+      details: [
+        if (isPlant) ...[
+          EntityDetailRow('Season', seasonName(seasons, activity.sourceId)),
+          EntityDetailRow(
+            'Land',
+            landNameForSeason(seasons, lands, activity.sourceId),
+          ),
+        ] else
+          EntityDetailRow('Herd', herdName(herds, activity.sourceId)),
+        EntityDetailRow(
+          'Cost',
+          'Ksh ${activity.cost.toStringAsFixed(2)}',
+          isPrimary: true,
+        ),
+        EntityDetailRow('Date', _formatDate(activity.date)),
+        if (activity.details != null && activity.details!.isNotEmpty)
+          EntityDetailRow('Details', activity.details!),
+        if (activity.notes != null && activity.notes!.isNotEmpty)
+          EntityDetailRow('Notes', activity.notes!),
+      ],
+      onEdit: () => _showEditActivityDialog(context, activity),
+      onDelete: () => _showDeleteConfirmation(context, activity),
+    );
   }
 
   Future<void> _showAddActivityDialog(BuildContext context) async {
