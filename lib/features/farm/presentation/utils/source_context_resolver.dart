@@ -1,6 +1,17 @@
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+
+String plantName(List<Plant> plants, String plantId) {
+  for (final plant in plants) {
+    if (plant.id == plantId) {
+      final variety = plant.variety ?? '';
+      return variety.isNotEmpty ? '${plant.name} ($variety)' : plant.name;
+    }
+  }
+  return 'Unknown plant';
+}
 
 String seasonName(List<Season> seasons, String seasonId) {
   for (final season in seasons) {

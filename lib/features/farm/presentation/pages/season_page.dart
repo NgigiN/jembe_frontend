@@ -4,7 +4,11 @@ import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
+import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
@@ -39,6 +43,11 @@ class _SeasonPageState extends State<SeasonPage> {
 
   @override
   Widget build(BuildContext context) {
+    final landState = context.watch<LandBloc>().state;
+    final lands = landState is LandLoaded ? landState.lands : <Land>[];
+    final plantState = context.watch<PlantBloc>().state;
+    final plants = plantState is PlantLoaded ? plantState.plants : <Plant>[];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Season Management'),
@@ -75,18 +84,17 @@ class _SeasonPageState extends State<SeasonPage> {
               itemCount: state.seasons.length,
               itemBuilder: (context, index) {
                 final season = state.seasons[index];
-                return EntityListTile(
-                  leadingIcon: Icons.calendar_today,
-                  leadingBackgroundColor: Colors.orange.shade100,
-                  leadingIconColor: Colors.orange.shade700,
+                return EntityCard(
+                  icon: Icons.calendar_today,
+                  iconColor: AppColors.plantCategory,
                   title: season.name,
-                  subtitleFields: [
-                    Text('Start: ${_formatDate(season.startDate)}'),
-                    if (season.endDate != null)
-                      Text('End: ${_formatDate(season.endDate!)}'),
-                  ],
-                  onEdit: () => _showEditSeasonDialog(season),
-                  onDelete: () => _showDeleteConfirmation(season),
+                  subtitle:
+                      '${landName(lands, season.landId)} · Start: ${_formatDate(season.startDate)}',
+                  onTap: () => _showSeasonDetails(
+                    season,
+                    lands: lands,
+                    plants: plants,
+                  ),
                 );
               },
             );
@@ -106,6 +114,28 @@ class _SeasonPageState extends State<SeasonPage> {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  void _showSeasonDetails(
+    Season season, {
+    required List<Land> lands,
+    required List<Plant> plants,
+  }) {
+    EntityDetailsSheet.show(
+      context: context,
+      title: season.name,
+      details: [
+        EntityDetailRow('Plant', plantName(plants, season.plantId)),
+        EntityDetailRow('Land', landName(lands, season.landId)),
+        EntityDetailRow('Start Date', _formatDate(season.startDate)),
+        EntityDetailRow(
+          'End Date',
+          season.endDate != null ? _formatDate(season.endDate!) : '—',
+        ),
+      ],
+      onEdit: () => _showEditSeasonDialog(season),
+      onDelete: () => _showDeleteConfirmation(season),
+    );
   }
 
   void _showAddSeasonDialog() {

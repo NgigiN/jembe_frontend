@@ -7,7 +7,10 @@ import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/cost_category_type_selector.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_state.dart';
@@ -99,36 +102,33 @@ class _InputPageState extends State<InputPage> {
               itemCount: inputs.length,
               itemBuilder: (context, index) {
                 final input = inputs[index];
-                final sourceFields = input.sourceType == 'plant'
-                    ? [
-                        Text(
-                          'Season: ${seasonName(seasons, input.sourceId)}',
-                        ),
-                        Text(
-                          'Land: ${landNameForSeason(seasons, lands, input.sourceId)}',
-                        ),
-                      ]
-                    : [
-                        Text(
-                          'Herd: ${herdName(herds, input.sourceId)}',
-                        ),
-                      ];
-                return EntityListTile(
-                  leadingIcon: Icons.input,
-                  leadingBackgroundColor: Colors.purple.shade100,
-                  leadingIconColor: Colors.purple.shade700,
+                final isPlant = input.sourceType == 'plant';
+                final categoryColor = isPlant
+                    ? AppColors.plantCategory
+                    : AppColors.animalCategory;
+                final subtitle = isPlant
+                    ? '${seasonName(seasons, input.sourceId)} · ${landNameForSeason(seasons, lands, input.sourceId)}'
+                    : herdName(herds, input.sourceId);
+
+                return EntityCard(
+                  icon: Icons.input,
+                  iconColor: categoryColor,
                   title: input.type,
-                  subtitleFields: [
-                    ...sourceFields,
-                    Text('Cost: Ksh ${input.cost.toStringAsFixed(2)}'),
-                    if (input.quantity != null)
-                      Text('Quantity: ${input.quantity}'),
-                    Text('Date: ${_formatDate(input.date)}'),
-                    if (input.notes != null && input.notes!.isNotEmpty)
-                      Text('Notes: ${input.notes}'),
-                  ],
-                  onEdit: () => _showEditInputDialog(context, input),
-                  onDelete: () => _showDeleteConfirmation(context, input),
+                  subtitle: '$subtitle · ${_formatDate(input.date)}',
+                  trailing: Text(
+                    'Ksh ${input.cost.toStringAsFixed(0)}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                  ),
+                  onTap: () => _showInputDetails(
+                    context,
+                    input,
+                    seasons: seasons,
+                    lands: lands,
+                    herds: herds,
+                  ),
                 );
               },
             );
@@ -148,6 +148,45 @@ class _InputPageState extends State<InputPage> {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  void _showInputDetails(
+    BuildContext context,
+    Input input, {
+    required List<Season> seasons,
+    required List<Land> lands,
+    required List<Herd> herds,
+  }) {
+    final isPlant = input.sourceType == 'plant';
+    EntityDetailsSheet.show(
+      context: context,
+      title: input.type,
+      badgeLabel: input.sourceType.toUpperCase(),
+      badgeColor:
+          isPlant ? AppColors.plantCategory : AppColors.animalCategory,
+      details: [
+        if (isPlant) ...[
+          EntityDetailRow('Season', seasonName(seasons, input.sourceId)),
+          EntityDetailRow(
+            'Land',
+            landNameForSeason(seasons, lands, input.sourceId),
+          ),
+        ] else
+          EntityDetailRow('Herd', herdName(herds, input.sourceId)),
+        if (input.quantity != null)
+          EntityDetailRow('Quantity', input.quantity.toString()),
+        EntityDetailRow(
+          'Cost',
+          'Ksh ${input.cost.toStringAsFixed(2)}',
+          isPrimary: true,
+        ),
+        EntityDetailRow('Date', _formatDate(input.date)),
+        if (input.notes != null && input.notes!.isNotEmpty)
+          EntityDetailRow('Notes', input.notes!),
+      ],
+      onEdit: () => _showEditInputDialog(context, input),
+      onDelete: () => _showDeleteConfirmation(context, input),
+    );
   }
 
   Future<void> _showAddInputDialog(BuildContext context) async {

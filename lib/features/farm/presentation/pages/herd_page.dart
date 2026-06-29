@@ -6,7 +6,10 @@ import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
@@ -82,40 +85,23 @@ class _HerdPageState extends State<HerdPage> {
                     final animalTypeName =
                         animalTypeMap[herd.animalTypeId] ?? 'Unknown';
 
-                    return EntityListTile(
-                      leadingIcon: Icons.pets,
-                      leadingBackgroundColor: Colors.orange.shade100,
-                      leadingIconColor: Colors.orange.shade700,
+                    return EntityCard(
+                      icon: Icons.pets,
+                      iconColor: AppColors.animalCategory,
                       title: herd.name,
-                      subtitleFields: [
-                        Text('Type: $animalTypeName'),
-                        Text('Location: ${herd.location}'),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            _buildHeadCountChip(
-                              'Initial',
-                              herd.initialHeadCount,
-                              Colors.blue,
+                      subtitle:
+                          '$animalTypeName · ${herd.location}',
+                      trailing: Text(
+                        '${herd.currentHeadCount} head',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
-                            const SizedBox(width: 8),
-                            _buildHeadCountChip(
-                              'Current',
-                              herd.currentHeadCount,
-                              Colors.green,
-                            ),
-                          ],
-                        ),
-                        Text(
-                          'Created: ${_formatDate(herd.createdAt)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                      onEdit: () => _showEditHerdDialog(herd),
-                      onDelete: () => _showDeleteConfirmation(herd),
+                      ),
+                      onTap: () => _showHerdDetails(
+                        herd,
+                        animalTypeName: animalTypeName,
+                      ),
                     );
                   },
                 );
@@ -135,27 +121,28 @@ class _HerdPageState extends State<HerdPage> {
     );
   }
 
-  Widget _buildHeadCountChip(String label, int count, MaterialColor color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.shade200),
-      ),
-      child: Text(
-        '$label: $count',
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: color.shade700,
-        ),
-      ),
-    );
-  }
-
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  void _showHerdDetails(Herd herd, {required String animalTypeName}) {
+    EntityDetailsSheet.show(
+      context: context,
+      title: herd.name,
+      details: [
+        EntityDetailRow('Animal Type', animalTypeName),
+        EntityDetailRow('Location', herd.location),
+        EntityDetailRow('Initial Headcount', herd.initialHeadCount.toString()),
+        EntityDetailRow(
+          'Current Headcount',
+          herd.currentHeadCount.toString(),
+          isPrimary: true,
+        ),
+        EntityDetailRow('Created', _formatDate(herd.createdAt)),
+      ],
+      onEdit: () => _showEditHerdDialog(herd),
+      onDelete: () => _showDeleteConfirmation(herd),
+    );
   }
 
   void _showAddHerdDialog() {
