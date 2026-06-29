@@ -6,7 +6,10 @@ import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 import 'package:farm_tracker/features/farm/domain/entities/infrastructure.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_bloc.dart';
@@ -76,24 +79,22 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
             itemCount: infrastructures.length,
             itemBuilder: (context, index) {
               final item = infrastructures[index];
-              return EntityListTile(
-                leadingIcon: _iconForType(item.type),
-                leadingBackgroundColor: Colors.blue.shade100,
-                leadingIconColor: Colors.blue.shade700,
+              final location = item.location.isNotEmpty
+                  ? item.location
+                  : 'No location';
+              return EntityCard(
+                icon: _iconForType(item.type),
+                iconColor: AppColors.animalCategory,
                 title: item.name,
-                subtitleFields: [
-                  Text('Type: ${item.type}'),
-                  if (item.location.isNotEmpty) Text('Location: ${item.location}'),
-                  Text('Cost: KES ${item.cost.toStringAsFixed(2)}'),
-                  Text('Date: ${_formatDate(item.date)}'),
-                  if (item.notes.isNotEmpty)
-                    Text(
-                      'Notes: ${item.notes}',
-                      style: const TextStyle(fontStyle: FontStyle.italic),
-                    ),
-                ],
-                onEdit: () => _showAddOrEditDialog(item: item),
-                onDelete: () => _showDeleteConfirmation(item),
+                subtitle: '${item.type} · $location',
+                trailing: Text(
+                  'KES ${item.cost.toStringAsFixed(0)}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                ),
+                onTap: () => _showInfrastructureDetails(item),
               );
             },
           );
@@ -123,6 +124,29 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
       default:
         return Icons.foundation;
     }
+  }
+
+  void _showInfrastructureDetails(Infrastructure item) {
+    EntityDetailsSheet.show(
+      context: context,
+      title: item.name,
+      details: [
+        EntityDetailRow('Type', item.type),
+        EntityDetailRow(
+          'Location',
+          item.location.isNotEmpty ? item.location : '—',
+        ),
+        EntityDetailRow(
+          'Cost',
+          'KES ${item.cost.toStringAsFixed(2)}',
+          isPrimary: true,
+        ),
+        EntityDetailRow('Date', _formatDate(item.date)),
+        if (item.notes.isNotEmpty) EntityDetailRow('Notes', item.notes),
+      ],
+      onEdit: () => _showAddOrEditDialog(item: item),
+      onDelete: () => _showDeleteConfirmation(item),
+    );
   }
 
   String _formatDate(DateTime date) {

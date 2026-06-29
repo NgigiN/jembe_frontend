@@ -7,7 +7,11 @@ import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
+import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
 import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/harvest.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
@@ -78,20 +82,20 @@ class _HarvestPageState extends State<HarvestPage> {
               itemCount: harvests.length,
               itemBuilder: (context, index) {
                 final harvest = harvests[index];
-                final seasonName = _seasonName(seasonList, harvest.seasonId);
-                return EntityListTile(
-                  leadingIcon: Icons.agriculture,
-                  leadingBackgroundColor: Colors.amber.shade100,
-                  leadingIconColor: Colors.amber.shade800,
-                  title: '${_formatQuantity(harvest.quantity)} ${harvest.unit}',
-                  subtitleFields: [
-                    Text('Season: $seasonName'),
-                    Text('Date: ${_formatDate(harvest.date)}'),
-                    if (harvest.notes != null && harvest.notes!.isNotEmpty)
-                      Text('Notes: ${harvest.notes}'),
-                  ],
-                  onEdit: () => _showHarvestForm(context, harvest: harvest),
-                  onDelete: () => _confirmDelete(context, harvest),
+                final seasonLabel =
+                    seasonName(seasonList, harvest.seasonId);
+                return EntityCard(
+                  icon: Icons.agriculture,
+                  iconColor: AppColors.plantCategory,
+                  title:
+                      '${_formatQuantity(harvest.quantity)} ${harvest.unit}',
+                  subtitle:
+                      '$seasonLabel · ${_formatDate(harvest.date)}',
+                  onTap: () => _showHarvestDetails(
+                    context,
+                    harvest,
+                    seasonLabel: seasonLabel,
+                  ),
                 );
               },
             );
@@ -109,11 +113,28 @@ class _HarvestPageState extends State<HarvestPage> {
     );
   }
 
-  String _seasonName(List<Season> seasons, String seasonId) {
-    for (final season in seasons) {
-      if (season.id == seasonId) return season.name;
-    }
-    return 'Unknown season';
+  void _showHarvestDetails(
+    BuildContext context,
+    Harvest harvest, {
+    required String seasonLabel,
+  }) {
+    EntityDetailsSheet.show(
+      context: context,
+      title: '${_formatQuantity(harvest.quantity)} ${harvest.unit}',
+      details: [
+        EntityDetailRow('Season', seasonLabel),
+        EntityDetailRow(
+          'Quantity',
+          '${_formatQuantity(harvest.quantity)} ${harvest.unit}',
+          isPrimary: true,
+        ),
+        EntityDetailRow('Date', _formatDate(harvest.date)),
+        if (harvest.notes != null && harvest.notes!.isNotEmpty)
+          EntityDetailRow('Notes', harvest.notes!),
+      ],
+      onEdit: () => _showHarvestForm(context, harvest: harvest),
+      onDelete: () => _confirmDelete(context, harvest),
+    );
   }
 
   String _formatQuantity(double quantity) {
