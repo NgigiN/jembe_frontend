@@ -79,6 +79,24 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
   }
 
+  Widget _buildStep({required List<Widget> children}) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: children,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -127,128 +145,118 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Widget _buildWelcomeStep() {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Icon(
-            Icons.agriculture,
-            size: 80,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Welcome to Neema Farm!',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+    return _buildStep(
+      children: [
+        Icon(
+          Icons.agriculture,
+          size: 80,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Welcome to Neema Farm!',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          "Let's set up your farm in just a few steps.",
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 40),
+        Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _farmNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Farm Name',
+                  hintText: 'e.g., Green Valley Farm',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.agriculture),
                 ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            "Let's set up your farm in just a few steps.",
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Required' : null,
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _locationController,
+                decoration: const InputDecoration(
+                  labelText: 'Location',
+                  hintText: 'e.g., Nairobi, Kenya',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.location_on),
                 ),
-            textAlign: TextAlign.center,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Required' : null,
+                textCapitalization: TextCapitalization.words,
+              ),
+            ],
           ),
-          const SizedBox(height: 40),
-          Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                TextFormField(
-                  controller: _farmNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Farm Name',
-                    hintText: 'e.g., Green Valley Farm',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.agriculture),
-                  ),
-                  validator: (value) =>
-                      value == null || value.isEmpty ? 'Required' : null,
-                  textCapitalization: TextCapitalization.words,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _locationController,
-                  decoration: const InputDecoration(
-                    labelText: 'Location',
-                    hintText: 'e.g., Nairobi, Kenya',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.location_on),
-                  ),
-                  validator: (value) =>
-                      value == null || value.isEmpty ? 'Required' : null,
-                  textCapitalization: TextCapitalization.words,
-                ),
-              ],
-            ),
+        ),
+        const SizedBox(height: 32),
+        FilledButton.icon(
+          onPressed: _continueFromWelcome,
+          icon: const Icon(Icons.arrow_forward),
+          label: const Text('Continue'),
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
           ),
-          const SizedBox(height: 32),
-          FilledButton.icon(
-            onPressed: _continueFromWelcome,
-            icon: const Icon(Icons.arrow_forward),
-            label: const Text('Continue'),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildPathStep() {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'What would you like to start with?',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'You can always add the other later.',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          _buildPathCard(
-            icon: Icons.eco,
-            title: 'Start with Plants',
-            subtitle: 'Add land, crops, and manage planting seasons',
-            color: Colors.green,
-            isSelected: _selectedPath == 'plants',
-            onTap: () => _selectPathAndContinue('plants'),
-          ),
-          const SizedBox(height: 16),
-          _buildPathCard(
-            icon: Icons.pets,
-            title: 'Start with Animals',
-            subtitle: 'Register animal types, herds, and track activities',
-            color: Colors.orange,
-            isSelected: _selectedPath == 'animals',
-            onTap: () => _selectPathAndContinue('animals'),
-          ),
-          const SizedBox(height: 16),
-          TextButton.icon(
-            onPressed: () => _selectPathAndContinue('none'),
-            icon: const Icon(Icons.explore),
-            label: const Text("I'll explore on my own"),
-          ),
-        ],
-      ),
+    return _buildStep(
+      children: [
+        Text(
+          'What would you like to start with?',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'You can always add the other later.',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 32),
+        _buildPathCard(
+          icon: Icons.eco,
+          title: 'Start with Plants',
+          subtitle: 'Add land, crops, and manage planting seasons',
+          color: Colors.green,
+          isSelected: _selectedPath == 'plants',
+          onTap: () => _selectPathAndContinue('plants'),
+        ),
+        const SizedBox(height: 16),
+        _buildPathCard(
+          icon: Icons.pets,
+          title: 'Start with Animals',
+          subtitle: 'Register animal types, herds, and track activities',
+          color: Colors.orange,
+          isSelected: _selectedPath == 'animals',
+          onTap: () => _selectPathAndContinue('animals'),
+        ),
+        const SizedBox(height: 16),
+        TextButton.icon(
+          onPressed: () => _selectPathAndContinue('none'),
+          icon: const Icon(Icons.explore),
+          label: const Text("I'll explore on my own"),
+        ),
+      ],
     );
   }
 
@@ -314,71 +322,66 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Widget _buildCompletionStep(ProfileState state) {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.check,
-              size: 64,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+    return _buildStep(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            shape: BoxShape.circle,
           ),
-          const SizedBox(height: 24),
-          Text(
-            "You're all set!",
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+          child: Icon(
+            Icons.check,
+            size: 64,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          "You're all set!",
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          _selectedPath == 'plants'
+              ? 'Head to the Plants tab to add your first land and start planting.'
+              : _selectedPath == 'animals'
+                  ? 'Head to the Animals tab to add animal types and register your herd.'
+                  : 'Explore the tabs below to get started with your farm.',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Your farm "${_farmNameController.text}" in ${_locationController.text} is ready.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 40),
+        FilledButton(
+          onPressed: state is ProfileLoading ? null : _submit,
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          child: state is ProfileLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text(
+                  "Let's Go!",
+                  style: TextStyle(fontSize: 18),
                 ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            _selectedPath == 'plants'
-                ? 'Head to the Plants tab to add your first land and start planting.'
-                : _selectedPath == 'animals'
-                    ? 'Head to the Animals tab to add animal types and register your herd.'
-                    : 'Explore the tabs below to get started with your farm.',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Your farm "${_farmNameController.text}" in ${_locationController.text} is ready.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 40),
-          FilledButton(
-            onPressed: state is ProfileLoading ? null : _submit,
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            child: state is ProfileLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text(
-                    "Let's Go!",
-                    style: TextStyle(fontSize: 18),
-                  ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
