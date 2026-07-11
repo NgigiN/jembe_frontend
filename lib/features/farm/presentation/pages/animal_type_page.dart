@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
@@ -115,6 +118,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
   }
 
   void _showAddAnimalTypeDialog() {
+    final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
     final notesController = TextEditingController();
 
@@ -123,37 +127,12 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
       title: 'Add Animal Type',
       heightFactor: 0.6,
       submitLabel: 'Add Animal Type',
-      fields: [
-        TextField(
-          controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Animal Type Name *',
-            border: OutlineInputBorder(),
-            hintText: 'e.g., Chickens, Cows, Goats',
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: notesController,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            labelText: 'Notes (Optional)',
-            border: OutlineInputBorder(),
-            hintText: 'e.g., Poultry for eggs and meat',
-          ),
-        ),
-      ],
+      formKey: formKey,
+      fields: _animalTypeFormFields(
+        nameController: nameController,
+        notesController: notesController,
+      ),
       onSubmit: (sheetContext) async {
-        if (nameController.text.trim().isEmpty) {
-          ScaffoldMessenger.of(sheetContext).showSnackBar(
-            const SnackBar(
-              content: Text('Animal type name is required'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-
         final userId = await UserUtils.getCurrentUserId();
         if (userId == null) {
           ScaffoldMessenger.of(sheetContext).showSnackBar(
@@ -165,14 +144,10 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
           return;
         }
 
-        final notes = notesController.text.trim().isEmpty
-            ? null
-            : notesController.text.trim();
-
         context.read<AnimalTypeBloc>().add(
           AddAnimalTypeEvent(
-            nameController.text.trim(),
-            notes,
+            sanitizeText(nameController.text),
+            sanitizeOptionalText(notesController.text),
             userId,
           ),
         );
@@ -182,6 +157,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
   }
 
   void _showEditAnimalTypeDialog(AnimalType animalType) {
+    final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: animalType.name);
     final notesController = TextEditingController(text: animalType.notes ?? '');
 
@@ -190,49 +166,43 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
       title: 'Edit Animal Type',
       heightFactor: 0.6,
       submitLabel: 'Update Animal Type',
-      fields: [
-        TextField(
-          controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Animal Type Name *',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: notesController,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            labelText: 'Notes (Optional)',
-            border: OutlineInputBorder(),
-          ),
-        ),
-      ],
+      formKey: formKey,
+      fields: _animalTypeFormFields(
+        nameController: nameController,
+        notesController: notesController,
+      ),
       onSubmit: (sheetContext) {
-        if (nameController.text.trim().isEmpty) {
-          ScaffoldMessenger.of(sheetContext).showSnackBar(
-            const SnackBar(
-              content: Text('Animal type name is required'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-
-        final notes = notesController.text.trim().isEmpty
-            ? null
-            : notesController.text.trim();
-
         context.read<AnimalTypeBloc>().add(
           UpdateAnimalTypeEvent(
             animalType.id,
-            nameController.text.trim(),
-            notes,
+            sanitizeText(nameController.text),
+            sanitizeOptionalText(notesController.text),
           ),
         );
         Navigator.pop(sheetContext);
       },
     );
+  }
+
+  List<Widget> _animalTypeFormFields({
+    required TextEditingController nameController,
+    required TextEditingController notesController,
+  }) {
+    return [
+      ValidatedNameField(
+        controller: nameController,
+        labelText: 'Animal Type Name *',
+        hintText: 'e.g., Chickens, Cows, Goats',
+        validator: (value) =>
+            requiredName(value, fieldLabel: 'Animal type name'),
+      ),
+      const SizedBox(height: 16),
+      ValidatedNotesField(
+        controller: notesController,
+        labelText: 'Notes (Optional)',
+        validator: optionalNotes,
+      ),
+    ];
   }
 
   void _showDeleteConfirmation(AnimalType animalType) async {

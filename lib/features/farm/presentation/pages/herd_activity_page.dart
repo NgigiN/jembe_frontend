@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/validation/parse.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
@@ -52,26 +56,9 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
 
   void _submitForm() {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedHerdId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a herd'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
 
-    final count = int.tryParse(_countController.text.trim()) ?? 0;
-    if (count <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Count must be greater than zero'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+    final count = parsePositiveInt(_countController.text);
+    if (count == null) return;
 
     context.read<HerdActivityBloc>().add(
       AddHerdActivityEvent(
@@ -79,9 +66,7 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
         activityType: _activityType,
         count: count,
         date: _selectedDate,
-        notes: _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
+        notes: sanitizeOptionalText(_notesController.text),
       ),
     );
   }
@@ -219,6 +204,8 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                               onChanged: (value) {
                                 setState(() => _selectedHerdId = value);
                               },
+                              validator: (value) =>
+                                  requiredSelection(value, fieldLabel: 'herd'),
                             ),
                             const SizedBox(height: 20),
                             Text(
@@ -294,28 +281,20 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                               ],
                             ),
                             const SizedBox(height: 20),
-                            TextFormField(
+                            ValidatedIntegerField(
                               controller: _countController,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: 'Count *',
-                                hintText: 'Number of animals affected',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.tag),
-                              ),
+                              labelText: 'Count *',
+                              hintText: 'Number of animals affected',
+                              prefixIcon: const Icon(Icons.tag),
                               validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter the count';
+                                if (_activityType == 'fatality') {
+                                  return positiveIntMax(
+                                    value,
+                                    max: selectedHerd.currentHeadCount,
+                                    fieldLabel: 'Count',
+                                  );
                                 }
-                                final count = int.tryParse(value.trim());
-                                if (count == null || count <= 0) {
-                                  return 'Enter a positive number';
-                                }
-                                if (_activityType == 'fatality' &&
-                                    count > selectedHerd.currentHeadCount) {
-                                  return 'Fatality count cannot exceed current headcount (${selectedHerd.currentHeadCount})';
-                                }
-                                return null;
+                                return positiveInt(value, fieldLabel: 'Count');
                               },
                             ),
                             const SizedBox(height: 20),
@@ -350,15 +329,10 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                               ),
                             ),
                             const SizedBox(height: 20),
-                            TextFormField(
+                            ValidatedNotesField(
                               controller: _notesController,
-                              maxLines: 3,
-                              decoration: const InputDecoration(
-                                labelText: 'Notes / Reason',
-                                hintText: 'e.g., Illness, Normal Birth',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.notes),
-                              ),
+                              labelText: 'Notes / Reason',
+                              validator: optionalNotes,
                             ),
                             const SizedBox(height: 28),
                             SizedBox(

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/validation/parse.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
@@ -154,6 +158,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
   }
 
   void _showAddOrEditDialog({Infrastructure? item}) {
+    final formKey = GlobalKey<FormState>();
     final isEditing = item != null;
     final nameController = TextEditingController(text: item?.name ?? '');
     final locationController = TextEditingController(text: item?.location ?? '');
@@ -202,107 +207,101 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                 Expanded(
                   child: EntityFormSheet.scrollableForm(
                     context: sheetContext,
-                    child: Column(
-                      children: [
-                        DropdownButtonFormField<String>(
-                          value: selectedType,
-                          decoration: const InputDecoration(
-                            labelText: 'Infrastructure Type *',
-                            border: OutlineInputBorder(),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        children: [
+                          DropdownButtonFormField<String>(
+                            value: selectedType,
+                            decoration: const InputDecoration(
+                              labelText: 'Infrastructure Type *',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: _infrastructureTypes
+                                .map(
+                                  (type) => DropdownMenuItem<String>(
+                                    value: type,
+                                    child: Text(type),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) {
+                              if (value != null) {
+                                setSheetState(() => selectedType = value);
+                              }
+                            },
                           ),
-                          items: _infrastructureTypes
-                              .map(
-                                (type) => DropdownMenuItem<String>(
-                                  value: type,
-                                  child: Text(type),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            if (value != null) {
-                              setSheetState(() => selectedType = value);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: nameController,
-                          decoration: const InputDecoration(
+                          const SizedBox(height: 16),
+                          ValidatedNameField(
+                            controller: nameController,
                             labelText: 'Infrastructure Name *',
-                            border: OutlineInputBorder(),
                             hintText: 'e.g., Main Barn, North Fence',
+                            validator: (value) =>
+                                requiredName(value, fieldLabel: 'Name'),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: locationController,
-                          decoration: const InputDecoration(
+                          const SizedBox(height: 16),
+                          ValidatedLocationField(
+                            controller: locationController,
                             labelText: 'Location *',
-                            border: OutlineInputBorder(),
                             hintText: 'e.g., North Field',
+                            validator: (value) => requiredLocation(value),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: costController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
+                          const SizedBox(height: 16),
+                          ValidatedDecimalField(
+                            controller: costController,
                             labelText: 'Cost (KES) *',
-                            border: OutlineInputBorder(),
                             hintText: 'e.g., 5000.00',
+                            validator: (value) =>
+                                nonNegativeDecimal(value, fieldLabel: 'Cost'),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        InkWell(
-                          onTap: () async {
-                            final picked = await showDatePicker(
-                              context: sheetContext,
-                              initialDate: selectedDate,
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2030),
-                            );
-                            if (picked != null) {
-                              setSheetState(() => selectedDate = picked);
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(4),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 16,
-                            ),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade400),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.calendar_today,
-                                  color: Colors.grey,
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'Date: ${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                                const Spacer(),
-                                const Icon(Icons.arrow_drop_down),
-                              ],
+                          const SizedBox(height: 16),
+                          InkWell(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: sheetContext,
+                                initialDate: selectedDate,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2030),
+                              );
+                              if (picked != null) {
+                                setSheetState(() => selectedDate = picked);
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 16,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade400),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Date: ${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                  const Spacer(),
+                                  const Icon(Icons.arrow_drop_down),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: notesController,
-                          maxLines: 3,
-                          decoration: const InputDecoration(
+                          const SizedBox(height: 16),
+                          ValidatedNotesField(
+                            controller: notesController,
                             labelText: 'Notes',
-                            border: OutlineInputBorder(),
-                            hintText: 'Optional notes or descriptions',
+                            validator: optionalNotes,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -310,17 +309,22 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => _submitInfrastructure(
-                      sheetContext,
-                      isEditing: isEditing,
-                      item: item,
-                      selectedType: selectedType,
-                      selectedDate: selectedDate,
-                      nameController: nameController,
-                      locationController: locationController,
-                      costController: costController,
-                      notesController: notesController,
-                    ),
+                    onPressed: () {
+                      if (!(formKey.currentState?.validate() ?? false)) {
+                        return;
+                      }
+                      _submitInfrastructure(
+                        sheetContext,
+                        isEditing: isEditing,
+                        item: item,
+                        selectedType: selectedType,
+                        selectedDate: selectedDate,
+                        nameController: nameController,
+                        locationController: locationController,
+                        costController: costController,
+                        notesController: notesController,
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -352,32 +356,19 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
     required TextEditingController costController,
     required TextEditingController notesController,
   }) async {
-    if (nameController.text.trim().isEmpty) {
-      _showSheetError(sheetContext, 'Infrastructure name is required');
-      return;
-    }
-
-    if (locationController.text.trim().isEmpty) {
-      _showSheetError(sheetContext, 'Location is required');
-      return;
-    }
-
-    final cost = double.tryParse(costController.text.trim());
-    if (cost == null || cost < 0) {
-      _showSheetError(sheetContext, 'Cost must be a positive number');
-      return;
-    }
+    final cost = parseNonNegativeDecimal(costController.text);
+    final notes = sanitizeOptionalText(notesController.text);
 
     if (isEditing && item != null) {
       context.read<InfrastructureBloc>().add(
         UpdateInfrastructureEvent(
           id: item.id,
           type: selectedType,
-          name: nameController.text.trim(),
-          location: locationController.text.trim(),
+          name: sanitizeText(nameController.text),
+          location: sanitizeText(locationController.text),
           cost: cost,
           date: selectedDate,
-          notes: notesController.text.trim(),
+          notes: notes,
         ),
       );
       Navigator.pop(sheetContext);
@@ -393,12 +384,12 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
     context.read<InfrastructureBloc>().add(
       AddInfrastructureEvent(
         type: selectedType,
-        name: nameController.text.trim(),
-        location: locationController.text.trim(),
+        name: sanitizeText(nameController.text),
+        location: sanitizeText(locationController.text),
         cost: cost,
         date: selectedDate,
         userId: userId,
-        notes: notesController.text.trim(),
+        notes: notes,
       ),
     );
     Navigator.pop(sheetContext);
