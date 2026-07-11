@@ -7,6 +7,8 @@ class EntityFormSheet {
     required List<Widget> fields,
     required String submitLabel,
     required void Function(BuildContext sheetContext) onSubmit,
+    GlobalKey<FormState>? formKey,
+    AutovalidateMode autovalidateMode = AutovalidateMode.disabled,
     double heightFactor = 0.8,
   }) {
     return showModalBottomSheet(
@@ -40,14 +42,26 @@ class EntityFormSheet {
               Expanded(
                 child: scrollableForm(
                   context: sheetContext,
-                  child: Column(children: fields),
+                  child: formKey == null
+                      ? Column(children: fields)
+                      : Form(
+                          key: formKey,
+                          autovalidateMode: autovalidateMode,
+                          child: Column(children: fields),
+                        ),
                 ),
               ),
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => onSubmit(sheetContext),
+                  onPressed: () {
+                    if (formKey != null &&
+                        !(formKey.currentState?.validate() ?? false)) {
+                      return;
+                    }
+                    onSubmit(sheetContext);
+                  },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
