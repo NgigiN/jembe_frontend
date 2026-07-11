@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_event.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_state.dart';
@@ -65,8 +68,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
             UpdateProfileEvent(
               firstName: '',
               lastName: '',
-              farmName: _farmNameController.text,
-              location: _locationController.text,
+              farmName: sanitizeText(_farmNameController.text),
+              location: sanitizeText(_locationController.text),
             ),
           );
     } else {
@@ -173,30 +176,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
           key: _formKey,
           child: Column(
             children: [
-              TextFormField(
+              ValidatedNameField(
                 controller: _farmNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Farm Name',
-                  hintText: 'e.g., Green Valley Farm',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.agriculture),
-                ),
+                labelText: 'Farm Name',
+                hintText: 'e.g., Green Valley Farm',
+                prefixIcon: const Icon(Icons.agriculture),
                 validator: (value) =>
-                    value == null || value.isEmpty ? 'Required' : null,
-                textCapitalization: TextCapitalization.words,
+                    requiredName(value, fieldLabel: 'Farm name'),
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              ValidatedLocationField(
                 controller: _locationController,
-                decoration: const InputDecoration(
-                  labelText: 'Location',
-                  hintText: 'e.g., Nairobi, Kenya',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.location_on),
-                ),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Required' : null,
-                textCapitalization: TextCapitalization.words,
+                labelText: 'Location',
+                hintText: 'e.g., Nairobi, Kenya',
+                prefixIcon: const Icon(Icons.location_on),
+                validator: (value) => requiredLocation(value),
               ),
             ],
           ),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_event.dart';
@@ -57,8 +60,8 @@ class _SettingsPageState extends State<SettingsPage> {
         UpdateProfileEvent(
           firstName: _firstName,
           lastName: _lastName,
-          farmName: _farmNameController.text,
-          location: _locationController.text,
+          farmName: sanitizeText(_farmNameController.text),
+          location: sanitizeText(_locationController.text),
         ),
       );
     }
@@ -232,26 +235,17 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ],
                               ),
                               const SizedBox(height: 16),
-                              TextFormField(
+                              ValidatedNameField(
                                 controller: _farmNameController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Farm Name',
-                                ),
+                                labelText: 'Farm Name',
                                 validator: (value) =>
-                                    value == null || value.isEmpty
-                                        ? 'Required'
-                                        : null,
+                                    requiredName(value, fieldLabel: 'Farm name'),
                               ),
                               const SizedBox(height: 16),
-                              TextFormField(
+                              ValidatedLocationField(
                                 controller: _locationController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Location',
-                                ),
-                                validator: (value) =>
-                                    value == null || value.isEmpty
-                                        ? 'Required'
-                                        : null,
+                                labelText: 'Location',
+                                validator: (value) => requiredLocation(value),
                               ),
                               const SizedBox(height: 24),
                               ElevatedButton.icon(
