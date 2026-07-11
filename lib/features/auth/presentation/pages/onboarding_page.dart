@@ -14,6 +14,9 @@ class OnboardingPage extends StatefulWidget {
 }
 
 class _OnboardingPageState extends State<OnboardingPage> {
+  static const _pageTransitionDuration = Duration(milliseconds: 300);
+  static const _pageTransitionCurve = Curves.easeInOut;
+
   final _pageController = PageController();
   final _formKey = GlobalKey<FormState>();
   final _farmNameController = TextEditingController();
@@ -29,6 +32,33 @@ class _OnboardingPageState extends State<OnboardingPage> {
     super.dispose();
   }
 
+  void _nextPage() {
+    _pageController.nextPage(
+      duration: _pageTransitionDuration,
+      curve: _pageTransitionCurve,
+    );
+  }
+
+  void _goToWelcomeStep() {
+    _pageController.animateToPage(
+      0,
+      duration: _pageTransitionDuration,
+      curve: _pageTransitionCurve,
+    );
+  }
+
+  void _continueFromWelcome() {
+    if (_formKey.currentState?.validate() ?? false) {
+      FocusScope.of(context).unfocus();
+      _nextPage();
+    }
+  }
+
+  void _selectPathAndContinue(String path) {
+    setState(() => _selectedPath = path);
+    _nextPage();
+  }
+
   void _submit() {
     if (_formKey.currentState?.validate() ?? false) {
       context.read<ProfileBloc>().add(
@@ -39,6 +69,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
               location: _locationController.text,
             ),
           );
+    } else {
+      _goToWelcomeStep();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in your farm name and location'),
+        ),
+      );
     }
   }
 
@@ -71,6 +108,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 Expanded(
                   child: PageView(
                     controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
                     onPageChanged: (page) =>
                         setState(() => _currentPage = page),
                     children: [
@@ -104,16 +142,16 @@ class _OnboardingPageState extends State<OnboardingPage> {
           Text(
             'Welcome to Neema Farm!',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
           Text(
-            'Let\'s set up your farm in just a few steps.',
+            "Let's set up your farm in just a few steps.",
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 40),
@@ -151,10 +189,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           ),
           const SizedBox(height: 32),
           FilledButton.icon(
-            onPressed: () => _pageController.nextPage(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-            ),
+            onPressed: _continueFromWelcome,
             icon: const Icon(Icons.arrow_forward),
             label: const Text('Continue'),
             style: FilledButton.styleFrom(
@@ -176,16 +211,16 @@ class _OnboardingPageState extends State<OnboardingPage> {
           Text(
             'What would you like to start with?',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
             'You can always add the other later.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
@@ -195,7 +230,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             subtitle: 'Add land, crops, and manage planting seasons',
             color: Colors.green,
             isSelected: _selectedPath == 'plants',
-            onTap: () => setState(() => _selectedPath = 'plants'),
+            onTap: () => _selectPathAndContinue('plants'),
           ),
           const SizedBox(height: 16),
           _buildPathCard(
@@ -204,19 +239,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
             subtitle: 'Register animal types, herds, and track activities',
             color: Colors.orange,
             isSelected: _selectedPath == 'animals',
-            onTap: () => setState(() => _selectedPath = 'animals'),
+            onTap: () => _selectPathAndContinue('animals'),
           ),
           const SizedBox(height: 16),
           TextButton.icon(
-            onPressed: () {
-              setState(() => _selectedPath = 'none');
-              _pageController.nextPage(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-              );
-            },
+            onPressed: () => _selectPathAndContinue('none'),
             icon: const Icon(Icons.explore),
-            label: const Text('I\'ll explore on my own'),
+            label: const Text("I'll explore on my own"),
           ),
         ],
       ),
@@ -262,21 +291,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     Text(
                       title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                     ),
                   ],
                 ),
               ),
-              if (isSelected)
-                Icon(Icons.check_circle, color: color),
+              if (isSelected) Icon(Icons.check_circle, color: color),
             ],
           ),
         ),
@@ -305,10 +334,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
           ),
           const SizedBox(height: 24),
           Text(
-            'You\'re all set!',
+            "You're all set!",
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
@@ -319,22 +348,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     ? 'Head to the Animals tab to add animal types and register your herd.'
                     : 'Explore the tabs below to get started with your farm.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
             'Your farm "${_farmNameController.text}" in ${_locationController.text} is ready.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 40),
           FilledButton(
-            onPressed:
-                state is ProfileLoading ? null : _submit,
+            onPressed: state is ProfileLoading ? null : _submit,
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
@@ -345,7 +373,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Text(
-                    'Let\'s Go!',
+                    "Let's Go!",
                     style: TextStyle(fontSize: 18),
                   ),
           ),
