@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/validation/field_limits.dart';
+import 'package:farm_tracker/core/validation/input_formatters.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
@@ -115,6 +120,7 @@ class _PlantPageState extends State<PlantPage> {
   }
 
   void _showAddPlantDialog() {
+    final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
     final varietyController = TextEditingController();
 
@@ -123,34 +129,12 @@ class _PlantPageState extends State<PlantPage> {
       title: 'Add New Plant',
       heightFactor: 0.5,
       submitLabel: 'Add Plant',
-      fields: [
-        TextField(
-          controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Plant Name *',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: varietyController,
-          decoration: const InputDecoration(
-            labelText: 'Variety (Optional)',
-            border: OutlineInputBorder(),
-          ),
-        ),
-      ],
+      formKey: formKey,
+      fields: _plantFormFields(
+        nameController: nameController,
+        varietyController: varietyController,
+      ),
       onSubmit: (sheetContext) async {
-        if (nameController.text.trim().isEmpty) {
-          ScaffoldMessenger.of(sheetContext).showSnackBar(
-            const SnackBar(
-              content: Text('Plant name is required'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-
         final userId = await UserUtils.getCurrentUserId();
         if (userId == null) {
           ScaffoldMessenger.of(sheetContext).showSnackBar(
@@ -164,10 +148,8 @@ class _PlantPageState extends State<PlantPage> {
 
         final plant = PlantModel.create(
           userId: userId ?? '',
-          name: nameController.text.trim(),
-          variety: varietyController.text.trim().isEmpty
-              ? null
-              : varietyController.text.trim(),
+          name: sanitizeText(nameController.text),
+          variety: sanitizeOptionalText(varietyController.text),
         );
         context.read<PlantBloc>().add(AddPlantEvent(plant));
         Navigator.pop(sheetContext);
@@ -176,6 +158,7 @@ class _PlantPageState extends State<PlantPage> {
   }
 
   void _showEditPlantDialog(Plant plant) {
+    final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: plant.name);
     final varietyController = TextEditingController(text: plant.variety ?? '');
 
@@ -184,41 +167,17 @@ class _PlantPageState extends State<PlantPage> {
       title: 'Edit Plant',
       heightFactor: 0.5,
       submitLabel: 'Update Plant',
-      fields: [
-        TextField(
-          controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Plant Name *',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: varietyController,
-          decoration: const InputDecoration(
-            labelText: 'Variety (Optional)',
-            border: OutlineInputBorder(),
-          ),
-        ),
-      ],
+      formKey: formKey,
+      fields: _plantFormFields(
+        nameController: nameController,
+        varietyController: varietyController,
+      ),
       onSubmit: (sheetContext) async {
-        if (nameController.text.trim().isEmpty) {
-          ScaffoldMessenger.of(sheetContext).showSnackBar(
-            const SnackBar(
-              content: Text('Plant name is required'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-
         final updatedPlant = PlantModel(
           id: plant.id,
           userId: plant.userId,
-          name: nameController.text.trim(),
-          variety: varietyController.text.trim().isEmpty
-              ? null
-              : varietyController.text.trim(),
+          name: sanitizeText(nameController.text),
+          variety: sanitizeOptionalText(varietyController.text),
           createdAt: plant.createdAt,
           updatedAt: DateTime.now(),
         );
@@ -232,6 +191,32 @@ class _PlantPageState extends State<PlantPage> {
         );
       },
     );
+  }
+
+  List<Widget> _plantFormFields({
+    required TextEditingController nameController,
+    required TextEditingController varietyController,
+  }) {
+    return [
+      ValidatedNameField(
+        controller: nameController,
+        labelText: 'Plant Name *',
+        validator: (value) => requiredName(value, fieldLabel: 'Plant name'),
+      ),
+      const SizedBox(height: 16),
+      TextFormField(
+        controller: varietyController,
+        decoration: const InputDecoration(
+          labelText: 'Variety (Optional)',
+          border: OutlineInputBorder(),
+        ),
+        validator: optionalVariety,
+        inputFormatters: nameFormatters(maxLength: FieldLimits.varietyMax),
+        maxLength: FieldLimits.varietyMax,
+        buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
+            null,
+      ),
+    ];
   }
 
   void _showDeleteConfirmation(Plant plant) async {

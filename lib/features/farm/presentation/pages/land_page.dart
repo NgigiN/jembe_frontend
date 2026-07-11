@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/validation/field_limits.dart';
+import 'package:farm_tracker/core/validation/input_formatters.dart';
+import 'package:farm_tracker/core/validation/parse.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
@@ -123,6 +129,7 @@ class _LandPageState extends State<LandPage> {
   }
 
   void _showAddLandDialog() {
+    final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
     final sizeController = TextEditingController();
     final locationController = TextEditingController();
@@ -132,51 +139,14 @@ class _LandPageState extends State<LandPage> {
       context: context,
       title: 'Add New Land',
       submitLabel: 'Add Land',
-      fields: [
-        TextField(
-          controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Land Name *',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: sizeController,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Size (acres)',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: locationController,
-          decoration: const InputDecoration(
-            labelText: 'Location',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: soilTypeController,
-          decoration: const InputDecoration(
-            labelText: 'Soil Type',
-            border: OutlineInputBorder(),
-          ),
-        ),
-      ],
+      formKey: formKey,
+      fields: _landFormFields(
+        nameController: nameController,
+        sizeController: sizeController,
+        locationController: locationController,
+        soilTypeController: soilTypeController,
+      ),
       onSubmit: (sheetContext) async {
-        if (nameController.text.trim().isEmpty) {
-          ScaffoldMessenger.of(sheetContext).showSnackBar(
-            const SnackBar(
-              content: Text('Land name is required'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-
         final userId = await UserUtils.getCurrentUserId();
         if (userId == null) {
           ScaffoldMessenger.of(sheetContext).showSnackBar(
@@ -189,14 +159,10 @@ class _LandPageState extends State<LandPage> {
         }
         final land = LandModel.create(
           userId: userId,
-          name: nameController.text.trim(),
-          size: double.tryParse(sizeController.text.trim()),
-          location: locationController.text.trim().isEmpty
-              ? null
-              : locationController.text.trim(),
-          soilType: soilTypeController.text.trim().isEmpty
-              ? null
-              : soilTypeController.text.trim(),
+          name: sanitizeText(nameController.text),
+          size: parseOptionalNonNegativeDecimal(sizeController.text),
+          location: sanitizeOptionalText(locationController.text),
+          soilType: sanitizeOptionalText(soilTypeController.text),
         );
         context.read<LandBloc>().add(AddLandEvent(land));
         Navigator.pop(sheetContext);
@@ -205,6 +171,7 @@ class _LandPageState extends State<LandPage> {
   }
 
   void _showEditLandDialog(Land land) {
+    final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: land.name);
     final sizeController = TextEditingController(
       text: land.size?.toString() ?? '',
@@ -217,65 +184,24 @@ class _LandPageState extends State<LandPage> {
       title: 'Edit Land',
       heightFactor: 0.6,
       submitLabel: 'Update Land',
-      fields: [
-        TextField(
-          controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Land Name *',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: sizeController,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Size (Acres)',
-            border: OutlineInputBorder(),
-            hintText: 'Enter land size in acres',
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: locationController,
-          decoration: const InputDecoration(
-            labelText: 'Location',
-            border: OutlineInputBorder(),
-            hintText: 'Enter land location (optional)',
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: soilTypeController,
-          decoration: const InputDecoration(
-            labelText: 'Soil Type',
-            border: OutlineInputBorder(),
-            hintText: 'Enter soil type (optional)',
-          ),
-        ),
-      ],
+      formKey: formKey,
+      fields: _landFormFields(
+        nameController: nameController,
+        sizeController: sizeController,
+        locationController: locationController,
+        soilTypeController: soilTypeController,
+        sizeHint: 'Enter land size in acres',
+        locationHint: 'Enter land location (optional)',
+        soilTypeHint: 'Enter soil type (optional)',
+      ),
       onSubmit: (sheetContext) async {
-        if (nameController.text.trim().isEmpty) {
-          ScaffoldMessenger.of(sheetContext).showSnackBar(
-            const SnackBar(
-              content: Text('Land name is required'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-
         final updatedLand = LandModel(
           id: land.id,
           userId: land.userId,
-          name: nameController.text.trim(),
-          size: double.tryParse(sizeController.text.trim()),
-          location: locationController.text.trim().isEmpty
-              ? null
-              : locationController.text.trim(),
-          soilType: soilTypeController.text.trim().isEmpty
-              ? null
-              : soilTypeController.text.trim(),
+          name: sanitizeText(nameController.text),
+          size: parseOptionalNonNegativeDecimal(sizeController.text),
+          location: sanitizeOptionalText(locationController.text),
+          soilType: sanitizeOptionalText(soilTypeController.text),
           createdAt: land.createdAt,
           updatedAt: DateTime.now(),
         );
@@ -289,6 +215,53 @@ class _LandPageState extends State<LandPage> {
         );
       },
     );
+  }
+
+  List<Widget> _landFormFields({
+    required TextEditingController nameController,
+    required TextEditingController sizeController,
+    required TextEditingController locationController,
+    required TextEditingController soilTypeController,
+    String? sizeHint,
+    String? locationHint,
+    String? soilTypeHint,
+  }) {
+    return [
+      ValidatedNameField(
+        controller: nameController,
+        labelText: 'Land Name *',
+        validator: (value) => requiredName(value, fieldLabel: 'Land name'),
+      ),
+      const SizedBox(height: 16),
+      ValidatedDecimalField(
+        controller: sizeController,
+        labelText: 'Size (acres)',
+        hintText: sizeHint,
+        validator: (value) =>
+            optionalNonNegativeDecimal(value, fieldLabel: 'Size'),
+      ),
+      const SizedBox(height: 16),
+      ValidatedLocationField(
+        controller: locationController,
+        labelText: 'Location',
+        hintText: locationHint,
+        validator: (value) => optionalLocation(value),
+      ),
+      const SizedBox(height: 16),
+      TextFormField(
+        controller: soilTypeController,
+        decoration: InputDecoration(
+          labelText: 'Soil Type',
+          hintText: soilTypeHint,
+          border: const OutlineInputBorder(),
+        ),
+        validator: optionalSoilType,
+        inputFormatters: shortLabelFormatters(maxLength: FieldLimits.soilTypeMax),
+        maxLength: FieldLimits.soilTypeMax,
+        buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
+            null,
+      ),
+    ];
   }
 
   void _showDeleteConfirmation(Land land) async {
