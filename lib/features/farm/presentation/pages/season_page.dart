@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
@@ -139,6 +142,7 @@ class _SeasonPageState extends State<SeasonPage> {
   }
 
   void _showAddSeasonDialog() {
+    final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
     DateTime? selectedStartDate;
     DateTime? selectedEndDate;
@@ -197,112 +201,26 @@ class _SeasonPageState extends State<SeasonPage> {
                 const SizedBox(height: 20),
                 Expanded(
                   child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        TextField(
-                          controller: nameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Season Name *',
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          initialValue: selectedPlantId,
-                          decoration: const InputDecoration(
-                            labelText: 'Select Plant *',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: plants.map((plant) {
-                            final name = plant.name;
-                            final variety = plant.variety ?? '';
-                            final displayName = variety.isNotEmpty
-                                ? '$name ($variety)'
-                                : name;
-                            return DropdownMenuItem<String>(
-                              value: plant.id,
-                              child: Text(displayName),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedPlantId = value;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          initialValue: selectedLandId,
-                          decoration: const InputDecoration(
-                            labelText: 'Select Land *',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: lands.map((land) {
-                            final name = land.name;
-                            final location = land.location ?? '';
-                            final displayName = location.isNotEmpty
-                                ? '$name ($location)'
-                                : name;
-                            return DropdownMenuItem<String>(
-                              value: land.id,
-                              child: Text(displayName),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedLandId = value;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        ListTile(
-                          title: const Text('Start Date *'),
-                          subtitle: Text(
-                            selectedStartDate != null
-                                ? _formatDate(selectedStartDate!)
-                                : 'Select start date',
-                          ),
-                          trailing: const Icon(Icons.calendar_today),
-                          onTap: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate: DateTime.now(),
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2030),
-                            );
-                            if (date != null) {
-                              setState(() {
-                                selectedStartDate = date;
-                              });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        ListTile(
-                          title: const Text('End Date (Optional)'),
-                          subtitle: Text(
-                            selectedEndDate != null
-                                ? _formatDate(selectedEndDate!)
-                                : 'Select end date (optional)',
-                          ),
-                          trailing: const Icon(Icons.calendar_today),
-                          onTap: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate:
-                                  selectedStartDate ?? DateTime.now(),
-                              firstDate:
-                                  selectedStartDate ?? DateTime(2020),
-                              lastDate: DateTime(2030),
-                            );
-                            if (date != null) {
-                              setState(() {
-                                selectedEndDate = date;
-                              });
-                            }
-                          },
-                        ),
-                      ],
+                    child: Form(
+                      key: formKey,
+                      child: _seasonFormFields(
+                        context: context,
+                        nameController: nameController,
+                        plants: plants,
+                        lands: lands,
+                        selectedPlantId: selectedPlantId,
+                        selectedLandId: selectedLandId,
+                        selectedStartDate: selectedStartDate,
+                        selectedEndDate: selectedEndDate,
+                        onPlantChanged: (value) =>
+                            setState(() => selectedPlantId = value),
+                        onLandChanged: (value) =>
+                            setState(() => selectedLandId = value),
+                        onStartDateChanged: (value) =>
+                            setState(() => selectedStartDate = value),
+                        onEndDateChanged: (value) =>
+                            setState(() => selectedEndDate = value),
+                      ),
                     ),
                   ),
                 ),
@@ -311,43 +229,7 @@ class _SeasonPageState extends State<SeasonPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () async {
-                      if (nameController.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Season name is required'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (selectedPlantId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a plant'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (selectedLandId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a land'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (selectedStartDate == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a start date'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
+                      if (!(formKey.currentState?.validate() ?? false)) {
                         return;
                       }
 
@@ -364,7 +246,7 @@ class _SeasonPageState extends State<SeasonPage> {
 
                       final season = SeasonModel.create(
                         userId: userId,
-                        name: nameController.text.trim(),
+                        name: sanitizeText(nameController.text),
                         plantId: selectedPlantId!,
                         landId: selectedLandId!,
                         startDate: selectedStartDate!,
@@ -394,6 +276,7 @@ class _SeasonPageState extends State<SeasonPage> {
   }
 
   void _showEditSeasonDialog(Season season) {
+    final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: season.name);
     DateTime? selectedStartDate = season.startDate;
     var selectedEndDate = season.endDate != null && season.endDate!.year > 2000
@@ -454,153 +337,27 @@ class _SeasonPageState extends State<SeasonPage> {
                 const SizedBox(height: 20),
                 Expanded(
                   child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        TextField(
-                          controller: nameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Season Name *',
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          initialValue: selectedPlantId,
-                          decoration: const InputDecoration(
-                            labelText: 'Select Plant *',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: plants.map((plant) {
-                            final name = plant.name;
-                            final variety = plant.variety ?? '';
-                            final displayName = variety.isNotEmpty
-                                ? '$name ($variety)'
-                                : name;
-                            return DropdownMenuItem<String>(
-                              value: plant.id,
-                              child: Text(displayName),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedPlantId = value;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          initialValue: selectedLandId,
-                          decoration: const InputDecoration(
-                            labelText: 'Select Land *',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: lands.map((land) {
-                            final name = land.name;
-                            final location = land.location ?? '';
-                            final displayName = location.isNotEmpty
-                                ? '$name ($location)'
-                                : name;
-                            return DropdownMenuItem<String>(
-                              value: land.id,
-                              child: Text(displayName),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedLandId = value;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        ListTile(
-                          title: const Text('Start Date *'),
-                          subtitle: Text(
-                            selectedStartDate != null
-                                ? _formatDate(selectedStartDate!)
-                                : 'Select start date',
-                          ),
-                          trailing: const Icon(Icons.calendar_today),
-                          onTap: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate:
-                                  selectedStartDate ?? DateTime.now(),
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2030),
-                            );
-                            if (date != null) {
-                              setState(() {
-                                selectedStartDate = date;
-                              });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        ListTile(
-                          title: const Text('End Date (Optional)'),
-                          subtitle: Text(
-                            selectedEndDate != null &&
-                                    selectedEndDate!.year > 2000
-                                ? _formatDate(selectedEndDate!)
-                                : 'Select end date (optional)',
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (selectedEndDate != null &&
-                                  selectedEndDate!.year > 2000)
-                                IconButton(
-                                  icon:
-                                      const Icon(Icons.clear, size: 20),
-                                  onPressed: () {
-                                    setState(() {
-                                      selectedEndDate = null;
-                                    });
-                                  },
-                                ),
-                              const Icon(Icons.calendar_today),
-                            ],
-                          ),
-                          onTap: () async {
-                            final validEndDate =
-                                selectedEndDate != null &&
-                                        selectedEndDate!.year > 2000
-                                    ? selectedEndDate
-                                    : null;
-                            final initialDate = validEndDate ??
-                                selectedStartDate ??
-                                DateTime.now();
-                            final firstDate =
-                                selectedStartDate ?? DateTime(2020);
-
-                            if (initialDate.isBefore(firstDate)) {
-                              final date = await showDatePicker(
-                                context: context,
-                                initialDate: firstDate,
-                                firstDate: firstDate,
-                                lastDate: DateTime(2030),
-                              );
-                              if (date != null) {
-                                setState(() {
-                                  selectedEndDate = date;
-                                });
-                              }
-                            } else {
-                              final date = await showDatePicker(
-                                context: context,
-                                initialDate: initialDate,
-                                firstDate: firstDate,
-                                lastDate: DateTime(2030),
-                              );
-                              if (date != null) {
-                                setState(() {
-                                  selectedEndDate = date;
-                                });
-                              }
-                            }
-                          },
-                        ),
-                      ],
+                    child: Form(
+                      key: formKey,
+                      child: _seasonFormFields(
+                        context: context,
+                        nameController: nameController,
+                        plants: plants,
+                        lands: lands,
+                        selectedPlantId: selectedPlantId,
+                        selectedLandId: selectedLandId,
+                        selectedStartDate: selectedStartDate,
+                        selectedEndDate: selectedEndDate,
+                        onPlantChanged: (value) =>
+                            setState(() => selectedPlantId = value),
+                        onLandChanged: (value) =>
+                            setState(() => selectedLandId = value),
+                        onStartDateChanged: (value) =>
+                            setState(() => selectedStartDate = value),
+                        onEndDateChanged: (value) =>
+                            setState(() => selectedEndDate = value),
+                        showClearEndDate: true,
+                      ),
                     ),
                   ),
                 ),
@@ -609,50 +366,14 @@ class _SeasonPageState extends State<SeasonPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () async {
-                      if (nameController.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Season name is required'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (selectedPlantId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a plant'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (selectedLandId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a land'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (selectedStartDate == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a start date'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
+                      if (!(formKey.currentState?.validate() ?? false)) {
                         return;
                       }
 
                       final updatedSeason = SeasonModel(
                         id: season.id,
                         userId: season.userId,
-                        name: nameController.text.trim(),
+                        name: sanitizeText(nameController.text),
                         plantId: selectedPlantId!,
                         landId: selectedLandId!,
                         startDate: selectedStartDate!,
@@ -692,6 +413,188 @@ class _SeasonPageState extends State<SeasonPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _seasonFormFields({
+    required BuildContext context,
+    required TextEditingController nameController,
+    required List<Plant> plants,
+    required List<Land> lands,
+    required String? selectedPlantId,
+    required String? selectedLandId,
+    required DateTime? selectedStartDate,
+    required DateTime? selectedEndDate,
+    required ValueChanged<String?> onPlantChanged,
+    required ValueChanged<String?> onLandChanged,
+    required ValueChanged<DateTime?> onStartDateChanged,
+    required ValueChanged<DateTime?> onEndDateChanged,
+    bool showClearEndDate = false,
+  }) {
+    final endDate = selectedEndDate;
+    final hasValidEndDate = endDate != null && endDate.year > 2000;
+
+    return Column(
+      children: [
+        ValidatedNameField(
+          controller: nameController,
+          labelText: 'Season Name *',
+          validator: (value) => requiredName(value, fieldLabel: 'Season name'),
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          initialValue: selectedPlantId,
+          decoration: const InputDecoration(
+            labelText: 'Select Plant *',
+            border: OutlineInputBorder(),
+          ),
+          items: plants.map((plant) {
+            final name = plant.name;
+            final variety = plant.variety ?? '';
+            final displayName =
+                variety.isNotEmpty ? '$name ($variety)' : name;
+            return DropdownMenuItem<String>(
+              value: plant.id,
+              child: Text(displayName),
+            );
+          }).toList(),
+          validator: (value) =>
+              requiredSelection(value, fieldLabel: 'plant'),
+          onChanged: onPlantChanged,
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          initialValue: selectedLandId,
+          decoration: const InputDecoration(
+            labelText: 'Select Land *',
+            border: OutlineInputBorder(),
+          ),
+          items: lands.map((land) {
+            final name = land.name;
+            final location = land.location ?? '';
+            final displayName =
+                location.isNotEmpty ? '$name ($location)' : name;
+            return DropdownMenuItem<String>(
+              value: land.id,
+              child: Text(displayName),
+            );
+          }).toList(),
+          validator: (value) =>
+              requiredSelection(value, fieldLabel: 'land'),
+          onChanged: onLandChanged,
+        ),
+        const SizedBox(height: 16),
+        FormField<DateTime?>(
+          initialValue: selectedStartDate,
+          validator: (value) =>
+              value == null ? 'Start date is required' : null,
+          builder: (field) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Start Date *'),
+                subtitle: Text(
+                  selectedStartDate != null
+                      ? _formatDate(selectedStartDate)
+                      : 'Select start date',
+                ),
+                trailing: const Icon(Icons.calendar_today),
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: selectedStartDate ?? DateTime.now(),
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2030),
+                  );
+                  if (date != null) {
+                    onStartDateChanged(date);
+                    field.didChange(date);
+                  }
+                },
+              ),
+              if (field.hasError)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 8),
+                  child: Text(
+                    field.errorText!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        FormField<DateTime?>(
+          initialValue: hasValidEndDate ? selectedEndDate : null,
+          validator: (value) => validateEndDateAfterStart(
+            start: selectedStartDate,
+            end: value,
+          ),
+          builder: (field) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('End Date (Optional)'),
+                subtitle: Text(
+                  hasValidEndDate
+                      ? _formatDate(endDate)
+                      : 'Select end date (optional)',
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (showClearEndDate && hasValidEndDate)
+                      IconButton(
+                        icon: const Icon(Icons.clear, size: 20),
+                        onPressed: () {
+                          onEndDateChanged(null);
+                          field.didChange(null);
+                        },
+                      ),
+                    const Icon(Icons.calendar_today),
+                  ],
+                ),
+                onTap: () async {
+                  final validEndDate = hasValidEndDate ? selectedEndDate : null;
+                  final initialDate =
+                      validEndDate ?? selectedStartDate ?? DateTime.now();
+                  final firstDate = selectedStartDate ?? DateTime(2020);
+                  final pickerInitialDate = initialDate.isBefore(firstDate)
+                      ? firstDate
+                      : initialDate;
+
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: pickerInitialDate,
+                    firstDate: firstDate,
+                    lastDate: DateTime(2030),
+                  );
+                  if (date != null) {
+                    onEndDateChanged(date);
+                    field.didChange(date);
+                  }
+                },
+              ),
+              if (field.hasError)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 8),
+                  child: Text(
+                    field.errorText!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

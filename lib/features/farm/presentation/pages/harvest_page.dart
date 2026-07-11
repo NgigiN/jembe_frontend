@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/constants/harvest_units.dart';
+import 'package:farm_tracker/core/validation/parse.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
@@ -184,6 +188,7 @@ class _HarvestPageState extends State<HarvestPage> {
       return;
     }
 
+    final formKey = GlobalKey<FormState>();
     final quantityController = TextEditingController(
       text: harvest != null ? _formatQuantity(harvest.quantity) : '',
     );
@@ -231,96 +236,131 @@ class _HarvestPageState extends State<HarvestPage> {
                 Expanded(
                   child: EntityFormSheet.scrollableForm(
                     context: context,
-                    child: Column(
-                      children: [
-                        DropdownButtonFormField<String>(
-                          initialValue: selectedSeasonId,
-                          decoration: const InputDecoration(
-                            labelText: 'Season *',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: seasons.map((season) {
-                            return DropdownMenuItem<String>(
-                              value: season.id,
-                              child: Text(season.name),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() => selectedSeasonId = value);
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: quantityController,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          decoration: const InputDecoration(
-                            labelText: 'Quantity *',
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          initialValue: selectedUnit,
-                          decoration: const InputDecoration(
-                            labelText: 'Unit *',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: [
-                            ...harvestUnitPresets.map(
-                              (unit) => DropdownMenuItem<String>(
-                                value: unit,
-                                child: Text(unit),
-                              ),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        children: [
+                          DropdownButtonFormField<String>(
+                            initialValue: selectedSeasonId,
+                            decoration: const InputDecoration(
+                              labelText: 'Season *',
+                              border: OutlineInputBorder(),
                             ),
-                            const DropdownMenuItem<String>(
-                              value: harvestUnitOther,
-                              child: Text('Other'),
+                            items: seasons.map((season) {
+                              return DropdownMenuItem<String>(
+                                value: season.id,
+                                child: Text(season.name),
+                              );
+                            }).toList(),
+                            validator: (value) =>
+                                requiredSelection(value, fieldLabel: 'season'),
+                            onChanged: (value) {
+                              setState(() => selectedSeasonId = value);
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          ValidatedDecimalField(
+                            controller: quantityController,
+                            labelText: 'Quantity *',
+                            validator: (value) =>
+                                positiveDecimal(value, fieldLabel: 'Quantity'),
+                          ),
+                          const SizedBox(height: 16),
+                          DropdownButtonFormField<String>(
+                            initialValue: selectedUnit,
+                            decoration: const InputDecoration(
+                              labelText: 'Unit *',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: [
+                              ...harvestUnitPresets.map(
+                                (unit) => DropdownMenuItem<String>(
+                                  value: unit,
+                                  child: Text(unit),
+                                ),
+                              ),
+                              const DropdownMenuItem<String>(
+                                value: harvestUnitOther,
+                                child: Text('Other'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              setState(() => selectedUnit = value ?? 'kg');
+                            },
+                          ),
+                          if (selectedUnit == harvestUnitOther) ...[
+                            const SizedBox(height: 16),
+                            ValidatedNameField(
+                              controller: customUnitController,
+                              labelText: 'Custom Unit *',
+                              hintText: 'e.g., baskets',
+                              validator: (value) {
+                                if (selectedUnit != harvestUnitOther) {
+                                  return null;
+                                }
+                                return requiredName(
+                                  value,
+                                  fieldLabel: 'Custom unit',
+                                );
+                              },
                             ),
                           ],
-                          onChanged: (value) {
-                            setState(() => selectedUnit = value ?? 'kg');
-                          },
-                        ),
-                        if (selectedUnit == harvestUnitOther) ...[
                           const SizedBox(height: 16),
-                          TextField(
-                            controller: customUnitController,
-                            decoration: const InputDecoration(
-                              labelText: 'Custom Unit *',
-                              border: OutlineInputBorder(),
-                              hintText: 'e.g., baskets',
+                          FormField<DateTime>(
+                            initialValue: selectedDate,
+                            validator: (value) => validateDateNotInFuture(
+                              value,
+                              fieldLabel: 'Harvest date',
+                            ),
+                            builder: (field) => Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: const Text('Harvest Date *'),
+                                  subtitle: Text(_formatDate(selectedDate)),
+                                  trailing:
+                                      const Icon(Icons.calendar_today),
+                                  onTap: () async {
+                                    final date = await showDatePicker(
+                                      context: context,
+                                      initialDate: selectedDate,
+                                      firstDate: DateTime(2020),
+                                      lastDate: DateTime.now(),
+                                    );
+                                    if (date != null) {
+                                      setState(() => selectedDate = date);
+                                      field.didChange(date);
+                                    }
+                                  },
+                                ),
+                                if (field.hasError)
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      left: 4,
+                                      bottom: 8,
+                                    ),
+                                    child: Text(
+                                      field.errorText!,
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .error,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
-                        ],
-                        const SizedBox(height: 16),
-                        ListTile(
-                          title: const Text('Harvest Date *'),
-                          subtitle: Text(_formatDate(selectedDate)),
-                          trailing: const Icon(Icons.calendar_today),
-                          onTap: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate: selectedDate,
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2035),
-                            );
-                            if (date != null) {
-                              setState(() => selectedDate = date);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: notesController,
-                          decoration: const InputDecoration(
+                          const SizedBox(height: 16),
+                          ValidatedNotesField(
+                            controller: notesController,
                             labelText: 'Notes (Optional)',
-                            border: OutlineInputBorder(),
+                            validator: optionalNotes,
                           ),
-                          maxLines: 3,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -329,24 +369,17 @@ class _HarvestPageState extends State<HarvestPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      final quantity =
-                          double.tryParse(quantityController.text.trim());
-                      final unit = selectedUnit == harvestUnitOther
-                          ? customUnitController.text.trim()
-                          : selectedUnit;
+                      if (!(formKey.currentState?.validate() ?? false)) {
+                        return;
+                      }
 
-                      if (selectedSeasonId == null) {
-                        _showError(context, 'Please select a season');
-                        return;
-                      }
-                      if (quantity == null || quantity <= 0) {
-                        _showError(context, 'Please enter a valid quantity');
-                        return;
-                      }
-                      if (unit.isEmpty) {
-                        _showError(context, 'Please enter a unit');
-                        return;
-                      }
+                      final quantity =
+                          parsePositiveDecimal(quantityController.text)!;
+                      final unit = selectedUnit == harvestUnitOther
+                          ? sanitizeText(customUnitController.text)
+                          : selectedUnit;
+                      final notes =
+                          sanitizeOptionalText(notesController.text);
 
                       if (harvest == null) {
                         final newHarvest = HarvestModel.create(
@@ -354,9 +387,7 @@ class _HarvestPageState extends State<HarvestPage> {
                           quantity: quantity,
                           unit: unit,
                           date: selectedDate,
-                          notes: notesController.text.trim().isEmpty
-                              ? null
-                              : notesController.text.trim(),
+                          notes: notes,
                         );
                         context
                             .read<HarvestBloc>()
@@ -368,9 +399,7 @@ class _HarvestPageState extends State<HarvestPage> {
                           quantity: quantity,
                           unit: unit,
                           date: selectedDate,
-                          notes: notesController.text.trim().isEmpty
-                              ? null
-                              : notesController.text.trim(),
+                          notes: notes,
                           revenueId: harvest.revenueId,
                           createdAt: harvest.createdAt,
                           updatedAt: DateTime.now(),
@@ -412,12 +441,6 @@ class _HarvestPageState extends State<HarvestPage> {
           ),
         ),
       ),
-    );
-  }
-
-  void _showError(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 }
