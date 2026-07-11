@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:farm_tracker/core/validation/parse.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/utils/responsive_utils.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
@@ -493,6 +497,8 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
     }
     context.read<HerdBloc>().add(GetHerdsEvent());
     context.read<SeasonBloc>().add(GetSeasonsEvent());
+    _quantityController.addListener(() => setState(() {}));
+    _unitPriceController.addListener(() => setState(() {}));
   }
 
   @override
@@ -584,7 +590,8 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                                     return DropdownMenuItem(value: s.id, child: Text(s.name));
                                   }).toList(),
                                   onChanged: (v) => setState(() => _selectedSourceId = v),
-                                  validator: (v) => v == null ? 'Please select a season' : null,
+                                  validator: (v) =>
+                                      requiredSelection(v, fieldLabel: 'season'),
                                 );
                               }
                               return const Text('No seasons found');
@@ -610,7 +617,8 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                                     );
                                   }).toList(),
                                   onChanged: (v) => setState(() => _selectedSourceId = v),
-                                  validator: (v) => v == null ? 'Please select a herd' : null,
+                                  validator: (v) =>
+                                      requiredSelection(v, fieldLabel: 'herd'),
                                 );
                               }
                               return const Text('No herds found');
@@ -639,45 +647,31 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                               ),
                         ),
                         const SizedBox(height: 16),
-                        TextFormField(
+                        ValidatedNameField(
                           controller: _typeController,
-                          decoration: const InputDecoration(
-                            labelText: 'Revenue Type',
-                            hintText: 'e.g., Milk Sale, Maize Harvest',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                          labelText: 'Revenue Type',
+                          hintText: 'e.g., Milk Sale, Maize Harvest',
+                          validator: (value) =>
+                              requiredName(value, fieldLabel: 'Revenue type'),
                         ),
                         const SizedBox(height: 16),
                         Row(
                           children: [
                             Expanded(
-                              child: TextFormField(
+                              child: ValidatedDecimalField(
                                 controller: _quantityController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Quantity',
-                                  border: OutlineInputBorder(),
-                                ),
-                                keyboardType: TextInputType.number,
-                                validator: (v) => (v == null || double.tryParse(v) == null)
-                                    ? 'Invalid'
-                                    : null,
-                                onChanged: (_) => setState(() {}),
+                                labelText: 'Quantity',
+                                validator: (value) =>
+                                    positiveDecimal(value, fieldLabel: 'Quantity'),
                               ),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
-                              child: TextFormField(
+                              child: ValidatedDecimalField(
                                 controller: _unitPriceController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Unit Price',
-                                  border: OutlineInputBorder(),
-                                ),
-                                keyboardType: TextInputType.number,
-                                validator: (v) => (v == null || double.tryParse(v) == null)
-                                    ? 'Invalid'
-                                    : null,
-                                onChanged: (_) => setState(() {}),
+                                labelText: 'Unit Price',
+                                validator: (value) =>
+                                    positiveDecimal(value, fieldLabel: 'Unit price'),
                               ),
                             ),
                           ],
@@ -701,12 +695,10 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        TextFormField(
+                        ValidatedNotesField(
                           controller: _notesController,
-                          decoration: const InputDecoration(
-                            labelText: 'Notes (Optional)',
-                            border: OutlineInputBorder(),
-                          ),
+                          labelText: 'Notes (Optional)',
+                          validator: optionalNotes,
                           maxLines: 2,
                         ),
                       ],
@@ -763,18 +755,31 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
   }
 
   void _submitForm() {
-    if (_formKey.currentState!.validate() && _selectedSourceId != null) {
-      context.read<RevenueBloc>().add(
-            AddRevenueEvent(
-              source: _source,
-              sourceId: _selectedSourceId!,
-              type: _typeController.text,
-              quantity: double.parse(_quantityController.text),
-              unitPrice: double.parse(_unitPriceController.text),
-              date: _selectedDate,
-              notes: _notesController.text,
-            ),
-          );
+    if (!_formKey.currentState!.validate()) return;
+
+    final dateError =
+        validateDateNotInFuture(_selectedDate, fieldLabel: 'Date');
+    if (dateError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(dateError)),
+      );
+      return;
     }
+
+    final quantity = parsePositiveDecimal(_quantityController.text);
+    final unitPrice = parsePositiveDecimal(_unitPriceController.text);
+    if (quantity == null || unitPrice == null) return;
+
+    context.read<RevenueBloc>().add(
+          AddRevenueEvent(
+            source: _source,
+            sourceId: _selectedSourceId!,
+            type: sanitizeText(_typeController.text),
+            quantity: quantity,
+            unitPrice: unitPrice,
+            date: _selectedDate,
+            notes: sanitizeOptionalText(_notesController.text),
+          ),
+        );
   }
 }
