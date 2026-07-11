@@ -1,3 +1,7 @@
+import 'package:farm_tracker/core/validation/parse.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/crud/cost_category_type_selector.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
@@ -191,6 +195,7 @@ class _ActivityPageState extends State<ActivityPage> {
   }
 
   Future<void> _showAddActivityDialog(BuildContext context) async {
+    final formKey = GlobalKey<FormState>();
     final typeController = TextEditingController();
     final costController = TextEditingController();
     final detailsController = TextEditingController();
@@ -254,144 +259,151 @@ class _ActivityPageState extends State<ActivityPage> {
                 Expanded(
                   child: EntityFormSheet.scrollableForm(
                     context: context,
-                    child: Column(
-                      children: [
-                        DropdownButtonFormField<String>(
-                          initialValue: selectedSourceType,
-                          decoration: const InputDecoration(
-                            labelText: 'Source Type *',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'plant',
-                              child: Text('Plant'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'animal',
-                              child: Text('Animal'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              selectedSourceType = value ?? 'plant';
-                              selectedSeasonId = null;
-                              selectedHerdId = null;
-                              typeController.clear();
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        if (selectedSourceType == 'plant')
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        children: [
                           DropdownButtonFormField<String>(
-                            initialValue: selectedSeasonId,
+                            initialValue: selectedSourceType,
                             decoration: const InputDecoration(
-                              labelText: 'Select Season *',
+                              labelText: 'Source Type *',
                               border: OutlineInputBorder(),
                             ),
-                            items: seasons
-                                .map<DropdownMenuItem<String>>((season) {
-                              return DropdownMenuItem<String>(
-                                value: season.id,
-                                child: Text(seasonDropdownLabel(season, lands)),
-                              );
-                            }).toList(),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'plant',
+                                child: Text('Plant'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'animal',
+                                child: Text('Animal'),
+                              ),
+                            ],
+                            validator: (value) =>
+                                requiredSelection(value, fieldLabel: 'source type'),
                             onChanged: (value) {
                               setState(() {
-                                selectedSeasonId = value;
+                                selectedSourceType = value ?? 'plant';
+                                selectedSeasonId = null;
+                                selectedHerdId = null;
+                                typeController.clear();
                               });
                             },
                           ),
-                        if (selectedSourceType == 'animal')
-                          BlocBuilder<HerdBloc, HerdState>(
-                            builder: (context, herdState) {
-                              if (herdState is HerdLoaded) {
-                                final herds = herdState.herds;
-                                return DropdownButtonFormField<String>(
-                                  initialValue: selectedHerdId,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Select Herd *',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  items: herds.map((herd) {
-                                    return DropdownMenuItem<String>(
-                                      value: herd.id,
-                                      child: Text(
-                                        '${herd.name} (${herd.location})',
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      selectedHerdId = value;
-                                    });
-                                  },
-                                );
-                              }
-                              return const CircularProgressIndicator();
-                            },
-                          ),
-                        if (selectedSourceType == 'plant' ||
-                            selectedSourceType == 'animal')
                           const SizedBox(height: 16),
-                        CostCategoryTypeSelector(
-                          categoryKind: 'activity',
-                          sourceType: selectedSourceType!,
-                          selectedType: typeController.text,
-                          labelText: 'Activity Type *',
-                          hintText: 'Select activity type',
-                          addButtonBackgroundColor: Colors.green.shade50,
-                          onTypeChanged: (value) {
-                            setState(() {
-                              typeController.text = value;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        ListTile(
-                          title: const Text('Date *'),
-                          subtitle: Text(
-                            selectedDate != null
-                                ? _formatDate(selectedDate!)
-                                : 'Select date',
-                          ),
-                          trailing: const Icon(Icons.calendar_today),
-                          onTap: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate: DateTime.now(),
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2030),
-                            );
-                            if (date != null) {
+                          if (selectedSourceType == 'plant')
+                            DropdownButtonFormField<String>(
+                              initialValue: selectedSeasonId,
+                              decoration: const InputDecoration(
+                                labelText: 'Select Season *',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: seasons
+                                  .map<DropdownMenuItem<String>>((season) {
+                                return DropdownMenuItem<String>(
+                                  value: season.id,
+                                  child: Text(seasonDropdownLabel(season, lands)),
+                                );
+                              }).toList(),
+                              validator: (value) =>
+                                  requiredSelection(value, fieldLabel: 'season'),
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedSeasonId = value;
+                                });
+                              },
+                            ),
+                          if (selectedSourceType == 'animal')
+                            BlocBuilder<HerdBloc, HerdState>(
+                              builder: (context, herdState) {
+                                if (herdState is HerdLoaded) {
+                                  final herds = herdState.herds;
+                                  return DropdownButtonFormField<String>(
+                                    initialValue: selectedHerdId,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Select Herd *',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    items: herds.map((herd) {
+                                      return DropdownMenuItem<String>(
+                                        value: herd.id,
+                                        child: Text(
+                                          '${herd.name} (${herd.location})',
+                                        ),
+                                      );
+                                    }).toList(),
+                                    validator: (value) =>
+                                        requiredSelection(value, fieldLabel: 'herd'),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        selectedHerdId = value;
+                                      });
+                                    },
+                                  );
+                                }
+                                return const CircularProgressIndicator();
+                              },
+                            ),
+                          if (selectedSourceType == 'plant' ||
+                              selectedSourceType == 'animal')
+                            const SizedBox(height: 16),
+                          CostCategoryTypeSelector(
+                            categoryKind: 'activity',
+                            sourceType: selectedSourceType!,
+                            selectedType: typeController.text,
+                            labelText: 'Activity Type *',
+                            hintText: 'Select activity type',
+                            addButtonBackgroundColor: Colors.green.shade50,
+                            validator: (value) => requiredName(
+                              value,
+                              fieldLabel: 'Activity type',
+                            ),
+                            onTypeChanged: (value) {
                               setState(() {
-                                selectedDate = date;
+                                typeController.text = value;
                               });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: costController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Cost (Optional)',
-                            border: OutlineInputBorder(),
-                            prefixText: 'Ksh ',
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          ListTile(
+                            title: const Text('Date *'),
+                            subtitle: Text(
+                              selectedDate != null
+                                  ? _formatDate(selectedDate!)
+                                  : 'Select date',
+                            ),
+                            trailing: const Icon(Icons.calendar_today),
+                            onTap: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: DateTime.now(),
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2030),
+                              );
+                              if (date != null) {
+                                setState(() {
+                                  selectedDate = date;
+                                });
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          ValidatedDecimalField(
+                            controller: costController,
+                            labelText: 'Cost *',
                             hintText: '0.00',
+                            validator: (value) =>
+                                nonNegativeDecimal(value, fieldLabel: 'Cost'),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: detailsController,
-                          maxLines: 3,
-                          decoration: const InputDecoration(
+                          const SizedBox(height: 16),
+                          ValidatedNotesField(
+                            controller: detailsController,
                             labelText: 'Details (Optional)',
-                            border: OutlineInputBorder(),
-                            hintText: 'Describe the activity details...',
+                            validator: (value) =>
+                                optionalNotes(value, fieldLabel: 'Details'),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -400,59 +412,7 @@ class _ActivityPageState extends State<ActivityPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      if (selectedSourceType == 'plant' &&
-                          selectedSeasonId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a season'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (selectedSourceType == 'animal' &&
-                          selectedHerdId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a herd'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (typeController.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                                'Please select an activity type'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (selectedDate == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a date'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      final cost = double.tryParse(
-                              costController.text.trim()) ??
-                          0.0;
-                      if (cost < 0) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Cost cannot be negative'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
+                      if (!(formKey.currentState?.validate() ?? false)) {
                         return;
                       }
 
@@ -460,20 +420,18 @@ class _ActivityPageState extends State<ActivityPage> {
                           ? selectedSeasonId!
                           : selectedHerdId!;
 
+                      final details = sanitizeOptionalText(detailsController.text);
+
                       final activity = ActivityModel.create(
                         sourceType: selectedSourceType!,
                         sourceId: sourceId,
                         animalId:
                             selectedSourceType == 'animal' ? 0 : null,
-                        type: typeController.text.trim(),
-                        details: detailsController.text.trim().isEmpty
-                            ? null
-                            : detailsController.text.trim(),
-                        cost: cost,
+                        type: sanitizeText(typeController.text),
+                        details: details,
+                        cost: parseNonNegativeDecimal(costController.text),
                         date: selectedDate!,
-                        notes: detailsController.text.trim().isEmpty
-                            ? null
-                            : detailsController.text.trim(),
+                        notes: details,
                       );
                       context.read<ActivityBloc>().add(
                         AddActivityEvent(activity),
@@ -504,6 +462,7 @@ class _ActivityPageState extends State<ActivityPage> {
     BuildContext context,
     Activity activity,
   ) async {
+    final formKey = GlobalKey<FormState>();
     final descriptionController = TextEditingController(
       text: activity.details ?? '',
     );
@@ -576,147 +535,153 @@ class _ActivityPageState extends State<ActivityPage> {
                 Expanded(
                   child: EntityFormSheet.scrollableForm(
                     context: context,
-                    child: Column(
-                      children: [
-                        DropdownButtonFormField<String>(
-                          initialValue: selectedSourceType,
-                          decoration: const InputDecoration(
-                            labelText: 'Source Type *',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'plant',
-                              child: Text('Plant'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'animal',
-                              child: Text('Animal'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              selectedSourceType = value ?? 'plant';
-                              if (selectedSourceType == 'plant') {
-                                selectedHerdId = null;
-                              } else {
-                                selectedSeasonId = null;
-                              }
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        if (selectedSourceType == 'plant')
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        children: [
                           DropdownButtonFormField<String>(
-                            initialValue: selectedSeasonId,
+                            initialValue: selectedSourceType,
                             decoration: const InputDecoration(
-                              labelText: 'Select Season *',
+                              labelText: 'Source Type *',
                               border: OutlineInputBorder(),
                             ),
-                            items: seasons
-                                .map<DropdownMenuItem<String>>((season) {
-                              return DropdownMenuItem<String>(
-                                value: season.id,
-                                child: Text(seasonDropdownLabel(season, lands)),
-                              );
-                            }).toList(),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'plant',
+                                child: Text('Plant'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'animal',
+                                child: Text('Animal'),
+                              ),
+                            ],
+                            validator: (value) =>
+                                requiredSelection(value, fieldLabel: 'source type'),
                             onChanged: (value) {
                               setState(() {
-                                selectedSeasonId = value;
+                                selectedSourceType = value ?? 'plant';
+                                if (selectedSourceType == 'plant') {
+                                  selectedHerdId = null;
+                                } else {
+                                  selectedSeasonId = null;
+                                }
                               });
                             },
                           ),
-                        if (selectedSourceType == 'animal')
-                          BlocBuilder<HerdBloc, HerdState>(
-                            builder: (context, herdState) {
-                              if (herdState is HerdLoaded) {
-                                final herds = herdState.herds;
-                                return DropdownButtonFormField<String>(
-                                  initialValue: selectedHerdId,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Select Herd *',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  items: herds.map((herd) {
-                                    return DropdownMenuItem<String>(
-                                      value: herd.id,
-                                      child: Text(
-                                        '${herd.name} (${herd.location})',
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      selectedHerdId = value;
-                                    });
-                                  },
-                                );
-                              }
-                              return const CircularProgressIndicator();
-                            },
-                          ),
-                        if (selectedSourceType == 'plant' ||
-                            selectedSourceType == 'animal')
                           const SizedBox(height: 16),
-                        CostCategoryTypeSelector(
-                          categoryKind: 'activity',
-                          sourceType: selectedSourceType!,
-                          selectedType: selectedType ?? '',
-                          labelText: 'Activity Type *',
-                          addButtonBackgroundColor: Colors.blue.shade50,
-                          onTypeChanged: (value) {
-                            setState(() {
-                              selectedType = value.isEmpty ? null : value;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: descriptionController,
-                          decoration: const InputDecoration(
-                            labelText: 'Description',
-                            border: OutlineInputBorder(),
-                            hintText:
-                                'Enter activity description (optional)',
-                          ),
-                          maxLines: 3,
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: costController,
-                          decoration: const InputDecoration(
-                            labelText: 'Cost',
-                            border: OutlineInputBorder(),
-                            prefixText: 'Ksh ',
-                            hintText: '0.00',
-                          ),
-                          keyboardType: TextInputType.number,
-                        ),
-                        const SizedBox(height: 16),
-                        ListTile(
-                          title: const Text('Date *'),
-                          subtitle: Text(
-                            selectedDate != null
-                                ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
-                                : 'Select date',
-                          ),
-                          trailing: const Icon(Icons.calendar_today),
-                          onTap: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate:
-                                  selectedDate ?? DateTime.now(),
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2030),
-                            );
-                            if (date != null) {
+                          if (selectedSourceType == 'plant')
+                            DropdownButtonFormField<String>(
+                              initialValue: selectedSeasonId,
+                              decoration: const InputDecoration(
+                                labelText: 'Select Season *',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: seasons
+                                  .map<DropdownMenuItem<String>>((season) {
+                                return DropdownMenuItem<String>(
+                                  value: season.id,
+                                  child: Text(seasonDropdownLabel(season, lands)),
+                                );
+                              }).toList(),
+                              validator: (value) =>
+                                  requiredSelection(value, fieldLabel: 'season'),
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedSeasonId = value;
+                                });
+                              },
+                            ),
+                          if (selectedSourceType == 'animal')
+                            BlocBuilder<HerdBloc, HerdState>(
+                              builder: (context, herdState) {
+                                if (herdState is HerdLoaded) {
+                                  final herds = herdState.herds;
+                                  return DropdownButtonFormField<String>(
+                                    initialValue: selectedHerdId,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Select Herd *',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    items: herds.map((herd) {
+                                      return DropdownMenuItem<String>(
+                                        value: herd.id,
+                                        child: Text(
+                                          '${herd.name} (${herd.location})',
+                                        ),
+                                      );
+                                    }).toList(),
+                                    validator: (value) =>
+                                        requiredSelection(value, fieldLabel: 'herd'),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        selectedHerdId = value;
+                                      });
+                                    },
+                                  );
+                                }
+                                return const CircularProgressIndicator();
+                              },
+                            ),
+                          if (selectedSourceType == 'plant' ||
+                              selectedSourceType == 'animal')
+                            const SizedBox(height: 16),
+                          CostCategoryTypeSelector(
+                            categoryKind: 'activity',
+                            sourceType: selectedSourceType!,
+                            selectedType: selectedType ?? '',
+                            labelText: 'Activity Type *',
+                            addButtonBackgroundColor: Colors.blue.shade50,
+                            validator: (value) => requiredName(
+                              value,
+                              fieldLabel: 'Activity type',
+                            ),
+                            onTypeChanged: (value) {
                               setState(() {
-                                selectedDate = date;
+                                selectedType = value.isEmpty ? null : value;
                               });
-                            }
-                          },
-                        ),
-                      ],
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          ValidatedNotesField(
+                            controller: descriptionController,
+                            labelText: 'Description',
+                            validator: (value) =>
+                                optionalNotes(value, fieldLabel: 'Description'),
+                          ),
+                          const SizedBox(height: 16),
+                          ValidatedDecimalField(
+                            controller: costController,
+                            labelText: 'Cost *',
+                            hintText: '0.00',
+                            validator: (value) =>
+                                nonNegativeDecimal(value, fieldLabel: 'Cost'),
+                          ),
+                          const SizedBox(height: 16),
+                          ListTile(
+                            title: const Text('Date *'),
+                            subtitle: Text(
+                              selectedDate != null
+                                  ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
+                                  : 'Select date',
+                            ),
+                            trailing: const Icon(Icons.calendar_today),
+                            onTap: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate:
+                                    selectedDate ?? DateTime.now(),
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2030),
+                              );
+                              if (date != null) {
+                                setState(() {
+                                  selectedDate = date;
+                                });
+                              }
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -725,59 +690,7 @@ class _ActivityPageState extends State<ActivityPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () async {
-                      if (selectedSourceType == 'plant' &&
-                          selectedSeasonId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a season'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (selectedSourceType == 'animal' &&
-                          selectedHerdId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a herd'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (selectedType == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                                'Please select an activity type'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (selectedDate == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a date'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      final cost = double.tryParse(
-                              costController.text.trim()) ??
-                          0.0;
-                      if (cost < 0) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Cost cannot be negative'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
+                      if (!(formKey.currentState?.validate() ?? false)) {
                         return;
                       }
 
@@ -791,11 +704,9 @@ class _ActivityPageState extends State<ActivityPage> {
                         sourceId: sourceId,
                         animalId:
                             selectedSourceType == 'animal' ? 0 : null,
-                        type: selectedType!,
-                        details: descriptionController.text.trim().isEmpty
-                            ? null
-                            : descriptionController.text.trim(),
-                        cost: cost,
+                        type: sanitizeText(selectedType!),
+                        details: sanitizeOptionalText(descriptionController.text),
+                        cost: parseNonNegativeDecimal(costController.text),
                         date: selectedDate!,
                         notes: activity.notes,
                         createdAt: activity.createdAt,

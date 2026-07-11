@@ -1,3 +1,6 @@
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
@@ -15,6 +18,7 @@ class CostCategoryTypeSelector extends StatelessWidget {
     required this.labelText,
     this.hintText,
     this.addButtonBackgroundColor,
+    this.validator,
     super.key,
   });
 
@@ -25,6 +29,7 @@ class CostCategoryTypeSelector extends StatelessWidget {
   final String labelText;
   final String? hintText;
   final Color? addButtonBackgroundColor;
+  final FormFieldValidator<String>? validator;
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +63,7 @@ class CostCategoryTypeSelector extends StatelessWidget {
                   categories.map((category) => category.name),
                   selectedType,
                 ),
+                validator: validator,
                 onChanged: (value) => onTypeChanged(value ?? ''),
               ),
             ),
@@ -101,6 +107,7 @@ class CostCategoryTypeSelector extends StatelessWidget {
   }
 
   void _showCreateTypeDialog(BuildContext context) {
+    final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
     final typeLabel = categoryKind == 'input' ? 'Input' : 'Activity';
     final sourceLabel = sourceType == 'plant' ? 'Plant' : 'Animal';
@@ -109,14 +116,15 @@ class CostCategoryTypeSelector extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('Add New $sourceLabel $typeLabel Type'),
-        content: TextField(
-          controller: nameController,
-          decoration: InputDecoration(
+        content: Form(
+          key: formKey,
+          child: ValidatedNameField(
+            controller: nameController,
             labelText: '$typeLabel Type Name',
             hintText: 'e.g., Custom $typeLabel',
-            border: const OutlineInputBorder(),
+            validator: (value) =>
+                requiredName(value, fieldLabel: '$typeLabel type'),
           ),
-          autofocus: true,
         ),
         actions: [
           TextButton(
@@ -125,17 +133,9 @@ class CostCategoryTypeSelector extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              if (nameController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please enter a name'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                return;
-              }
+              if (!(formKey.currentState?.validate() ?? false)) return;
 
-              final name = nameController.text.trim();
+              final name = sanitizeText(nameController.text);
               context.read<CostCategoryBloc>().add(
                 AddCostCategoryEvent(
                   name: name,
