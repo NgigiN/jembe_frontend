@@ -6,7 +6,7 @@ abstract class SeasonState extends Equatable {
   final List<Season> seasons;
 
   @override
-  List<Object> get props => [seasons];
+  List<Object?> get props => [seasons];
 }
 
 class SeasonInitial extends SeasonState {}
@@ -16,10 +16,11 @@ class SeasonLoading extends SeasonState {
 }
 
 class SeasonLoaded extends SeasonState {
-  const SeasonLoaded({required super.seasons});
+  const SeasonLoaded({required super.seasons, this.successMessage});
+  final String? successMessage;
 
   @override
-  List<Object> get props => [seasons];
+  List<Object?> get props => [seasons, successMessage];
 }
 
 class SeasonError extends SeasonState {

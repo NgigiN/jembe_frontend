@@ -15,6 +15,8 @@ class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
     try {
       final animalTypes = await remoteDataSource.getAnimalTypes();
       return Right(animalTypes);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -27,6 +29,8 @@ class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
     try {
       final animalType = await remoteDataSource.getAnimalType(id);
       return Right(animalType);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -48,6 +52,8 @@ class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
       );
       final result = await remoteDataSource.addAnimalType(animalTypeModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -73,6 +79,8 @@ class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
       );
       final result = await remoteDataSource.updateAnimalType(updatedModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -85,6 +93,8 @@ class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
     try {
       await remoteDataSource.deleteAnimalType(id);
       return const Right(null);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {

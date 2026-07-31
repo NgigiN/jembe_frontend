@@ -15,6 +15,8 @@ class HerdRepositoryImpl implements HerdRepository {
     try {
       final herds = await remoteDataSource.getHerds();
       return Right(herds);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -40,6 +42,8 @@ class HerdRepositoryImpl implements HerdRepository {
       );
       final result = await remoteDataSource.addHerd(herdModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -71,6 +75,8 @@ class HerdRepositoryImpl implements HerdRepository {
       );
       final result = await remoteDataSource.updateHerd(updatedModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -83,6 +89,8 @@ class HerdRepositoryImpl implements HerdRepository {
     try {
       await remoteDataSource.deleteHerd(id);
       return const Right(null);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {

@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/auth/data/models/user_model.dart';
 
 abstract class ProfileRemoteDataSource {
@@ -30,17 +32,15 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
         if (data['profile'] != null) {
           return UserModel.fromJson(data['profile'] as Map<String, dynamic>);
         } else {
-          throw const ServerException('Invalid response format');
+          throw const ServerException('Profile data could not be loaded. Please try again.');
         }
       } else {
-        throw ServerException(
-          _extractErrorMessage(response.data) ?? 'Failed to get profile',
-        );
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
       }
     } on DioException catch (e) {
-      throw ServerException(
-        _extractErrorMessage(e.response?.data) ?? 'Failed to get profile',
-      );
+      appLogger.error(LogCategory.http, 'DioException in getProfile', e);
+      throw mapDioException(e);
     }
   }
 
@@ -63,14 +63,12 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
       );
 
       if (response.statusCode != 200) {
-        throw ServerException(
-          _extractErrorMessage(response.data) ?? 'Failed to update profile',
-        );
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
       }
     } on DioException catch (e) {
-      throw ServerException(
-        _extractErrorMessage(e.response?.data) ?? 'Failed to update profile',
-      );
+      appLogger.error(LogCategory.http, 'DioException in updateProfile', e);
+      throw mapDioException(e);
     }
   }
 
@@ -86,22 +84,12 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
       );
 
       if (response.statusCode != 200) {
-        throw ServerException(
-          _extractErrorMessage(response.data) ?? 'Failed to change password',
-        );
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
       }
     } on DioException catch (e) {
-      throw ServerException(
-        _extractErrorMessage(e.response?.data) ?? 'Failed to change password',
-      );
+      appLogger.error(LogCategory.http, 'DioException in changePassword', e);
+      throw mapDioException(e);
     }
-  }
-
-  String? _extractErrorMessage(dynamic data) {
-    if (data is Map<String, dynamic>) {
-      if (data['error'] != null) return data['error'].toString();
-      if (data['message'] != null) return data['message'].toString();
-    }
-    return null;
   }
 }

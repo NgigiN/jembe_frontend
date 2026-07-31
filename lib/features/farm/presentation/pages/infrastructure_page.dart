@@ -19,6 +19,7 @@ import 'package:farm_tracker/features/farm/domain/entities/infrastructure.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_state.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 
 class InfrastructurePage extends StatefulWidget {
   const InfrastructurePage({super.key});
@@ -54,7 +55,18 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<InfrastructureBloc, InfrastructureState>(
+      body: BlocConsumer<InfrastructureBloc, InfrastructureState>(
+        listener: (context, state) {
+          if (state is InfrastructureLoaded && state.successMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.success(state.successMessage!),
+            );
+          } else if (state is InfrastructureError && state.infrastructures.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.error(state.message),
+            );
+          }
+        },
         builder: (context, state) {
           if (state is InfrastructureLoading && state.infrastructures.isEmpty) {
             return const Center(child: CircularProgressIndicator());
@@ -415,14 +427,6 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
       context.read<InfrastructureBloc>().add(
         DeleteInfrastructureEvent(item.id),
       );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${item.name} deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     }
   }
 }

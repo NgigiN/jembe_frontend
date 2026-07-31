@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
@@ -33,7 +34,7 @@ class AnalysisBloc extends Bloc<AnalysisEvent, AnalysisState> {
     emit(AnalysisLoading());
     final result = await getTotalCostsBySeason(NoParams());
     result.fold(
-      (failure) => emit(const AnalysisError('Failed to load total costs by season')),
+      (failure) => emit(AnalysisError(resolveFailureMessage(failure, 'Failed to load cost summary'))),
       (totalCosts) => emit(TotalCostsBySeasonLoaded(totalCosts)),
     );
   }
@@ -45,7 +46,7 @@ class AnalysisBloc extends Bloc<AnalysisEvent, AnalysisState> {
     emit(AnalysisLoading());
     final result = await getCostBreakdown(NoParams());
     result.fold(
-      (failure) => emit(const AnalysisError('Failed to load cost breakdown')),
+      (failure) => emit(AnalysisError(resolveFailureMessage(failure, 'Failed to load cost breakdown'))),
       (breakdowns) => emit(CostBreakdownLoaded(breakdowns)),
     );
   }
@@ -57,7 +58,7 @@ class AnalysisBloc extends Bloc<AnalysisEvent, AnalysisState> {
     emit(AnalysisLoading());
     final result = await getAnnualCostSummary(NoParams());
     result.fold(
-      (failure) => emit(const AnalysisError('Failed to load annual cost summary')),
+      (failure) => emit(AnalysisError(resolveFailureMessage(failure, 'Failed to load annual summary'))),
       (summaries) => emit(AnnualCostSummaryLoaded(summaries)),
     );
   }

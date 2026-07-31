@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/farm/data/models/animal_model.dart';
 
 abstract class AnimalRemoteDataSource {
@@ -27,26 +29,12 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
         }
         return [];
       } else {
-        var errorMsg = 'Failed to load animals';
-        try {
-          final errorData = response.data as Map<String, dynamic>?;
-          if (errorData != null && errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-        throw ServerException(errorMsg);
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
       }
     } on DioException catch (e) {
-      var errorMsg = 'Failed to load animals';
-      if (e.response?.data != null) {
-        try {
-          final errorData = e.response!.data as Map<String, dynamic>;
-          if (errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-      }
-      throw ServerException(errorMsg);
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 
@@ -62,26 +50,12 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return AnimalModel.fromJson(data);
       } else {
-        var errorMsg = 'Failed to add animal';
-        try {
-          final errorData = response.data as Map<String, dynamic>?;
-          if (errorData != null && errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-        throw ServerException(errorMsg);
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
       }
     } on DioException catch (e) {
-      var errorMsg = 'Failed to add animal';
-      if (e.response?.data != null) {
-        try {
-          final errorData = e.response!.data as Map<String, dynamic>;
-          if (errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-      }
-      throw ServerException(errorMsg);
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 
@@ -97,26 +71,12 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return AnimalModel.fromJson(data);
       } else {
-        var errorMsg = 'Failed to update animal';
-        try {
-          final errorData = response.data as Map<String, dynamic>?;
-          if (errorData != null && errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-        throw ServerException(errorMsg);
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
       }
     } on DioException catch (e) {
-      var errorMsg = 'Failed to update animal';
-      if (e.response?.data != null) {
-        try {
-          final errorData = e.response!.data as Map<String, dynamic>;
-          if (errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-      }
-      throw ServerException(errorMsg);
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 
@@ -126,26 +86,12 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
       final response = await dio.delete('/api/v1/animals/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
-        var errorMsg = 'Failed to delete animal';
-        try {
-          final errorData = response.data as Map<String, dynamic>?;
-          if (errorData != null && errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-        throw ServerException(errorMsg);
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
       }
     } on DioException catch (e) {
-      var errorMsg = 'Failed to delete animal';
-      if (e.response?.data != null) {
-        try {
-          final errorData = e.response!.data as Map<String, dynamic>;
-          if (errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-      }
-      throw ServerException(errorMsg);
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 }

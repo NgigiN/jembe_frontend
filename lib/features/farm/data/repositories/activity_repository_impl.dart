@@ -19,6 +19,8 @@ class ActivityRepositoryImpl implements ActivityRepository {
         sourceType: sourceType,
       );
       return Right(activities);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -44,6 +46,8 @@ class ActivityRepositoryImpl implements ActivityRepository {
 
       final result = await remoteDataSource.addActivity(activityModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -69,6 +73,8 @@ class ActivityRepositoryImpl implements ActivityRepository {
 
       final result = await remoteDataSource.updateActivity(activityModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -79,6 +85,8 @@ class ActivityRepositoryImpl implements ActivityRepository {
     try {
       await remoteDataSource.deleteActivity(id);
       return const Right(null);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

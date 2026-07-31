@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
@@ -86,19 +87,13 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
           listener: (context, state) {
             if (state is HerdActivitySuccess) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: Colors.green,
-                ),
+                AppSnackBar.success(state.message),
               );
               context.read<HerdBloc>().add(GetHerdsEvent());
               Navigator.pop(context);
             } else if (state is HerdActivityError) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: Colors.red,
-                ),
+                AppSnackBar.error(state.message),
               );
             }
           },

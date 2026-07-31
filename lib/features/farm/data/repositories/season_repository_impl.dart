@@ -15,6 +15,8 @@ class SeasonRepositoryImpl implements SeasonRepository {
     try {
       final seasons = await remoteDataSource.getSeasons();
       return Right(seasons);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -38,6 +40,8 @@ class SeasonRepositoryImpl implements SeasonRepository {
 
       final result = await remoteDataSource.addSeason(seasonModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -48,6 +52,8 @@ class SeasonRepositoryImpl implements SeasonRepository {
     try {
       await remoteDataSource.deleteSeason(id);
       return const Right(null);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -69,6 +75,8 @@ class SeasonRepositoryImpl implements SeasonRepository {
       );
       final result = await remoteDataSource.updateSeason(seasonModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

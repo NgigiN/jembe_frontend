@@ -21,29 +21,17 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
       appLogger.debug(LogCategory.farm, 'GetSeasonsEvent triggered');
       emit(SeasonLoading());
 
-      try {
-        final result = await getSeasons(NoParams());
-        result.fold(
-          (failure) {
-            appLogger.warning(LogCategory.farm, 'GetSeasons failed: $failure');
-            String message = 'Failed to load seasons';
-            if (failure is ServerFailure && failure.errorMessage != null) {
-              message = failure.errorMessage!;
-            }
-            emit(SeasonError(message));
-          },
-          (seasons) {
-            appLogger.info(
-              LogCategory.farm,
-              'Loaded ${seasons.length} seasons',
-            );
-            emit(SeasonLoaded(seasons: seasons));
-          },
-        );
-      } catch (e) {
-        appLogger.error(LogCategory.farm, 'GetSeasons exception', e);
-        emit(SeasonError('Unexpected error: $e'));
-      }
+      final result = await getSeasons(NoParams());
+      result.fold(
+        (failure) {
+          appLogger.warning(LogCategory.farm, 'GetSeasons failed: $failure');
+          emit(SeasonError(resolveFailureMessage(failure, 'Failed to load seasons')));
+        },
+        (seasons) {
+          appLogger.info(LogCategory.farm, 'Loaded ${seasons.length} seasons');
+          emit(SeasonLoaded(seasons: seasons));
+        },
+      );
     });
 
     on<AddSeasonEvent>((event, emit) async {
@@ -52,66 +40,53 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
       emit(SeasonLoading(seasons: currentSeasons));
       final result = await addSeason(AddSeasonParams(season: event.season));
       result.fold(
-        (failure) {
-          String message = 'Failed to add season';
-          if (failure is ServerFailure && failure.errorMessage != null) {
-            message = failure.errorMessage!;
-          }
-          emit(SeasonError(message, seasons: currentSeasons));
-        },
+        (failure) => emit(SeasonError(
+          resolveFailureMessage(failure, 'Failed to add season'),
+          seasons: currentSeasons,
+        )),
         (season) {
           final updatedSeasons = List<Season>.from(currentSeasons)..add(season);
-          emit(SeasonLoaded(seasons: updatedSeasons));
+          emit(SeasonLoaded(seasons: updatedSeasons, successMessage: 'Season created'));
         },
       );
     });
 
     on<UpdateSeasonEvent>((event, emit) async {
-      final currentSeasons = state is SeasonLoaded
-          ? (state as SeasonLoaded).seasons
-          : <Season>[];
+      final currentSeasons = state.seasons;
 
-      emit(SeasonLoading());
+      emit(SeasonLoading(seasons: currentSeasons));
       final result = await updateSeason(
         UpdateSeasonParams(season: event.season),
       );
       result.fold(
-        (failure) {
-          String message = 'Failed to update season';
-          if (failure is ServerFailure && failure.errorMessage != null) {
-            message = failure.errorMessage!;
-          }
-          emit(SeasonError(message, seasons: currentSeasons));
-        },
+        (failure) => emit(SeasonError(
+          resolveFailureMessage(failure, 'Failed to update season'),
+          seasons: currentSeasons,
+        )),
         (updatedSeason) {
           final updatedSeasons = currentSeasons.map((season) {
             return season.id == updatedSeason.id ? updatedSeason : season;
           }).toList();
-          emit(SeasonLoaded(seasons: updatedSeasons));
+          emit(SeasonLoaded(seasons: updatedSeasons, successMessage: 'Season updated'));
         },
       );
     });
 
     on<DeleteSeasonEvent>((event, emit) async {
-      final currentSeasons = state is SeasonLoaded
-          ? (state as SeasonLoaded).seasons
-          : <Season>[];
+      final currentSeasons = state.seasons;
 
-      emit(SeasonLoading());
+      emit(SeasonLoading(seasons: currentSeasons));
       final result = await deleteSeason(DeleteSeasonParams(id: event.id));
       result.fold(
-        (failure) {
-          String message = 'Failed to delete season';
-          if (failure is ServerFailure && failure.errorMessage != null) {
-            message = failure.errorMessage!;
-          }
-          emit(SeasonError(message, seasons: currentSeasons));
-        },
+        (failure) => emit(SeasonError(
+          resolveFailureMessage(failure, 'Failed to delete season'),
+          seasons: currentSeasons,
+        )),
         (_) {
           final updatedSeasons = currentSeasons
               .where((season) => season.id != event.id)
               .toList();
-          emit(SeasonLoaded(seasons: updatedSeasons));
+          emit(SeasonLoaded(seasons: updatedSeasons, successMessage: 'Season deleted'));
         },
       );
     });

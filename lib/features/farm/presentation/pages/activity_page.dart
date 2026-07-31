@@ -35,6 +35,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 
 class ActivityPage extends StatefulWidget {
   const ActivityPage({super.key, this.sourceType});
@@ -78,13 +79,24 @@ class _ActivityPageState extends State<ActivityPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<ActivityBloc, ActivityState>(
+      body: BlocConsumer<ActivityBloc, ActivityState>(
+        listener: (context, state) {
+          if (state is ActivityLoaded && state.successMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.success(state.successMessage!),
+            );
+          } else if (state is ActivityError && state.activities.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.error(state.message),
+            );
+          }
+        },
         builder: (context, state) {
-          if (state is ActivityLoading) {
+          if (state is ActivityLoading && state.activities.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state is ActivityError) {
+          if (state is ActivityError && state.activities.isEmpty) {
             return EntityErrorView(
               message: state.message,
               onRetry: () => context.read<ActivityBloc>().add(
@@ -93,20 +105,20 @@ class _ActivityPageState extends State<ActivityPage> {
             );
           }
 
-          if (state is ActivityLoaded) {
-            if (state.activities.isEmpty) {
-              return const EntityEmptyView(
-                icon: Icons.work,
-                title: 'No activities registered yet',
-                subtitle: 'Tap the + button to add your first activity',
-              );
-            }
+          final activities = state.activities;
+          if (activities.isEmpty) {
+            return const EntityEmptyView(
+              icon: Icons.work,
+              title: 'No activities registered yet',
+              subtitle: 'Tap the + button to add your first activity',
+            );
+          }
 
-            return ListView.builder(
+          return ListView.builder(
               padding: context.scrollListPadding(forFab: true),
-              itemCount: state.activities.length,
+              itemCount: activities.length,
               itemBuilder: (context, index) {
-                final activity = state.activities[index];
+                final activity = activities[index];
                 final isPlant = activity.sourceType == 'plant';
                 final categoryColor = isPlant
                     ? AppColors.plantCategory
@@ -137,9 +149,6 @@ class _ActivityPageState extends State<ActivityPage> {
                 );
               },
             );
-          }
-
-          return const SizedBox.shrink();
         },
       ),
       floatingActionButton: SafeFloatingActionButton(
@@ -717,12 +726,6 @@ class _ActivityPageState extends State<ActivityPage> {
                         UpdateActivityEvent(updatedActivity),
                       );
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Activity updated successfully'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
@@ -760,15 +763,6 @@ class _ActivityPageState extends State<ActivityPage> {
       context.read<ActivityBloc>().add(
         DeleteActivityEvent(activity.id),
       );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                '${activity.type} activity deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     }
   }
 

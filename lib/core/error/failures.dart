@@ -23,3 +23,13 @@ class InvalidInputFailure extends Failure {
 class UnauthorizedFailure extends Failure {
   const UnauthorizedFailure() : super('Unauthorized access. Please log in again.');
 }
+
+String resolveFailureMessage(Failure failure, String fallback) {
+  if (failure is NetworkFailure) {
+    return 'No internet connection. Check your network and try again.';
+  }
+  if (failure is ServerFailure && failure.errorMessage != null) {
+    return failure.errorMessage!;
+  }
+  return fallback;
+}

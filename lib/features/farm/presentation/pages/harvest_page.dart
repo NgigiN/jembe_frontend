@@ -25,6 +25,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/harvest_state.dart'
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 
 class HarvestPage extends StatefulWidget {
   const HarvestPage({super.key, this.seasonId});
@@ -56,7 +57,18 @@ class _HarvestPageState extends State<HarvestPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<HarvestBloc, HarvestState>(
+      body: BlocConsumer<HarvestBloc, HarvestState>(
+        listener: (context, state) {
+          if (state is HarvestLoaded && state.successMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.success(state.successMessage!),
+            );
+          } else if (state is HarvestError && state.harvests.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.error(state.message),
+            );
+          }
+        },
         builder: (context, state) {
           if (state is HarvestLoading && state.harvests.isEmpty) {
             return const Center(child: CircularProgressIndicator());
@@ -161,12 +173,6 @@ class _HarvestPageState extends State<HarvestPage> {
     );
     if (confirmed == true && context.mounted) {
       context.read<HarvestBloc>().add(DeleteHarvestEvent(harvest.id));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Harvest deleted successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
     }
   }
 
@@ -410,16 +416,6 @@ class _HarvestPageState extends State<HarvestPage> {
                       }
 
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            harvest == null
-                                ? 'Harvest recorded successfully'
-                                : 'Harvest updated successfully',
-                          ),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,

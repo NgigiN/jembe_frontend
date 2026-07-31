@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
@@ -77,13 +78,24 @@ class _InputPageState extends State<InputPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<InputBloc, InputState>(
+      body: BlocConsumer<InputBloc, InputState>(
+        listener: (context, state) {
+          if (state is InputLoaded && state.successMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.success(state.successMessage!),
+            );
+          } else if (state is InputError && state.inputs.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.error(state.message),
+            );
+          }
+        },
         builder: (context, state) {
-          if (state is InputLoading) {
+          if (state is InputLoading && state.inputs.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state is InputError) {
+          if (state is InputError && state.inputs.isEmpty) {
             return EntityErrorView(
               message: state.message,
               onRetry: () =>
@@ -91,17 +103,16 @@ class _InputPageState extends State<InputPage> {
             );
           }
 
-          if (state is InputLoaded) {
-            final inputs = state.inputs;
-            if (inputs.isEmpty) {
-              return EntityEmptyView(
-                icon: Icons.input,
-                title: 'No inputs registered yet',
-                subtitle: 'Tap the + button to add your first input',
-              );
-            }
+          final inputs = state.inputs;
+          if (inputs.isEmpty) {
+            return EntityEmptyView(
+              icon: Icons.input,
+              title: 'No inputs registered yet',
+              subtitle: 'Tap the + button to add your first input',
+            );
+          }
 
-            return ListView.builder(
+          return ListView.builder(
               padding: context.scrollListPadding(forFab: true),
               itemCount: inputs.length,
               itemBuilder: (context, index) {
@@ -136,9 +147,6 @@ class _InputPageState extends State<InputPage> {
                 );
               },
             );
-          }
-
-          return const SizedBox.shrink();
         },
       ),
       floatingActionButton: SafeFloatingActionButton(
@@ -706,12 +714,6 @@ class _InputPageState extends State<InputPage> {
                           .read<InputBloc>()
                           .add(UpdateInputEvent(updatedInput));
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Input updated successfully'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
@@ -746,14 +748,6 @@ class _InputPageState extends State<InputPage> {
     );
     if (confirmed == true) {
       context.read<InputBloc>().add(DeleteInputEvent(input.id));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${input.type} input deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     }
   }
 

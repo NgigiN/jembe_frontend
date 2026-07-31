@@ -21,6 +21,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/data/models/land_model.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 
 class LandPage extends StatefulWidget {
@@ -48,45 +49,53 @@ class _LandPageState extends State<LandPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<LandBloc, LandState>(
+      body: BlocConsumer<LandBloc, LandState>(
+        listener: (context, state) {
+          if (state is LandLoaded && state.successMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.success(state.successMessage!),
+            );
+          } else if (state is LandError && state.lands.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.error(state.message),
+            );
+          }
+        },
         builder: (context, state) {
-          if (state is LandLoading) {
+          if (state is LandLoading && state.lands.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state is LandError) {
+          if (state is LandError && state.lands.isEmpty) {
             return EntityErrorView(
               message: state.message,
               onRetry: () => context.read<LandBloc>().add(GetLandsEvent()),
             );
           }
 
-          if (state is LandLoaded) {
-            if (state.lands.isEmpty) {
-              return EntityEmptyView(
-                icon: Icons.landscape,
-                title: 'No lands registered yet',
-                subtitle: 'Tap the + button to add your first land',
-              );
-            }
-
-            return ListView.builder(
-              padding: context.scrollListPadding(forFab: true),
-              itemCount: state.lands.length,
-              itemBuilder: (context, index) {
-                final land = state.lands[index];
-                return EntityCard(
-                  icon: Icons.landscape,
-                  iconColor: AppColors.plantCategory,
-                  title: land.name,
-                  subtitle: _landSubtitle(land),
-                  onTap: () => _showLandDetails(land),
-                );
-              },
+          final lands = state.lands;
+          if (lands.isEmpty) {
+            return EntityEmptyView(
+              icon: Icons.landscape,
+              title: 'No lands registered yet',
+              subtitle: 'Tap the + button to add your first land',
             );
           }
 
-          return const SizedBox.shrink();
+          return ListView.builder(
+            padding: context.scrollListPadding(forFab: true),
+            itemCount: lands.length,
+            itemBuilder: (context, index) {
+              final land = lands[index];
+              return EntityCard(
+                icon: Icons.landscape,
+                iconColor: AppColors.plantCategory,
+                title: land.name,
+                subtitle: _landSubtitle(land),
+                onTap: () => _showLandDetails(land),
+              );
+            },
+          );
         },
       ),
       floatingActionButton: SafeFloatingActionButton(
@@ -207,12 +216,6 @@ class _LandPageState extends State<LandPage> {
         );
         context.read<LandBloc>().add(UpdateLandEvent(updatedLand));
         Navigator.pop(sheetContext);
-        ScaffoldMessenger.of(sheetContext).showSnackBar(
-          const SnackBar(
-            content: Text('Land updated successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
       },
     );
   }
@@ -273,14 +276,6 @@ class _LandPageState extends State<LandPage> {
     );
     if (confirmed == true) {
       context.read<LandBloc>().add(DeleteLandEvent(land.id));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${land.name} deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     }
   }
 }

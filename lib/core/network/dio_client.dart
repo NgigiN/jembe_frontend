@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:farm_tracker/core/config/app_config.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:flutter/foundation.dart';
@@ -111,4 +112,29 @@ class _AuthInterceptor extends Interceptor {
     }
     handler.next(err);
   }
+}
+
+/// Maps a [DioException] to the appropriate application exception.
+/// Connection / timeout errors become [NetworkException].
+/// All other errors (4xx, 5xx) become [ServerException] with a human message.
+Exceptions mapDioException(DioException e) {
+  switch (e.type) {
+    case DioExceptionType.connectionTimeout:
+    case DioExceptionType.receiveTimeout:
+    case DioExceptionType.sendTimeout:
+    case DioExceptionType.connectionError:
+      return NetworkException();
+    default:
+      final msg = extractServerErrorMessage(e.response?.data);
+      return ServerException(msg.isNotEmpty ? msg : null);
+  }
+}
+
+/// Extracts a human-readable error string from a JSON response body.
+/// Returns empty string if none found.
+String extractServerErrorMessage(dynamic data) {
+  if (data is Map<String, dynamic>) {
+    return (data['error'] ?? data['message'] ?? '').toString();
+  }
+  return '';
 }

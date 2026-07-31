@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
 
@@ -65,17 +66,8 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      appLogger.error(LogCategory.http, 'Error in getActivities', e);
-      var errorMsg = 'Network error';
-      if (e.response?.data != null) {
-        try {
-          final errorData = e.response!.data as Map<String, dynamic>;
-          if (errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-      }
-      throw ServerException(errorMsg);
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 
@@ -114,16 +106,8 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      var errorMsg = 'Failed to add activity';
-      if (e.response?.data != null) {
-        try {
-          final errorData = e.response!.data as Map<String, dynamic>;
-          if (errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-      }
-      throw ServerException(errorMsg);
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 
@@ -162,16 +146,8 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      var errorMsg = 'Failed to update activity';
-      if (e.response?.data != null) {
-        try {
-          final errorData = e.response!.data as Map<String, dynamic>;
-          if (errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-      }
-      throw ServerException(errorMsg);
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 
@@ -193,16 +169,8 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
         throw ServerException(errorMsg);
       }
     } on DioException catch (e) {
-      var errorMsg = 'Failed to delete activity';
-      if (e.response?.data != null) {
-        try {
-          final errorData = e.response!.data as Map<String, dynamic>;
-          if (errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-      }
-      throw ServerException(errorMsg);
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 }

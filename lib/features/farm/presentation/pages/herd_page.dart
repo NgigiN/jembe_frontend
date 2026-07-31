@@ -23,6 +23,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.d
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 
 class HerdPage extends StatefulWidget {
   const HerdPage({super.key});
@@ -50,29 +51,40 @@ class _HerdPageState extends State<HerdPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<HerdBloc, HerdState>(
+      body: BlocConsumer<HerdBloc, HerdState>(
+        listener: (context, state) {
+          if (state is HerdLoaded && state.successMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.success(state.successMessage!),
+            );
+          } else if (state is HerdError && state.herds.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.error(state.message),
+            );
+          }
+        },
         builder: (context, state) {
-          if (state is HerdLoading) {
+          if (state is HerdLoading && state.herds.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state is HerdError) {
+          if (state is HerdError && state.herds.isEmpty) {
             return EntityErrorView(
               message: state.message,
               onRetry: () => context.read<HerdBloc>().add(GetHerdsEvent()),
             );
           }
 
-          if (state is HerdLoaded) {
-            if (state.herds.isEmpty) {
-              return const EntityEmptyView(
-                icon: Icons.pets,
-                title: 'No herds registered yet',
-                subtitle: 'Tap the + button to register your first herd',
-              );
-            }
+          final herds = state.herds;
+          if (herds.isEmpty) {
+            return const EntityEmptyView(
+              icon: Icons.pets,
+              title: 'No herds registered yet',
+              subtitle: 'Tap the + button to register your first herd',
+            );
+          }
 
-            return BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
+          return BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
               builder: (context, animalTypeState) {
                 final animalTypeMap = <String, String>{};
                 if (animalTypeState is AnimalTypeLoaded) {
@@ -83,9 +95,9 @@ class _HerdPageState extends State<HerdPage> {
 
                 return ListView.builder(
                   padding: context.scrollListPadding(forFab: true),
-                  itemCount: state.herds.length,
+                  itemCount: herds.length,
                   itemBuilder: (context, index) {
-                    final herd = state.herds[index];
+                    final herd = herds[index];
                     final animalTypeName =
                         animalTypeMap[herd.animalTypeId] ?? 'Unknown';
 
@@ -111,9 +123,6 @@ class _HerdPageState extends State<HerdPage> {
                 );
               },
             );
-          }
-
-          return const SizedBox.shrink();
         },
       ),
       floatingActionButton: SafeFloatingActionButton(
@@ -514,14 +523,6 @@ class _HerdPageState extends State<HerdPage> {
     );
     if (confirmed == true) {
       context.read<HerdBloc>().add(DeleteHerdEvent(herd.id));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${herd.name} deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     }
   }
 }

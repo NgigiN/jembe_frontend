@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_animal_type.dart';
@@ -33,7 +34,9 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
     emit(const AnimalTypeLoading());
     final result = await getAnimalTypes(NoParams());
     result.fold(
-      (failure) => emit(const AnimalTypeError('Failed to load animal types')),
+      (failure) => emit(AnimalTypeError(
+        resolveFailureMessage(failure, 'Failed to load animal types'),
+      )),
       (animalTypes) => emit(AnimalTypeLoaded(animalTypes)),
     );
   }
@@ -42,18 +45,19 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
     AddAnimalTypeEvent event,
     Emitter<AnimalTypeState> emit,
   ) async {
-    final currentAnimalTypes = state is AnimalTypeLoaded
-        ? (state as AnimalTypeLoaded).animalTypes
-        : <AnimalType>[];
+    final currentAnimalTypes = state.animalTypes;
 
     emit(AnimalTypeLoading(animalTypes: currentAnimalTypes));
     final result = await addAnimalType(event.name, event.notes, event.userId);
     result.fold(
-      (failure) => emit(AnimalTypeError('Failed to add animal type', animalTypes: currentAnimalTypes)),
+      (failure) => emit(AnimalTypeError(
+        resolveFailureMessage(failure, 'Failed to add animal type'),
+        animalTypes: currentAnimalTypes,
+      )),
       (animalType) {
         final updatedAnimalTypes = List<AnimalType>.from(currentAnimalTypes)
           ..add(animalType);
-        emit(AnimalTypeLoaded(updatedAnimalTypes));
+        emit(AnimalTypeLoaded(updatedAnimalTypes, successMessage: 'Animal type added'));
       },
     );
   }
@@ -66,12 +70,15 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
     emit(AnimalTypeLoading(animalTypes: currentAnimalTypes));
     final result = await updateAnimalType(event.id, event.name, event.notes);
     result.fold(
-      (failure) => emit(AnimalTypeError('Failed to update animal type', animalTypes: currentAnimalTypes)),
+      (failure) => emit(AnimalTypeError(
+        resolveFailureMessage(failure, 'Failed to update animal type'),
+        animalTypes: currentAnimalTypes,
+      )),
       (updatedAnimalType) {
         final updatedAnimalTypes = currentAnimalTypes.map((type) {
           return type.id == updatedAnimalType.id ? updatedAnimalType : type;
         }).toList();
-        emit(AnimalTypeLoaded(updatedAnimalTypes));
+        emit(AnimalTypeLoaded(updatedAnimalTypes, successMessage: 'Animal type updated'));
       },
     );
   }
@@ -84,13 +91,15 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
     emit(AnimalTypeLoading(animalTypes: currentAnimalTypes));
     final result = await deleteAnimalType(event.id);
     result.fold(
-      (failure) => emit(AnimalTypeError('Failed to delete animal type', animalTypes: currentAnimalTypes)),
+      (failure) => emit(AnimalTypeError(
+        resolveFailureMessage(failure, 'Failed to delete animal type'),
+        animalTypes: currentAnimalTypes,
+      )),
       (_) {
         final updatedAnimalTypes =
             currentAnimalTypes.where((type) => type.id != event.id).toList();
-        emit(AnimalTypeLoaded(updatedAnimalTypes));
+        emit(AnimalTypeLoaded(updatedAnimalTypes, successMessage: 'Animal type deleted'));
       },
     );
   }
 }
-

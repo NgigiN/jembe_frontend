@@ -20,6 +20,8 @@ class CostCategoryRepositoryImpl implements CostCategoryRepository {
         category: category,
       );
       return Right(remoteCategories);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -40,6 +42,8 @@ class CostCategoryRepositoryImpl implements CostCategoryRepository {
         category: category,
       );
       return Right(success);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -52,6 +56,8 @@ class CostCategoryRepositoryImpl implements CostCategoryRepository {
     try {
       await remoteDataSource.deleteCostCategory(id);
       return const Right(null);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {

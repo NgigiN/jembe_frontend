@@ -6,7 +6,7 @@ abstract class LandState extends Equatable {
   final List<Land> lands;
 
   @override
-  List<Object> get props => [lands];
+  List<Object?> get props => [lands];
 }
 
 class LandInitial extends LandState {}
@@ -16,10 +16,11 @@ class LandLoading extends LandState {
 }
 
 class LandLoaded extends LandState {
-  const LandLoaded({required super.lands});
+  const LandLoaded({required super.lands, this.successMessage});
+  final String? successMessage;
 
   @override
-  List<Object> get props => [lands];
+  List<Object?> get props => [lands, successMessage];
 }
 
 class LandError extends LandState {

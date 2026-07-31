@@ -14,6 +14,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
     try {
       final userModel = await remoteDataSource.getProfile();
       return Right(userModel);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -36,6 +38,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
         location: location,
       );
       return const Right(null);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -54,6 +58,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
         newPassword: newPassword,
       );
       return const Right(null);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {

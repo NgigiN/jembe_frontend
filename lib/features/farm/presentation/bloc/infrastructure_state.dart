@@ -16,11 +16,12 @@ class InfrastructureLoading extends InfrastructureState {
 }
 
 class InfrastructureLoaded extends InfrastructureState {
-  const InfrastructureLoaded(List<Infrastructure> infrastructures)
+  const InfrastructureLoaded(List<Infrastructure> infrastructures, {this.successMessage})
       : super(infrastructures: infrastructures);
+  final String? successMessage;
 
   @override
-  List<Object?> get props => [infrastructures];
+  List<Object?> get props => [infrastructures, successMessage];
 }
 
 class InfrastructureError extends InfrastructureState {

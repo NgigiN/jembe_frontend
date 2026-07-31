@@ -51,10 +51,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         
         await result.fold(
           (failure) async {
-            String message = 'Google Sign-In failed';
-            if (failure is ServerFailure && failure.errorMessage != null) {
-              message = failure.errorMessage!;
-            }
+            final message = resolveFailureMessage(failure, 'Google Sign-In failed');
             appLogger.logAuthEvent(
               'Google Sign-In failed',
               details: {'error': message},
@@ -72,7 +69,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
       } catch (e) {
         appLogger.logError('GoogleSignInRequested', e);
-        emit(AuthError('Google Sign-In failed: ${e.toString()}'));
+        emit(AuthError('Google Sign-In failed. Please try again.'));
       }
     });
 

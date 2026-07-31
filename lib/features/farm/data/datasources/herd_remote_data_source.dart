@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
 
 abstract class HerdRemoteDataSource {
@@ -28,26 +30,12 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
         }
         return [];
       } else {
-        var errorMsg = 'Failed to load herds';
-        try {
-          final errorData = response.data as Map<String, dynamic>?;
-          if (errorData != null && errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-        throw ServerException(errorMsg);
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
       }
     } on DioException catch (e) {
-      var errorMsg = 'Failed to load herds';
-      if (e.response?.data != null) {
-        try {
-          final errorData = e.response!.data as Map<String, dynamic>;
-          if (errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-      }
-      throw ServerException(errorMsg);
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 
@@ -60,26 +48,12 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return HerdModel.fromJson(data);
       } else {
-        var errorMsg = 'Failed to add herd';
-        try {
-          final errorData = response.data as Map<String, dynamic>?;
-          if (errorData != null && errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-        throw ServerException(errorMsg);
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
       }
     } on DioException catch (e) {
-      var errorMsg = 'Failed to add herd';
-      if (e.response?.data != null) {
-        try {
-          final errorData = e.response!.data as Map<String, dynamic>;
-          if (errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-      }
-      throw ServerException(errorMsg);
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 
@@ -95,26 +69,12 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
         final data = response.data as Map<String, dynamic>;
         return HerdModel.fromJson(data);
       } else {
-        var errorMsg = 'Failed to update herd';
-        try {
-          final errorData = response.data as Map<String, dynamic>?;
-          if (errorData != null && errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-        throw ServerException(errorMsg);
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
       }
     } on DioException catch (e) {
-      var errorMsg = 'Failed to update herd';
-      if (e.response?.data != null) {
-        try {
-          final errorData = e.response!.data as Map<String, dynamic>;
-          if (errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-      }
-      throw ServerException(errorMsg);
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 
@@ -124,26 +84,12 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
       final response = await dio.delete('/api/v1/herds/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
-        var errorMsg = 'Failed to delete herd';
-        try {
-          final errorData = response.data as Map<String, dynamic>?;
-          if (errorData != null && errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-        throw ServerException(errorMsg);
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
       }
     } on DioException catch (e) {
-      var errorMsg = 'Failed to delete herd';
-      if (e.response?.data != null) {
-        try {
-          final errorData = e.response!.data as Map<String, dynamic>;
-          if (errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-      }
-      throw ServerException(errorMsg);
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 }

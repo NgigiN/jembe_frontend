@@ -63,13 +63,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   void _submit() {
-    if (_formKey.currentState?.validate() ?? false) {
+    final farmName = sanitizeText(_farmNameController.text);
+    final location = sanitizeText(_locationController.text);
+    if (farmName.isNotEmpty && location.isNotEmpty) {
       context.read<ProfileBloc>().add(
             UpdateProfileEvent(
               firstName: '',
               lastName: '',
-              farmName: sanitizeText(_farmNameController.text),
-              location: sanitizeText(_locationController.text),
+              farmName: farmName,
+              location: location,
             ),
           );
     } else {

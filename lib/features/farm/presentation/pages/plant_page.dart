@@ -21,6 +21,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/plant_state.dart';
 import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 import 'package:farm_tracker/features/farm/data/models/plant_model.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 
 class PlantPage extends StatefulWidget {
   const PlantPage({super.key});
@@ -47,33 +48,44 @@ class _PlantPageState extends State<PlantPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<PlantBloc, PlantState>(
+      body: BlocConsumer<PlantBloc, PlantState>(
+        listener: (context, state) {
+          if (state is PlantLoaded && state.successMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.success(state.successMessage!),
+            );
+          } else if (state is PlantError && state.plants.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.error(state.message),
+            );
+          }
+        },
         builder: (context, state) {
-          if (state is PlantLoading) {
+          if (state is PlantLoading && state.plants.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state is PlantError) {
+          if (state is PlantError && state.plants.isEmpty) {
             return EntityErrorView(
               message: state.message,
               onRetry: () => context.read<PlantBloc>().add(GetPlantsEvent()),
             );
           }
 
-          if (state is PlantLoaded) {
-            if (state.plants.isEmpty) {
-              return EntityEmptyView(
-                icon: Icons.eco,
-                title: 'No plants registered yet',
-                subtitle: 'Tap the + button to add your first plant',
-              );
-            }
+          final plants = state.plants;
+          if (plants.isEmpty) {
+            return EntityEmptyView(
+              icon: Icons.eco,
+              title: 'No plants registered yet',
+              subtitle: 'Tap the + button to add your first plant',
+            );
+          }
 
-            return ListView.builder(
-              padding: context.scrollListPadding(forFab: true),
-              itemCount: state.plants.length,
-              itemBuilder: (context, index) {
-                final plant = state.plants[index];
+          return ListView.builder(
+            padding: context.scrollListPadding(forFab: true),
+            itemCount: plants.length,
+            itemBuilder: (context, index) {
+              final plant = plants[index];
                 return EntityCard(
                   icon: Icons.eco,
                   iconColor: AppColors.plantCategory,
@@ -85,9 +97,6 @@ class _PlantPageState extends State<PlantPage> {
                 );
               },
             );
-          }
-
-          return const SizedBox.shrink();
         },
       ),
       floatingActionButton: SafeFloatingActionButton(
@@ -183,12 +192,6 @@ class _PlantPageState extends State<PlantPage> {
         );
         context.read<PlantBloc>().add(UpdatePlantEvent(updatedPlant));
         Navigator.pop(sheetContext);
-        ScaffoldMessenger.of(sheetContext).showSnackBar(
-          const SnackBar(
-            content: Text('Plant updated successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
       },
     );
   }
@@ -228,14 +231,6 @@ class _PlantPageState extends State<PlantPage> {
     );
     if (confirmed == true) {
       context.read<PlantBloc>().add(DeletePlantEvent(plant.id));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${plant.name} deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     }
   }
 }

@@ -18,6 +18,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.d
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 
 class AnimalTypePage extends StatefulWidget {
   const AnimalTypePage({super.key});
@@ -44,13 +45,24 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
+      body: BlocConsumer<AnimalTypeBloc, AnimalTypeState>(
+        listener: (context, state) {
+          if (state is AnimalTypeLoaded && state.successMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.success(state.successMessage!),
+            );
+          } else if (state is AnimalTypeError && state.animalTypes.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.error(state.message),
+            );
+          }
+        },
         builder: (context, state) {
-          if (state is AnimalTypeLoading) {
+          if (state is AnimalTypeLoading && state.animalTypes.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state is AnimalTypeError) {
+          if (state is AnimalTypeError && state.animalTypes.isEmpty) {
             return EntityErrorView(
               message: state.message,
               onRetry: () =>
@@ -58,20 +70,20 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
             );
           }
 
-          if (state is AnimalTypeLoaded) {
-            if (state.animalTypes.isEmpty) {
-              return EntityEmptyView(
-                icon: Icons.category,
-                title: 'No animal types added yet',
-                subtitle: 'Tap the + button to add your first animal type',
-              );
-            }
+          final animalTypes = state.animalTypes;
+          if (animalTypes.isEmpty) {
+            return EntityEmptyView(
+              icon: Icons.category,
+              title: 'No animal types added yet',
+              subtitle: 'Tap the + button to add your first animal type',
+            );
+          }
 
-            return ListView.builder(
-              padding: context.scrollListPadding(forFab: true),
-              itemCount: state.animalTypes.length,
-              itemBuilder: (context, index) {
-                final animalType = state.animalTypes[index];
+          return ListView.builder(
+            padding: context.scrollListPadding(forFab: true),
+            itemCount: animalTypes.length,
+            itemBuilder: (context, index) {
+              final animalType = animalTypes[index];
                 return EntityCard(
                   icon: Icons.category,
                   iconColor: AppColors.animalCategory,
@@ -83,9 +95,6 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
                 );
               },
             );
-          }
-
-          return const SizedBox.shrink();
         },
       ),
       floatingActionButton: SafeFloatingActionButton(
@@ -216,14 +225,6 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
       context.read<AnimalTypeBloc>().add(
         DeleteAnimalTypeEvent(animalType.id),
       );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${animalType.name} deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     }
   }
 }

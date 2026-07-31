@@ -26,6 +26,7 @@ import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 import 'package:farm_tracker/features/farm/data/models/season_model.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 
 class SeasonPage extends StatefulWidget {
@@ -60,50 +61,58 @@ class _SeasonPageState extends State<SeasonPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<SeasonBloc, SeasonState>(
+      body: BlocConsumer<SeasonBloc, SeasonState>(
+        listener: (context, state) {
+          if (state is SeasonLoaded && state.successMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.success(state.successMessage!),
+            );
+          } else if (state is SeasonError && state.seasons.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.error(state.message),
+            );
+          }
+        },
         builder: (context, state) {
-          if (state is SeasonLoading) {
+          if (state is SeasonLoading && state.seasons.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state is SeasonError) {
+          if (state is SeasonError && state.seasons.isEmpty) {
             return EntityErrorView(
               message: state.message,
               onRetry: () => context.read<SeasonBloc>().add(GetSeasonsEvent()),
             );
           }
 
-          if (state is SeasonLoaded) {
-            if (state.seasons.isEmpty) {
-              return EntityEmptyView(
-                icon: Icons.calendar_today,
-                title: 'No seasons registered yet',
-                subtitle: 'Tap the + button to add your first season',
-              );
-            }
-
-            return ListView.builder(
-              padding: context.scrollListPadding(forFab: true),
-              itemCount: state.seasons.length,
-              itemBuilder: (context, index) {
-                final season = state.seasons[index];
-                return EntityCard(
-                  icon: Icons.calendar_today,
-                  iconColor: AppColors.plantCategory,
-                  title: season.name,
-                  subtitle:
-                      '${landName(lands, season.landId)} · Start: ${_formatDate(season.startDate)}',
-                  onTap: () => _showSeasonDetails(
-                    season,
-                    lands: lands,
-                    plants: plants,
-                  ),
-                );
-              },
+          final seasons = state.seasons;
+          if (seasons.isEmpty) {
+            return EntityEmptyView(
+              icon: Icons.calendar_today,
+              title: 'No seasons registered yet',
+              subtitle: 'Tap the + button to add your first season',
             );
           }
 
-          return const SizedBox.shrink();
+          return ListView.builder(
+            padding: context.scrollListPadding(forFab: true),
+            itemCount: seasons.length,
+            itemBuilder: (context, index) {
+              final season = seasons[index];
+              return EntityCard(
+                icon: Icons.calendar_today,
+                iconColor: AppColors.plantCategory,
+                title: season.name,
+                subtitle:
+                    '${landName(lands, season.landId)} · Start: ${_formatDate(season.startDate)}',
+                onTap: () => _showSeasonDetails(
+                  season,
+                  lands: lands,
+                  plants: plants,
+                ),
+              );
+            },
+          );
         },
       ),
       floatingActionButton: SafeFloatingActionButton(
@@ -385,12 +394,6 @@ class _SeasonPageState extends State<SeasonPage> {
                         UpdateSeasonEvent(updatedSeason),
                       );
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Season updated successfully'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
@@ -607,14 +610,6 @@ class _SeasonPageState extends State<SeasonPage> {
     );
     if (confirmed == true) {
       context.read<SeasonBloc>().add(DeleteSeasonEvent(season.id));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${season.name} deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     }
   }
 }

@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/farm/data/models/cost_category_model.dart';
 
 abstract class CostCategoryRemoteDataSource {
@@ -36,15 +38,15 @@ class CostCategoryRemoteDataSourceImpl implements CostCategoryRemoteDataSource {
       );
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = response.data;
-        return data.map((json) => CostCategoryModel.fromJson(json)).toList();
+        final data = response.data as List<dynamic>;
+        return data.map((json) => CostCategoryModel.fromJson(json as Map<String, dynamic>)).toList();
       } else {
-        throw const ServerException('Failed to load cost categories');
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
       }
     } on DioException catch (e) {
-      throw ServerException(e.message ?? 'Failed to load cost categories');
-    } catch (e) {
-      throw ServerException(e.toString());
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 
@@ -60,11 +62,15 @@ class CostCategoryRemoteDataSourceImpl implements CostCategoryRemoteDataSource {
         data: {'name': name, 'type': type, 'category': category},
       );
 
-      return response.statusCode == 201 || response.statusCode == 200;
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return true;
+      } else {
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
+      }
     } on DioException catch (e) {
-      throw ServerException(e.message ?? 'Failed to add cost category');
-    } catch (e) {
-      throw ServerException(e.toString());
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 
@@ -74,12 +80,12 @@ class CostCategoryRemoteDataSourceImpl implements CostCategoryRemoteDataSource {
       final response = await dio.delete('/api/v1/cost-categories/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
-        throw const ServerException('Failed to delete cost category');
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
       }
     } on DioException catch (e) {
-      throw ServerException(e.message ?? 'Failed to delete cost category');
-    } catch (e) {
-      throw ServerException(e.toString());
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 }

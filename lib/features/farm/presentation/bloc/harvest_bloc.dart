@@ -33,10 +33,10 @@ class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
     emit(HarvestLoading(harvests: state.harvests));
     final result = await getHarvests(GetHarvestsParams(seasonId: event.seasonId));
     result.fold(
-      (failure) => emit(
-        HarvestError(_failureMessage(failure, 'Failed to load harvests'),
-            harvests: state.harvests),
-      ),
+      (failure) => emit(HarvestError(
+        resolveFailureMessage(failure, 'Failed to load harvests'),
+        harvests: state.harvests,
+      )),
       (harvests) => emit(HarvestLoaded(harvests: harvests)),
     );
   }
@@ -49,13 +49,13 @@ class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
     emit(HarvestLoading(harvests: currentHarvests));
     final result = await addHarvest(AddHarvestParams(harvest: event.harvest));
     result.fold(
-      (failure) => emit(
-        HarvestError(_failureMessage(failure, 'Failed to add harvest'),
-            harvests: currentHarvests),
-      ),
+      (failure) => emit(HarvestError(
+        resolveFailureMessage(failure, 'Failed to add harvest'),
+        harvests: currentHarvests,
+      )),
       (harvest) {
         final updated = List<Harvest>.from(currentHarvests)..add(harvest);
-        emit(HarvestLoaded(harvests: updated));
+        emit(HarvestLoaded(harvests: updated, successMessage: 'Harvest recorded'));
       },
     );
   }
@@ -69,16 +69,16 @@ class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
     final result =
         await updateHarvest(UpdateHarvestParams(harvest: event.harvest));
     result.fold(
-      (failure) => emit(
-        HarvestError(_failureMessage(failure, 'Failed to update harvest'),
-            harvests: currentHarvests),
-      ),
+      (failure) => emit(HarvestError(
+        resolveFailureMessage(failure, 'Failed to update harvest'),
+        harvests: currentHarvests,
+      )),
       (updatedHarvest) {
         final updated = currentHarvests
             .map((harvest) =>
                 harvest.id == updatedHarvest.id ? updatedHarvest : harvest)
             .toList();
-        emit(HarvestLoaded(harvests: updated));
+        emit(HarvestLoaded(harvests: updated, successMessage: 'Harvest updated'));
       },
     );
   }
@@ -91,23 +91,16 @@ class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
     emit(HarvestLoading(harvests: currentHarvests));
     final result = await deleteHarvest(DeleteHarvestParams(id: event.id));
     result.fold(
-      (failure) => emit(
-        HarvestError(_failureMessage(failure, 'Failed to delete harvest'),
-            harvests: currentHarvests),
-      ),
+      (failure) => emit(HarvestError(
+        resolveFailureMessage(failure, 'Failed to delete harvest'),
+        harvests: currentHarvests,
+      )),
       (_) {
         final updated = currentHarvests
             .where((harvest) => harvest.id != event.id)
             .toList();
-        emit(HarvestLoaded(harvests: updated));
+        emit(HarvestLoaded(harvests: updated, successMessage: 'Harvest deleted'));
       },
     );
-  }
-
-  String _failureMessage(Failure failure, String fallback) {
-    if (failure is ServerFailure && failure.errorMessage != null) {
-      return failure.errorMessage!;
-    }
-    return fallback;
   }
 }

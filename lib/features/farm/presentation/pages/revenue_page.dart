@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
@@ -72,7 +73,7 @@ class _RevenuePageState extends State<RevenuePage> {
                 listener: (context, state) {
                   if (state is RevenueDeleted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Revenue deleted successfully')),
+                      AppSnackBar.success('Revenue deleted successfully'),
                     );
                   }
                 },
@@ -520,13 +521,13 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
         listener: (context, state) {
           if (state is RevenueAdded) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Revenue added successfully!')),
+              AppSnackBar.success('Revenue added successfully'),
             );
             Navigator.pop(context);
             context.read<RevenueBloc>().add(LoadRevenues());
           } else if (state is RevenueError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error: ${state.message}')),
+              AppSnackBar.error(state.message),
             );
           }
         },
@@ -761,7 +762,7 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
         validateDateNotInFuture(_selectedDate, fieldLabel: 'Date');
     if (dateError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(dateError)),
+        AppSnackBar.error(dateError),
       );
       return;
     }

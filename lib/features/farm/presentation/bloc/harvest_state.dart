@@ -6,7 +6,7 @@ abstract class HarvestState extends Equatable {
   final List<Harvest> harvests;
 
   @override
-  List<Object> get props => [harvests];
+  List<Object?> get props => [harvests];
 }
 
 class HarvestInitial extends HarvestState {}
@@ -16,10 +16,11 @@ class HarvestLoading extends HarvestState {
 }
 
 class HarvestLoaded extends HarvestState {
-  const HarvestLoaded({required super.harvests});
+  const HarvestLoaded({required super.harvests, this.successMessage});
+  final String? successMessage;
 
   @override
-  List<Object> get props => [harvests];
+  List<Object?> get props => [harvests, successMessage];
 }
 
 class HarvestError extends HarvestState {

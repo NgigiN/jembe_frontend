@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/infrastructure.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_infrastructure.dart';
@@ -33,7 +34,9 @@ class InfrastructureBloc extends Bloc<InfrastructureEvent, InfrastructureState> 
     emit(const InfrastructureLoading());
     final result = await getInfrastructure(NoParams());
     result.fold(
-      (failure) => emit(InfrastructureError(failure.message)),
+      (failure) => emit(InfrastructureError(
+        resolveFailureMessage(failure, 'Failed to load infrastructure'),
+      )),
       (list) => emit(InfrastructureLoaded(list)),
     );
   }
@@ -54,10 +57,13 @@ class InfrastructureBloc extends Bloc<InfrastructureEvent, InfrastructureState> 
       event.notes,
     );
     result.fold(
-      (failure) => emit(InfrastructureError(failure.message, infrastructures: currentList)),
+      (failure) => emit(InfrastructureError(
+        resolveFailureMessage(failure, 'Failed to add infrastructure'),
+        infrastructures: currentList,
+      )),
       (item) {
         final updatedList = List<Infrastructure>.from(currentList)..add(item);
-        emit(InfrastructureLoaded(updatedList));
+        emit(InfrastructureLoaded(updatedList, successMessage: 'Infrastructure added'));
       },
     );
   }
@@ -78,12 +84,15 @@ class InfrastructureBloc extends Bloc<InfrastructureEvent, InfrastructureState> 
       event.notes,
     );
     result.fold(
-      (failure) => emit(InfrastructureError(failure.message, infrastructures: currentList)),
+      (failure) => emit(InfrastructureError(
+        resolveFailureMessage(failure, 'Failed to update infrastructure'),
+        infrastructures: currentList,
+      )),
       (updatedItem) {
         final updatedList = currentList.map((item) {
           return item.id == updatedItem.id ? updatedItem : item;
         }).toList();
-        emit(InfrastructureLoaded(updatedList));
+        emit(InfrastructureLoaded(updatedList, successMessage: 'Infrastructure updated'));
       },
     );
   }
@@ -96,10 +105,13 @@ class InfrastructureBloc extends Bloc<InfrastructureEvent, InfrastructureState> 
     emit(InfrastructureLoading(infrastructures: currentList));
     final result = await deleteInfrastructure(event.id);
     result.fold(
-      (failure) => emit(InfrastructureError(failure.message, infrastructures: currentList)),
+      (failure) => emit(InfrastructureError(
+        resolveFailureMessage(failure, 'Failed to delete infrastructure'),
+        infrastructures: currentList,
+      )),
       (_) {
         final updatedList = currentList.where((item) => item.id != event.id).toList();
-        emit(InfrastructureLoaded(updatedList));
+        emit(InfrastructureLoaded(updatedList, successMessage: 'Infrastructure deleted'));
       },
     );
   }

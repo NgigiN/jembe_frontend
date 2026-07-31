@@ -15,6 +15,8 @@ class LandRepositoryImpl implements LandRepository {
     try {
       final lands = await remoteDataSource.getLands();
       return Right(lands);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -34,6 +36,8 @@ class LandRepositoryImpl implements LandRepository {
 
       final result = await remoteDataSource.addLand(landModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -56,6 +60,8 @@ class LandRepositoryImpl implements LandRepository {
 
       final result = await remoteDataSource.updateLand(landModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -66,6 +72,8 @@ class LandRepositoryImpl implements LandRepository {
     try {
       await remoteDataSource.deleteLand(id);
       return const Right(null);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

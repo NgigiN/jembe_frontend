@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_cost_categories.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_cost_category.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_cost_category.dart';
@@ -29,7 +30,7 @@ class CostCategoryBloc extends Bloc<CostCategoryEvent, CostCategoryState> {
     );
 
     result.fold(
-      (failure) => emit(CostCategoryError(failure.message)),
+      (failure) => emit(CostCategoryError(resolveFailureMessage(failure, 'Failed to load categories'))),
       (categories) => emit(CostCategoryLoaded(categories)),
     );
   }
@@ -50,7 +51,7 @@ class CostCategoryBloc extends Bloc<CostCategoryEvent, CostCategoryState> {
 
     result.fold(
       (failure) => emit(
-        CostCategoryError(failure.message, categories: currentCategories),
+        CostCategoryError(resolveFailureMessage(failure, 'Failed to save category'), categories: currentCategories),
       ),
       (success) {
         emit(CostCategoryAdded(categories: currentCategories));
@@ -72,7 +73,7 @@ class CostCategoryBloc extends Bloc<CostCategoryEvent, CostCategoryState> {
 
     result.fold(
       (failure) => emit(
-        CostCategoryError(failure.message, categories: currentCategories),
+        CostCategoryError(resolveFailureMessage(failure, 'Failed to save category'), categories: currentCategories),
       ),
       (_) {
         emit(CostCategoryDeleted(categories: currentCategories));

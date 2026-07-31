@@ -16,10 +16,11 @@ class HerdLoading extends HerdState {
 }
 
 class HerdLoaded extends HerdState {
-  const HerdLoaded(List<Herd> herds) : super(herds: herds);
+  const HerdLoaded(List<Herd> herds, {this.successMessage}) : super(herds: herds);
+  final String? successMessage;
 
   @override
-  List<Object?> get props => [herds];
+  List<Object?> get props => [herds, successMessage];
 }
 
 class HerdError extends HerdState {

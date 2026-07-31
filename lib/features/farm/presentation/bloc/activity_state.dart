@@ -6,7 +6,7 @@ abstract class ActivityState extends Equatable {
   final List<Activity> activities;
 
   @override
-  List<Object> get props => [activities];
+  List<Object?> get props => [activities];
 }
 
 class ActivityInitial extends ActivityState {}
@@ -16,10 +16,11 @@ class ActivityLoading extends ActivityState {
 }
 
 class ActivityLoaded extends ActivityState {
-  const ActivityLoaded({required super.activities});
+  const ActivityLoaded({required super.activities, this.successMessage});
+  final String? successMessage;
 
   @override
-  List<Object> get props => [activities];
+  List<Object?> get props => [activities, successMessage];
 }
 
 class ActivityError extends ActivityState {

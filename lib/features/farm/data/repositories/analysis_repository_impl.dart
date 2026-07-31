@@ -17,6 +17,8 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
     try {
       final model = await remoteDataSource.getTotalCostsBySeason();
       return Right(model);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -39,6 +41,8 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
               )
               .toList();
       return Right(breakdowns);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -49,6 +53,8 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
     try {
       final summaryModels = await remoteDataSource.getAnnualCostSummary();
       return Right(summaryModels);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

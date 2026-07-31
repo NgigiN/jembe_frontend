@@ -74,10 +74,6 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     );
   }
 
-  String _mapFailureToMessage(Failure failure) {
-    if (failure is ServerFailure) {
-      return failure.errorMessage ?? 'Server Error';
-    }
-    return 'An unexpected error occurred';
-  }
+  String _mapFailureToMessage(Failure failure) =>
+      resolveFailureMessage(failure, 'Something went wrong. Please try again.');
 }

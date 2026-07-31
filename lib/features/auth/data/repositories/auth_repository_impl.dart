@@ -25,6 +25,8 @@ class AuthRepositoryImpl implements AuthRepository {
       await UserStorageService.saveUserData(userStorage);
 
       return Right(userModel);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
