@@ -222,86 +222,22 @@ class TotalCostsBySeasonPage extends StatelessWidget {
               onRefresh: () async {
                 context.read<AnalysisBloc>().add(LoadTotalCostsBySeason());
               },
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: _buildTotalHeader(context, data.totalOverallCost),
-                  ),
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate((context, index) {
-                        final detail = data.details[index];
-                        return _buildCostDetailItem(context, detail);
-                      }, childCount: data.details.length),
-                    ),
-                  ),
-                ],
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                itemCount: data.details.length,
+                itemBuilder: (context, index) {
+                  final detail = data.details[index];
+                  return _buildCostDetailItem(context, detail);
+                },
               ),
             );
           }
           return const Center(child: Text('No data loaded'));
         },
       ),
-    );
-  }
-
-  Widget _buildTotalHeader(BuildContext context, double total) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).colorScheme.primary,
-            Theme.of(context).colorScheme.tertiary,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      // child: Column(
-      //   children: [
-      //     Text(
-      //       'Total Overall Farm Cost',
-      //       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-      //             color: Colors.white.withValues(alpha: 0.9),
-      //           ),
-      //     ),
-      //     const SizedBox(height: 12),
-      //     Text(
-      //       'KES ${total.toStringAsFixed(2)}',
-      //       style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-      //             color: Colors.white,
-      //             fontWeight: FontWeight.bold,
-      //             letterSpacing: 1.2,
-      //           ),
-      //     ),
-      //     const SizedBox(height: 8),
-      //     Container(
-      //       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      //       decoration: BoxDecoration(
-      //         color: Colors.white.withValues(alpha: 0.2),
-      //         borderRadius: BorderRadius.circular(20),
-      //       ),
-      //       child: const Text(
-      //         'Unified View: Plants & Animals',
-      //         style: TextStyle(color: Colors.white, fontSize: 12),
-      //       ),
-      //     ),
-      //   ],
-      // ),
     );
   }
 
