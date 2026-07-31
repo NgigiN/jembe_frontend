@@ -2,13 +2,11 @@ import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.da
 
 class FarmDetailedCostModel extends FarmDetailedCost {
   const FarmDetailedCostModel({
-    required super.totalOverallCost,
     required List<CostDetailModel> super.details,
   });
 
   factory FarmDetailedCostModel.fromJson(Map<String, dynamic> json) {
     return FarmDetailedCostModel(
-      totalOverallCost: (json['total_overall_cost'] ?? 0.0).toDouble(),
       details:
           (json['details'] as List<dynamic>?)
               ?.map((e) => CostDetailModel.fromJson(e as Map<String, dynamic>))
@@ -19,7 +17,6 @@ class FarmDetailedCostModel extends FarmDetailedCost {
 
   Map<String, dynamic> toJson() {
     return {
-      'total_overall_cost': totalOverallCost,
       'details': details.map((e) => (e as CostDetailModel).toJson()).toList(),
     };
   }
