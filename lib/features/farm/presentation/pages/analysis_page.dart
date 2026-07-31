@@ -2,6 +2,7 @@ import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/core/utils/responsive_utils.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
+import 'package:farm_tracker/features/farm/domain/entities/farm_year.dart';
 import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
@@ -9,6 +10,9 @@ import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/widgets/enterprise_picker.dart';
+import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:farm_tracker/features/profile/presentation/bloc/profile_event.dart';
+import 'package:farm_tracker/features/profile/presentation/bloc/profile_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -157,7 +161,6 @@ class AnalysisPage extends StatelessWidget {
   }
 
   void _showAnnualSummary(BuildContext context) {
-    context.read<AnalysisBloc>().add(LoadAnnualCostSummary());
     context.push(AppRoutePath.annualSummary);
   }
 
@@ -569,8 +572,23 @@ class _CostBreakdownPageState extends State<CostBreakdownPage> {
   }
 }
 
-class AnnualSummaryPage extends StatelessWidget {
+class AnnualSummaryPage extends StatefulWidget {
   const AnnualSummaryPage({super.key});
+
+  @override
+  State<AnnualSummaryPage> createState() => _AnnualSummaryPageState();
+}
+
+class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
+  FarmYear? _farmYear;
+  bool _requested = false;
+
+  void _requestFarmYear(FarmYear farmYear) {
+    setState(() => _farmYear = farmYear);
+    context.read<AnalysisBloc>().add(
+      LoadAnnualCostSummary(farmYear.start, farmYear.end),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -579,82 +597,134 @@ class AnnualSummaryPage extends StatelessWidget {
         title: const Text('Annual Performance Summary'),
         elevation: 0,
       ),
-      body: BlocBuilder<AnalysisBloc, AnalysisState>(
-        builder: (context, state) {
-          if (state is AnalysisLoading) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state is AnalysisError) {
-            return RefreshIndicator(
-              onRefresh: () async {
-                context.read<AnalysisBloc>().add(LoadAnnualCostSummary());
-              },
-              child: ListView(
-                children: [
-                  SizedBox(height: MediaQuery.of(context).size.height * 0.3),
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          state.message,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            context.read<AnalysisBloc>().add(
-                              LoadAnnualCostSummary(),
-                            );
-                          },
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          } else if (state is AnnualCostSummaryLoaded) {
-            if (state.summaries.isEmpty) {
-              return const Center(
-                child: Text('No performance data available for this year'),
-              );
+      body: BlocBuilder<ProfileBloc, ProfileState>(
+        builder: (context, profileState) {
+          if (_farmYear == null) {
+            if (profileState is! ProfileLoaded) {
+              context.read<ProfileBloc>().add(FetchProfileEvent());
+              return const Center(child: CircularProgressIndicator());
             }
-
-            // Sort summaries by month string (e.g. "2026-01")
-            final sortedSummaries = List<MonthlySummary>.from(state.summaries)
-              ..sort((a, b) => a.month.compareTo(b.month));
-
-            return RefreshIndicator(
-              onRefresh: () async {
-                context.read<AnalysisBloc>().add(LoadAnnualCostSummary());
-              },
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: _buildAnnualOverview(context, sortedSummaries),
+            if (!_requested) {
+              _requested = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                _requestFarmYear(
+                  FarmYear.containing(
+                    DateTime.now(),
+                    profileState.user.fiscalYearStartMonth,
                   ),
-                  SliverPadding(
-                    padding: const EdgeInsets.all(16),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate((context, index) {
-                        final summary = sortedSummaries[index];
-                        return _buildMonthlyPerformanceCard(context, summary);
-                      }, childCount: sortedSummaries.length),
-                    ),
-                  ),
-                ],
-              ),
-            );
+                );
+              });
+            }
+            return const Center(child: CircularProgressIndicator());
           }
-          return const Center(child: Text('No data loaded'));
+
+          final farmYear = _farmYear!;
+
+          return BlocBuilder<AnalysisBloc, AnalysisState>(
+            builder: (context, state) {
+              if (state is AnalysisLoading) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (state is AnalysisError) {
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    context.read<AnalysisBloc>().add(
+                      LoadAnnualCostSummary(farmYear.start, farmYear.end),
+                    );
+                  },
+                  child: ListView(
+                    children: [
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.3,
+                      ),
+                      Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 64,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              state.message,
+                              style: Theme.of(context).textTheme.bodyLarge,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () {
+                                context.read<AnalysisBloc>().add(
+                                  LoadAnnualCostSummary(
+                                    farmYear.start,
+                                    farmYear.end,
+                                  ),
+                                );
+                              },
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              } else if (state is AnnualCostSummaryLoaded) {
+                // Sort summaries by month string (e.g. "2026-01")
+                final sortedSummaries =
+                    List<MonthlySummary>.from(state.summaries)
+                      ..sort((a, b) => a.month.compareTo(b.month));
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    context.read<AnalysisBloc>().add(
+                      LoadAnnualCostSummary(farmYear.start, farmYear.end),
+                    );
+                  },
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: _buildAnnualOverview(
+                          context,
+                          farmYear,
+                          sortedSummaries,
+                        ),
+                      ),
+                      if (sortedSummaries.isEmpty)
+                        const SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.all(32),
+                            child: Center(
+                              child: Text(
+                                'No performance data available for this farm year',
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.all(16),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate((
+                              context,
+                              index,
+                            ) {
+                              final summary = sortedSummaries[index];
+                              return _buildMonthlyPerformanceCard(
+                                context,
+                                summary,
+                              );
+                            }, childCount: sortedSummaries.length),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }
+              return const Center(child: Text('No data loaded'));
+            },
+          );
         },
       ),
     );
@@ -662,6 +732,7 @@ class AnnualSummaryPage extends StatelessWidget {
 
   Widget _buildAnnualOverview(
     BuildContext context,
+    FarmYear farmYear,
     List<MonthlySummary> summaries,
   ) {
     double totalAnnualCosts = 0;
@@ -695,6 +766,41 @@ class AnnualSummaryPage extends StatelessWidget {
       ),
       child: Column(
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left, color: Colors.white),
+                onPressed: () => _requestFarmYear(farmYear.previous),
+              ),
+              Column(
+                children: [
+                  Text(
+                    'Farm Year ${farmYear.label}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    farmYear.rangeLabel,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right, color: Colors.white),
+                onPressed: farmYear.canGoNext(DateTime.now())
+                    ? () => _requestFarmYear(farmYear.next)
+                    : null,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           Text(
             'Annual Net Profit',
             style: TextStyle(
