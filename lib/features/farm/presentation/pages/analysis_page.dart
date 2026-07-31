@@ -3,6 +3,11 @@ import 'package:farm_tracker/core/utils/responsive_utils.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
 import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
+import 'package:farm_tracker/features/farm/presentation/widgets/enterprise_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -163,8 +168,56 @@ class AnalysisPage extends StatelessWidget {
   }
 }
 
-class TotalCostsBySeasonPage extends StatelessWidget {
+class TotalCostsBySeasonPage extends StatefulWidget {
   const TotalCostsBySeasonPage({super.key});
+
+  @override
+  State<TotalCostsBySeasonPage> createState() =>
+      _TotalCostsBySeasonPageState();
+}
+
+class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
+  Enterprise? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<SeasonBloc>().add(GetSeasonsEvent());
+    context.read<HerdBloc>().add(GetHerdsEvent());
+  }
+
+  List<Enterprise> _buildEnterprises(BuildContext context) {
+    final seasons = context.watch<SeasonBloc>().state.seasons;
+    final herds = context.watch<HerdBloc>().state.herds;
+    return [
+      for (final season in seasons)
+        Enterprise(
+          id: season.id,
+          kind: EnterpriseKind.season,
+          name: season.name,
+          startDate: season.startDate,
+          endDate: season.endDate,
+        ),
+      for (final herd in herds)
+        Enterprise(
+          id: herd.id,
+          kind: EnterpriseKind.herd,
+          name: herd.name,
+          startDate: herd.startDate,
+          endDate: herd.endDate,
+        ),
+    ];
+  }
+
+  bool _matchesSelected(CostDetail detail) {
+    final selected = _selected;
+    if (selected == null) {
+      return detail.endDate == null || detail.endDate!.isAfter(DateTime.now());
+    }
+    final expectedType =
+        selected.kind == EnterpriseKind.season ? 'plant' : 'animal';
+    return detail.type == expectedType && detail.id.toString() == selected.id;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -218,21 +271,43 @@ class TotalCostsBySeasonPage extends StatelessWidget {
               return const Center(child: Text('No cost data available'));
             }
 
-            return RefreshIndicator(
-              onRefresh: () async {
-                context.read<AnalysisBloc>().add(LoadTotalCostsBySeason());
-              },
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+            final visibleDetails = data.details.where(_matchesSelected).toList();
+
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: EnterprisePicker(
+                    enterprises: _buildEnterprises(context),
+                    selected: _selected,
+                    onChanged: (value) => setState(() => _selected = value),
+                  ),
                 ),
-                itemCount: data.details.length,
-                itemBuilder: (context, index) {
-                  final detail = data.details[index];
-                  return _buildCostDetailItem(context, detail);
-                },
-              ),
+                Expanded(
+                  child: visibleDetails.isEmpty
+                      ? const Center(
+                          child: Text('No cost data for this selection'),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: () async {
+                            context.read<AnalysisBloc>().add(
+                              LoadTotalCostsBySeason(),
+                            );
+                          },
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            itemCount: visibleDetails.length,
+                            itemBuilder: (context, index) {
+                              final detail = visibleDetails[index];
+                              return _buildCostDetailItem(context, detail);
+                            },
+                          ),
+                        ),
+                ),
+              ],
             );
           }
           return const Center(child: Text('No data loaded'));
