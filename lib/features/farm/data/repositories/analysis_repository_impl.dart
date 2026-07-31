@@ -35,6 +35,8 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
                   category: model.category,
                   type: model.type,
                   origin: model.origin,
+                  originId: model.originId,
+                  originType: model.originType,
                   totalCost: model.totalCost,
                   percentage: model.percentage,
                 ),
@@ -49,9 +51,15 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
   }
 
   @override
-  Future<Either<Failure, List<MonthlySummary>>> getAnnualCostSummary() async {
+  Future<Either<Failure, List<MonthlySummary>>> getAnnualCostSummary(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
     try {
-      final summaryModels = await remoteDataSource.getAnnualCostSummary();
+      final summaryModels = await remoteDataSource.getAnnualCostSummary(
+        startDate,
+        endDate,
+      );
       return Right(summaryModels);
     } on NetworkException catch (_) {
       return Left(const NetworkFailure());

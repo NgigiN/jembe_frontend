@@ -56,7 +56,12 @@ class AnalysisBloc extends Bloc<AnalysisEvent, AnalysisState> {
     Emitter<AnalysisState> emit,
   ) async {
     emit(AnalysisLoading());
-    final result = await getAnnualCostSummary(NoParams());
+    final result = await getAnnualCostSummary(
+      GetAnnualCostSummaryParams(
+        startDate: event.startDate,
+        endDate: event.endDate,
+      ),
+    );
     result.fold(
       (failure) => emit(AnalysisError(resolveFailureMessage(failure, 'Failed to load annual summary'))),
       (summaries) => emit(AnnualCostSummaryLoaded(summaries)),

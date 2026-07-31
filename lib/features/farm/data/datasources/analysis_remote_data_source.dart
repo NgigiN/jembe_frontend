@@ -9,7 +9,10 @@ import 'package:farm_tracker/features/farm/data/models/monthly_summary_model.dar
 abstract class AnalysisRemoteDataSource {
   Future<FarmDetailedCostModel> getTotalCostsBySeason();
   Future<List<CostBreakdownModel>> getCostBreakdownByInputType();
-  Future<List<MonthlySummaryModel>> getAnnualCostSummary();
+  Future<List<MonthlySummaryModel>> getAnnualCostSummary(
+    DateTime startDate,
+    DateTime endDate,
+  );
 }
 
 class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
@@ -91,16 +94,21 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
   }
 
   @override
-  Future<List<MonthlySummaryModel>> getAnnualCostSummary() async {
+  Future<List<MonthlySummaryModel>> getAnnualCostSummary(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
     try {
       appLogger.info(
         LogCategory.farm,
         'Fetching annual cost summary (monthly breakdown)',
       );
-      final currentYear = DateTime.now().year;
       final response = await dio.get(
         '/api/v1/analytics/monthly-summary',
-        queryParameters: {'year': currentYear.toString()},
+        queryParameters: {
+          'start_date': startDate.toIso8601String().split('T')[0],
+          'end_date': endDate.toIso8601String().split('T')[0],
+        },
       );
 
       appLogger.debug(

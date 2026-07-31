@@ -11,4 +11,11 @@ class LoadTotalCostsBySeason extends AnalysisEvent {}
 
 class LoadCostBreakdown extends AnalysisEvent {}
 
-class LoadAnnualCostSummary extends AnalysisEvent {}
+class LoadAnnualCostSummary extends AnalysisEvent {
+  const LoadAnnualCostSummary(this.startDate, this.endDate);
+  final DateTime startDate;
+  final DateTime endDate;
+
+  @override
+  List<Object> get props => [startDate, endDate];
+}
