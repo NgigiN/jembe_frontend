@@ -52,6 +52,8 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
       event.location,
       event.userId,
       event.initialHeadCount,
+      startDate: event.startDate,
+      endDate: event.endDate,
     );
     result.fold(
       (failure) => emit(HerdError(
@@ -77,6 +79,8 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
       event.animalTypeId,
       event.location,
       event.initialHeadCount,
+      startDate: event.startDate,
+      endDate: event.endDate,
     );
     result.fold(
       (failure) => emit(HerdError(

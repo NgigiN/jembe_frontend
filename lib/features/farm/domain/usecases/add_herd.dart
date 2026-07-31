@@ -12,8 +12,18 @@ class AddHerd {
     String animalTypeId,
     String location,
     String userId,
-    int initialHeadCount,
-  ) async {
-    return repository.addHerd(name, animalTypeId, location, userId, initialHeadCount);
+    int initialHeadCount, {
+    required DateTime startDate,
+    DateTime? endDate,
+  }) async {
+    return repository.addHerd(
+      name,
+      animalTypeId,
+      location,
+      userId,
+      initialHeadCount,
+      startDate: startDate,
+      endDate: endDate,
+    );
   }
 }

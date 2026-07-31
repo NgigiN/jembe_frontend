@@ -15,16 +15,28 @@ class AddHerdEvent extends HerdEvent {
     this.animalTypeId,
     this.location,
     this.userId,
-    this.initialHeadCount,
-  );
+    this.initialHeadCount, {
+    required this.startDate,
+    this.endDate,
+  });
   final String name;
   final String animalTypeId;
   final String location;
   final String userId;
   final int initialHeadCount;
+  final DateTime startDate;
+  final DateTime? endDate;
 
   @override
-  List<Object?> get props => [name, animalTypeId, location, userId, initialHeadCount];
+  List<Object?> get props => [
+    name,
+    animalTypeId,
+    location,
+    userId,
+    initialHeadCount,
+    startDate,
+    endDate,
+  ];
 }
 
 class UpdateHerdEvent extends HerdEvent {
@@ -33,16 +45,28 @@ class UpdateHerdEvent extends HerdEvent {
     this.name,
     this.animalTypeId,
     this.location,
-    this.initialHeadCount,
-  );
+    this.initialHeadCount, {
+    required this.startDate,
+    this.endDate,
+  });
   final String id;
   final String name;
   final String animalTypeId;
   final String location;
   final int initialHeadCount;
+  final DateTime startDate;
+  final DateTime? endDate;
 
   @override
-  List<Object?> get props => [id, name, animalTypeId, location, initialHeadCount];
+  List<Object?> get props => [
+    id,
+    name,
+    animalTypeId,
+    location,
+    initialHeadCount,
+    startDate,
+    endDate,
+  ];
 }
 
 class DeleteHerdEvent extends HerdEvent {
