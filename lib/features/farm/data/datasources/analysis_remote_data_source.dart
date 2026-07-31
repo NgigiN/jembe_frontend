@@ -54,10 +54,7 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
   Future<List<CostBreakdownModel>> getCostBreakdownByInputType() async {
     try {
       appLogger.info(LogCategory.farm, 'Fetching cost breakdown by input type');
-      final response = await dio.get(
-        '/api/v1/analytics/cost-breakdown',
-        queryParameters: {'type': 'plant'},
-      );
+      final response = await dio.get('/api/v1/analytics/cost-breakdown');
 
       appLogger.debug(
         LogCategory.http,
