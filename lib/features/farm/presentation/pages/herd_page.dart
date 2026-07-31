@@ -164,6 +164,8 @@ class _HerdPageState extends State<HerdPage> {
     final locationController = TextEditingController();
     final headCountController = TextEditingController();
     String? selectedAnimalTypeId;
+    DateTime? selectedStartDate;
+    DateTime? selectedEndDate;
 
     showModalBottomSheet<void>(
       context: context,
@@ -210,14 +212,27 @@ class _HerdPageState extends State<HerdPage> {
                           key: formKey,
                           child: Column(
                             children: _herdFormFields(
+                              context: context,
                               nameController: nameController,
                               locationController: locationController,
                               headCountController: headCountController,
                               animalTypes: animalTypes,
                               selectedAnimalTypeId: selectedAnimalTypeId,
+                              selectedStartDate: selectedStartDate,
+                              selectedEndDate: selectedEndDate,
                               onAnimalTypeChanged: (value) {
                                 setSheetState(() {
                                   selectedAnimalTypeId = value;
+                                });
+                              },
+                              onStartDateChanged: (value) {
+                                setSheetState(() {
+                                  selectedStartDate = value;
+                                });
+                              },
+                              onEndDateChanged: (value) {
+                                setSheetState(() {
+                                  selectedEndDate = value;
                                 });
                               },
                             ),
@@ -241,6 +256,8 @@ class _HerdPageState extends State<HerdPage> {
                                   locationController,
                                   headCountController,
                                   selectedAnimalTypeId,
+                                  selectedStartDate,
+                                  selectedEndDate,
                                 );
                               },
                         style: ElevatedButton.styleFrom(
@@ -271,9 +288,12 @@ class _HerdPageState extends State<HerdPage> {
     TextEditingController locationController,
     TextEditingController headCountController,
     String? selectedAnimalTypeId,
+    DateTime? selectedStartDate,
+    DateTime? selectedEndDate,
   ) async {
     final headCount = parsePositiveInt(headCountController.text);
     if (headCount == null) return;
+    if (selectedStartDate == null) return;
 
     final userId = await UserUtils.getCurrentUserId();
     if (userId == null) {
@@ -288,6 +308,8 @@ class _HerdPageState extends State<HerdPage> {
         sanitizeText(locationController.text),
         userId,
         headCount,
+        startDate: selectedStartDate,
+        endDate: selectedEndDate,
       ),
     );
     Navigator.pop(sheetContext);
@@ -301,6 +323,8 @@ class _HerdPageState extends State<HerdPage> {
       text: herd.initialHeadCount.toString(),
     );
     String? selectedAnimalTypeId = herd.animalTypeId;
+    DateTime? selectedStartDate = herd.startDate;
+    DateTime? selectedEndDate = herd.endDate;
 
     showModalBottomSheet<void>(
       context: context,
@@ -347,16 +371,30 @@ class _HerdPageState extends State<HerdPage> {
                           key: formKey,
                           child: Column(
                             children: _herdFormFields(
+                              context: context,
                               nameController: nameController,
                               locationController: locationController,
                               headCountController: headCountController,
                               animalTypes: animalTypes,
                               selectedAnimalTypeId: selectedAnimalTypeId,
+                              selectedStartDate: selectedStartDate,
+                              selectedEndDate: selectedEndDate,
                               onAnimalTypeChanged: (value) {
                                 setSheetState(() {
                                   selectedAnimalTypeId = value;
                                 });
                               },
+                              onStartDateChanged: (value) {
+                                setSheetState(() {
+                                  selectedStartDate = value;
+                                });
+                              },
+                              onEndDateChanged: (value) {
+                                setSheetState(() {
+                                  selectedEndDate = value;
+                                });
+                              },
+                              showClearEndDate: true,
                             ),
                           ),
                         ),
@@ -377,6 +415,8 @@ class _HerdPageState extends State<HerdPage> {
                             locationController,
                             headCountController,
                             selectedAnimalTypeId,
+                            selectedStartDate,
+                            selectedEndDate,
                           );
                         },
                         style: ElevatedButton.styleFrom(
@@ -412,9 +452,12 @@ class _HerdPageState extends State<HerdPage> {
     TextEditingController locationController,
     TextEditingController headCountController,
     String? selectedAnimalTypeId,
+    DateTime? selectedStartDate,
+    DateTime? selectedEndDate,
   ) {
     final headCount = parsePositiveInt(headCountController.text);
     if (headCount == null) return;
+    if (selectedStartDate == null) return;
 
     context.read<HerdBloc>().add(
       UpdateHerdEvent(
@@ -423,18 +466,26 @@ class _HerdPageState extends State<HerdPage> {
         selectedAnimalTypeId!,
         sanitizeText(locationController.text),
         headCount,
+        startDate: selectedStartDate,
+        endDate: selectedEndDate,
       ),
     );
     Navigator.pop(sheetContext);
   }
 
   List<Widget> _herdFormFields({
+    required BuildContext context,
     required TextEditingController nameController,
     required TextEditingController locationController,
     required TextEditingController headCountController,
     required List<AnimalType> animalTypes,
     required String? selectedAnimalTypeId,
+    required DateTime? selectedStartDate,
+    required DateTime? selectedEndDate,
     required ValueChanged<String?> onAnimalTypeChanged,
+    required ValueChanged<DateTime?> onStartDateChanged,
+    required ValueChanged<DateTime?> onEndDateChanged,
+    bool showClearEndDate = false,
   }) {
     return [
       ValidatedNameField(
@@ -478,6 +529,116 @@ class _HerdPageState extends State<HerdPage> {
         labelText: 'Initial Head Count *',
         hintText: 'e.g., 50',
         validator: (value) => positiveInt(value, fieldLabel: 'Head count'),
+      ),
+      const SizedBox(height: 16),
+      FormField<DateTime?>(
+        initialValue: selectedStartDate,
+        validator: (value) =>
+            value == null ? 'Start date is required' : null,
+        builder: (field) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Start Date *'),
+              subtitle: Text(
+                selectedStartDate != null
+                    ? _formatDate(selectedStartDate)
+                    : 'Select start date',
+              ),
+              trailing: const Icon(Icons.calendar_today),
+              onTap: () async {
+                final date = await showDatePicker(
+                  context: context,
+                  initialDate: selectedStartDate ?? DateTime.now(),
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2030),
+                );
+                if (date != null) {
+                  onStartDateChanged(date);
+                  field.didChange(date);
+                }
+              },
+            ),
+            if (field.hasError)
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 8),
+                child: Text(
+                  field.errorText!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 16),
+      FormField<DateTime?>(
+        initialValue: selectedEndDate,
+        validator: (value) => validateEndDateAfterStart(
+          start: selectedStartDate,
+          end: value,
+        ),
+        builder: (field) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('End Date (Optional)'),
+              subtitle: Text(
+                selectedEndDate != null
+                    ? _formatDate(selectedEndDate)
+                    : 'Select end date (optional) — leave empty for an ongoing herd',
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (showClearEndDate && selectedEndDate != null)
+                    IconButton(
+                      icon: const Icon(Icons.clear, size: 20),
+                      onPressed: () {
+                        onEndDateChanged(null);
+                        field.didChange(null);
+                      },
+                    ),
+                  const Icon(Icons.calendar_today),
+                ],
+              ),
+              onTap: () async {
+                final initialDate =
+                    selectedEndDate ?? selectedStartDate ?? DateTime.now();
+                final firstDate = selectedStartDate ?? DateTime(2020);
+                final pickerInitialDate = initialDate.isBefore(firstDate)
+                    ? firstDate
+                    : initialDate;
+
+                final date = await showDatePicker(
+                  context: context,
+                  initialDate: pickerInitialDate,
+                  firstDate: firstDate,
+                  lastDate: DateTime(2030),
+                );
+                if (date != null) {
+                  onEndDateChanged(date);
+                  field.didChange(date);
+                }
+              },
+            ),
+            if (field.hasError)
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 8),
+                child: Text(
+                  field.errorText!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     ];
   }
