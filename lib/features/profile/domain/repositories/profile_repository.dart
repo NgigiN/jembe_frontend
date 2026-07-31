@@ -7,6 +7,7 @@ abstract class ProfileRepository {
   Future<Either<Failure, void>> updateProfile({
     required String firstName,
     required String lastName,
+    required int fiscalYearStartMonth,
     String? farmName,
     String? location,
   });

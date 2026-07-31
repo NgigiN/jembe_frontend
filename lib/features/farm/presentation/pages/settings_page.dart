@@ -28,6 +28,7 @@ class _SettingsPageState extends State<SettingsPage> {
   String _lastName = '';
   String _email = '';
   String _pictureUrl = '';
+  int _fiscalYearStartMonth = 1;
 
   @override
   void initState() {
@@ -53,6 +54,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _lastName = state.user.lastName;
     _email = state.user.email;
     _pictureUrl = state.user.pictureUrl;
+    _fiscalYearStartMonth = state.user.fiscalYearStartMonth;
   }
 
   void _onSaveProfile() {
@@ -61,6 +63,7 @@ class _SettingsPageState extends State<SettingsPage> {
         UpdateProfileEvent(
           firstName: _firstName,
           lastName: _lastName,
+          fiscalYearStartMonth: _fiscalYearStartMonth,
           farmName: sanitizeText(_farmNameController.text),
           location: sanitizeText(_locationController.text),
         ),
@@ -264,6 +267,48 @@ class _SettingsPageState extends State<SettingsPage> {
                               ),
                             ],
                           ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSettingsCard(
+                      context,
+                      title: 'Farm Year',
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: DropdownButtonFormField<int>(
+                          initialValue: _fiscalYearStartMonth,
+                          decoration: const InputDecoration(
+                            labelText: 'Our farm year starts in',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 1, child: Text('January')),
+                            DropdownMenuItem(value: 2, child: Text('February')),
+                            DropdownMenuItem(value: 3, child: Text('March')),
+                            DropdownMenuItem(value: 4, child: Text('April')),
+                            DropdownMenuItem(value: 5, child: Text('May')),
+                            DropdownMenuItem(value: 6, child: Text('June')),
+                            DropdownMenuItem(value: 7, child: Text('July')),
+                            DropdownMenuItem(value: 8, child: Text('August')),
+                            DropdownMenuItem(value: 9, child: Text('September')),
+                            DropdownMenuItem(value: 10, child: Text('October')),
+                            DropdownMenuItem(value: 11, child: Text('November')),
+                            DropdownMenuItem(value: 12, child: Text('December')),
+                          ],
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() => _fiscalYearStartMonth = value);
+                            context.read<ProfileBloc>().add(
+                              UpdateProfileEvent(
+                                firstName: _firstName,
+                                lastName: _lastName,
+                                fiscalYearStartMonth: value,
+                                farmName: sanitizeText(_farmNameController.text),
+                                location: sanitizeText(_locationController.text),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),

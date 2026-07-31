@@ -9,6 +9,7 @@ abstract class ProfileRemoteDataSource {
   Future<void> updateProfile({
     required String firstName,
     required String lastName,
+    required int fiscalYearStartMonth,
     String? farmName,
     String? location,
   });
@@ -48,6 +49,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   Future<void> updateProfile({
     required String firstName,
     required String lastName,
+    required int fiscalYearStartMonth,
     String? farmName,
     String? location,
   }) async {
@@ -57,6 +59,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
         data: {
           'first_name': firstName,
           'last_name': lastName,
+          'fiscal_year_start_month': fiscalYearStartMonth,
           if (farmName != null) 'farm_name': farmName,
           if (location != null) 'location': location,
         },

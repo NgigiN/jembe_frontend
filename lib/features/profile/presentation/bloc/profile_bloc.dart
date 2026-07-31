@@ -43,6 +43,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       UpdateProfileParams(
         firstName: event.firstName,
         lastName: event.lastName,
+        fiscalYearStartMonth: event.fiscalYearStartMonth,
         farmName: event.farmName,
         location: event.location,
       ),

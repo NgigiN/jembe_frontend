@@ -27,6 +27,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
   Future<Either<Failure, void>> updateProfile({
     required String firstName,
     required String lastName,
+    required int fiscalYearStartMonth,
     String? farmName,
     String? location,
   }) async {
@@ -34,6 +35,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
       await remoteDataSource.updateProfile(
         firstName: firstName,
         lastName: lastName,
+        fiscalYearStartMonth: fiscalYearStartMonth,
         farmName: farmName,
         location: location,
       );

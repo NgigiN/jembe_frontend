@@ -15,6 +15,7 @@ class UpdateProfile implements UseCase<void, UpdateProfileParams> {
       lastName: params.lastName,
       farmName: params.farmName,
       location: params.location,
+      fiscalYearStartMonth: params.fiscalYearStartMonth,
     );
   }
 }
@@ -23,15 +24,23 @@ class UpdateProfileParams extends Equatable {
   const UpdateProfileParams({
     required this.firstName,
     required this.lastName,
+    required this.fiscalYearStartMonth,
     this.farmName,
     this.location,
   });
 
   final String firstName;
   final String lastName;
+  final int fiscalYearStartMonth;
   final String? farmName;
   final String? location;
 
   @override
-  List<Object?> get props => [firstName, lastName, farmName, location];
+  List<Object?> get props => [
+    firstName,
+    lastName,
+    fiscalYearStartMonth,
+    farmName,
+    location,
+  ];
 }

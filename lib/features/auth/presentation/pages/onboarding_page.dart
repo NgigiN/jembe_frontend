@@ -70,6 +70,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             UpdateProfileEvent(
               firstName: '',
               lastName: '',
+              fiscalYearStartMonth: 1,
               farmName: farmName,
               location: location,
             ),
