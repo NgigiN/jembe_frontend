@@ -1,3 +1,4 @@
+import 'package:animations/animations.dart';
 import 'package:farm_tracker/core/logging/logging_navigator.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/google_login_page.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/onboarding_page.dart';
@@ -18,7 +19,7 @@ import 'package:farm_tracker/features/farm/presentation/pages/plants_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/revenue_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/season_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/settings_page.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class AppRouteName {
@@ -221,18 +222,35 @@ class AppRouter {
     return CustomTransitionPage<void>(
       key: state.pageKey,
       child: child,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return SlideTransition(
-          position:
-              Tween<Offset>(
-                begin: const Offset(0.25, 0),
-                end: Offset.zero,
-              ).animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-              ),
-          child: child,
-        );
-      },
+      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+          sharedAxisTransition(
+        context: context,
+        animation: animation,
+        secondaryAnimation: secondaryAnimation,
+        child: child,
+      ),
+    );
+  }
+
+  /// Drives both the outgoing and incoming page from the same animation,
+  /// unlike a plain SlideTransition which only moves the incoming page and
+  /// leaves the outgoing one frozen. Falls back to an instant cut when the
+  /// user has reduced motion enabled.
+  static Widget sharedAxisTransition({
+    required BuildContext context,
+    required Animation<double> animation,
+    required Animation<double> secondaryAnimation,
+    required Widget child,
+  }) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return child;
+    }
+    return SharedAxisTransition(
+      animation: animation,
+      secondaryAnimation: secondaryAnimation,
+      transitionType: SharedAxisTransitionType.horizontal,
+      fillColor: Theme.of(context).colorScheme.surface,
+      child: child,
     );
   }
 
