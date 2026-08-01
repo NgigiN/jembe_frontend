@@ -532,7 +532,12 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
           }
         },
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(context.paddingMedium),
+          padding: EdgeInsets.fromLTRB(
+            context.paddingMedium,
+            context.paddingMedium,
+            context.paddingMedium,
+            context.paddingMedium + context.systemBottomInset,
+          ),
           child: Form(
             key: _formKey,
             child: Column(
