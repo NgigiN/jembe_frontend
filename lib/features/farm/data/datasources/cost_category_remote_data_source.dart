@@ -38,7 +38,7 @@ class CostCategoryRemoteDataSourceImpl implements CostCategoryRemoteDataSource {
       );
 
       if (response.statusCode == 200) {
-        final data = response.data as List<dynamic>;
+        final data = response.data as List<dynamic>? ?? [];
         return data.map((json) => CostCategoryModel.fromJson(json as Map<String, dynamic>)).toList();
       } else {
         final msg = extractServerErrorMessage(response.data);
