@@ -626,6 +626,10 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
               if (state is AnalysisLoading) {
                 return const Center(child: CircularProgressIndicator());
               } else if (state is AnalysisError) {
+                // Keep the year switcher live even on error - the request
+                // that failed is scoped to farmYear, so the user can still
+                // page to a different year instead of getting stuck on a
+                // dead-end screen.
                 return RefreshIndicator(
                   onRefresh: () async {
                     context.read<AnalysisBloc>().add(
@@ -634,16 +638,29 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
                   },
                   child: ListView(
                     children: [
-                      SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.3,
+                      Container(
+                        margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Theme.of(context).colorScheme.primary,
+                              Theme.of(context).colorScheme.secondary,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: _buildYearSwitcherRow(farmYear),
                       ),
-                      Center(
+                      Padding(
+                        padding: const EdgeInsets.all(32),
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
                               Icons.error_outline,
-                              size: 64,
+                              size: 48,
                               color: Theme.of(context).colorScheme.error,
                             ),
                             const SizedBox(height: 16),
@@ -766,40 +783,7 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
       ),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.chevron_left, color: Colors.white),
-                onPressed: () => _requestFarmYear(farmYear.previous),
-              ),
-              Column(
-                children: [
-                  Text(
-                    'Farm Year ${farmYear.label}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    farmYear.rangeLabel,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              IconButton(
-                icon: const Icon(Icons.chevron_right, color: Colors.white),
-                onPressed: farmYear.canGoNext(DateTime.now())
-                    ? () => _requestFarmYear(farmYear.next)
-                    : null,
-              ),
-            ],
-          ),
+          _buildYearSwitcherRow(farmYear),
           const SizedBox(height: 12),
           Text(
             'Annual Net Profit',
@@ -839,6 +823,43 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildYearSwitcherRow(FarmYear farmYear) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.chevron_left, color: Colors.white),
+          onPressed: () => _requestFarmYear(farmYear.previous),
+        ),
+        Column(
+          children: [
+            Text(
+              'Farm Year ${farmYear.label}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              farmYear.rangeLabel,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.8),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        IconButton(
+          icon: const Icon(Icons.chevron_right, color: Colors.white),
+          onPressed: farmYear.canGoNext(DateTime.now())
+              ? () => _requestFarmYear(farmYear.next)
+              : null,
+        ),
+      ],
     );
   }
 

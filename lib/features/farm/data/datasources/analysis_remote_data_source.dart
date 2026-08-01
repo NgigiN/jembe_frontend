@@ -65,7 +65,7 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
       );
 
       if (response.statusCode == 200) {
-        final data = response.data as List<dynamic>;
+        final data = response.data as List<dynamic>? ?? [];
         final breakdowns = data
             .map(
               (item) =>
@@ -117,7 +117,7 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
       );
 
       if (response.statusCode == 200) {
-        final data = response.data as List<dynamic>;
+        final data = response.data as List<dynamic>? ?? [];
         final summaries = data
             .map(
               (item) =>

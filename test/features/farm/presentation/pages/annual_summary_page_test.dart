@@ -102,4 +102,78 @@ void main() {
       ).called(1);
     },
   );
+
+  testWidgets(
+    'shows the farm-year switcher (not just a dead-end error) when a load fails, and keeps prev navigation working',
+    (tester) async {
+      final analysisBloc = MockAnalysisBloc();
+      final profileBloc = MockProfileBloc();
+
+      const user = User(
+        id: '1',
+        email: 'a@example.com',
+        firstName: 'A',
+        lastName: 'B',
+        farmName: 'Green Acres',
+        location: 'Nakuru',
+        pictureUrl: '',
+        fiscalYearStartMonth: 1,
+      );
+
+      whenListen(
+        profileBloc,
+        Stream<ProfileState>.value(const ProfileLoaded(user: user)),
+        initialState: const ProfileLoaded(user: user),
+      );
+
+      whenListen(
+        analysisBloc,
+        Stream<AnalysisState>.value(
+          const AnalysisError('Something went wrong. Please try again.'),
+        ),
+        initialState: const AnalysisError(
+          'Something went wrong. Please try again.',
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<AnalysisBloc>.value(value: analysisBloc),
+              BlocProvider<ProfileBloc>.value(value: profileBloc),
+            ],
+            child: const AnnualSummaryPage(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The year switcher must stay visible and usable even on error -
+      // otherwise a user who pages back into a failing year is stuck.
+      expect(find.textContaining('Farm Year 20'), findsOneWidget);
+      expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+      expect(
+        find.text('Something went wrong. Please try again.'),
+        findsOneWidget,
+      );
+
+      // Consume the initial-mount dispatch so the check below only counts
+      // the one triggered by the tap (mocktail's verify resets on each call).
+      verify(
+        () => analysisBloc.add(
+          any(that: isA<LoadAnnualCostSummary>()),
+        ),
+      ).called(greaterThanOrEqualTo(1));
+
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.pump();
+
+      verify(
+        () => analysisBloc.add(
+          any(that: isA<LoadAnnualCostSummary>()),
+        ),
+      ).called(1);
+    },
+  );
 }
