@@ -105,27 +105,32 @@ class AppRouter {
           GoRoute(
             name: AppRouteName.plantsDashboard,
             path: '/',
-            builder: (context, state) => const PlantsPage(),
+            pageBuilder: (context, state) =>
+                _fadeThroughPage(const PlantsPage(), state),
           ),
           GoRoute(
             name: AppRouteName.animalsDashboard,
             path: '/animals',
-            builder: (context, state) => const AnimalsPage(),
+            pageBuilder: (context, state) =>
+                _fadeThroughPage(const AnimalsPage(), state),
           ),
           GoRoute(
             name: AppRouteName.revenue,
             path: '/revenue',
-            builder: (context, state) => const RevenuePage(),
+            pageBuilder: (context, state) =>
+                _fadeThroughPage(const RevenuePage(), state),
           ),
           GoRoute(
             name: AppRouteName.analytics,
             path: '/analytics',
-            builder: (context, state) => const AnalysisPage(),
+            pageBuilder: (context, state) =>
+                _fadeThroughPage(const AnalysisPage(), state),
           ),
           GoRoute(
             name: AppRouteName.settings,
             path: '/settings',
-            builder: (context, state) => const SettingsPage(),
+            pageBuilder: (context, state) =>
+                _fadeThroughPage(const SettingsPage(), state),
           ),
         ],
       ),
@@ -249,6 +254,43 @@ class AppRouter {
       animation: animation,
       secondaryAnimation: secondaryAnimation,
       transitionType: SharedAxisTransitionType.horizontal,
+      fillColor: Theme.of(context).colorScheme.surface,
+      child: child,
+    );
+  }
+
+  static CustomTransitionPage<void> _fadeThroughPage(
+    Widget child,
+    GoRouterState state,
+  ) {
+    return CustomTransitionPage<void>(
+      key: state.pageKey,
+      child: child,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+          fadeThroughTransitionBuilder(
+        context: context,
+        animation: animation,
+        secondaryAnimation: secondaryAnimation,
+        child: child,
+      ),
+    );
+  }
+
+  /// Used for the bottom-nav tabs, which aren't hierarchically related to
+  /// each other - a directional slide would be the wrong signal. Falls back
+  /// to an instant cut when the user has reduced motion enabled.
+  static Widget fadeThroughTransitionBuilder({
+    required BuildContext context,
+    required Animation<double> animation,
+    required Animation<double> secondaryAnimation,
+    required Widget child,
+  }) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return child;
+    }
+    return FadeThroughTransition(
+      animation: animation,
+      secondaryAnimation: secondaryAnimation,
       fillColor: Theme.of(context).colorScheme.surface,
       child: child,
     );
