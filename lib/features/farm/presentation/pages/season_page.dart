@@ -7,6 +7,7 @@ import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
@@ -76,7 +77,7 @@ class _SeasonPageState extends State<SeasonPage> {
         },
         builder: (context, state) {
           if (state is SeasonLoading && state.seasons.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const SkeletonEntityList(icon: Icons.calendar_today);
           }
 
           if (state is SeasonError && state.seasons.isEmpty) {

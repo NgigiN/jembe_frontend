@@ -16,6 +16,7 @@ import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
@@ -63,7 +64,7 @@ class _LandPageState extends State<LandPage> {
         },
         builder: (context, state) {
           if (state is LandLoading && state.lands.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const SkeletonEntityList(icon: Icons.landscape);
           }
 
           if (state is LandError && state.lands.isEmpty) {

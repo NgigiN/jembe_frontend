@@ -11,6 +11,7 @@ import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
@@ -71,7 +72,7 @@ class _HarvestPageState extends State<HarvestPage> {
         },
         builder: (context, state) {
           if (state is HarvestLoading && state.harvests.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const SkeletonEntityList(icon: Icons.agriculture);
           }
 
           if (state is HarvestError && state.harvests.isEmpty) {

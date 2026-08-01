@@ -13,6 +13,7 @@ import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
@@ -59,7 +60,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
         },
         builder: (context, state) {
           if (state is AnimalTypeLoading && state.animalTypes.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const SkeletonEntityList(icon: Icons.pets);
           }
 
           if (state is AnimalTypeError && state.animalTypes.isEmpty) {
