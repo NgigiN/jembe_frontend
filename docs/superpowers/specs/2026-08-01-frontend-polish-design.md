@@ -9,7 +9,9 @@ Three related but independent frontend issues, raised together because they're a
 
 1. **Loading states** use a bare `CircularProgressIndicator` for whole-page/section content loads across ~15 pages. Modern apps show a skeleton of the real layout instead, so nothing jumps when data arrives and the wait feels shorter.
 2. **Navigation motion** feels like screens "stack and unstack." Root cause: `AppRouter._slidePage` (`lib/core/navigation/app_router.dart`) only animates the *incoming* page's position via `SlideTransition`; it never uses `secondaryAnimation`, so the outgoing page is frozen underneath while the new one nudges in from a 25%-offset start (not even a full off-screen slide). On pop, the reverse happens: the popped page nudges back out and disappears, revealing a background that never moved. Confirmed with looping CSS mockups during design review; the frozen-background artifact was clearly visible.
-3. **Safe-area bug**: the "Add Season"/"Add Revenue" submit buttons sit behind the 3-button Android system nav bar. Every other page's bottom sheet (`activity_page.dart`, `herd_page.dart`, `input_page.dart`, `infrastructure_page.dart`, `harvest_page.dart`) goes through the shared `EntityFormSheet` helper (`lib/core/widgets/crud/entity_form_sheet.dart`), which sets `useSafeArea: true` and pads for `MediaQuery.paddingOf(context).bottom`. `season_page.dart` and `revenue_page.dart` hand-rolled their own `showModalBottomSheet` instead and dropped that handling. This is not a systemic gap - it's two files that didn't use the existing shared component.
+3. **Safe-area bug**: the "Add Season" submit button sits behind the 3-button Android system nav bar. Every other page's bottom sheet (`activity_page.dart`, `herd_page.dart`, `input_page.dart`, `infrastructure_page.dart`, `harvest_page.dart`) goes through the shared `EntityFormSheet` helper (`lib/core/widgets/crud/entity_form_sheet.dart`), which sets `useSafeArea: true` and pads for `MediaQuery.paddingOf(context).bottom`. `season_page.dart` hand-rolled its own `showModalBottomSheet` (both Add and Edit Season) instead and dropped that handling.
+
+   Separately, the same underlying mistake (a bottom-anchored button with no bottom-inset padding) also affects `AddRevenuePage` in `revenue_page.dart` - but it's not a modal sheet, it's a full page whose `SingleChildScrollView` pads with the fixed `context.paddingMedium` (~16px) instead of accounting for `context.systemBottomInset` (already defined in `lib/core/utils/safe_layout_utils.dart` and used elsewhere, e.g. `season_page.dart`'s `context.scrollListPadding`). `revenue_page.dart`'s other bottom sheet (`RevenueDetailsSheet`, the read-only detail view) already correctly pads for `MediaQuery.of(context).padding.bottom` - it is not part of this bug.
 
 ## Approach
 
@@ -32,9 +34,10 @@ Add the `animations` package (`flutter pub add animations`) - Google's own Flutt
 - Both transitions need a `fillColor` (use `Theme.of(context).colorScheme.surface`) so the cross-fade doesn't show through to whatever's behind during the dip.
 - Respect reduced motion: check `MediaQuery.disableAnimationsOf(context)` in both helpers and fall back to an instant cut (zero-duration `FadeTransition` or similar) when true. This is an accessibility requirement, not optional.
 
-### 3. Safe-area bug: use the existing shared component
+### 3. Safe-area bug: two independent fixes
 
-Rewrite `season_page.dart`'s two `showModalBottomSheet` calls (add + edit season) and `revenue_page.dart`'s one to go through `EntityFormSheet.show(...)` / `.container()` / `.scrollableForm()`, exactly like `activity_page.dart` and `herd_page.dart` already do. No new pattern - just stop duplicating the bottom sheet by hand.
+- `season_page.dart`: rewrite both `showModalBottomSheet` calls (add + edit season) to use `EntityFormSheet.container()` / `.scrollableForm()` with `useSafeArea: true`, exactly like `activity_page.dart` and `herd_page.dart` already do. No new pattern - just stop duplicating the bottom sheet by hand.
+- `revenue_page.dart`'s `AddRevenuePage`: change its `SingleChildScrollView`'s padding from a flat `EdgeInsets.all(context.paddingMedium)` to add `context.systemBottomInset` on the bottom edge, so the "Save Revenue" button clears the system nav bar. This isn't a modal sheet, so it doesn't go through `EntityFormSheet` - it's a plain padding fix using the extension that already exists in `safe_layout_utils.dart`.
 
 ## Testing
 
