@@ -6,6 +6,7 @@ import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
@@ -174,18 +175,14 @@ class _SeasonPageState extends State<SeasonPage> {
       return;
     }
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Container(
-          height: MediaQuery.of(context).size.height * 0.9,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => EntityFormSheet.container(
+          context: sheetContext,
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -196,24 +193,25 @@ class _SeasonPageState extends State<SeasonPage> {
                   children: [
                     Text(
                       'Add New Season',
-                      style: Theme.of(context)
+                      style: Theme.of(sheetContext)
                           .textTheme
                           .titleLarge
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(sheetContext),
                       icon: const Icon(Icons.close),
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
                 Expanded(
-                  child: SingleChildScrollView(
+                  child: EntityFormSheet.scrollableForm(
+                    context: sheetContext,
                     child: Form(
                       key: formKey,
                       child: _seasonFormFields(
-                        context: context,
+                        context: sheetContext,
                         nameController: nameController,
                         plants: plants,
                         lands: lands,
@@ -222,13 +220,13 @@ class _SeasonPageState extends State<SeasonPage> {
                         selectedStartDate: selectedStartDate,
                         selectedEndDate: selectedEndDate,
                         onPlantChanged: (value) =>
-                            setState(() => selectedPlantId = value),
+                            setSheetState(() => selectedPlantId = value),
                         onLandChanged: (value) =>
-                            setState(() => selectedLandId = value),
+                            setSheetState(() => selectedLandId = value),
                         onStartDateChanged: (value) =>
-                            setState(() => selectedStartDate = value),
+                            setSheetState(() => selectedStartDate = value),
                         onEndDateChanged: (value) =>
-                            setState(() => selectedEndDate = value),
+                            setSheetState(() => selectedEndDate = value),
                       ),
                     ),
                   ),
@@ -244,7 +242,7 @@ class _SeasonPageState extends State<SeasonPage> {
 
                       final userId = await UserUtils.getCurrentUserId();
                       if (userId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(sheetContext).showSnackBar(
                           const SnackBar(
                             content: Text('User not authenticated'),
                             backgroundColor: Colors.red,
@@ -262,7 +260,7 @@ class _SeasonPageState extends State<SeasonPage> {
                         endDate: selectedEndDate,
                       );
                       context.read<SeasonBloc>().add(AddSeasonEvent(season));
-                      Navigator.pop(context);
+                      Navigator.pop(sheetContext);
                     },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -310,18 +308,14 @@ class _SeasonPageState extends State<SeasonPage> {
       return;
     }
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Container(
-          height: MediaQuery.of(context).size.height * 0.9,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => EntityFormSheet.container(
+          context: sheetContext,
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -332,24 +326,25 @@ class _SeasonPageState extends State<SeasonPage> {
                   children: [
                     Text(
                       'Edit Season',
-                      style: Theme.of(context)
+                      style: Theme.of(sheetContext)
                           .textTheme
                           .titleLarge
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(sheetContext),
                       icon: const Icon(Icons.close),
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
                 Expanded(
-                  child: SingleChildScrollView(
+                  child: EntityFormSheet.scrollableForm(
+                    context: sheetContext,
                     child: Form(
                       key: formKey,
                       child: _seasonFormFields(
-                        context: context,
+                        context: sheetContext,
                         nameController: nameController,
                         plants: plants,
                         lands: lands,
@@ -358,13 +353,13 @@ class _SeasonPageState extends State<SeasonPage> {
                         selectedStartDate: selectedStartDate,
                         selectedEndDate: selectedEndDate,
                         onPlantChanged: (value) =>
-                            setState(() => selectedPlantId = value),
+                            setSheetState(() => selectedPlantId = value),
                         onLandChanged: (value) =>
-                            setState(() => selectedLandId = value),
+                            setSheetState(() => selectedLandId = value),
                         onStartDateChanged: (value) =>
-                            setState(() => selectedStartDate = value),
+                            setSheetState(() => selectedStartDate = value),
                         onEndDateChanged: (value) =>
-                            setState(() => selectedEndDate = value),
+                            setSheetState(() => selectedEndDate = value),
                         showClearEndDate: true,
                       ),
                     ),
@@ -393,13 +388,13 @@ class _SeasonPageState extends State<SeasonPage> {
                       context.read<SeasonBloc>().add(
                         UpdateSeasonEvent(updatedSeason),
                       );
-                      Navigator.pop(context);
+                      Navigator.pop(sheetContext);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          Theme.of(context).colorScheme.primary,
+                          Theme.of(sheetContext).colorScheme.primary,
                       foregroundColor:
-                          Theme.of(context).colorScheme.onPrimary,
+                          Theme.of(sheetContext).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child: const Text(

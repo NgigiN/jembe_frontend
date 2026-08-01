@@ -106,7 +106,13 @@ class EntityFormSheet {
           color: Theme.of(context).colorScheme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: child,
+        // Gives any ListTile/InkWell inside child a Material ancestor that
+        // paints above this container's own DecoratedBox, so their ink
+        // effects aren't swallowed by it.
+        child: Material(
+          type: MaterialType.transparency,
+          child: child,
+        ),
       ),
     );
   }
