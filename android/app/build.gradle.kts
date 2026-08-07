@@ -1,9 +1,19 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.FileInputStream
+import java.util.Properties
 
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android Gradle plugin.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Release signing secrets live in android/key.properties, which is git-ignored.
+// See https://flutter.dev/to/reference-keystore
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
@@ -13,20 +23,20 @@ android {
 
     signingConfigs {
         create("release") {
-            val keystorePath = project.findProperty("RELEASE_STORE_FILE") as String?
-            val keystorePassword = project.findProperty("RELEASE_STORE_PASSWORD") as String?
-            val keyAlias = project.findProperty("RELEASE_KEY_ALIAS") as String?
-            val keyPassword = project.findProperty("RELEASE_KEY_PASSWORD") as String?
+            val keystorePath = keystoreProperties.getProperty("storeFile")
+            val keystorePassword = keystoreProperties.getProperty("storePassword")
+            val keyAliasProperty = keystoreProperties.getProperty("keyAlias")
+            val keyPasswordProperty = keystoreProperties.getProperty("keyPassword")
 
             if (!keystorePath.isNullOrBlank() &&
                 !keystorePassword.isNullOrBlank() &&
-                !keyAlias.isNullOrBlank() &&
-                !keyPassword.isNullOrBlank()
+                !keyAliasProperty.isNullOrBlank() &&
+                !keyPasswordProperty.isNullOrBlank()
             ) {
                 storeFile = file(keystorePath)
                 storePassword = keystorePassword
-                this.keyAlias = keyAlias
-                this.keyPassword = keyPassword
+                keyAlias = keyAliasProperty
+                keyPassword = keyPasswordProperty
             } else {
                 project.logger.warn(
                     "Release signing config is not fully specified. Falling back to debug keystore."
