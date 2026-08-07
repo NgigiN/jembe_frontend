@@ -32,7 +32,7 @@ void main() async {
   await di.init();
 
   // Log app startup
-  appLogger.info(LogCategory.general, 'Farm Tracker App Starting');
+  appLogger.info(LogCategory.general, 'Shamba+ App Starting');
 
   runApp(const MyApp());
 }
@@ -72,7 +72,7 @@ class MyApp extends StatelessWidget {
       child: BlocBuilder<ThemeBloc, ThemeState>(
         builder: (context, themeState) {
           return MaterialApp.router(
-            title: 'Farm Tracking App',
+            title: 'Shamba+',
             theme: AppTheme.getLightTheme(),
             darkTheme: AppTheme.getDarkTheme(),
             themeMode: themeState.themeMode,

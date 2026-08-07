@@ -1,4 +1,4 @@
-package com.samtama.farm_tracker
+package com.samtama.shamba
 
 import io.flutter.embedding.android.FlutterActivity
 

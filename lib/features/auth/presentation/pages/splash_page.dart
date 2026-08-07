@@ -65,7 +65,7 @@ class _SplashPageState extends State<SplashPage> {
               const SizedBox(height: 30),
               // App name
               const Text(
-                'Farm Tracker',
+                'Shamba+',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
