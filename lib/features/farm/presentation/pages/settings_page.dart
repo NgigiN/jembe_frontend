@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/features/profile/presentation/widgets/typed_delete_account_dialog.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
@@ -75,6 +76,20 @@ class _SettingsPageState extends State<SettingsPage> {
     context.read<AuthBloc>().add(LogoutEvent());
   }
 
+  Future<void> _onDeleteAccount() async {
+    final confirmed = await TypedDeleteAccountDialog.show(
+      context: context,
+      title: 'Delete Account',
+      message:
+          'This permanently deletes your account and all farm data '
+          '(harvests, land, animals, revenue, costs). This cannot be undone.',
+    );
+    if (confirmed ?? false) {
+      if (!mounted) return;
+      context.read<ProfileBloc>().add(DeleteAccountEvent());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -99,6 +114,11 @@ class _SettingsPageState extends State<SettingsPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               AppSnackBar.error(state.message),
             );
+          } else if (state is AccountDeleted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.success('Account deleted'),
+            );
+            context.read<AuthBloc>().add(LogoutEvent());
           }
         },
         builder: (context, profileState) {
@@ -310,6 +330,27 @@ class _SettingsPageState extends State<SettingsPage> {
                             );
                           },
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSettingsCard(
+                      context,
+                      title: 'Danger Zone',
+                      child: ListTile(
+                        leading: const Icon(
+                          Icons.delete_forever,
+                          color: Colors.red,
+                        ),
+                        title: const Text(
+                          'Delete Account',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                        subtitle: const Text(
+                          'Permanently delete your account and all farm data',
+                        ),
+                        onTap: profileState is ProfileLoading
+                            ? null
+                            : _onDeleteAccount,
                       ),
                     ),
                   ],

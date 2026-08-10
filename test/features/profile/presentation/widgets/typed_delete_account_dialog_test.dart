@@ -1,6 +1,6 @@
+import 'package:farm_tracker/features/profile/presentation/widgets/typed_delete_account_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:farm_tracker/features/profile/presentation/widgets/typed_delete_account_dialog.dart';
 
 void main() {
   Future<void> pumpDialogHost(

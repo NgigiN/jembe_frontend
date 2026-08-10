@@ -89,4 +89,76 @@ void main() {
       expect(event.fiscalYearStartMonth, 7);
     },
   );
+
+  testWidgets(
+    'Delete Account requires typing DELETE before dispatching DeleteAccountEvent',
+    (tester) async {
+      final profileBloc = MockProfileBloc();
+      final themeBloc = MockThemeBloc();
+      final authBloc = MockAuthBloc();
+
+      const user = User(
+        id: '1',
+        email: 'a@example.com',
+        firstName: 'A',
+        lastName: 'B',
+        farmName: 'Green Acres',
+        location: 'Nakuru',
+        pictureUrl: '',
+        fiscalYearStartMonth: 1,
+      );
+
+      whenListen(
+        profileBloc,
+        Stream<ProfileState>.value(const ProfileLoaded(user: user)),
+        initialState: const ProfileLoaded(user: user),
+      );
+      whenListen(
+        themeBloc,
+        Stream<ThemeState>.value(const ThemeState(themeMode: ThemeMode.light)),
+        initialState: const ThemeState(themeMode: ThemeMode.light),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<ProfileBloc>.value(value: profileBloc),
+              BlocProvider<ThemeBloc>.value(value: themeBloc),
+              BlocProvider<AuthBloc>.value(value: authBloc),
+            ],
+            child: const SettingsPage(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.dragUntilVisible(
+        find.text('Delete Account'),
+        find.byType(ListView),
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Delete Account'));
+      await tester.pumpAndSettle();
+
+      final deleteButtonFinder = find.widgetWithText(TextButton, 'Delete');
+      expect(tester.widget<TextButton>(deleteButtonFinder).onPressed, isNull);
+
+      final dialogTextFieldFinder = find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(dialogTextFieldFinder, 'DELETE');
+      await tester.pump();
+
+      await tester.tap(deleteButtonFinder);
+      await tester.pumpAndSettle();
+
+      verify(
+        () => profileBloc.add(any(that: isA<DeleteAccountEvent>())),
+      ).called(1);
+    },
+  );
 }

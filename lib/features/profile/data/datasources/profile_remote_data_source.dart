@@ -17,6 +17,7 @@ abstract class ProfileRemoteDataSource {
     required String oldPassword,
     required String newPassword,
   });
+  Future<void> deleteAccount();
 }
 
 class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
@@ -92,6 +93,21 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
       }
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException in changePassword', e);
+      throw mapDioException(e);
+    }
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    try {
+      final response = await dio.delete('/api/v1/profile');
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
+      }
+    } on DioException catch (e) {
+      appLogger.error(LogCategory.http, 'DioException in deleteAccount', e);
       throw mapDioException(e);
     }
   }

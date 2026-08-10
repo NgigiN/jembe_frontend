@@ -44,3 +44,5 @@ class ChangePasswordEvent extends ProfileEvent {
   @override
   List<Object?> get props => [oldPassword, newPassword];
 }
+
+class DeleteAccountEvent extends ProfileEvent {}

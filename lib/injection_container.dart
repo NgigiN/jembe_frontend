@@ -117,6 +117,7 @@ import 'package:farm_tracker/features/profile/data/datasources/profile_remote_da
 import 'package:farm_tracker/features/profile/data/repositories/profile_repository_impl.dart';
 import 'package:farm_tracker/features/profile/domain/repositories/profile_repository.dart';
 import 'package:farm_tracker/features/profile/domain/usecases/change_password.dart';
+import 'package:farm_tracker/features/profile/domain/usecases/delete_account.dart';
 import 'package:farm_tracker/features/profile/domain/usecases/get_profile.dart';
 import 'package:farm_tracker/features/profile/domain/usecases/update_profile.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
@@ -233,6 +234,7 @@ Future<void> init() async {
         getProfile: sl(),
         updateProfile: sl(),
         changePassword: sl(),
+        deleteAccount: sl(),
       ),
     )
     // Use Cases
@@ -292,6 +294,7 @@ Future<void> init() async {
     ..registerLazySingleton(() => GetProfile(sl()))
     ..registerLazySingleton(() => UpdateProfile(sl()))
     ..registerLazySingleton(() => ChangePassword(sl()))
+    ..registerLazySingleton(() => DeleteAccount(sl()))
     // Repositories
     ..registerLazySingleton<AuthRepository>(
       () => AuthRepositoryImpl(remoteDataSource: sl()),
