@@ -160,7 +160,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         ),
         const SizedBox(height: 24),
         Text(
-          'Welcome to Neema Farm!',
+          'Welcome to Shamba+!',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
