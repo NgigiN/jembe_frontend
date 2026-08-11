@@ -46,11 +46,10 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
     result.fold(
       (failure) {
-        var message = 'Failed to load revenues';
-        if (failure is ServerFailure && failure.errorMessage != null) {
-          message = failure.errorMessage!;
-        }
-        emit(RevenueError(message, revenues: state.revenues));
+        emit(RevenueError(
+          resolveFailureMessage(failure, 'Failed to load revenues'),
+          revenues: state.revenues,
+        ));
       },
       (revenues) => emit(RevenueLoaded(revenues: revenues)),
     );
@@ -79,11 +78,10 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
     result.fold(
       (failure) {
-        var message = 'Failed to add revenue';
-        if (failure is ServerFailure && failure.errorMessage != null) {
-          message = failure.errorMessage!;
-        }
-        emit(RevenueError(message, revenues: currentRevenues));
+        emit(RevenueError(
+          resolveFailureMessage(failure, 'Failed to add revenue'),
+          revenues: currentRevenues,
+        ));
       },
       (revenue) {
         final updatedList = List<Revenue>.from(currentRevenues)..add(revenue);
@@ -115,11 +113,10 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
     result.fold(
       (failure) {
-        var message = 'Failed to update revenue';
-        if (failure is ServerFailure && failure.errorMessage != null) {
-          message = failure.errorMessage!;
-        }
-        emit(RevenueError(message, revenues: currentRevenues));
+        emit(RevenueError(
+          resolveFailureMessage(failure, 'Failed to update revenue'),
+          revenues: currentRevenues,
+        ));
       },
       (revenue) {
         final updatedList = List<Revenue>.from(currentRevenues);
@@ -143,11 +140,10 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
     result.fold(
       (failure) {
-        var message = 'Failed to delete revenue';
-        if (failure is ServerFailure && failure.errorMessage != null) {
-          message = failure.errorMessage!;
-        }
-        emit(RevenueError(message, revenues: currentRevenues));
+        emit(RevenueError(
+          resolveFailureMessage(failure, 'Failed to delete revenue'),
+          revenues: currentRevenues,
+        ));
       },
       (_) {
         final updatedList = List<Revenue>.from(currentRevenues)

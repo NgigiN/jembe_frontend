@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/validation/parse.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 import 'package:farm_tracker/features/farm/domain/entities/infrastructure.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_state.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 
 class InfrastructurePage extends StatefulWidget {
   const InfrastructurePage({super.key});
@@ -45,10 +56,21 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<InfrastructureBloc, InfrastructureState>(
+      body: BlocConsumer<InfrastructureBloc, InfrastructureState>(
+        listener: (context, state) {
+          if (state is InfrastructureLoaded && state.successMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.success(state.successMessage!),
+            );
+          } else if (state is InfrastructureError && state.infrastructures.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.error(state.message),
+            );
+          }
+        },
         builder: (context, state) {
           if (state is InfrastructureLoading && state.infrastructures.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const SkeletonEntityList(icon: Icons.home_work);
           }
 
           if (state is InfrastructureError && state.infrastructures.isEmpty) {
@@ -70,36 +92,36 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: context.scrollListPadding(forFab: true),
             itemCount: infrastructures.length,
             itemBuilder: (context, index) {
               final item = infrastructures[index];
-              return EntityListTile(
-                leadingIcon: _iconForType(item.type),
-                leadingBackgroundColor: Colors.blue.shade100,
-                leadingIconColor: Colors.blue.shade700,
+              final location = item.location.isNotEmpty
+                  ? item.location
+                  : 'No location';
+              return EntityCard(
+                icon: _iconForType(item.type),
+                iconColor: AppColors.animalCategory,
                 title: item.name,
-                subtitleFields: [
-                  Text('Type: ${item.type}'),
-                  if (item.location.isNotEmpty) Text('Location: ${item.location}'),
-                  Text('Cost: KES ${item.cost.toStringAsFixed(2)}'),
-                  Text('Date: ${_formatDate(item.date)}'),
-                  if (item.notes.isNotEmpty)
-                    Text(
-                      'Notes: ${item.notes}',
-                      style: const TextStyle(fontStyle: FontStyle.italic),
-                    ),
-                ],
-                onEdit: () => _showAddOrEditDialog(item: item),
-                onDelete: () => _showDeleteConfirmation(item),
+                subtitle: '${item.type} · $location',
+                trailing: Text(
+                  'KES ${item.cost.toStringAsFixed(0)}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                ),
+                onTap: () => _showInfrastructureDetails(item),
               );
             },
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddOrEditDialog(),
-        child: const Icon(Icons.add),
+      floatingActionButton: SafeFloatingActionButton(
+        child: FloatingActionButton(
+          onPressed: () => _showAddOrEditDialog(),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
@@ -121,11 +143,35 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
     }
   }
 
+  void _showInfrastructureDetails(Infrastructure item) {
+    EntityDetailsSheet.show(
+      context: context,
+      title: item.name,
+      details: [
+        EntityDetailRow('Type', item.type),
+        EntityDetailRow(
+          'Location',
+          item.location.isNotEmpty ? item.location : '—',
+        ),
+        EntityDetailRow(
+          'Cost',
+          'KES ${item.cost.toStringAsFixed(2)}',
+          isPrimary: true,
+        ),
+        EntityDetailRow('Date', _formatDate(item.date)),
+        if (item.notes.isNotEmpty) EntityDetailRow('Notes', item.notes),
+      ],
+      onEdit: () => _showAddOrEditDialog(item: item),
+      onDelete: () => _showDeleteConfirmation(item),
+    );
+  }
+
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
 
   void _showAddOrEditDialog({Infrastructure? item}) {
+    final formKey = GlobalKey<FormState>();
     final isEditing = item != null;
     final nameController = TextEditingController(text: item?.name ?? '');
     final locationController = TextEditingController(text: item?.location ?? '');
@@ -174,107 +220,101 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                 Expanded(
                   child: EntityFormSheet.scrollableForm(
                     context: sheetContext,
-                    child: Column(
-                      children: [
-                        DropdownButtonFormField<String>(
-                          value: selectedType,
-                          decoration: const InputDecoration(
-                            labelText: 'Infrastructure Type *',
-                            border: OutlineInputBorder(),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        children: [
+                          DropdownButtonFormField<String>(
+                            value: selectedType,
+                            decoration: const InputDecoration(
+                              labelText: 'Infrastructure Type *',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: _infrastructureTypes
+                                .map(
+                                  (type) => DropdownMenuItem<String>(
+                                    value: type,
+                                    child: Text(type),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) {
+                              if (value != null) {
+                                setSheetState(() => selectedType = value);
+                              }
+                            },
                           ),
-                          items: _infrastructureTypes
-                              .map(
-                                (type) => DropdownMenuItem<String>(
-                                  value: type,
-                                  child: Text(type),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            if (value != null) {
-                              setSheetState(() => selectedType = value);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: nameController,
-                          decoration: const InputDecoration(
+                          const SizedBox(height: 16),
+                          ValidatedNameField(
+                            controller: nameController,
                             labelText: 'Infrastructure Name *',
-                            border: OutlineInputBorder(),
                             hintText: 'e.g., Main Barn, North Fence',
+                            validator: (value) =>
+                                requiredName(value, fieldLabel: 'Name'),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: locationController,
-                          decoration: const InputDecoration(
+                          const SizedBox(height: 16),
+                          ValidatedLocationField(
+                            controller: locationController,
                             labelText: 'Location *',
-                            border: OutlineInputBorder(),
                             hintText: 'e.g., North Field',
+                            validator: (value) => requiredLocation(value),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: costController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
+                          const SizedBox(height: 16),
+                          ValidatedDecimalField(
+                            controller: costController,
                             labelText: 'Cost (KES) *',
-                            border: OutlineInputBorder(),
                             hintText: 'e.g., 5000.00',
+                            validator: (value) =>
+                                nonNegativeDecimal(value, fieldLabel: 'Cost'),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        InkWell(
-                          onTap: () async {
-                            final picked = await showDatePicker(
-                              context: sheetContext,
-                              initialDate: selectedDate,
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2030),
-                            );
-                            if (picked != null) {
-                              setSheetState(() => selectedDate = picked);
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(4),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 16,
-                            ),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade400),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.calendar_today,
-                                  color: Colors.grey,
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'Date: ${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                                const Spacer(),
-                                const Icon(Icons.arrow_drop_down),
-                              ],
+                          const SizedBox(height: 16),
+                          InkWell(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: sheetContext,
+                                initialDate: selectedDate,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2030),
+                              );
+                              if (picked != null) {
+                                setSheetState(() => selectedDate = picked);
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 16,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade400),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Date: ${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                  const Spacer(),
+                                  const Icon(Icons.arrow_drop_down),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: notesController,
-                          maxLines: 3,
-                          decoration: const InputDecoration(
+                          const SizedBox(height: 16),
+                          ValidatedNotesField(
+                            controller: notesController,
                             labelText: 'Notes',
-                            border: OutlineInputBorder(),
-                            hintText: 'Optional notes or descriptions',
+                            validator: optionalNotes,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -282,17 +322,22 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => _submitInfrastructure(
-                      sheetContext,
-                      isEditing: isEditing,
-                      item: item,
-                      selectedType: selectedType,
-                      selectedDate: selectedDate,
-                      nameController: nameController,
-                      locationController: locationController,
-                      costController: costController,
-                      notesController: notesController,
-                    ),
+                    onPressed: () {
+                      if (!(formKey.currentState?.validate() ?? false)) {
+                        return;
+                      }
+                      _submitInfrastructure(
+                        sheetContext,
+                        isEditing: isEditing,
+                        item: item,
+                        selectedType: selectedType,
+                        selectedDate: selectedDate,
+                        nameController: nameController,
+                        locationController: locationController,
+                        costController: costController,
+                        notesController: notesController,
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -324,32 +369,19 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
     required TextEditingController costController,
     required TextEditingController notesController,
   }) async {
-    if (nameController.text.trim().isEmpty) {
-      _showSheetError(sheetContext, 'Infrastructure name is required');
-      return;
-    }
-
-    if (locationController.text.trim().isEmpty) {
-      _showSheetError(sheetContext, 'Location is required');
-      return;
-    }
-
-    final cost = double.tryParse(costController.text.trim());
-    if (cost == null || cost < 0) {
-      _showSheetError(sheetContext, 'Cost must be a positive number');
-      return;
-    }
+    final cost = parseNonNegativeDecimal(costController.text);
+    final notes = sanitizeOptionalText(notesController.text);
 
     if (isEditing && item != null) {
       context.read<InfrastructureBloc>().add(
         UpdateInfrastructureEvent(
           id: item.id,
           type: selectedType,
-          name: nameController.text.trim(),
-          location: locationController.text.trim(),
+          name: sanitizeText(nameController.text),
+          location: sanitizeText(locationController.text),
           cost: cost,
           date: selectedDate,
-          notes: notesController.text.trim(),
+          notes: notes,
         ),
       );
       Navigator.pop(sheetContext);
@@ -365,12 +397,12 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
     context.read<InfrastructureBloc>().add(
       AddInfrastructureEvent(
         type: selectedType,
-        name: nameController.text.trim(),
-        location: locationController.text.trim(),
+        name: sanitizeText(nameController.text),
+        location: sanitizeText(locationController.text),
         cost: cost,
         date: selectedDate,
         userId: userId,
-        notes: notesController.text.trim(),
+        notes: notes,
       ),
     );
     Navigator.pop(sheetContext);
@@ -396,14 +428,6 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
       context.read<InfrastructureBloc>().add(
         DeleteInfrastructureEvent(item.id),
       );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${item.name} deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     }
   }
 }

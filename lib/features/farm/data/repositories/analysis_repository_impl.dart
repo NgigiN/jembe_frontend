@@ -17,6 +17,8 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
     try {
       final model = await remoteDataSource.getTotalCostsBySeason();
       return Right(model);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -33,22 +35,34 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
                   category: model.category,
                   type: model.type,
                   origin: model.origin,
+                  originId: model.originId,
+                  originType: model.originType,
                   totalCost: model.totalCost,
                   percentage: model.percentage,
                 ),
               )
               .toList();
       return Right(breakdowns);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
   }
 
   @override
-  Future<Either<Failure, List<MonthlySummary>>> getAnnualCostSummary() async {
+  Future<Either<Failure, List<MonthlySummary>>> getAnnualCostSummary(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
     try {
-      final summaryModels = await remoteDataSource.getAnnualCostSummary();
+      final summaryModels = await remoteDataSource.getAnnualCostSummary(
+        startDate,
+        endDate,
+      );
       return Right(summaryModels);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

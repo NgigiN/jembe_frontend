@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/validation/parse.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_bloc.dart';
@@ -51,26 +57,9 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
 
   void _submitForm() {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedHerdId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a herd'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
 
-    final count = int.tryParse(_countController.text.trim()) ?? 0;
-    if (count <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Count must be greater than zero'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+    final count = parsePositiveInt(_countController.text);
+    if (count == null) return;
 
     context.read<HerdActivityBloc>().add(
       AddHerdActivityEvent(
@@ -78,9 +67,7 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
         activityType: _activityType,
         count: count,
         date: _selectedDate,
-        notes: _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
+        notes: sanitizeOptionalText(_notesController.text),
       ),
     );
   }
@@ -96,37 +83,17 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context)
-                  .colorScheme
-                  .primaryContainer
-                  .withValues(alpha: 0.2),
-              Theme.of(context).colorScheme.surface,
-            ],
-          ),
-        ),
-        child: BlocConsumer<HerdActivityBloc, HerdActivityState>(
+      body: BlocConsumer<HerdActivityBloc, HerdActivityState>(
           listener: (context, state) {
             if (state is HerdActivitySuccess) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: Colors.green,
-                ),
+                AppSnackBar.success(state.message),
               );
               context.read<HerdBloc>().add(GetHerdsEvent());
               Navigator.pop(context);
             } else if (state is HerdActivityError) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: Colors.red,
-                ),
+                AppSnackBar.error(state.message),
               );
             }
           },
@@ -159,9 +126,15 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Card(
-                    elevation: 2,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outlineVariant
+                            .withValues(alpha: 0.5),
+                      ),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(20),
@@ -170,12 +143,32 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Record Birth or Fatality',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.animalCategory
+                                        .withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    Icons.pets,
+                                    color: AppColors.animalCategory,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Text(
+                                    'Record Birth or Fatality',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 8),
                             Text(
@@ -206,6 +199,8 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                               onChanged: (value) {
                                 setState(() => _selectedHerdId = value);
                               },
+                              validator: (value) =>
+                                  requiredSelection(value, fieldLabel: 'herd'),
                             ),
                             const SizedBox(height: 20),
                             Text(
@@ -281,28 +276,20 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                               ],
                             ),
                             const SizedBox(height: 20),
-                            TextFormField(
+                            ValidatedIntegerField(
                               controller: _countController,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: 'Count *',
-                                hintText: 'Number of animals affected',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.tag),
-                              ),
+                              labelText: 'Count *',
+                              hintText: 'Number of animals affected',
+                              prefixIcon: const Icon(Icons.tag),
                               validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter the count';
+                                if (_activityType == 'fatality') {
+                                  return positiveIntMax(
+                                    value,
+                                    max: selectedHerd.currentHeadCount,
+                                    fieldLabel: 'Count',
+                                  );
                                 }
-                                final count = int.tryParse(value.trim());
-                                if (count == null || count <= 0) {
-                                  return 'Enter a positive number';
-                                }
-                                if (_activityType == 'fatality' &&
-                                    count > selectedHerd.currentHeadCount) {
-                                  return 'Fatality count cannot exceed current headcount (${selectedHerd.currentHeadCount})';
-                                }
-                                return null;
+                                return positiveInt(value, fieldLabel: 'Count');
                               },
                             ),
                             const SizedBox(height: 20),
@@ -337,15 +324,10 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                               ),
                             ),
                             const SizedBox(height: 20),
-                            TextFormField(
+                            ValidatedNotesField(
                               controller: _notesController,
-                              maxLines: 3,
-                              decoration: const InputDecoration(
-                                labelText: 'Notes / Reason',
-                                hintText: 'e.g., Illness, Normal Birth',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.notes),
-                              ),
+                              labelText: 'Notes / Reason',
+                              validator: optionalNotes,
                             ),
                             const SizedBox(height: 28),
                             SizedBox(
@@ -378,7 +360,6 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
             );
           },
         ),
-      ),
     );
   }
 }

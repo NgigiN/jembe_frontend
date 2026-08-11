@@ -22,76 +22,61 @@ class PlantBloc extends Bloc<PlantEvent, PlantState> {
       emit(PlantLoading());
       final result = await getPlants(NoParams());
       result.fold(
-        (failure) => emit(PlantError('Failed to load plants')),
+        (failure) => emit(PlantError(resolveFailureMessage(failure, 'Failed to load crops'))),
         (plants) => emit(PlantLoaded(plants: plants)),
       );
     });
 
     on<AddPlantEvent>((event, emit) async {
-      final currentPlants = state is PlantLoaded
-          ? (state as PlantLoaded).plants
-          : <Plant>[];
+      final currentPlants = state.plants;
 
-      emit(PlantLoading());
+      emit(PlantLoading(plants: currentPlants));
       final result = await addPlant(AddPlantParams(plant: event.plant));
       result.fold(
-        (failure) {
-          String message = 'Failed to add plant';
-          if (failure is ServerFailure && failure.errorMessage != null) {
-            message = failure.errorMessage!;
-          }
-          emit(PlantError(message, plants: currentPlants));
-        },
+        (failure) => emit(PlantError(
+          resolveFailureMessage(failure, 'Failed to add crop'),
+          plants: currentPlants,
+        )),
         (plant) {
           final updatedPlants = List<Plant>.from(currentPlants)..add(plant);
-          emit(PlantLoaded(plants: updatedPlants));
+          emit(PlantLoaded(plants: updatedPlants, successMessage: 'Crop added'));
         },
       );
     });
 
     on<UpdatePlantEvent>((event, emit) async {
-      final currentPlants = state is PlantLoaded
-          ? (state as PlantLoaded).plants
-          : <Plant>[];
+      final currentPlants = state.plants;
 
-      emit(PlantLoading());
+      emit(PlantLoading(plants: currentPlants));
       final result = await updatePlant(UpdatePlantParams(plant: event.plant));
       result.fold(
-        (failure) {
-          String message = 'Failed to update plant';
-          if (failure is ServerFailure && failure.errorMessage != null) {
-            message = failure.errorMessage!;
-          }
-          emit(PlantError(message, plants: currentPlants));
-        },
+        (failure) => emit(PlantError(
+          resolveFailureMessage(failure, 'Failed to update crop'),
+          plants: currentPlants,
+        )),
         (updatedPlant) {
           final updatedPlants = currentPlants.map((plant) {
             return plant.id == updatedPlant.id ? updatedPlant : plant;
           }).toList();
-          emit(PlantLoaded(plants: updatedPlants));
+          emit(PlantLoaded(plants: updatedPlants, successMessage: 'Crop updated'));
         },
       );
     });
 
     on<DeletePlantEvent>((event, emit) async {
-      final currentPlants = state is PlantLoaded
-          ? (state as PlantLoaded).plants
-          : <Plant>[];
+      final currentPlants = state.plants;
 
-      emit(PlantLoading());
+      emit(PlantLoading(plants: currentPlants));
       final result = await deletePlant(DeletePlantParams(id: event.id));
       result.fold(
-        (failure) {
-          String message = 'Failed to delete plant';
-          if (failure is ServerFailure && failure.errorMessage != null) {
-            message = failure.errorMessage!;
-          }
-          emit(PlantError(message, plants: currentPlants));
-        },
+        (failure) => emit(PlantError(
+          resolveFailureMessage(failure, 'Failed to delete crop'),
+          plants: currentPlants,
+        )),
         (_) {
           final updatedPlants =
               currentPlants.where((plant) => plant.id != event.id).toList();
-          emit(PlantLoaded(plants: updatedPlants));
+          emit(PlantLoaded(plants: updatedPlants, successMessage: 'Crop deleted'));
         },
       );
     });

@@ -9,6 +9,7 @@ class User extends Equatable {
     required this.farmName,
     required this.location,
     required this.pictureUrl,
+    this.fiscalYearStartMonth = 1,
   });
   final String id;
   final String email;
@@ -17,9 +18,19 @@ class User extends Equatable {
   final String farmName;
   final String location;
   final String pictureUrl;
+  final int fiscalYearStartMonth;
 
   String get fullName => '$firstName $lastName';
 
   @override
-  List<Object?> get props => [id, email, firstName, lastName, farmName, location, pictureUrl];
+  List<Object?> get props => [
+    id,
+    email,
+    firstName,
+    lastName,
+    farmName,
+    location,
+    pictureUrl,
+    fiscalYearStartMonth,
+  ];
 }

@@ -16,10 +16,11 @@ class AnimalTypeLoading extends AnimalTypeState {
 }
 
 class AnimalTypeLoaded extends AnimalTypeState {
-  const AnimalTypeLoaded(List<AnimalType> animalTypes) : super(animalTypes: animalTypes);
+  const AnimalTypeLoaded(List<AnimalType> animalTypes, {this.successMessage}) : super(animalTypes: animalTypes);
+  final String? successMessage;
 
   @override
-  List<Object?> get props => [animalTypes];
+  List<Object?> get props => [animalTypes, successMessage];
 }
 
 class AnimalTypeError extends AnimalTypeState {

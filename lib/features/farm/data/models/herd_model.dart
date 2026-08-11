@@ -7,6 +7,8 @@ class HerdModel extends Herd {
     required String animalTypeId,
     required String location,
     required int initialHeadCount,
+    required DateTime startDate,
+    DateTime? endDate,
   }) {
     final now = DateTime.now();
     return HerdModel(
@@ -17,6 +19,8 @@ class HerdModel extends Herd {
       location: location,
       initialHeadCount: initialHeadCount,
       currentHeadCount: initialHeadCount,
+      startDate: startDate,
+      endDate: endDate,
       createdAt: now,
       updatedAt: now,
     );
@@ -29,11 +33,14 @@ class HerdModel extends Herd {
     required super.location,
     required super.initialHeadCount,
     required super.currentHeadCount,
+    required super.startDate,
+    super.endDate,
     required super.createdAt,
     required super.updatedAt,
   });
 
   factory HerdModel.fromJson(Map<String, dynamic> json) {
+    final endDateValue = json['end_date'] ?? json['EndDate'];
     return HerdModel(
       id: (json['ID'] ?? json['id'] ?? '').toString(),
       userId: (json['user_id'] ?? json['UserID'] ?? '').toString(),
@@ -43,6 +50,10 @@ class HerdModel extends Herd {
       location: (json['location'] ?? json['Location'] ?? '').toString(),
       initialHeadCount: _parseInt(json['initial_head_count'] ?? json['InitialHeadCount']),
       currentHeadCount: _parseInt(json['current_head_count'] ?? json['CurrentHeadCount']),
+      startDate: _parseDate(json['start_date'] ?? json['StartDate']),
+      endDate: endDateValue != null && endDateValue.toString().isNotEmpty
+          ? _parseDate(endDateValue)
+          : null,
       createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
       updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );
@@ -69,6 +80,8 @@ class HerdModel extends Herd {
       'animal_type_id': int.tryParse(animalTypeId) ?? animalTypeId,
       'location': location,
       'initial_head_count': initialHeadCount,
+      'start_date': startDate.toUtc().toIso8601String(),
+      'end_date': endDate?.toUtc().toIso8601String(),
     };
   }
 }

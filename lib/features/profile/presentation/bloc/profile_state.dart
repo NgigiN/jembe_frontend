@@ -35,3 +35,8 @@ class ProfileError extends ProfileState {
   @override
   List<Object?> get props => [message];
 }
+
+/// Emitted once the account has been deleted server-side. Distinct from
+/// [ProfileOperationSuccess] so the UI doesn't re-fetch a profile that no
+/// longer exists, and instead clears the local session.
+class AccountDeleted extends ProfileState {}

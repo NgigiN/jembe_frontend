@@ -7,5 +7,8 @@ import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart'
 abstract class AnalysisRepository {
   Future<Either<Failure, FarmDetailedCost>> getTotalCostsBySeason();
   Future<Either<Failure, List<CostBreakdown>>> getCostBreakdownByInputType();
-  Future<Either<Failure, List<MonthlySummary>>> getAnnualCostSummary();
+  Future<Either<Failure, List<MonthlySummary>>> getAnnualCostSummary(
+    DateTime startDate,
+    DateTime endDate,
+  );
 }

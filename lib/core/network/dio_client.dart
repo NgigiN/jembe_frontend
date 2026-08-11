@@ -1,10 +1,25 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:flutter/foundation.dart';
-import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:farm_tracker/core/config/app_config.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:pretty_dio_logger/pretty_dio_logger.dart';
+
+final _sensitiveLogPattern = RegExp(
+  '(authorization|id_token|token|password|old_password|new_password)',
+  caseSensitive: false,
+);
+
+void _redactedLogPrint(Object object) {
+  final message = object.toString();
+  if (_sensitiveLogPattern.hasMatch(message)) {
+    debugPrint('[REDACTED HTTP LOG — contains sensitive auth data]');
+    return;
+  }
+  debugPrint(message);
+}
 
 /// Factory for creating configured Dio instances
 class DioClientFactory {
@@ -57,10 +72,14 @@ class DioClientFactory {
       );
     }
 
-    // Add logging interceptor (only in debug mode)
+    // Add logging interceptor (only in debug mode; redact secrets)
     if (enableLogging && kDebugMode) {
       dio.interceptors.add(
-        PrettyDioLogger(requestHeader: true, requestBody: true),
+        PrettyDioLogger(
+          requestHeader: true,
+          requestBody: true,
+          logPrint: _redactedLogPrint,
+        ),
       );
     }
 
@@ -93,4 +112,29 @@ class _AuthInterceptor extends Interceptor {
     }
     handler.next(err);
   }
+}
+
+/// Maps a [DioException] to the appropriate application exception.
+/// Connection / timeout errors become [NetworkException].
+/// All other errors (4xx, 5xx) become [ServerException] with a human message.
+Exceptions mapDioException(DioException e) {
+  switch (e.type) {
+    case DioExceptionType.connectionTimeout:
+    case DioExceptionType.receiveTimeout:
+    case DioExceptionType.sendTimeout:
+    case DioExceptionType.connectionError:
+      return NetworkException();
+    default:
+      final msg = extractServerErrorMessage(e.response?.data);
+      return ServerException(msg.isNotEmpty ? msg : null);
+  }
+}
+
+/// Extracts a human-readable error string from a JSON response body.
+/// Returns empty string if none found.
+String extractServerErrorMessage(dynamic data) {
+  if (data is Map<String, dynamic>) {
+    return (data['error'] ?? data['message'] ?? '').toString();
+  }
+  return '';
 }

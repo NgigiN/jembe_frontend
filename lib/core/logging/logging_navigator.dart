@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:flutter/material.dart';
 
 /// Navigator observer for GoRouter that logs all navigation events
 class LoggingNavigatorObserver extends NavigatorObserver {
@@ -105,8 +105,8 @@ class LoggingGoRouterObserver extends NavigatorObserver {
 @Deprecated('Use GoRouter from app_router.dart instead')
 class LoggingMaterialApp extends StatelessWidget {
   const LoggingMaterialApp({
-    super.key,
     required this.title,
+    super.key,
     this.theme,
     this.initialRoute,
     this.routes,

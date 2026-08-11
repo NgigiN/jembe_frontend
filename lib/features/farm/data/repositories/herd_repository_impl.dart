@@ -15,6 +15,8 @@ class HerdRepositoryImpl implements HerdRepository {
     try {
       final herds = await remoteDataSource.getHerds();
       return Right(herds);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -28,8 +30,10 @@ class HerdRepositoryImpl implements HerdRepository {
     String animalTypeId,
     String location,
     String userId,
-    int initialHeadCount,
-  ) async {
+    int initialHeadCount, {
+    required DateTime startDate,
+    DateTime? endDate,
+  }) async {
     try {
       final herdModel = HerdModel.create(
         userId: userId,
@@ -37,9 +41,13 @@ class HerdRepositoryImpl implements HerdRepository {
         animalTypeId: animalTypeId,
         location: location,
         initialHeadCount: initialHeadCount,
+        startDate: startDate,
+        endDate: endDate,
       );
       final result = await remoteDataSource.addHerd(herdModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -53,8 +61,10 @@ class HerdRepositoryImpl implements HerdRepository {
     String name,
     String animalTypeId,
     String location,
-    int initialHeadCount,
-  ) async {
+    int initialHeadCount, {
+    required DateTime startDate,
+    DateTime? endDate,
+  }) async {
     try {
       final herdModel = await remoteDataSource.getHerds();
       final existingHerd = herdModel.firstWhere((h) => h.id == id);
@@ -66,11 +76,15 @@ class HerdRepositoryImpl implements HerdRepository {
         location: location,
         initialHeadCount: initialHeadCount,
         currentHeadCount: existingHerd.currentHeadCount,
+        startDate: startDate,
+        endDate: endDate,
         createdAt: existingHerd.createdAt,
         updatedAt: DateTime.now(),
       );
       final result = await remoteDataSource.updateHerd(updatedModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -83,6 +97,8 @@ class HerdRepositoryImpl implements HerdRepository {
     try {
       await remoteDataSource.deleteHerd(id);
       return const Right(null);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {

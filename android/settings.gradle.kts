@@ -20,7 +20,8 @@ pluginManagement {
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "8.11.1" apply false
-    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
+    // Classpath only: Flutter may apply this for MainActivity.kt when built-in Kotlin is enabled.
+    id("org.jetbrains.kotlin.android") version "2.3.0" apply false
 }
 
 include(":app")

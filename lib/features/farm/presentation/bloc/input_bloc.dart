@@ -21,28 +21,19 @@ class InputBloc extends Bloc<InputEvent, InputState> {
       appLogger.debug(LogCategory.farm, 'GetInputsEvent triggered');
       emit(InputLoading());
 
-      try {
-        final result = await getInputs(
-          GetInputsParams(sourceType: event.sourceType),
-        );
-        result.fold(
-          (failure) {
-            appLogger.warning(LogCategory.farm, 'GetInputs failed: $failure');
-            String message = 'Failed to load inputs';
-            if (failure is ServerFailure && failure.errorMessage != null) {
-              message = failure.errorMessage!;
-            }
-            emit(InputError(message));
-          },
-          (inputs) {
-            appLogger.info(LogCategory.farm, 'Loaded ${inputs.length} inputs');
-            emit(InputLoaded(inputs: inputs));
-          },
-        );
-      } catch (e) {
-        appLogger.error(LogCategory.farm, 'GetInputs exception', e);
-        emit(InputError('Unexpected error: $e'));
-      }
+      final result = await getInputs(
+        GetInputsParams(sourceType: event.sourceType),
+      );
+      result.fold(
+        (failure) {
+          appLogger.warning(LogCategory.farm, 'GetInputs failed: $failure');
+          emit(InputError(resolveFailureMessage(failure, 'Failed to load inputs')));
+        },
+        (inputs) {
+          appLogger.info(LogCategory.farm, 'Loaded ${inputs.length} inputs');
+          emit(InputLoaded(inputs: inputs));
+        },
+      );
     });
 
     on<AddInputEvent>((event, emit) async {
@@ -51,64 +42,51 @@ class InputBloc extends Bloc<InputEvent, InputState> {
       emit(InputLoading(inputs: currentInputs));
       final result = await addInput(AddInputParams(input: event.input));
       result.fold(
-        (failure) {
-          String message = 'Failed to add input';
-          if (failure is ServerFailure && failure.errorMessage != null) {
-            message = failure.errorMessage!;
-          }
-          emit(InputError(message, inputs: currentInputs));
-        },
+        (failure) => emit(InputError(
+          resolveFailureMessage(failure, 'Failed to add input'),
+          inputs: currentInputs,
+        )),
         (input) {
           final updatedInputs = List<Input>.from(currentInputs)..add(input);
-          emit(InputLoaded(inputs: updatedInputs));
+          emit(InputLoaded(inputs: updatedInputs, successMessage: 'Input added'));
         },
       );
     });
 
     on<UpdateInputEvent>((event, emit) async {
-      final currentInputs = state is InputLoaded
-          ? (state as InputLoaded).inputs
-          : <Input>[];
+      final currentInputs = state.inputs;
 
-      emit(InputLoading());
+      emit(InputLoading(inputs: currentInputs));
       final result = await updateInput(UpdateInputParams(input: event.input));
       result.fold(
-        (failure) {
-          String message = 'Failed to update input';
-          if (failure is ServerFailure && failure.errorMessage != null) {
-            message = failure.errorMessage!;
-          }
-          emit(InputError(message, inputs: currentInputs));
-        },
+        (failure) => emit(InputError(
+          resolveFailureMessage(failure, 'Failed to update input'),
+          inputs: currentInputs,
+        )),
         (updatedInput) {
           final updatedInputs = currentInputs.map((input) {
             return input.id == updatedInput.id ? updatedInput : input;
           }).toList();
-          emit(InputLoaded(inputs: updatedInputs));
+          emit(InputLoaded(inputs: updatedInputs, successMessage: 'Input updated'));
         },
       );
     });
 
     on<DeleteInputEvent>((event, emit) async {
-      final currentInputs = state is InputLoaded
-          ? (state as InputLoaded).inputs
-          : <Input>[];
+      final currentInputs = state.inputs;
 
-      emit(InputLoading());
+      emit(InputLoading(inputs: currentInputs));
       final result = await deleteInput(DeleteInputParams(id: event.id));
       result.fold(
-        (failure) {
-          String message = 'Failed to delete input';
-          if (failure is ServerFailure && failure.errorMessage != null) {
-            message = failure.errorMessage!;
-          }
-          emit(InputError(message, inputs: currentInputs));
-        },
+        (failure) => emit(InputError(
+          resolveFailureMessage(failure, 'Failed to delete input'),
+          inputs: currentInputs,
+        )),
         (_) {
           final updatedInputs = currentInputs
               .where((input) => input.id != event.id)
               .toList();
-          emit(InputLoaded(inputs: updatedInputs));
+          emit(InputLoaded(inputs: updatedInputs, successMessage: 'Input deleted'));
         },
       );
     });

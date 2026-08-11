@@ -13,16 +13,24 @@ class UpdateProfileEvent extends ProfileEvent {
   const UpdateProfileEvent({
     required this.firstName,
     required this.lastName,
+    required this.fiscalYearStartMonth,
     this.farmName,
     this.location,
   });
   final String firstName;
   final String lastName;
+  final int fiscalYearStartMonth;
   final String? farmName;
   final String? location;
 
   @override
-  List<Object?> get props => [firstName, lastName, farmName, location];
+  List<Object?> get props => [
+    firstName,
+    lastName,
+    fiscalYearStartMonth,
+    farmName,
+    location,
+  ];
 }
 
 class ChangePasswordEvent extends ProfileEvent {
@@ -36,3 +44,5 @@ class ChangePasswordEvent extends ProfileEvent {
   @override
   List<Object?> get props => [oldPassword, newPassword];
 }
+
+class DeleteAccountEvent extends ProfileEvent {}

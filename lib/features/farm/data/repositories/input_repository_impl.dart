@@ -15,6 +15,8 @@ class InputRepositoryImpl implements InputRepository {
     try {
       final inputs = await remoteDataSource.getInputs(sourceType: sourceType);
       return Right(inputs);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -39,6 +41,8 @@ class InputRepositoryImpl implements InputRepository {
 
       final result = await remoteDataSource.addInput(inputModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -63,6 +67,8 @@ class InputRepositoryImpl implements InputRepository {
 
       final result = await remoteDataSource.updateInput(inputModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -73,6 +79,8 @@ class InputRepositoryImpl implements InputRepository {
     try {
       await remoteDataSource.deleteInput(id);
       return const Right(null);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

@@ -1,15 +1,11 @@
 import 'package:equatable/equatable.dart';
 
 class FarmDetailedCost extends Equatable {
-  const FarmDetailedCost({
-    required this.totalOverallCost,
-    required this.details,
-  });
-  final double totalOverallCost;
+  const FarmDetailedCost({required this.details});
   final List<CostDetail> details;
 
   @override
-  List<Object?> get props => [totalOverallCost, details];
+  List<Object?> get props => [details];
 }
 
 class CostDetail extends Equatable {

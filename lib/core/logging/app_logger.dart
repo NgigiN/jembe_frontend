@@ -1,5 +1,5 @@
-import 'package:logger/logger.dart';
 import 'package:flutter/foundation.dart';
+import 'package:logger/logger.dart';
 
 enum LogLevel { debug, info, warning, error }
 
@@ -18,7 +18,6 @@ class AppLogger {
 
     _logger = Logger(
       printer: PrettyPrinter(
-        errorMethodCount: 8,
         dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
       ),
       level: kDebugMode ? Level.debug : Level.warning,

@@ -12,6 +12,9 @@ import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
@@ -30,6 +33,7 @@ class _PlantsPageState extends State<PlantsPage> {
     context.read<LandBloc>().add(GetLandsEvent());
     context.read<PlantBloc>().add(GetPlantsEvent());
     context.read<SeasonBloc>().add(GetSeasonsEvent());
+    context.read<HarvestBloc>().add(GetHarvestsEvent());
   }
 
   @override
@@ -67,10 +71,17 @@ class _PlantsPageState extends State<PlantsPage> {
 
                 return BlocBuilder<SeasonBloc, SeasonState>(
                   builder: (context, seasonState) {
+                    return BlocBuilder<HarvestBloc, HarvestState>(
+                      builder: (context, harvestState) {
                     final hasSeason = seasonState is SeasonLoaded &&
                         seasonState.seasons.isNotEmpty;
                     final seasonCount = seasonState is SeasonLoaded
                         ? seasonState.seasons.length
+                        : 0;
+                    final hasHarvest = harvestState is HarvestLoaded &&
+                        harvestState.harvests.isNotEmpty;
+                    final harvestCount = harvestState is HarvestLoaded
+                        ? harvestState.harvests.length
                         : 0;
 
                     if (!hasLand && landState is LandLoading) {
@@ -97,6 +108,9 @@ class _PlantsPageState extends State<PlantsPage> {
                         context
                             .read<SeasonBloc>()
                             .add(GetSeasonsEvent());
+                        context
+                            .read<HarvestBloc>()
+                            .add(GetHarvestsEvent());
                       },
                       child: ListView(
                         padding: const EdgeInsets.all(16),
@@ -183,8 +197,27 @@ class _PlantsPageState extends State<PlantsPage> {
                             onTap: () => context.push(
                                 AppRoutePath.activitiesFor('plant')),
                           ),
+                          StepConnector(isActive: hasSeason),
+                          SetupStepCard(
+                            stepNumber: 6,
+                            title: 'Record Harvest',
+                            subtitle:
+                                'Log yield per season in kg, sacks, and more',
+                            summary: hasHarvest
+                                ? '$harvestCount harvests recorded'
+                                : null,
+                            status: hasSeason
+                                ? (hasHarvest
+                                    ? StepStatus.completed
+                                    : StepStatus.available)
+                                : StepStatus.locked,
+                            onTap: () =>
+                                context.push(AppRoutePath.harvests),
+                          ),
                         ],
                       ),
+                    );
+                      },
                     );
                   },
                 );

@@ -9,14 +9,18 @@ abstract class HerdRepository {
     String animalTypeId,
     String location,
     String userId,
-    int initialHeadCount,
-  );
+    int initialHeadCount, {
+    required DateTime startDate,
+    DateTime? endDate,
+  });
   Future<Either<Failure, Herd>> updateHerd(
     String id,
     String name,
     String animalTypeId,
     String location,
-    int initialHeadCount,
-  );
+    int initialHeadCount, {
+    required DateTime startDate,
+    DateTime? endDate,
+  });
   Future<Either<Failure, void>> deleteHerd(String id);
 }

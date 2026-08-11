@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_herd.dart';
@@ -33,7 +34,7 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
     emit(const HerdLoading());
     final result = await getHerds(NoParams());
     result.fold(
-      (failure) => emit(const HerdError('Failed to load herds')),
+      (failure) => emit(HerdError(resolveFailureMessage(failure, 'Failed to load herds'))),
       (herds) => emit(HerdLoaded(herds)),
     );
   }
@@ -42,7 +43,7 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
     AddHerdEvent event,
     Emitter<HerdState> emit,
   ) async {
-    final currentHerds = state is HerdLoaded ? (state as HerdLoaded).herds : <Herd>[];
+    final currentHerds = state.herds;
 
     emit(HerdLoading(herds: currentHerds));
     final result = await addHerd(
@@ -51,12 +52,17 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
       event.location,
       event.userId,
       event.initialHeadCount,
+      startDate: event.startDate,
+      endDate: event.endDate,
     );
     result.fold(
-      (failure) => emit(HerdError('Failed to add herd', herds: currentHerds)),
+      (failure) => emit(HerdError(
+        resolveFailureMessage(failure, 'Failed to add herd'),
+        herds: currentHerds,
+      )),
       (herd) {
         final updatedHerds = List<Herd>.from(currentHerds)..add(herd);
-        emit(HerdLoaded(updatedHerds));
+        emit(HerdLoaded(updatedHerds, successMessage: 'Herd created'));
       },
     );
   }
@@ -73,14 +79,19 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
       event.animalTypeId,
       event.location,
       event.initialHeadCount,
+      startDate: event.startDate,
+      endDate: event.endDate,
     );
     result.fold(
-      (failure) => emit(HerdError('Failed to update herd', herds: currentHerds)),
+      (failure) => emit(HerdError(
+        resolveFailureMessage(failure, 'Failed to update herd'),
+        herds: currentHerds,
+      )),
       (updatedHerd) {
         final updatedHerds = currentHerds.map((herd) {
           return herd.id == updatedHerd.id ? updatedHerd : herd;
         }).toList();
-        emit(HerdLoaded(updatedHerds));
+        emit(HerdLoaded(updatedHerds, successMessage: 'Herd updated'));
       },
     );
   }
@@ -93,11 +104,14 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
     emit(HerdLoading(herds: currentHerds));
     final result = await deleteHerd(event.id);
     result.fold(
-      (failure) => emit(HerdError('Failed to delete herd', herds: currentHerds)),
+      (failure) => emit(HerdError(
+        resolveFailureMessage(failure, 'Failed to delete herd'),
+        herds: currentHerds,
+      )),
       (_) {
         final updatedHerds =
             currentHerds.where((herd) => herd.id != event.id).toList();
-        emit(HerdLoaded(updatedHerds));
+        emit(HerdLoaded(updatedHerds, successMessage: 'Herd deleted'));
       },
     );
   }

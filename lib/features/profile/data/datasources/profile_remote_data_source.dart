@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/auth/data/models/user_model.dart';
 
 abstract class ProfileRemoteDataSource {
@@ -7,6 +9,7 @@ abstract class ProfileRemoteDataSource {
   Future<void> updateProfile({
     required String firstName,
     required String lastName,
+    required int fiscalYearStartMonth,
     String? farmName,
     String? location,
   });
@@ -14,6 +17,7 @@ abstract class ProfileRemoteDataSource {
     required String oldPassword,
     required String newPassword,
   });
+  Future<void> deleteAccount();
 }
 
 class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
@@ -30,17 +34,15 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
         if (data['profile'] != null) {
           return UserModel.fromJson(data['profile'] as Map<String, dynamic>);
         } else {
-          throw const ServerException('Invalid response format');
+          throw const ServerException('Profile data could not be loaded. Please try again.');
         }
       } else {
-        throw ServerException(
-          _extractErrorMessage(response.data) ?? 'Failed to get profile',
-        );
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
       }
     } on DioException catch (e) {
-      throw ServerException(
-        _extractErrorMessage(e.response?.data) ?? 'Failed to get profile',
-      );
+      appLogger.error(LogCategory.http, 'DioException in getProfile', e);
+      throw mapDioException(e);
     }
   }
 
@@ -48,6 +50,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   Future<void> updateProfile({
     required String firstName,
     required String lastName,
+    required int fiscalYearStartMonth,
     String? farmName,
     String? location,
   }) async {
@@ -57,20 +60,19 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
         data: {
           'first_name': firstName,
           'last_name': lastName,
+          'fiscal_year_start_month': fiscalYearStartMonth,
           if (farmName != null) 'farm_name': farmName,
           if (location != null) 'location': location,
         },
       );
 
       if (response.statusCode != 200) {
-        throw ServerException(
-          _extractErrorMessage(response.data) ?? 'Failed to update profile',
-        );
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
       }
     } on DioException catch (e) {
-      throw ServerException(
-        _extractErrorMessage(e.response?.data) ?? 'Failed to update profile',
-      );
+      appLogger.error(LogCategory.http, 'DioException in updateProfile', e);
+      throw mapDioException(e);
     }
   }
 
@@ -86,22 +88,27 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
       );
 
       if (response.statusCode != 200) {
-        throw ServerException(
-          _extractErrorMessage(response.data) ?? 'Failed to change password',
-        );
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
       }
     } on DioException catch (e) {
-      throw ServerException(
-        _extractErrorMessage(e.response?.data) ?? 'Failed to change password',
-      );
+      appLogger.error(LogCategory.http, 'DioException in changePassword', e);
+      throw mapDioException(e);
     }
   }
 
-  String? _extractErrorMessage(dynamic data) {
-    if (data is Map<String, dynamic>) {
-      if (data['error'] != null) return data['error'].toString();
-      if (data['message'] != null) return data['message'].toString();
+  @override
+  Future<void> deleteAccount() async {
+    try {
+      final response = await dio.delete('/api/v1/profile');
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(msg.isNotEmpty ? msg : null);
+      }
+    } on DioException catch (e) {
+      appLogger.error(LogCategory.http, 'DioException in deleteAccount', e);
+      throw mapDioException(e);
     }
-    return null;
   }
 }

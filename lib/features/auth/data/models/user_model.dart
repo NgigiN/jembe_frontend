@@ -9,6 +9,7 @@ class UserModel extends User {
     required super.farmName,
     required super.location,
     required super.pictureUrl,
+    super.fiscalYearStartMonth,
   });
 
   factory UserModel.empty() {
@@ -24,6 +25,7 @@ class UserModel extends User {
   }
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    final fiscalYearRaw = json['fiscal_year_start_month'];
     return UserModel(
       id: (json['id'] ?? json['ID'] ?? '').toString(),
       email: (json['email'] ?? '').toString(),
@@ -32,6 +34,7 @@ class UserModel extends User {
       farmName: (json['farm_name'] ?? '').toString(),
       location: (json['location'] ?? '').toString(),
       pictureUrl: (json['picture_url'] ?? json['profile_picture'] ?? '').toString(),
+      fiscalYearStartMonth: fiscalYearRaw is num ? fiscalYearRaw.toInt() : 1,
     );
   }
 
@@ -44,6 +47,7 @@ class UserModel extends User {
       'farm_name': farmName,
       'location': location,
       'picture_url': pictureUrl,
+      'fiscal_year_start_month': fiscalYearStartMonth,
     };
   }
 }

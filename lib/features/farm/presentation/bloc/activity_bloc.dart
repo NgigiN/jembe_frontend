@@ -21,34 +21,19 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       appLogger.debug(LogCategory.farm, 'GetActivitiesEvent triggered');
       emit(ActivityLoading());
 
-      try {
-        final result = await getActivities(
-          GetActivitiesParams(sourceType: event.sourceType),
-        );
-        result.fold(
-          (failure) {
-            appLogger.warning(
-              LogCategory.farm,
-              'GetActivities failed: $failure',
-            );
-            String message = 'Failed to load activities';
-            if (failure is ServerFailure && failure.errorMessage != null) {
-              message = failure.errorMessage!;
-            }
-            emit(ActivityError(message));
-          },
-          (activities) {
-            appLogger.info(
-              LogCategory.farm,
-              'Loaded ${activities.length} activities',
-            );
-            emit(ActivityLoaded(activities: activities));
-          },
-        );
-      } catch (e) {
-        appLogger.error(LogCategory.farm, 'GetActivities exception', e);
-        emit(ActivityError('Unexpected error: $e'));
-      }
+      final result = await getActivities(
+        GetActivitiesParams(sourceType: event.sourceType),
+      );
+      result.fold(
+        (failure) {
+          appLogger.warning(LogCategory.farm, 'GetActivities failed: $failure');
+          emit(ActivityError(resolveFailureMessage(failure, 'Failed to load activities')));
+        },
+        (activities) {
+          appLogger.info(LogCategory.farm, 'Loaded ${activities.length} activities');
+          emit(ActivityLoaded(activities: activities));
+        },
+      );
     });
 
     on<AddActivityEvent>((event, emit) async {
@@ -59,69 +44,65 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
         AddActivityParams(activity: event.activity),
       );
       result.fold(
-        (failure) {
-          String message = 'Failed to add activity';
-          if (failure is ServerFailure && failure.errorMessage != null) {
-            message = failure.errorMessage!;
-          }
-          emit(ActivityError(message, activities: currentActivities));
-        },
+        (failure) => emit(ActivityError(
+          resolveFailureMessage(failure, 'Failed to add activity'),
+          activities: currentActivities,
+        )),
         (activity) {
           final updatedActivities = List<Activity>.from(currentActivities)
             ..add(activity);
-          emit(ActivityLoaded(activities: updatedActivities));
+          emit(ActivityLoaded(
+            activities: updatedActivities,
+            successMessage: 'Activity recorded',
+          ));
         },
       );
     });
 
     on<UpdateActivityEvent>((event, emit) async {
-      final currentActivities = state is ActivityLoaded
-          ? (state as ActivityLoaded).activities
-          : <Activity>[];
+      final currentActivities = state.activities;
 
-      emit(ActivityLoading());
+      emit(ActivityLoading(activities: currentActivities));
       final result = await updateActivity(
         UpdateActivityParams(activity: event.activity),
       );
       result.fold(
-        (failure) {
-          String message = 'Failed to update activity';
-          if (failure is ServerFailure && failure.errorMessage != null) {
-            message = failure.errorMessage!;
-          }
-          emit(ActivityError(message, activities: currentActivities));
-        },
+        (failure) => emit(ActivityError(
+          resolveFailureMessage(failure, 'Failed to update activity'),
+          activities: currentActivities,
+        )),
         (updatedActivity) {
           final updatedActivities = currentActivities.map((activity) {
             return activity.id == updatedActivity.id
                 ? updatedActivity
                 : activity;
           }).toList();
-          emit(ActivityLoaded(activities: updatedActivities));
+          emit(ActivityLoaded(
+            activities: updatedActivities,
+            successMessage: 'Activity updated',
+          ));
         },
       );
     });
 
     on<DeleteActivityEvent>((event, emit) async {
-      final currentActivities = state is ActivityLoaded
-          ? (state as ActivityLoaded).activities
-          : <Activity>[];
+      final currentActivities = state.activities;
 
-      emit(ActivityLoading());
+      emit(ActivityLoading(activities: currentActivities));
       final result = await deleteActivity(DeleteActivityParams(id: event.id));
       result.fold(
-        (failure) {
-          String message = 'Failed to delete activity';
-          if (failure is ServerFailure && failure.errorMessage != null) {
-            message = failure.errorMessage!;
-          }
-          emit(ActivityError(message, activities: currentActivities));
-        },
+        (failure) => emit(ActivityError(
+          resolveFailureMessage(failure, 'Failed to delete activity'),
+          activities: currentActivities,
+        )),
         (_) {
           final updatedActivities = currentActivities
               .where((activity) => activity.id != event.id)
               .toList();
-          emit(ActivityLoaded(activities: updatedActivities));
+          emit(ActivityLoaded(
+            activities: updatedActivities,
+            successMessage: 'Activity deleted',
+          ));
         },
       );
     });

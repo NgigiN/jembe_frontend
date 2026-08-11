@@ -1,6 +1,17 @@
 import 'package:flutter/material.dart';
 
 class EntityListTile extends StatelessWidget {
+  const EntityListTile({
+    required this.leadingIcon,
+    required this.title,
+    super.key,
+    this.leadingBackgroundColor,
+    this.leadingIconColor,
+    this.subtitleFields = const [],
+    this.onTap,
+    this.onEdit,
+    this.onDelete,
+  });
   final IconData leadingIcon;
   final Color? leadingBackgroundColor;
   final Color? leadingIconColor;
@@ -9,18 +20,6 @@ class EntityListTile extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
-
-  const EntityListTile({
-    super.key,
-    required this.leadingIcon,
-    this.leadingBackgroundColor,
-    this.leadingIconColor,
-    required this.title,
-    this.subtitleFields = const [],
-    this.onTap,
-    this.onEdit,
-    this.onDelete,
-  });
 
   @override
   Widget build(BuildContext context) {
@@ -75,10 +74,7 @@ class EntityListTile extends StatelessWidget {
                         children: [
                           Icon(Icons.delete, color: Colors.red),
                           SizedBox(width: 8),
-                          Text(
-                            'Delete',
-                            style: TextStyle(color: Colors.red),
-                          ),
+                          Text('Delete', style: TextStyle(color: Colors.red)),
                         ],
                       ),
                     ),

@@ -1,10 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/validation/parse.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
+import 'package:farm_tracker/core/widgets/crud/cost_category_type_selector.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_list_tile.dart';
+import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_state.dart';
@@ -13,14 +25,18 @@ import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
 import 'package:farm_tracker/features/farm/domain/entities/input.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
+import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_state.dart';
+
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
-import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
 import 'package:farm_tracker/features/farm/data/models/input_model.dart';
 
 class InputPage extends StatefulWidget {
@@ -38,6 +54,7 @@ class _InputPageState extends State<InputPage> {
     context.read<InputBloc>().add(GetInputsEvent(sourceType: widget.sourceType));
     context.read<HerdBloc>().add(GetHerdsEvent());
     context.read<SeasonBloc>().add(GetSeasonsEvent());
+    context.read<LandBloc>().add(GetLandsEvent());
     context.read<CostCategoryBloc>().add(
           const GetCostCategoriesEvent(category: 'input'),
         );
@@ -45,6 +62,14 @@ class _InputPageState extends State<InputPage> {
 
   @override
   Widget build(BuildContext context) {
+    final seasonState = context.watch<SeasonBloc>().state;
+    final seasons =
+        seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
+    final landState = context.watch<LandBloc>().state;
+    final lands = landState is LandLoaded ? landState.lands : <Land>[];
+    final herdState = context.watch<HerdBloc>().state;
+    final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Input Management'),
@@ -54,13 +79,24 @@ class _InputPageState extends State<InputPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocBuilder<InputBloc, InputState>(
+      body: BlocConsumer<InputBloc, InputState>(
+        listener: (context, state) {
+          if (state is InputLoaded && state.successMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.success(state.successMessage!),
+            );
+          } else if (state is InputError && state.inputs.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.error(state.message),
+            );
+          }
+        },
         builder: (context, state) {
-          if (state is InputLoading) {
-            return const Center(child: CircularProgressIndicator());
+          if (state is InputLoading && state.inputs.isEmpty) {
+            return const SkeletonEntityList(icon: Icons.inventory_2);
           }
 
-          if (state is InputError) {
+          if (state is InputError && state.inputs.isEmpty) {
             return EntityErrorView(
               message: state.message,
               onRetry: () =>
@@ -68,47 +104,57 @@ class _InputPageState extends State<InputPage> {
             );
           }
 
-          if (state is InputLoaded) {
-            final inputs = state.inputs;
-            if (inputs.isEmpty) {
-              return EntityEmptyView(
-                icon: Icons.input,
-                title: 'No inputs registered yet',
-                subtitle: 'Tap the + button to add your first input',
-              );
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: inputs.length,
-              itemBuilder: (context, index) {
-                final input = inputs[index];
-                return EntityListTile(
-                  leadingIcon: Icons.input,
-                  leadingBackgroundColor: Colors.purple.shade100,
-                  leadingIconColor: Colors.purple.shade700,
-                  title: input.type,
-                  subtitleFields: [
-                    Text('Cost: Ksh ${input.cost.toStringAsFixed(2)}'),
-                    if (input.quantity != null)
-                      Text('Quantity: ${input.quantity}'),
-                    Text('Date: ${_formatDate(input.date)}'),
-                    if (input.notes != null && input.notes!.isNotEmpty)
-                      Text('Notes: ${input.notes}'),
-                  ],
-                  onEdit: () => _showEditInputDialog(context, input),
-                  onDelete: () => _showDeleteConfirmation(context, input),
-                );
-              },
+          final inputs = state.inputs;
+          if (inputs.isEmpty) {
+            return EntityEmptyView(
+              icon: Icons.input,
+              title: 'No inputs registered yet',
+              subtitle: 'Tap the + button to add your first input',
             );
           }
 
-          return const SizedBox.shrink();
+          return ListView.builder(
+              padding: context.scrollListPadding(forFab: true),
+              itemCount: inputs.length,
+              itemBuilder: (context, index) {
+                final input = inputs[index];
+                final isPlant = input.sourceType == 'plant';
+                final categoryColor = isPlant
+                    ? AppColors.plantCategory
+                    : AppColors.animalCategory;
+                final subtitle = isPlant
+                    ? '${seasonName(seasons, input.sourceId)} · ${landNameForSeason(seasons, lands, input.sourceId)}'
+                    : herdName(herds, input.sourceId);
+
+                return EntityCard(
+                  icon: Icons.input,
+                  iconColor: categoryColor,
+                  title: input.type,
+                  subtitle: '$subtitle · ${_formatDate(input.date)}',
+                  trailing: Text(
+                    'Ksh ${input.cost.toStringAsFixed(0)}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                  ),
+                  onTap: () => _showInputDetails(
+                    context,
+                    input,
+                    seasons: seasons,
+                    lands: lands,
+                    herds: herds,
+                  ),
+                );
+              },
+            );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddInputDialog(context),
-        child: const Icon(Icons.add),
+      floatingActionButton: SafeFloatingActionButton(
+        child: FloatingActionButton(
+          onPressed: () => _showAddInputDialog(context),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
@@ -117,7 +163,47 @@ class _InputPageState extends State<InputPage> {
     return '${date.day}/${date.month}/${date.year}';
   }
 
+  void _showInputDetails(
+    BuildContext context,
+    Input input, {
+    required List<Season> seasons,
+    required List<Land> lands,
+    required List<Herd> herds,
+  }) {
+    final isPlant = input.sourceType == 'plant';
+    EntityDetailsSheet.show(
+      context: context,
+      title: input.type,
+      badgeLabel: input.sourceType.toUpperCase(),
+      badgeColor:
+          isPlant ? AppColors.plantCategory : AppColors.animalCategory,
+      details: [
+        if (isPlant) ...[
+          EntityDetailRow('Season', seasonName(seasons, input.sourceId)),
+          EntityDetailRow(
+            'Land',
+            landNameForSeason(seasons, lands, input.sourceId),
+          ),
+        ] else
+          EntityDetailRow('Herd', herdName(herds, input.sourceId)),
+        if (input.quantity != null)
+          EntityDetailRow('Quantity', input.quantity.toString()),
+        EntityDetailRow(
+          'Cost',
+          'Ksh ${input.cost.toStringAsFixed(2)}',
+          isPrimary: true,
+        ),
+        EntityDetailRow('Date', _formatDate(input.date)),
+        if (input.notes != null && input.notes!.isNotEmpty)
+          EntityDetailRow('Notes', input.notes!),
+      ],
+      onEdit: () => _showEditInputDialog(context, input),
+      onDelete: () => _showDeleteConfirmation(context, input),
+    );
+  }
+
   Future<void> _showAddInputDialog(BuildContext context) async {
+    final formKey = GlobalKey<FormState>();
     final typeController = TextEditingController();
     final quantityController = TextEditingController();
     final costController = TextEditingController();
@@ -130,10 +216,8 @@ class _InputPageState extends State<InputPage> {
     final seasonState = context.read<SeasonBloc>().state;
     final seasons = seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
 
-    final costCategoryState = context.read<CostCategoryBloc>().state;
-    final allCategories = costCategoryState is CostCategoryLoaded
-        ? costCategoryState.categories
-        : <CostCategory>[];
+    final landState = context.read<LandBloc>().state;
+    final lands = landState is LandLoaded ? landState.lands : <Land>[];
 
     final herdState = context.read<HerdBloc>().state;
     final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
@@ -182,167 +266,149 @@ class _InputPageState extends State<InputPage> {
                 Expanded(
                   child: EntityFormSheet.scrollableForm(
                     context: context,
-                    child: Column(
-                      children: [
-                        DropdownButtonFormField<String>(
-                          initialValue: selectedSourceType,
-                          decoration: const InputDecoration(
-                            labelText: 'Source Type *',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'plant',
-                              child: Text('Plant'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'animal',
-                              child: Text('Animal'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              selectedSourceType = value ?? 'plant';
-                              selectedSeasonId = null;
-                              selectedHerdId = null;
-                              typeController.clear();
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        if (selectedSourceType == 'plant')
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        children: [
                           DropdownButtonFormField<String>(
-                            initialValue: selectedSeasonId,
+                            initialValue: selectedSourceType,
                             decoration: const InputDecoration(
-                              labelText: 'Select Season *',
+                              labelText: 'Source Type *',
                               border: OutlineInputBorder(),
                             ),
-                            items: seasons.map((season) {
-                              return DropdownMenuItem<String>(
-                                value: season.id,
-                                child: Text(season.name),
-                              );
-                            }).toList(),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'plant',
+                                child: Text('Plant'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'animal',
+                                child: Text('Animal'),
+                              ),
+                            ],
+                            validator: (value) =>
+                                requiredSelection(value, fieldLabel: 'source type'),
                             onChanged: (value) {
                               setState(() {
-                                selectedSeasonId = value;
+                                selectedSourceType = value ?? 'plant';
+                                selectedSeasonId = null;
+                                selectedHerdId = null;
+                                typeController.clear();
                               });
                             },
                           ),
-                        if (selectedSourceType == 'animal')
-                          DropdownButtonFormField<String>(
-                            initialValue: selectedHerdId,
-                            decoration: const InputDecoration(
-                              labelText: 'Select Herd *',
-                              border: OutlineInputBorder(),
-                            ),
-                            items: herds.map((herd) {
-                              return DropdownMenuItem<String>(
-                                value: herd.id,
-                                child: Text(
-                                  '${herd.name} (${herd.location})',
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                selectedHerdId = value;
-                              });
-                            },
-                          ),
-                        if (selectedSourceType == 'plant' ||
-                            selectedSourceType == 'animal')
                           const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                decoration: const InputDecoration(
-                                  labelText: 'Input Type *',
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: allCategories
-                                    .where(
-                                        (c) => c.type == selectedSourceType)
-                                    .map((category) {
-                                  return DropdownMenuItem<String>(
-                                    value: category.name,
-                                    child: Text(category.name),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    typeController.text = value ?? '';
-                                  });
-                                },
+                          if (selectedSourceType == 'plant')
+                            DropdownButtonFormField<String>(
+                              initialValue: selectedSeasonId,
+                              decoration: const InputDecoration(
+                                labelText: 'Select Season *',
+                                border: OutlineInputBorder(),
                               ),
+                              items: seasons.map((season) {
+                                return DropdownMenuItem<String>(
+                                  value: season.id,
+                                  child: Text(seasonDropdownLabel(season, lands)),
+                                );
+                              }).toList(),
+                              validator: (value) =>
+                                  requiredSelection(value, fieldLabel: 'season'),
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedSeasonId = value;
+                                });
+                              },
                             ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              onPressed: () => _showCreateInputTypeDialog(
-                                context,
-                                selectedSourceType!,
+                          if (selectedSourceType == 'animal')
+                            DropdownButtonFormField<String>(
+                              initialValue: selectedHerdId,
+                              decoration: const InputDecoration(
+                                labelText: 'Select Herd *',
+                                border: OutlineInputBorder(),
                               ),
-                              icon: const Icon(Icons.add_circle_outline),
-                              tooltip: 'Add new input type',
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.green.shade50,
-                              ),
+                              items: herds.map((herd) {
+                                return DropdownMenuItem<String>(
+                                  value: herd.id,
+                                  child: Text(
+                                    '${herd.name} (${herd.location})',
+                                  ),
+                                );
+                              }).toList(),
+                              validator: (value) =>
+                                  requiredSelection(value, fieldLabel: 'herd'),
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedHerdId = value;
+                                });
+                              },
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: quantityController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Quantity (Optional)',
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: costController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Cost *',
-                            border: OutlineInputBorder(),
-                            prefixText: 'Ksh ',
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ListTile(
-                          title: const Text('Date *'),
-                          subtitle: Text(
-                            selectedDate != null
-                                ? _formatDate(selectedDate!)
-                                : 'Select date',
-                          ),
-                          trailing: const Icon(Icons.calendar_today),
-                          onTap: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate: DateTime.now(),
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2030),
-                            );
-                            if (date != null) {
+                          if (selectedSourceType == 'plant' ||
+                              selectedSourceType == 'animal')
+                            const SizedBox(height: 16),
+                          CostCategoryTypeSelector(
+                            categoryKind: 'input',
+                            sourceType: selectedSourceType!,
+                            selectedType: typeController.text,
+                            labelText: 'Input Type *',
+                            addButtonBackgroundColor: Colors.green.shade50,
+                            validator: (value) => requiredName(
+                              value,
+                              fieldLabel: 'Input type',
+                            ),
+                            onTypeChanged: (value) {
                               setState(() {
-                                selectedDate = date;
+                                typeController.text = value;
                               });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: notesController,
-                          maxLines: 3,
-                          decoration: const InputDecoration(
-                            labelText: 'Notes (Optional)',
-                            border: OutlineInputBorder(),
+                            },
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 16),
+                          ValidatedDecimalField(
+                            controller: quantityController,
+                            labelText: 'Quantity (Optional)',
+                            validator: (value) => optionalNonNegativeDecimal(
+                              value,
+                              fieldLabel: 'Quantity',
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ValidatedDecimalField(
+                            controller: costController,
+                            labelText: 'Cost *',
+                            hintText: '0.00',
+                            validator: (value) =>
+                                positiveDecimal(value, fieldLabel: 'Cost'),
+                          ),
+                          const SizedBox(height: 16),
+                          ListTile(
+                            title: const Text('Date *'),
+                            subtitle: Text(
+                              selectedDate != null
+                                  ? _formatDate(selectedDate!)
+                                  : 'Select date',
+                            ),
+                            trailing: const Icon(Icons.calendar_today),
+                            onTap: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: DateTime.now(),
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2030),
+                              );
+                              if (date != null) {
+                                setState(() {
+                                  selectedDate = date;
+                                });
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          ValidatedNotesField(
+                            controller: notesController,
+                            labelText: 'Notes (Optional)',
+                            validator: optionalNotes,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -351,67 +417,7 @@ class _InputPageState extends State<InputPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      if (selectedSourceType == 'plant' &&
-                          selectedSeasonId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a season'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (selectedSourceType == 'animal' &&
-                          selectedHerdId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a herd'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (typeController.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select an input type'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (costController.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please enter a cost'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      final cost =
-                          double.tryParse(costController.text.trim());
-                      if (cost == null || cost <= 0) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please enter a valid cost'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (selectedDate == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a date'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
+                      if (!(formKey.currentState?.validate() ?? false)) {
                         return;
                       }
 
@@ -424,14 +430,13 @@ class _InputPageState extends State<InputPage> {
                         sourceId: sourceId,
                         animalId:
                             selectedSourceType == 'animal' ? 0 : null,
-                        type: typeController.text.trim(),
-                        quantity:
-                            double.tryParse(quantityController.text.trim()),
-                        cost: cost,
+                        type: sanitizeText(typeController.text),
+                        quantity: parseOptionalNonNegativeDecimal(
+                          quantityController.text,
+                        ),
+                        cost: parsePositiveDecimal(costController.text)!,
                         date: selectedDate!,
-                        notes: notesController.text.trim().isEmpty
-                            ? null
-                            : notesController.text.trim(),
+                        notes: sanitizeOptionalText(notesController.text),
                       );
                       context.read<InputBloc>().add(AddInputEvent(input));
                       Navigator.pop(context);
@@ -457,6 +462,7 @@ class _InputPageState extends State<InputPage> {
   }
 
   Future<void> _showEditInputDialog(BuildContext context, Input input) async {
+    final formKey = GlobalKey<FormState>();
     final typeController = TextEditingController(text: input.type);
     final quantityController = TextEditingController(
       text: input.quantity?.toString() ?? '',
@@ -474,10 +480,8 @@ class _InputPageState extends State<InputPage> {
     final seasons =
         seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
 
-    final costCategoryState = context.read<CostCategoryBloc>().state;
-    final allCategories = costCategoryState is CostCategoryLoaded
-        ? costCategoryState.categories
-        : <CostCategory>[];
+    final landState = context.read<LandBloc>().state;
+    final lands = landState is LandLoaded ? landState.lands : <Land>[];
 
     final herdState = context.read<HerdBloc>().state;
     final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
@@ -527,177 +531,153 @@ class _InputPageState extends State<InputPage> {
                 Expanded(
                   child: EntityFormSheet.scrollableForm(
                     context: context,
-                    child: Column(
-                      children: [
-                        DropdownButtonFormField<String>(
-                          initialValue: selectedSourceType,
-                          decoration: const InputDecoration(
-                            labelText: 'Source Type *',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'plant',
-                              child: Text('Plant'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'animal',
-                              child: Text('Animal'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              selectedSourceType = value ?? 'plant';
-                              if (selectedSourceType == 'plant') {
-                                selectedHerdId = null;
-                              } else {
-                                selectedSeasonId = null;
-                              }
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        if (selectedSourceType == 'plant')
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        children: [
                           DropdownButtonFormField<String>(
-                            initialValue: selectedSeasonId,
+                            initialValue: selectedSourceType,
                             decoration: const InputDecoration(
-                              labelText: 'Select Season *',
+                              labelText: 'Source Type *',
                               border: OutlineInputBorder(),
                             ),
-                            items: seasons.map((season) {
-                              return DropdownMenuItem<String>(
-                                value: season.id,
-                                child: Text(season.name),
-                              );
-                            }).toList(),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'plant',
+                                child: Text('Plant'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'animal',
+                                child: Text('Animal'),
+                              ),
+                            ],
+                            validator: (value) =>
+                                requiredSelection(value, fieldLabel: 'source type'),
                             onChanged: (value) {
                               setState(() {
-                                selectedSeasonId = value;
+                                selectedSourceType = value ?? 'plant';
+                                if (selectedSourceType == 'plant') {
+                                  selectedHerdId = null;
+                                } else {
+                                  selectedSeasonId = null;
+                                }
                               });
                             },
                           ),
-                        if (selectedSourceType == 'animal')
-                          DropdownButtonFormField<String>(
-                            initialValue: selectedHerdId,
-                            decoration: const InputDecoration(
-                              labelText: 'Select Herd *',
-                              border: OutlineInputBorder(),
-                            ),
-                            items: herds
-                                .map<DropdownMenuItem<String>>((herd) {
-                              return DropdownMenuItem<String>(
-                                value: herd.id,
-                                child: Text(
-                                    '${herd.name} (${herd.location})'),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                selectedHerdId = value;
-                              });
-                            },
-                          ),
-                        if (selectedSourceType == 'plant' ||
-                            selectedSourceType == 'animal')
                           const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                initialValue: typeController.text.isEmpty
-                                    ? null
-                                    : typeController.text,
-                                decoration: const InputDecoration(
-                                  labelText: 'Input Type *',
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: allCategories
-                                    .where(
-                                        (c) => c.type == selectedSourceType)
-                                    .map((category) {
-                                  return DropdownMenuItem<String>(
-                                    value: category.name,
-                                    child: Text(category.name),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    typeController.text = value ?? '';
-                                  });
-                                },
+                          if (selectedSourceType == 'plant')
+                            DropdownButtonFormField<String>(
+                              initialValue: selectedSeasonId,
+                              decoration: const InputDecoration(
+                                labelText: 'Select Season *',
+                                border: OutlineInputBorder(),
                               ),
+                              items: seasons.map((season) {
+                                return DropdownMenuItem<String>(
+                                  value: season.id,
+                                  child: Text(seasonDropdownLabel(season, lands)),
+                                );
+                              }).toList(),
+                              validator: (value) =>
+                                  requiredSelection(value, fieldLabel: 'season'),
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedSeasonId = value;
+                                });
+                              },
                             ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              onPressed: () =>
-                                  _showCreateInputTypeDialog(
-                                context,
-                                selectedSourceType!,
+                          if (selectedSourceType == 'animal')
+                            DropdownButtonFormField<String>(
+                              initialValue: selectedHerdId,
+                              decoration: const InputDecoration(
+                                labelText: 'Select Herd *',
+                                border: OutlineInputBorder(),
                               ),
-                              icon: const Icon(Icons.add_circle_outline),
-                              tooltip: 'Add new input type',
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.blue.shade50,
-                              ),
+                              items: herds
+                                  .map<DropdownMenuItem<String>>((herd) {
+                                return DropdownMenuItem<String>(
+                                  value: herd.id,
+                                  child: Text(
+                                      '${herd.name} (${herd.location})'),
+                                );
+                              }).toList(),
+                              validator: (value) =>
+                                  requiredSelection(value, fieldLabel: 'herd'),
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedHerdId = value;
+                                });
+                              },
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: quantityController,
-                          decoration: const InputDecoration(
-                            labelText: 'Quantity (Optional)',
-                            border: OutlineInputBorder(),
-                            hintText: 'Enter quantity',
-                          ),
-                          keyboardType: TextInputType.number,
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: costController,
-                          decoration: const InputDecoration(
-                            labelText: 'Cost *',
-                            border: OutlineInputBorder(),
-                            prefixText: 'Ksh ',
-                            hintText: '0.00',
-                          ),
-                          keyboardType: TextInputType.number,
-                        ),
-                        const SizedBox(height: 16),
-                        ListTile(
-                          title: const Text('Date *'),
-                          subtitle: Text(
-                            selectedDate != null
-                                ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
-                                : 'Select date',
-                          ),
-                          trailing: const Icon(Icons.calendar_today),
-                          onTap: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate:
-                                  selectedDate ?? DateTime.now(),
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2030),
-                            );
-                            if (date != null) {
+                          if (selectedSourceType == 'plant' ||
+                              selectedSourceType == 'animal')
+                            const SizedBox(height: 16),
+                          CostCategoryTypeSelector(
+                            categoryKind: 'input',
+                            sourceType: selectedSourceType!,
+                            selectedType: typeController.text,
+                            labelText: 'Input Type *',
+                            addButtonBackgroundColor: Colors.blue.shade50,
+                            validator: (value) => requiredName(
+                              value,
+                              fieldLabel: 'Input type',
+                            ),
+                            onTypeChanged: (value) {
                               setState(() {
-                                selectedDate = date;
+                                typeController.text = value;
                               });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: notesController,
-                          decoration: const InputDecoration(
-                            labelText: 'Notes (Optional)',
-                            border: OutlineInputBorder(),
-                            hintText: 'Enter additional notes',
+                            },
                           ),
-                          maxLines: 3,
-                        ),
-                      ],
+                          const SizedBox(height: 16),
+                          ValidatedDecimalField(
+                            controller: quantityController,
+                            labelText: 'Quantity (Optional)',
+                            hintText: 'Enter quantity',
+                            validator: (value) => optionalNonNegativeDecimal(
+                              value,
+                              fieldLabel: 'Quantity',
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ValidatedDecimalField(
+                            controller: costController,
+                            labelText: 'Cost *',
+                            hintText: '0.00',
+                            validator: (value) =>
+                                positiveDecimal(value, fieldLabel: 'Cost'),
+                          ),
+                          const SizedBox(height: 16),
+                          ListTile(
+                            title: const Text('Date *'),
+                            subtitle: Text(
+                              selectedDate != null
+                                  ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
+                                  : 'Select date',
+                            ),
+                            trailing: const Icon(Icons.calendar_today),
+                            onTap: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate:
+                                    selectedDate ?? DateTime.now(),
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2030),
+                              );
+                              if (date != null) {
+                                setState(() {
+                                  selectedDate = date;
+                                });
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          ValidatedNotesField(
+                            controller: notesController,
+                            labelText: 'Notes (Optional)',
+                            validator: optionalNotes,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -706,67 +686,7 @@ class _InputPageState extends State<InputPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () async {
-                      if (selectedSourceType == 'plant' &&
-                          selectedSeasonId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a season'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (selectedSourceType == 'animal' &&
-                          selectedHerdId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a herd'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (typeController.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select an input type'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (costController.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please enter a cost'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      final cost =
-                          double.tryParse(costController.text.trim());
-                      if (cost == null || cost <= 0) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please enter a valid cost'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (selectedDate == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select a date'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
+                      if (!(formKey.currentState?.validate() ?? false)) {
                         return;
                       }
 
@@ -780,14 +700,13 @@ class _InputPageState extends State<InputPage> {
                         sourceId: sourceId,
                         animalId:
                             selectedSourceType == 'animal' ? 0 : null,
-                        type: typeController.text.trim(),
-                        quantity: double.tryParse(
-                            quantityController.text.trim()),
-                        cost: cost,
+                        type: sanitizeText(typeController.text),
+                        quantity: parseOptionalNonNegativeDecimal(
+                          quantityController.text,
+                        ),
+                        cost: parsePositiveDecimal(costController.text)!,
                         date: selectedDate!,
-                        notes: notesController.text.trim().isEmpty
-                            ? null
-                            : notesController.text.trim(),
+                        notes: sanitizeOptionalText(notesController.text),
                         createdAt: input.createdAt,
                         updatedAt: DateTime.now(),
                       );
@@ -796,12 +715,6 @@ class _InputPageState extends State<InputPage> {
                           .read<InputBloc>()
                           .add(UpdateInputEvent(updatedInput));
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Input updated successfully'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
@@ -836,79 +749,7 @@ class _InputPageState extends State<InputPage> {
     );
     if (confirmed == true) {
       context.read<InputBloc>().add(DeleteInputEvent(input.id));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${input.type} input deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     }
   }
 
-  void _showCreateInputTypeDialog(
-    BuildContext context,
-    String sourceType,
-  ) {
-    final nameController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Add New ${sourceType == 'plant' ? 'Plant' : 'Animal'} Input Type',
-        ),
-        content: TextField(
-          controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Input Type Name',
-            hintText: 'e.g., Custom Fertilizer',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please enter a name'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                return;
-              }
-
-              context.read<CostCategoryBloc>().add(
-                    AddCostCategoryEvent(
-                      name: nameController.text.trim(),
-                      type: sourceType,
-                      category: 'input',
-                    ),
-                  );
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    '${nameController.text.trim()} added successfully',
-                  ),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade600,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-  }
 }

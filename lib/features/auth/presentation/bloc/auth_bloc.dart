@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart' as auth_google;
 import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
+import 'package:farm_tracker/features/auth/data/services/google_sign_in_service.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:farm_tracker/features/auth/domain/entities/user.dart';
 
@@ -26,6 +27,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
 
       try {
+        await GoogleSignInService.ensureInitialized();
+
         final auth_google.GoogleSignIn googleSignIn = auth_google.GoogleSignIn.instance;
 
         final auth_google.GoogleSignInAccount? account = await googleSignIn.authenticate();
@@ -48,10 +51,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         
         await result.fold(
           (failure) async {
-            String message = 'Google Sign-In failed';
-            if (failure is ServerFailure && failure.errorMessage != null) {
-              message = failure.errorMessage!;
-            }
+            final message = resolveFailureMessage(failure, 'Google Sign-In failed');
             appLogger.logAuthEvent(
               'Google Sign-In failed',
               details: {'error': message},
@@ -69,7 +69,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
       } catch (e) {
         appLogger.logError('GoogleSignInRequested', e);
-        emit(AuthError('Google Sign-In failed: ${e.toString()}'));
+        emit(AuthError('Google Sign-In failed. Please try again.'));
       }
     });
 

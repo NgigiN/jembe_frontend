@@ -1,12 +1,12 @@
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
-import 'package:farm_tracker/features/auth/domain/entities/user.dart';
-import 'package:farm_tracker/features/auth/domain/repositories/auth_repository.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:farm_tracker/features/auth/data/models/user_model.dart';
 import 'package:farm_tracker/features/auth/data/models/user_storage_model.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
+import 'package:farm_tracker/features/auth/domain/entities/user.dart';
+import 'package:farm_tracker/features/auth/domain/repositories/auth_repository.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({required this.remoteDataSource});
@@ -25,6 +25,8 @@ class AuthRepositoryImpl implements AuthRepository {
       await UserStorageService.saveUserData(userStorage);
 
       return Right(userModel);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

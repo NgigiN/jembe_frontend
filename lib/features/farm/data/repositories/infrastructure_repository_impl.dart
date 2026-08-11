@@ -15,6 +15,8 @@ class InfrastructureRepositoryImpl implements InfrastructureRepository {
     try {
       final list = await remoteDataSource.getInfrastructures();
       return Right(list);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -44,6 +46,8 @@ class InfrastructureRepositoryImpl implements InfrastructureRepository {
       );
       final result = await remoteDataSource.addInfrastructure(model);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -78,6 +82,8 @@ class InfrastructureRepositoryImpl implements InfrastructureRepository {
       );
       final result = await remoteDataSource.updateInfrastructure(updatedModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -90,6 +96,8 @@ class InfrastructureRepositoryImpl implements InfrastructureRepository {
     try {
       await remoteDataSource.deleteInfrastructure(id);
       return const Right(null);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {

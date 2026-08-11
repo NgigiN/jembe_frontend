@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/features/profile/presentation/widgets/typed_delete_account_dialog.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_event.dart';
@@ -24,6 +29,7 @@ class _SettingsPageState extends State<SettingsPage> {
   String _lastName = '';
   String _email = '';
   String _pictureUrl = '';
+  int _fiscalYearStartMonth = 1;
 
   @override
   void initState() {
@@ -49,6 +55,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _lastName = state.user.lastName;
     _email = state.user.email;
     _pictureUrl = state.user.pictureUrl;
+    _fiscalYearStartMonth = state.user.fiscalYearStartMonth;
   }
 
   void _onSaveProfile() {
@@ -57,8 +64,9 @@ class _SettingsPageState extends State<SettingsPage> {
         UpdateProfileEvent(
           firstName: _firstName,
           lastName: _lastName,
-          farmName: _farmNameController.text,
-          location: _locationController.text,
+          fiscalYearStartMonth: _fiscalYearStartMonth,
+          farmName: sanitizeText(_farmNameController.text),
+          location: sanitizeText(_locationController.text),
         ),
       );
     }
@@ -66,6 +74,20 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _onLogout() {
     context.read<AuthBloc>().add(LogoutEvent());
+  }
+
+  Future<void> _onDeleteAccount() async {
+    final confirmed = await TypedDeleteAccountDialog.show(
+      context: context,
+      title: 'Delete Account',
+      message:
+          'This permanently deletes your account and all farm data '
+          '(harvests, land, animals, revenue, costs). This cannot be undone.',
+    );
+    if (confirmed ?? false) {
+      if (!mounted) return;
+      context.read<ProfileBloc>().add(DeleteAccountEvent());
+    }
   }
 
   @override
@@ -85,19 +107,18 @@ class _SettingsPageState extends State<SettingsPage> {
         listener: (context, state) {
           if (state is ProfileOperationSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.green,
-              ),
+              AppSnackBar.success(state.message),
             );
             context.read<ProfileBloc>().add(FetchProfileEvent());
           } else if (state is ProfileError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
+              AppSnackBar.error(state.message),
             );
+          } else if (state is AccountDeleted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.success('Account deleted'),
+            );
+            context.read<AuthBloc>().add(LogoutEvent());
           }
         },
         builder: (context, profileState) {
@@ -232,26 +253,17 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ],
                               ),
                               const SizedBox(height: 16),
-                              TextFormField(
+                              ValidatedNameField(
                                 controller: _farmNameController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Farm Name',
-                                ),
+                                labelText: 'Farm Name',
                                 validator: (value) =>
-                                    value == null || value.isEmpty
-                                        ? 'Required'
-                                        : null,
+                                    requiredName(value, fieldLabel: 'Farm name'),
                               ),
                               const SizedBox(height: 16),
-                              TextFormField(
+                              ValidatedLocationField(
                                 controller: _locationController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Location',
-                                ),
-                                validator: (value) =>
-                                    value == null || value.isEmpty
-                                        ? 'Required'
-                                        : null,
+                                labelText: 'Location',
+                                validator: (value) => requiredLocation(value),
                               ),
                               const SizedBox(height: 24),
                               ElevatedButton.icon(
@@ -276,6 +288,69 @@ class _SettingsPageState extends State<SettingsPage> {
                             ],
                           ),
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSettingsCard(
+                      context,
+                      title: 'Farm Year',
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: DropdownButtonFormField<int>(
+                          initialValue: _fiscalYearStartMonth,
+                          decoration: const InputDecoration(
+                            labelText: 'Our farm year starts in',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 1, child: Text('January')),
+                            DropdownMenuItem(value: 2, child: Text('February')),
+                            DropdownMenuItem(value: 3, child: Text('March')),
+                            DropdownMenuItem(value: 4, child: Text('April')),
+                            DropdownMenuItem(value: 5, child: Text('May')),
+                            DropdownMenuItem(value: 6, child: Text('June')),
+                            DropdownMenuItem(value: 7, child: Text('July')),
+                            DropdownMenuItem(value: 8, child: Text('August')),
+                            DropdownMenuItem(value: 9, child: Text('September')),
+                            DropdownMenuItem(value: 10, child: Text('October')),
+                            DropdownMenuItem(value: 11, child: Text('November')),
+                            DropdownMenuItem(value: 12, child: Text('December')),
+                          ],
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() => _fiscalYearStartMonth = value);
+                            context.read<ProfileBloc>().add(
+                              UpdateProfileEvent(
+                                firstName: _firstName,
+                                lastName: _lastName,
+                                fiscalYearStartMonth: value,
+                                farmName: sanitizeText(_farmNameController.text),
+                                location: sanitizeText(_locationController.text),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSettingsCard(
+                      context,
+                      title: 'Danger Zone',
+                      child: ListTile(
+                        leading: const Icon(
+                          Icons.delete_forever,
+                          color: Colors.red,
+                        ),
+                        title: const Text(
+                          'Delete Account',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                        subtitle: const Text(
+                          'Permanently delete your account and all farm data',
+                        ),
+                        onTap: profileState is ProfileLoading
+                            ? null
+                            : _onDeleteAccount,
                       ),
                     ),
                   ],

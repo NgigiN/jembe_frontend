@@ -6,7 +6,7 @@ abstract class InputState extends Equatable {
   final List<Input> inputs;
 
   @override
-  List<Object> get props => [inputs];
+  List<Object?> get props => [inputs];
 }
 
 class InputInitial extends InputState {}
@@ -16,10 +16,11 @@ class InputLoading extends InputState {
 }
 
 class InputLoaded extends InputState {
-  const InputLoaded({required super.inputs});
+  const InputLoaded({required super.inputs, this.successMessage});
+  final String? successMessage;
 
   @override
-  List<Object> get props => [inputs];
+  List<Object?> get props => [inputs, successMessage];
 }
 
 class InputError extends InputState {

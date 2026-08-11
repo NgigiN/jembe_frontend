@@ -15,6 +15,8 @@ class PlantRepositoryImpl implements PlantRepository {
     try {
       final plants = await remoteDataSource.getPlants();
       return Right(plants);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -31,6 +33,8 @@ class PlantRepositoryImpl implements PlantRepository {
 
       final result = await remoteDataSource.addPlant(plantModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -49,6 +53,8 @@ class PlantRepositoryImpl implements PlantRepository {
       );
       final result = await remoteDataSource.updatePlant(plantModel);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -59,6 +65,8 @@ class PlantRepositoryImpl implements PlantRepository {
     try {
       await remoteDataSource.deletePlant(id);
       return const Right(null);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

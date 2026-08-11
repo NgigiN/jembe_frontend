@@ -4,10 +4,12 @@ class EntityFormSheet {
   static Future<void> show({
     required BuildContext context,
     required String title,
-    double heightFactor = 0.8,
     required List<Widget> fields,
     required String submitLabel,
     required void Function(BuildContext sheetContext) onSubmit,
+    GlobalKey<FormState>? formKey,
+    AutovalidateMode autovalidateMode = AutovalidateMode.disabled,
+    double heightFactor = 0.8,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -27,9 +29,8 @@ class EntityFormSheet {
                 children: [
                   Text(
                     title,
-                    style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(sheetContext).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(sheetContext),
@@ -41,16 +42,26 @@ class EntityFormSheet {
               Expanded(
                 child: scrollableForm(
                   context: sheetContext,
-                  child: Column(
-                    children: fields,
-                  ),
+                  child: formKey == null
+                      ? Column(children: fields)
+                      : Form(
+                          key: formKey,
+                          autovalidateMode: autovalidateMode,
+                          child: Column(children: fields),
+                        ),
                 ),
               ),
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => onSubmit(sheetContext),
+                  onPressed: () {
+                    if (formKey != null &&
+                        !(formKey.currentState?.validate() ?? false)) {
+                      return;
+                    }
+                    onSubmit(sheetContext);
+                  },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -78,21 +89,30 @@ class EntityFormSheet {
     double heightFactor = 0.8,
   }) {
     final viewInsets = MediaQuery.viewInsetsOf(context);
-    final availableHeight = MediaQuery.sizeOf(context).height - viewInsets.bottom;
+    final systemPadding = MediaQuery.paddingOf(context);
+    final availableHeight = MediaQuery.sizeOf(context).height -
+        viewInsets.bottom -
+        systemPadding.bottom;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: viewInsets.bottom + systemPadding.bottom,
+      ),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOut,
         height: availableHeight * heightFactor,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(20),
-          ),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: child,
+        // Gives any ListTile/InkWell inside child a Material ancestor that
+        // paints above this container's own DecoratedBox, so their ink
+        // effects aren't swallowed by it.
+        child: Material(
+          type: MaterialType.transparency,
+          child: child,
+        ),
       ),
     );
   }

@@ -23,6 +23,8 @@ class RevenueRepositoryImpl implements RevenueRepository {
         endDate: endDate,
       );
       return Right(revenues);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -33,6 +35,8 @@ class RevenueRepositoryImpl implements RevenueRepository {
     try {
       final revenue = await remoteDataSource.getRevenueById(id);
       return Right(revenue);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -62,6 +66,8 @@ class RevenueRepositoryImpl implements RevenueRepository {
       );
       final revenue = await remoteDataSource.addRevenue(revenueModel);
       return Right(revenue);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -96,6 +102,8 @@ class RevenueRepositoryImpl implements RevenueRepository {
       );
       final revenue = await remoteDataSource.updateRevenue(revenueModel);
       return Right(revenue);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -106,6 +114,8 @@ class RevenueRepositoryImpl implements RevenueRepository {
     try {
       await remoteDataSource.deleteRevenue(id);
       return const Right(null);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

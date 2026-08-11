@@ -6,7 +6,7 @@ abstract class PlantState extends Equatable {
   final List<Plant> plants;
 
   @override
-  List<Object> get props => [plants];
+  List<Object?> get props => [plants];
 }
 
 class PlantInitial extends PlantState {}
@@ -16,10 +16,11 @@ class PlantLoading extends PlantState {
 }
 
 class PlantLoaded extends PlantState {
-  const PlantLoaded({required super.plants});
+  const PlantLoaded({required super.plants, this.successMessage});
+  final String? successMessage;
 
   @override
-  List<Object> get props => [plants];
+  List<Object?> get props => [plants, successMessage];
 }
 
 class PlantError extends PlantState {

@@ -1,11 +1,21 @@
-import 'package:flutter/material.dart';
+import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/core/utils/responsive_utils.dart';
+import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
+import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
+import 'package:farm_tracker/features/farm/domain/entities/farm_year.dart';
+import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
+import 'package:farm_tracker/features/farm/presentation/widgets/enterprise_picker.dart';
+import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:farm_tracker/features/profile/presentation/bloc/profile_event.dart';
+import 'package:farm_tracker/features/profile/presentation/bloc/profile_state.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:farm_tracker/core/navigation/app_router.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
-import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
-import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 
 class AnalysisPage extends StatelessWidget {
   const AnalysisPage({super.key});
@@ -13,17 +23,17 @@ class AnalysisPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Farm Analysis'),
-      ),
+      appBar: AppBar(title: const Text('Farm Analysis')),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-              Theme.of(context).colorScheme.surface
+              Theme.of(
+                context,
+              ).colorScheme.primaryContainer.withValues(alpha: 0.3),
+              Theme.of(context).colorScheme.surface,
             ],
           ),
         ),
@@ -40,8 +50,8 @@ class AnalysisPage extends StatelessWidget {
               Text(
                 'Track your farm performance and costs',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               SizedBox(height: context.paddingLarge),
               Expanded(
@@ -121,15 +131,17 @@ class AnalysisPage extends StatelessWidget {
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
                 'Tap to view',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: color),
               ),
             ],
           ),
@@ -149,7 +161,6 @@ class AnalysisPage extends StatelessWidget {
   }
 
   void _showAnnualSummary(BuildContext context) {
-    context.read<AnalysisBloc>().add(LoadAnnualCostSummary());
     context.push(AppRoutePath.annualSummary);
   }
 
@@ -161,15 +172,61 @@ class AnalysisPage extends StatelessWidget {
   }
 }
 
-class TotalCostsBySeasonPage extends StatelessWidget {
+class TotalCostsBySeasonPage extends StatefulWidget {
   const TotalCostsBySeasonPage({super.key});
+
+  @override
+  State<TotalCostsBySeasonPage> createState() =>
+      _TotalCostsBySeasonPageState();
+}
+
+class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
+  Enterprise? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<SeasonBloc>().add(GetSeasonsEvent());
+    context.read<HerdBloc>().add(GetHerdsEvent());
+  }
+
+  List<Enterprise> _buildEnterprises(BuildContext context) {
+    final seasons = context.watch<SeasonBloc>().state.seasons;
+    final herds = context.watch<HerdBloc>().state.herds;
+    return [
+      for (final season in seasons)
+        Enterprise(
+          id: season.id,
+          kind: EnterpriseKind.season,
+          name: season.name,
+          startDate: season.startDate,
+          endDate: season.endDate,
+        ),
+      for (final herd in herds)
+        Enterprise(
+          id: herd.id,
+          kind: EnterpriseKind.herd,
+          name: herd.name,
+          startDate: herd.startDate,
+          endDate: herd.endDate,
+        ),
+    ];
+  }
+
+  bool _matchesSelected(CostDetail detail) {
+    final selected = _selected;
+    if (selected == null) {
+      return detail.endDate == null || detail.endDate!.isAfter(DateTime.now());
+    }
+    final expectedType =
+        selected.kind == EnterpriseKind.season ? 'plant' : 'animal';
+    return detail.type == expectedType && detail.id.toString() == selected.id;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Unified Farm Costs'),
-      ),
+      appBar: AppBar(title: const Text('Unified Farm Costs')),
       body: BlocBuilder<AnalysisBloc, AnalysisState>(
         builder: (context, state) {
           if (state is AnalysisLoading) {
@@ -181,12 +238,16 @@ class TotalCostsBySeasonPage extends StatelessWidget {
               },
               child: ListView(
                 children: [
-                   SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.3),
                   Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           state.message,
@@ -196,7 +257,9 @@ class TotalCostsBySeasonPage extends StatelessWidget {
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () {
-                            context.read<AnalysisBloc>().add(LoadTotalCostsBySeason());
+                            context.read<AnalysisBloc>().add(
+                              LoadTotalCostsBySeason(),
+                            );
                           },
                           child: const Text('Retry'),
                         ),
@@ -212,90 +275,48 @@ class TotalCostsBySeasonPage extends StatelessWidget {
               return const Center(child: Text('No cost data available'));
             }
 
-            return RefreshIndicator(
-              onRefresh: () async {
-                context.read<AnalysisBloc>().add(LoadTotalCostsBySeason());
-              },
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: _buildTotalHeader(context, data.totalOverallCost),
+            final visibleDetails = data.details.where(_matchesSelected).toList();
+
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: EnterprisePicker(
+                    enterprises: _buildEnterprises(context),
+                    selected: _selected,
+                    onChanged: (value) => setState(() => _selected = value),
                   ),
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final detail = data.details[index];
-                          return _buildCostDetailItem(context, detail);
-                        },
-                        childCount: data.details.length,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                Expanded(
+                  child: visibleDetails.isEmpty
+                      ? const Center(
+                          child: Text('No cost data for this selection'),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: () async {
+                            context.read<AnalysisBloc>().add(
+                              LoadTotalCostsBySeason(),
+                            );
+                          },
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            itemCount: visibleDetails.length,
+                            itemBuilder: (context, index) {
+                              final detail = visibleDetails[index];
+                              return _buildCostDetailItem(context, detail);
+                            },
+                          ),
+                        ),
+                ),
+              ],
             );
           }
           return const Center(child: Text('No data loaded'));
         },
       ),
-    );
-  }
-
-  Widget _buildTotalHeader(BuildContext context, double total) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).colorScheme.primary,
-            Theme.of(context).colorScheme.tertiary,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      // child: Column(
-      //   children: [
-      //     Text(
-      //       'Total Overall Farm Cost',
-      //       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-      //             color: Colors.white.withValues(alpha: 0.9),
-      //           ),
-      //     ),
-      //     const SizedBox(height: 12),
-      //     Text(
-      //       'KES ${total.toStringAsFixed(2)}',
-      //       style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-      //             color: Colors.white,
-      //             fontWeight: FontWeight.bold,
-      //             letterSpacing: 1.2,
-      //           ),
-      //     ),
-      //     const SizedBox(height: 8),
-      //     Container(
-      //       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      //       decoration: BoxDecoration(
-      //         color: Colors.white.withValues(alpha: 0.2),
-      //         borderRadius: BorderRadius.circular(20),
-      //       ),
-      //       child: const Text(
-      //         'Unified View: Plants & Animals',
-      //         style: TextStyle(color: Colors.white, fontSize: 12),
-      //       ),
-      //     ),
-      //   ],
-      // ),
     );
   }
 
@@ -337,7 +358,11 @@ class TotalCostsBySeasonPage extends StatelessWidget {
               children: [
                 _buildBreakdownRow(context, 'Input Costs', detail.inputCost),
                 const SizedBox(height: 8),
-                _buildBreakdownRow(context, 'Activity Costs', detail.activityCost),
+                _buildBreakdownRow(
+                  context,
+                  'Activity Costs',
+                  detail.activityCost,
+                ),
                 const Divider(height: 24),
                 _buildBreakdownRow(
                   context,
@@ -382,7 +407,9 @@ class TotalCostsBySeasonPage extends StatelessWidget {
           label,
           style: TextStyle(
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            color: isBold ? null : Theme.of(context).colorScheme.onSurfaceVariant,
+            color: isBold
+                ? null
+                : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
         Text(
@@ -397,15 +424,64 @@ class TotalCostsBySeasonPage extends StatelessWidget {
   }
 }
 
-class CostBreakdownPage extends StatelessWidget {
+class CostBreakdownPage extends StatefulWidget {
   const CostBreakdownPage({super.key});
 
   @override
+  State<CostBreakdownPage> createState() => _CostBreakdownPageState();
+}
+
+class _CostBreakdownPageState extends State<CostBreakdownPage> {
+  Enterprise? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<SeasonBloc>().add(GetSeasonsEvent());
+    context.read<HerdBloc>().add(GetHerdsEvent());
+  }
+
+  List<Enterprise> _buildEnterprises(BuildContext context) {
+    final seasons = context.watch<SeasonBloc>().state.seasons;
+    final herds = context.watch<HerdBloc>().state.herds;
+    return [
+      for (final season in seasons)
+        Enterprise(
+          id: season.id,
+          kind: EnterpriseKind.season,
+          name: season.name,
+          startDate: season.startDate,
+          endDate: season.endDate,
+        ),
+      for (final herd in herds)
+        Enterprise(
+          id: herd.id,
+          kind: EnterpriseKind.herd,
+          name: herd.name,
+          startDate: herd.startDate,
+          endDate: herd.endDate,
+        ),
+    ];
+  }
+
+  bool _matchesSelected(CostBreakdown row, List<Enterprise> enterprises) {
+    final selected = _selected;
+    if (selected == null) {
+      if (row.originId == null) return true;
+      final match = enterprises.where((e) => e.id == row.originId).firstOrNull;
+      return match?.isActive ?? true;
+    }
+    final expectedType =
+        selected.kind == EnterpriseKind.season ? 'season' : 'herd';
+    return row.originType == expectedType && row.originId == selected.id;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final enterprises = _buildEnterprises(context);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Cost Breakdown by Input Type'),
-      ),
+      appBar: AppBar(title: const Text('Cost Breakdown by Input Type')),
       body: BlocBuilder<AnalysisBloc, AnalysisState>(
         builder: (context, state) {
           if (state is AnalysisLoading) {
@@ -429,39 +505,64 @@ class CostBreakdownPage extends StatelessWidget {
             if (state.breakdowns.isEmpty) {
               return const Center(child: Text('No data available'));
             }
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.breakdowns.length,
-              itemBuilder: (context, index) {
-                final breakdown = state.breakdowns[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    title: Text(
-                      breakdown.category,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Origin: ${breakdown.origin}'),
-                        Text('Type: ${breakdown.type}'),
-                        Text(
-                          'Percentage: ${breakdown.percentage.toStringAsFixed(1)}%',
-                        ),
-                      ],
-                    ),
-                    trailing: Text(
-                      'KES ${breakdown.totalCost.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange.shade700,
-                      ),
-                    ),
+
+            final visible = state.breakdowns
+                .where((row) => _matchesSelected(row, enterprises))
+                .toList();
+
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: EnterprisePicker(
+                    enterprises: enterprises,
+                    selected: _selected,
+                    onChanged: (value) => setState(() => _selected = value),
                   ),
-                );
-              },
+                ),
+                Expanded(
+                  child: visible.isEmpty
+                      ? const Center(
+                          child: Text('No cost data for this selection'),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: visible.length,
+                          itemBuilder: (context, index) {
+                            final breakdown = visible[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: ListTile(
+                                title: Text(
+                                  breakdown.category,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Origin: ${breakdown.origin}'),
+                                    Text('Type: ${breakdown.type}'),
+                                    Text(
+                                      'Percentage: ${breakdown.percentage.toStringAsFixed(1)}%',
+                                    ),
+                                  ],
+                                ),
+                                trailing: Text(
+                                  'KES ${breakdown.totalCost.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange.shade700,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
             );
           }
           return const Center(child: Text('No data loaded'));
@@ -471,8 +572,23 @@ class CostBreakdownPage extends StatelessWidget {
   }
 }
 
-class AnnualSummaryPage extends StatelessWidget {
+class AnnualSummaryPage extends StatefulWidget {
   const AnnualSummaryPage({super.key});
+
+  @override
+  State<AnnualSummaryPage> createState() => _AnnualSummaryPageState();
+}
+
+class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
+  FarmYear? _farmYear;
+  bool _requested = false;
+
+  void _requestFarmYear(FarmYear farmYear) {
+    setState(() => _farmYear = farmYear);
+    context.read<AnalysisBloc>().add(
+      LoadAnnualCostSummary(farmYear.start, farmYear.end),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -481,83 +597,161 @@ class AnnualSummaryPage extends StatelessWidget {
         title: const Text('Annual Performance Summary'),
         elevation: 0,
       ),
-      body: BlocBuilder<AnalysisBloc, AnalysisState>(
-        builder: (context, state) {
-          if (state is AnalysisLoading) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state is AnalysisError) {
-            return RefreshIndicator(
-              onRefresh: () async {
-                context.read<AnalysisBloc>().add(LoadAnnualCostSummary());
-              },
-              child: ListView(
-                children: [
-                  SizedBox(height: MediaQuery.of(context).size.height * 0.3),
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
-                        const SizedBox(height: 16),
-                        Text(
-                          state.message,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            context.read<AnalysisBloc>().add(LoadAnnualCostSummary());
-                          },
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          } else if (state is AnnualCostSummaryLoaded) {
-            if (state.summaries.isEmpty) {
-              return const Center(child: Text('No performance data available for this year'));
+      body: BlocBuilder<ProfileBloc, ProfileState>(
+        builder: (context, profileState) {
+          if (_farmYear == null) {
+            if (profileState is! ProfileLoaded) {
+              context.read<ProfileBloc>().add(FetchProfileEvent());
+              return const Center(child: CircularProgressIndicator());
             }
-
-            // Sort summaries by month string (e.g. "2026-01")
-            final sortedSummaries = List<MonthlySummary>.from(state.summaries)
-              ..sort((a, b) => a.month.compareTo(b.month));
-
-            return RefreshIndicator(
-              onRefresh: () async {
-                context.read<AnalysisBloc>().add(LoadAnnualCostSummary());
-              },
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: _buildAnnualOverview(context, sortedSummaries),
+            if (!_requested) {
+              _requested = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                _requestFarmYear(
+                  FarmYear.containing(
+                    DateTime.now(),
+                    profileState.user.fiscalYearStartMonth,
                   ),
-                  SliverPadding(
-                    padding: const EdgeInsets.all(16),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final summary = sortedSummaries[index];
-                          return _buildMonthlyPerformanceCard(context, summary);
-                        },
-                        childCount: sortedSummaries.length,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
+                );
+              });
+            }
+            return const Center(child: CircularProgressIndicator());
           }
-          return const Center(child: Text('No data loaded'));
+
+          final farmYear = _farmYear!;
+
+          return BlocBuilder<AnalysisBloc, AnalysisState>(
+            builder: (context, state) {
+              if (state is AnalysisLoading) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (state is AnalysisError) {
+                // Keep the year switcher live even on error - the request
+                // that failed is scoped to farmYear, so the user can still
+                // page to a different year instead of getting stuck on a
+                // dead-end screen.
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    context.read<AnalysisBloc>().add(
+                      LoadAnnualCostSummary(farmYear.start, farmYear.end),
+                    );
+                  },
+                  child: ListView(
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Theme.of(context).colorScheme.primary,
+                              Theme.of(context).colorScheme.secondary,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: _buildYearSwitcherRow(farmYear),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 48,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              state.message,
+                              style: Theme.of(context).textTheme.bodyLarge,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () {
+                                context.read<AnalysisBloc>().add(
+                                  LoadAnnualCostSummary(
+                                    farmYear.start,
+                                    farmYear.end,
+                                  ),
+                                );
+                              },
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              } else if (state is AnnualCostSummaryLoaded) {
+                // Sort summaries by month string (e.g. "2026-01")
+                final sortedSummaries =
+                    List<MonthlySummary>.from(state.summaries)
+                      ..sort((a, b) => a.month.compareTo(b.month));
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    context.read<AnalysisBloc>().add(
+                      LoadAnnualCostSummary(farmYear.start, farmYear.end),
+                    );
+                  },
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: _buildAnnualOverview(
+                          context,
+                          farmYear,
+                          sortedSummaries,
+                        ),
+                      ),
+                      if (sortedSummaries.isEmpty)
+                        const SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.all(32),
+                            child: Center(
+                              child: Text(
+                                'No performance data available for this farm year',
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.all(16),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate((
+                              context,
+                              index,
+                            ) {
+                              final summary = sortedSummaries[index];
+                              return _buildMonthlyPerformanceCard(
+                                context,
+                                summary,
+                              );
+                            }, childCount: sortedSummaries.length),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }
+              return const Center(child: Text('No data loaded'));
+            },
+          );
         },
       ),
     );
   }
 
-  Widget _buildAnnualOverview(BuildContext context, List<MonthlySummary> summaries) {
+  Widget _buildAnnualOverview(
+    BuildContext context,
+    FarmYear farmYear,
+    List<MonthlySummary> summaries,
+  ) {
     double totalAnnualCosts = 0;
     double totalAnnualRevenue = 0;
     for (final s in summaries) {
@@ -589,6 +783,8 @@ class AnnualSummaryPage extends StatelessWidget {
       ),
       child: Column(
         children: [
+          _buildYearSwitcherRow(farmYear),
+          const SizedBox(height: 12),
           Text(
             'Annual Net Profit',
             style: TextStyle(
@@ -611,8 +807,18 @@ class AnnualSummaryPage extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildOverviewStat('Total Revenue', totalAnnualRevenue, Icons.trending_up, Colors.greenAccent),
-              _buildOverviewStat('Total Costs', totalAnnualCosts, Icons.trending_down, Colors.orangeAccent),
+              _buildOverviewStat(
+                'Total Revenue',
+                totalAnnualRevenue,
+                Icons.trending_up,
+                Colors.greenAccent,
+              ),
+              _buildOverviewStat(
+                'Total Costs',
+                totalAnnualCosts,
+                Icons.trending_down,
+                Colors.orangeAccent,
+              ),
             ],
           ),
         ],
@@ -620,24 +826,76 @@ class AnnualSummaryPage extends StatelessWidget {
     );
   }
 
-  Widget _buildOverviewStat(String label, double value, IconData icon, Color color) {
+  Widget _buildYearSwitcherRow(FarmYear farmYear) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.chevron_left, color: Colors.white),
+          onPressed: () => _requestFarmYear(farmYear.previous),
+        ),
+        Column(
+          children: [
+            Text(
+              'Farm Year ${farmYear.label}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              farmYear.rangeLabel,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.8),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        IconButton(
+          icon: const Icon(Icons.chevron_right, color: Colors.white),
+          onPressed: farmYear.canGoNext(DateTime.now())
+              ? () => _requestFarmYear(farmYear.next)
+              : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOverviewStat(
+    String label,
+    double value,
+    IconData icon,
+    Color color,
+  ) {
     return Column(
       children: [
         Icon(icon, color: color, size: 24),
         const SizedBox(height: 8),
         Text(
           'KES ${value.toStringAsFixed(0)}',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
         ),
         Text(
           label,
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.7),
+            fontSize: 12,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildMonthlyPerformanceCard(BuildContext context, MonthlySummary summary) {
+  Widget _buildMonthlyPerformanceCard(
+    BuildContext context,
+    MonthlySummary summary,
+  ) {
     final date = DateTime.tryParse('${summary.month}-01') ?? DateTime.now();
     final monthName = _getMonthName(date.month);
     final isProfit = summary.profit >= 0;
@@ -651,7 +909,9 @@ class AnnualSummaryPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
@@ -665,7 +925,10 @@ class AnnualSummaryPage extends StatelessWidget {
                   children: [
                     Text(
                       monthName,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
                     ),
                     Text(
                       date.year.toString(),
@@ -674,9 +937,14 @@ class AnnualSummaryPage extends StatelessWidget {
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: (isProfit ? Colors.green : Colors.red).withValues(alpha: 0.1),
+                    color: (isProfit ? Colors.green : Colors.red).withValues(
+                      alpha: 0.1,
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -698,8 +966,18 @@ class AnnualSummaryPage extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildCompactStat(context, 'Revenue', summary.totalRevenue, Colors.green),
-                    _buildCompactStat(context, 'Costs', summary.totalCosts, Colors.orange),
+                    _buildCompactStat(
+                      context,
+                      'Revenue',
+                      summary.totalRevenue,
+                      Colors.green,
+                    ),
+                    _buildCompactStat(
+                      context,
+                      'Costs',
+                      summary.totalCosts,
+                      Colors.orange,
+                    ),
                     _buildCompactStat(
                       context,
                       'Net',
@@ -718,7 +996,12 @@ class AnnualSummaryPage extends StatelessWidget {
     );
   }
 
-  Widget _buildCompactStat(BuildContext context, String label, double value, Color color) {
+  Widget _buildCompactStat(
+    BuildContext context,
+    String label,
+    double value,
+    Color color,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -753,9 +1036,21 @@ class AnnualSummaryPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSubLabel('Costs'),
-                  _buildMiniBreakdownRow('Plant', summary.breakdown.costs.plant, Colors.green.shade300),
-                  _buildMiniBreakdownRow('Animal', summary.breakdown.costs.animal, Colors.blue.shade300),
-                  _buildMiniBreakdownRow('Infra', summary.breakdown.costs.infrastructure, Colors.brown.shade300),
+                  _buildMiniBreakdownRow(
+                    'Plant',
+                    summary.breakdown.costs.plant,
+                    Colors.green.shade300,
+                  ),
+                  _buildMiniBreakdownRow(
+                    'Animal',
+                    summary.breakdown.costs.animal,
+                    Colors.blue.shade300,
+                  ),
+                  _buildMiniBreakdownRow(
+                    'Infra',
+                    summary.breakdown.costs.infrastructure,
+                    Colors.brown.shade300,
+                  ),
                 ],
               ),
             ),
@@ -765,8 +1060,16 @@ class AnnualSummaryPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSubLabel('Revenue'),
-                  _buildMiniBreakdownRow('Plant', summary.breakdown.revenue.plant, Colors.green),
-                  _buildMiniBreakdownRow('Animal', summary.breakdown.revenue.animal, Colors.blue),
+                  _buildMiniBreakdownRow(
+                    'Plant',
+                    summary.breakdown.revenue.plant,
+                    Colors.green,
+                  ),
+                  _buildMiniBreakdownRow(
+                    'Animal',
+                    summary.breakdown.revenue.animal,
+                    Colors.blue,
+                  ),
                 ],
               ),
             ),
@@ -781,7 +1084,11 @@ class AnnualSummaryPage extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: Colors.grey,
+        ),
       ),
     );
   }
@@ -791,7 +1098,11 @@ class AnnualSummaryPage extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -811,8 +1122,18 @@ class AnnualSummaryPage extends StatelessWidget {
 
   String _getMonthName(int month) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return months[month - 1];
   }

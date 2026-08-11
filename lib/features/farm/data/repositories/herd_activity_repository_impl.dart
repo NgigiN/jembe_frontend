@@ -28,6 +28,8 @@ class HerdActivityRepositoryImpl implements HerdActivityRepository {
       );
       final result = await remoteDataSource.addHerdActivity(herdId, model);
       return Right(result);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {

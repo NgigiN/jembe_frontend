@@ -12,8 +12,18 @@ class UpdateHerd {
     String name,
     String animalTypeId,
     String location,
-    int initialHeadCount,
-  ) async {
-    return repository.updateHerd(id, name, animalTypeId, location, initialHeadCount);
+    int initialHeadCount, {
+    required DateTime startDate,
+    DateTime? endDate,
+  }) async {
+    return repository.updateHerd(
+      id,
+      name,
+      animalTypeId,
+      location,
+      initialHeadCount,
+      startDate: startDate,
+      endDate: endDate,
+    );
   }
 }

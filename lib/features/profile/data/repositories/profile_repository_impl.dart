@@ -14,6 +14,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
     try {
       final userModel = await remoteDataSource.getProfile();
       return Right(userModel);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -25,6 +27,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
   Future<Either<Failure, void>> updateProfile({
     required String firstName,
     required String lastName,
+    required int fiscalYearStartMonth,
     String? farmName,
     String? location,
   }) async {
@@ -32,10 +35,13 @@ class ProfileRepositoryImpl implements ProfileRepository {
       await remoteDataSource.updateProfile(
         firstName: firstName,
         lastName: lastName,
+        fiscalYearStartMonth: fiscalYearStartMonth,
         farmName: farmName,
         location: location,
       );
       return const Right(null);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -54,6 +60,22 @@ class ProfileRepositoryImpl implements ProfileRepository {
         newPassword: newPassword,
       );
       return const Right(null);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return const Left(ServerFailure('An unexpected error occurred'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteAccount() async {
+    try {
+      await remoteDataSource.deleteAccount();
+      return const Right(null);
+    } on NetworkException catch (_) {
+      return Left(const NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {

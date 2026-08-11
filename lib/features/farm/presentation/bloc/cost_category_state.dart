@@ -34,3 +34,7 @@ class CostCategoryError extends CostCategoryState {
 class CostCategoryAdded extends CostCategoryState {
   const CostCategoryAdded({super.categories});
 }
+
+class CostCategoryDeleted extends CostCategoryState {
+  const CostCategoryDeleted({super.categories});
+}

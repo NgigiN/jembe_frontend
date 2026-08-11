@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
-import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:farm_tracker/features/auth/data/repositories/auth_repository_impl.dart';
@@ -12,45 +11,51 @@ import 'package:farm_tracker/features/farm/data/datasources/analysis_remote_data
 import 'package:farm_tracker/features/farm/data/datasources/animal_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/animal_type_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/cost_category_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/harvest_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/herd_activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/infrastructure_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/input_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/land_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/plant_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/season_remote_data_source.dart';
-import 'package:farm_tracker/features/farm/data/datasources/herd_activity_remote_data_source.dart';
-import 'package:farm_tracker/features/farm/data/datasources/infrastructure_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/repositories/activity_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/analysis_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/animal_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/animal_type_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/cost_category_repository_impl.dart';
+import 'package:farm_tracker/features/farm/data/repositories/harvest_repository_impl.dart';
+import 'package:farm_tracker/features/farm/data/repositories/herd_activity_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/herd_repository_impl.dart';
+import 'package:farm_tracker/features/farm/data/repositories/infrastructure_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/input_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/land_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/plant_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/revenue_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/season_repository_impl.dart';
-import 'package:farm_tracker/features/farm/data/repositories/herd_activity_repository_impl.dart';
-import 'package:farm_tracker/features/farm/data/repositories/infrastructure_repository_impl.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/activity_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/analysis_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/animal_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/animal_type_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/cost_category_repository.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/harvest_repository.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/herd_activity_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/herd_repository.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/infrastructure_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/input_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/land_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/plant_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/revenue_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/season_repository.dart';
-import 'package:farm_tracker/features/farm/domain/repositories/herd_activity_repository.dart';
-import 'package:farm_tracker/features/farm/domain/repositories/infrastructure_repository.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_activity.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_animal.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_cost_category.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/add_harvest.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_herd.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/add_herd_activity.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/add_infrastructure.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_input.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_land.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_plant.dart';
@@ -59,7 +64,10 @@ import 'package:farm_tracker/features/farm/domain/usecases/add_season.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_activity.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_animal.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_animal_type.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/delete_cost_category.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/delete_harvest.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_herd.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/delete_infrastructure.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_input.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_land.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_plant.dart';
@@ -71,7 +79,9 @@ import 'package:farm_tracker/features/farm/domain/usecases/get_animals.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_annual_cost_summary.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_cost_breakdown.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_cost_categories.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_harvests.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_herds.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_infrastructure.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_inputs.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_lands.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_plants.dart';
@@ -82,53 +92,42 @@ import 'package:farm_tracker/features/farm/domain/usecases/get_total_costs_by_se
 import 'package:farm_tracker/features/farm/domain/usecases/update_activity.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_animal.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_animal_type.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/update_harvest.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_herd.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/update_infrastructure.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_input.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_land.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_plant.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_revenue.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_season.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_herd_activity.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_infrastructure.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_bloc.dart';
 import 'package:farm_tracker/features/profile/data/datasources/profile_remote_data_source.dart';
 import 'package:farm_tracker/features/profile/data/repositories/profile_repository_impl.dart';
 import 'package:farm_tracker/features/profile/domain/repositories/profile_repository.dart';
 import 'package:farm_tracker/features/profile/domain/usecases/change_password.dart';
+import 'package:farm_tracker/features/profile/domain/usecases/delete_account.dart';
 import 'package:farm_tracker/features/profile/domain/usecases/get_profile.dart';
 import 'package:farm_tracker/features/profile/domain/usecases/update_profile.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:get_it/get_it.dart';
-import 'package:google_sign_in/google_sign_in.dart' as auth_google;
 
 final sl = GetIt.instance;
 
 Future<void> init() async {
   // Initialize logging
   appLogger.initialize();
-
-  // Initialize Google Sign-In
-  try {
-    await auth_google.GoogleSignIn.instance.initialize(
-      serverClientId: AppConfig.googleServerClientId,
-    );
-  } catch (e) {
-    appLogger.error(LogCategory.auth, 'Failed to initialize Google Sign-In', e);
-  }
 
   // Bloc
   sl
@@ -175,6 +174,14 @@ Future<void> init() async {
       ),
     )
     ..registerFactory(
+      () => HarvestBloc(
+        getHarvests: sl(),
+        addHarvest: sl(),
+        updateHarvest: sl(),
+        deleteHarvest: sl(),
+      ),
+    )
+    ..registerFactory(
       () => AnimalTypeBloc(
         getAnimalTypes: sl(),
         addAnimalType: sl(),
@@ -190,11 +197,7 @@ Future<void> init() async {
         deleteHerd: sl(),
       ),
     )
-    ..registerFactory(
-      () => HerdActivityBloc(
-        addHerdActivity: sl(),
-      ),
-    )
+    ..registerFactory(() => HerdActivityBloc(addHerdActivity: sl()))
     ..registerFactory(
       () => InfrastructureBloc(
         getInfrastructure: sl(),
@@ -220,13 +223,18 @@ Future<void> init() async {
       ),
     )
     ..registerFactory(
-      () => CostCategoryBloc(getCostCategories: sl(), addCostCategory: sl()),
+      () => CostCategoryBloc(
+        getCostCategories: sl(),
+        addCostCategory: sl(),
+        deleteCostCategory: sl(),
+      ),
     )
     ..registerFactory(
       () => ProfileBloc(
         getProfile: sl(),
         updateProfile: sl(),
         changePassword: sl(),
+        deleteAccount: sl(),
       ),
     )
     // Use Cases
@@ -251,6 +259,10 @@ Future<void> init() async {
     ..registerLazySingleton(() => AddInput(sl()))
     ..registerLazySingleton(() => UpdateInput(sl()))
     ..registerLazySingleton(() => DeleteInput(sl()))
+    ..registerLazySingleton(() => GetHarvests(sl()))
+    ..registerLazySingleton(() => AddHarvest(sl()))
+    ..registerLazySingleton(() => UpdateHarvest(sl()))
+    ..registerLazySingleton(() => DeleteHarvest(sl()))
     ..registerLazySingleton(() => GetAnimals(sl()))
     ..registerLazySingleton(() => AddAnimal(sl()))
     ..registerLazySingleton(() => UpdateAnimal(sl()))
@@ -278,9 +290,11 @@ Future<void> init() async {
     ..registerLazySingleton(() => DeleteRevenue(sl()))
     ..registerLazySingleton(() => GetCostCategories(sl()))
     ..registerLazySingleton(() => AddCostCategory(sl()))
+    ..registerLazySingleton(() => DeleteCostCategory(sl()))
     ..registerLazySingleton(() => GetProfile(sl()))
     ..registerLazySingleton(() => UpdateProfile(sl()))
     ..registerLazySingleton(() => ChangePassword(sl()))
+    ..registerLazySingleton(() => DeleteAccount(sl()))
     // Repositories
     ..registerLazySingleton<AuthRepository>(
       () => AuthRepositoryImpl(remoteDataSource: sl()),
@@ -299,6 +313,9 @@ Future<void> init() async {
     )
     ..registerLazySingleton<InputRepository>(
       () => InputRepositoryImpl(remoteDataSource: sl()),
+    )
+    ..registerLazySingleton<HarvestRepository>(
+      () => HarvestRepositoryImpl(remoteDataSource: sl()),
     )
     ..registerLazySingleton<AnimalRepository>(
       () => AnimalRepositoryImpl(remoteDataSource: sl()),
@@ -345,6 +362,9 @@ Future<void> init() async {
     )
     ..registerLazySingleton<InputRemoteDataSource>(
       () => InputRemoteDataSourceImpl(dio: sl()),
+    )
+    ..registerLazySingleton<HarvestRemoteDataSource>(
+      () => HarvestRemoteDataSourceImpl(dio: sl()),
     )
     ..registerLazySingleton<AnimalRemoteDataSource>(
       () => AnimalRemoteDataSourceImpl(dio: sl()),
