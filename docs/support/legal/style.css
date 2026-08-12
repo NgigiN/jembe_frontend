@@ -62,6 +62,11 @@ body {
   font-size: 18px;
 }
 
+.back-link {
+  margin: 0 0 20px;
+  font-size: 0.9rem;
+}
+
 .card {
   background: var(--surface);
   border: 1px solid var(--border);

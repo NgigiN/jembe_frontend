@@ -4,7 +4,7 @@
 
 Shamba+ is developed and operated by **SaMTama** ("we", "us", "our"). This policy explains what data Shamba+ collects, why, and how you can control it.
 
-If you have questions, contact us at **support@samtama.lol**.
+If you have questions, contact us at **ngigi.nyongo@gmail.com**.
 
 ## What we collect
 
@@ -37,13 +37,13 @@ We retain your data while your account is active. You can request deletion of yo
 
 1. Opening the app and going to **Settings → Danger Zone → Delete Account**, or
 2. Visiting our [account deletion page](delete-account.html), or
-3. Emailing **support@samtama.lol**
+3. Emailing **ngigi.nyongo@gmail.com**
 
 We will delete your account and farm data within a reasonable time of a verified request, except where we're required to retain certain records by law.
 
 ## Your rights
 
-Depending on where you live, you may have the right to access, correct, export, or delete your personal data, and to object to or restrict certain processing. To exercise any of these rights, contact **support@samtama.lol**.
+Depending on where you live, you may have the right to access, correct, export, or delete your personal data, and to object to or restrict certain processing. To exercise any of these rights, contact **ngigi.nyongo@gmail.com**.
 
 ## Children's privacy
 
@@ -56,4 +56,4 @@ We may update this policy as the app evolves. The "Effective date" above reflect
 ## Contact us
 
 **SaMTama**
-Email: support@samtama.lol
+Email: ngigi.nyongo@gmail.com

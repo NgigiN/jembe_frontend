@@ -10,7 +10,7 @@ Shamba+ helps farmers track farm operations and finances — land, crops, season
 
 ## 2. Accounts
 
-You need a Google Account to sign in to Shamba+. You're responsible for maintaining the security of that account and for all activity that happens under your Shamba+ account. Tell us right away at support@samtama.lol if you suspect unauthorized access.
+You need a Google Account to sign in to Shamba+. You're responsible for maintaining the security of that account and for all activity that happens under your Shamba+ account. Tell us right away at ngigi.nyongo@gmail.com if you suspect unauthorized access.
 
 ## 3. Your data
 
@@ -34,7 +34,7 @@ To the extent permitted by law, SaMTama is not liable for indirect, incidental, 
 
 ## 7. Termination and account deletion
 
-You may stop using Shamba+ and delete your account at any time — in-app via **Settings → Danger Zone → Delete Account**, via our [account deletion page](delete-account.html), or by emailing support@samtama.lol. We may suspend or terminate accounts that violate these Terms.
+You may stop using Shamba+ and delete your account at any time — in-app via **Settings → Danger Zone → Delete Account**, via our [account deletion page](delete-account.html), or by emailing ngigi.nyongo@gmail.com. We may suspend or terminate accounts that violate these Terms.
 
 ## 8. Changes to these Terms
 
@@ -47,4 +47,4 @@ We may update these Terms as the app evolves. Continued use of Shamba+ after cha
 ## 10. Contact
 
 **SaMTama**
-Email: support@samtama.lol
+Email: ngigi.nyongo@gmail.com
