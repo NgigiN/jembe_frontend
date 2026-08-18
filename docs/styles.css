@@ -132,11 +132,14 @@ a { color: var(--accent); }
 }
 
 /* Features */
+#features {
+  padding: 48px 0 64px;
+}
+
 .features {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
-  padding: 48px 20px 64px;
 }
 
 .feature-card {
@@ -146,7 +149,7 @@ a { color: var(--accent); }
   padding: 28px 24px;
 }
 
-.feature-card h2 {
+.feature-card h3 {
   margin: 0 0 8px;
   font-size: 1.15rem;
   color: var(--accent);
