@@ -134,11 +134,23 @@ void main() {
     'a first-load error with no cached questions shows a retry view, '
     'not "No questions yet."',
     (tester) async {
+      // Deliver the states through a real Stream (not a pre-seeded
+      // `initialState:`), mirroring exactly how this happens in the real
+      // app: initState dispatches GetQuestionsEvent, the bloc emits
+      // QuestionLoading, then QuestionError once it fails. Seeding the
+      // error directly via `initialState:` would bypass the
+      // BlocConsumer's listener entirely for that first state, which
+      // previously let a regression here go undetected - the listener
+      // never got a chance to run (and mutate its ordering-sensitive
+      // internal flags) before the builder rendered it.
       final bloc = MockQuestionBloc();
       whenListen(
         bloc,
-        const Stream<QuestionState>.empty(),
-        initialState: const QuestionError('Failed to load questions'),
+        Stream<QuestionState>.fromIterable([
+          const QuestionLoading(),
+          const QuestionError('Failed to load questions'),
+        ]),
+        initialState: QuestionInitial(),
       );
 
       await tester.pumpWidget(
@@ -150,7 +162,9 @@ void main() {
         ),
       );
       await tester.pump();
+      await tester.pump(); // let QuestionLoading, then QuestionError land
 
+      expect(find.byType(EntityErrorView), findsOneWidget);
       expect(find.text('Failed to load questions'), findsOneWidget);
       expect(find.text('Try Again'), findsOneWidget);
       expect(find.text('No questions yet.'), findsNothing);

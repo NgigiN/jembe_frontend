@@ -31,12 +31,25 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
   // it emits, including a from-zero-questions submit's - so for a user
   // with no existing questions, a submit failure looks structurally
   // identical (empty questions list) to a genuine first-load failure.
-  // Gating the skeleton/retry-view branches on `!_hasLoadedOnce` instead of
-  // `state.questions.isEmpty` distinguishes "the first load hasn't
-  // finished yet" from "some later state that happens to carry an empty
-  // list too", so a from-zero submit keeps the form (and typed text)
-  // visible instead of being replaced by EntityErrorView with no way back.
+  // Safe to gate the skeleton branch on `!_hasLoadedOnce` directly: a
+  // QuestionLoading transition never itself mutates this flag (only
+  // QuestionLoaded/QuestionError do, in the listener below), so the value
+  // the builder reads for a Loading state was always settled by a prior,
+  // separate transition - no ordering hazard there.
   bool _hasLoadedOnce = false;
+
+  // Whether the very first settle (QuestionLoaded or QuestionError) was an
+  // error. Deliberately NOT re-derived from `_hasLoadedOnce` in the
+  // builder: flutter_bloc's BlocConsumer runs the listener (and its
+  // setState) to completion for a given state *before* the builder
+  // evaluates that same state, so by the time the builder ran for a
+  // genuine first-ever QuestionError, `_hasLoadedOnce` would already have
+  // flipped to `true` in that same listener call - making a
+  // `state is QuestionError && !_hasLoadedOnce` builder check always false
+  // for exactly the case it's meant to catch. Instead, the listener
+  // computes and stores this decision once, using the pre-mutation value,
+  // and the builder reads the stored decision directly.
+  bool _isFirstLoadError = false;
 
   @override
   void initState() {
@@ -65,16 +78,21 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
       body: BlocConsumer<QuestionBloc, QuestionState>(
         listener: (context, state) {
           // Captured before any mutation below: true only if an earlier
-          // GetQuestionsEvent already settled. Used to tell a genuine
-          // first-load failure (no snackbar - EntityErrorView handles it
-          // inline) apart from a later failure that also happens to carry
-          // an empty questions list, e.g. a from-zero-questions submit
-          // (which must still notify the user via snackbar, since the
-          // form stays on screen instead of EntityErrorView).
+          // GetQuestionsEvent already settled. Used both to decide (once,
+          // for the transition that first settles the load) whether this
+          // is a first-load failure, and to tell a genuine first-load
+          // failure (no snackbar - EntityErrorView handles it inline)
+          // apart from a later failure that also happens to carry an
+          // empty questions list, e.g. a from-zero-questions submit (which
+          // must still notify via snackbar, since the form stays on
+          // screen instead of EntityErrorView).
           final wasLoadedOnce = _hasLoadedOnce;
           if (state is QuestionLoaded) {
             setState(() {
-              if (!_hasLoadedOnce) _hasLoadedOnce = true;
+              if (!wasLoadedOnce) {
+                _isFirstLoadError = false;
+                _hasLoadedOnce = true;
+              }
               if (_isSubmitting) _isSubmitting = false;
             });
             if (state.successMessage != null) {
@@ -85,7 +103,10 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
             }
           } else if (state is QuestionError) {
             setState(() {
-              if (!_hasLoadedOnce) _hasLoadedOnce = true;
+              if (!wasLoadedOnce) {
+                _isFirstLoadError = true;
+                _hasLoadedOnce = true;
+              }
               if (_isSubmitting) _isSubmitting = false;
             });
             if (state.questions.isNotEmpty || wasLoadedOnce) {
@@ -100,7 +121,7 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
             return const SkeletonEntityList(icon: Icons.question_answer);
           }
 
-          if (state is QuestionError && !_hasLoadedOnce) {
+          if (state is QuestionError && _isFirstLoadError) {
             return EntityErrorView(
               message: state.message,
               onRetry: () =>
