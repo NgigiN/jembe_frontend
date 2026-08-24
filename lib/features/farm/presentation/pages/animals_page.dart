@@ -11,6 +11,9 @@ import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.d
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
+import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
+import 'package:farm_tracker/features/content/presentation/bloc/content_event.dart';
+import 'package:farm_tracker/features/content/presentation/widgets/related_content_section.dart';
 
 class AnimalsPage extends StatefulWidget {
   const AnimalsPage({super.key});
@@ -25,6 +28,7 @@ class _AnimalsPageState extends State<AnimalsPage> {
     super.initState();
     context.read<AnimalTypeBloc>().add(GetAnimalTypesEvent());
     context.read<HerdBloc>().add(GetHerdsEvent());
+    context.read<ContentBloc>().add(GetAllContentEvent());
   }
 
   @override
@@ -54,6 +58,9 @@ class _AnimalsPageState extends State<AnimalsPage> {
             final animalTypeCount = animalTypeState is AnimalTypeLoaded
                 ? animalTypeState.animalTypes.length
                 : 0;
+            final animalTypeNames = animalTypeState is AnimalTypeLoaded
+                ? animalTypeState.animalTypes.map((t) => t.name).toList()
+                : const <String>[];
 
             return BlocBuilder<HerdBloc, HerdState>(
               builder: (context, herdState) {
@@ -174,6 +181,10 @@ class _AnimalsPageState extends State<AnimalsPage> {
                             : StepStatus.locked,
                         onTap: () =>
                             context.push(AppRoutePath.infrastructure),
+                      ),
+                      RelatedContentSection(
+                        matchNames: animalTypeNames,
+                        kind: ContentMatchKind.animal,
                       ),
                     ],
                   ),

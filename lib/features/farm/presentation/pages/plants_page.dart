@@ -17,6 +17,9 @@ import 'package:farm_tracker/features/farm/presentation/bloc/harvest_state.dart'
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
+import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
+import 'package:farm_tracker/features/content/presentation/bloc/content_event.dart';
+import 'package:farm_tracker/features/content/presentation/widgets/related_content_section.dart';
 
 class PlantsPage extends StatefulWidget {
   const PlantsPage({super.key});
@@ -33,6 +36,7 @@ class _PlantsPageState extends State<PlantsPage> {
     context.read<PlantBloc>().add(GetPlantsEvent());
     context.read<SeasonBloc>().add(GetSeasonsEvent());
     context.read<HarvestBloc>().add(GetHarvestsEvent());
+    context.read<ContentBloc>().add(GetAllContentEvent());
   }
 
   @override
@@ -82,14 +86,17 @@ class _PlantsPageState extends State<PlantsPage> {
                 return BlocSelector<
                   PlantBloc,
                   PlantState,
-                  (bool hasPlant, int plantCount)
+                  (bool hasPlant, int plantCount, List<String> plantNames)
                 >(
                   selector: (state) => (
                     state is PlantLoaded && state.plants.isNotEmpty,
                     state is PlantLoaded ? state.plants.length : 0,
+                    state is PlantLoaded
+                        ? state.plants.map((p) => p.name).toList()
+                        : const <String>[],
                   ),
                   builder: (context, plantInfo) {
-                    final (hasPlant, plantCount) = plantInfo;
+                    final (hasPlant, plantCount, plantNames) = plantInfo;
 
                     return BlocSelector<
                       SeasonBloc,
@@ -236,6 +243,10 @@ class _PlantsPageState extends State<PlantsPage> {
                                         : StepStatus.locked,
                                     onTap: () =>
                                         context.push(AppRoutePath.harvests),
+                                  ),
+                                  RelatedContentSection(
+                                    matchNames: plantNames,
+                                    kind: ContentMatchKind.crop,
                                   ),
                                 ],
                               ),
