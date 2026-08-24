@@ -82,13 +82,6 @@ class AnalysisPage extends StatelessWidget {
                       Colors.green,
                       () => _showAnnualSummary(context),
                     ),
-                    // _buildAnalysisCard(
-                    //   context,
-                    //   'Performance Insights',
-                    //   Icons.trending_up,
-                    //   Colors.purple,
-                    //   () => _showPerformanceInsights(context),
-                    // ),
                   ],
                 ),
               ),
@@ -162,13 +155,6 @@ class AnalysisPage extends StatelessWidget {
 
   void _showAnnualSummary(BuildContext context) {
     context.push(AppRoutePath.annualSummary);
-  }
-
-  void _showPerformanceInsights(BuildContext context) {
-    // TODO: Implement performance insights
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Performance insights coming soon!')),
-    );
   }
 }
 

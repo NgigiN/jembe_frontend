@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
-import 'package:farm_tracker/core/utils/responsive_utils.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/features/farm/presentation/widgets/setup_step_card.dart';
 import 'package:farm_tracker/features/farm/presentation/widgets/step_connector.dart';

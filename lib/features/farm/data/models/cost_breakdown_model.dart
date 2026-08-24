@@ -18,8 +18,8 @@ class CostBreakdownModel extends Equatable {
       origin: (json['origin'] ?? '').toString(),
       originId: json['origin_id']?.toString(),
       originType: json['origin_type']?.toString(),
-      totalCost: (json['total_cost'] ?? 0.0).toDouble(),
-      percentage: (json['percentage'] ?? 0.0).toDouble(),
+      totalCost: ((json['total_cost'] as num?) ?? 0).toDouble(),
+      percentage: ((json['percentage'] as num?) ?? 0).toDouble(),
     );
   }
   final String category;
