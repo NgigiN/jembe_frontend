@@ -52,6 +52,15 @@ void main() {
       expect(matcher.forAnimalTypeNames([item], []), isEmpty);
       expect(matcher.forAnimalTypeNames([item], ['anything']), isEmpty);
     });
+
+    test(
+      'a short farmer value does not match via reverse containment (e.g. "Cat" vs "cattle")',
+      () {
+        final item = _item(animalTypeTags: ['cattle']);
+        final result = matcher.forAnimalTypeNames([item], ['Cat']);
+        expect(result, isEmpty);
+      },
+    );
   });
 
   group('forPlantNames', () {

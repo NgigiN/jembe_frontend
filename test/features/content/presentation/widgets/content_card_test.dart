@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('renders title and source-attributed summary, and calls onTap', (
+  testWidgets('renders title and summary, and calls onTap', (
     tester,
   ) async {
     var tapped = false;

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/features/profile/presentation/widgets/typed_delete_account_dialog.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
@@ -330,6 +332,19 @@ class _SettingsPageState extends State<SettingsPage> {
                             );
                           },
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSettingsCard(
+                      context,
+                      title: 'Resources',
+                      child: ListTile(
+                        leading: const Icon(Icons.menu_book_outlined),
+                        title: const Text('Browse Farming Tips'),
+                        subtitle: const Text(
+                          'Guides for your crops and animals',
+                        ),
+                        onTap: () => context.push(AppRoutePath.contentTips),
                       ),
                     ),
                     const SizedBox(height: 24),

@@ -87,6 +87,7 @@ class _AnimalsPageState extends State<AnimalsPage> {
                         .read<AnimalTypeBloc>()
                         .add(GetAnimalTypesEvent());
                     context.read<HerdBloc>().add(GetHerdsEvent());
+                    context.read<ContentBloc>().add(GetAllContentEvent());
                   },
                   child: ListView(
                     padding: const EdgeInsets.all(16),

@@ -132,6 +132,9 @@ class _PlantsPageState extends State<PlantsPage> {
                                 context.read<HarvestBloc>().add(
                                   GetHarvestsEvent(),
                                 );
+                                context.read<ContentBloc>().add(
+                                  GetAllContentEvent(),
+                                );
                               },
                               child: ListView(
                                 padding: const EdgeInsets.all(16),
