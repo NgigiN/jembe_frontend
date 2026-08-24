@@ -1,7 +1,6 @@
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
-import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
 import 'package:farm_tracker/features/content/domain/entities/question.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/question_bloc.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/question_event.dart';
@@ -10,6 +9,15 @@ import 'package:farm_tracker/injection_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+/// Ask Us: a composite page - a persistent question-input form on top of a
+/// "Your questions" list.
+///
+/// Unlike a pure list page (e.g. LandPage), this page must NOT swap its whole
+/// body out for a skeleton or an error view while the list loads or fails:
+/// doing so takes away a form the user may be halfway through typing into, and
+/// offers a "Try Again" button that cannot recover their draft. Loading, error
+/// and empty treatment is therefore confined to [_QuestionsSection] below the
+/// form, and the form itself renders unconditionally in every bloc state.
 class AskQuestionPage extends StatefulWidget {
   const AskQuestionPage({super.key});
 
@@ -20,36 +28,16 @@ class AskQuestionPage extends StatefulWidget {
 class _AskQuestionPageState extends State<AskQuestionPage> {
   final _controller = TextEditingController();
 
-  // Tracked locally rather than derived from `state is QuestionLoading`,
-  // because that state also covers the initial GetQuestionsEvent list-load
-  // triggered from initState, not just an in-flight submission.
+  /// True only while a [SubmitQuestionEvent] dispatched by this page is still
+  /// in flight. Deliberately not derived from `state is QuestionLoading`,
+  /// which also covers the initial list load from [initState] and any later
+  /// background refresh - neither should disable the Submit button.
+  ///
+  /// Nothing about *which content the page renders* depends on this flag: it
+  /// only drives the button's enabled/spinner state and the choice of error
+  /// feedback. So, unlike the flag schemes this replaced, it can never hide
+  /// the form or the user's questions no matter when it is read or written.
   bool _isSubmitting = false;
-
-  // True once the first GetQuestionsEvent has settled (QuestionLoaded or
-  // QuestionError). Needed because QuestionBloc threads the *current*
-  // questions list through every subsequent QuestionLoading/QuestionError
-  // it emits, including a from-zero-questions submit's - so for a user
-  // with no existing questions, a submit failure looks structurally
-  // identical (empty questions list) to a genuine first-load failure.
-  // Safe to gate the skeleton branch on `!_hasLoadedOnce` directly: a
-  // QuestionLoading transition never itself mutates this flag (only
-  // QuestionLoaded/QuestionError do, in the listener below), so the value
-  // the builder reads for a Loading state was always settled by a prior,
-  // separate transition - no ordering hazard there.
-  bool _hasLoadedOnce = false;
-
-  // Whether the very first settle (QuestionLoaded or QuestionError) was an
-  // error. Deliberately NOT re-derived from `_hasLoadedOnce` in the
-  // builder: flutter_bloc's BlocConsumer runs the listener (and its
-  // setState) to completion for a given state *before* the builder
-  // evaluates that same state, so by the time the builder ran for a
-  // genuine first-ever QuestionError, `_hasLoadedOnce` would already have
-  // flipped to `true` in that same listener call - making a
-  // `state is QuestionError && !_hasLoadedOnce` builder check always false
-  // for exactly the case it's meant to catch. Instead, the listener
-  // computes and stores this decision once, using the pre-mutation value,
-  // and the builder reads the stored decision directly.
-  bool _isFirstLoadError = false;
 
   @override
   void initState() {
@@ -64,6 +52,9 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
   }
 
   void _submit() {
+    // Guards a rapid double-tap whose second tap lands before the setState
+    // below has rebuilt the button in its disabled state.
+    if (_isSubmitting) return;
     final text = _controller.text.trim();
     if (text.isEmpty) return;
     sl<AnalyticsService>().track('question_submitted');
@@ -77,24 +68,13 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
       appBar: AppBar(title: const Text('Ask Us')),
       body: BlocConsumer<QuestionBloc, QuestionState>(
         listener: (context, state) {
-          // Captured before any mutation below: true only if an earlier
-          // GetQuestionsEvent already settled. Used both to decide (once,
-          // for the transition that first settles the load) whether this
-          // is a first-load failure, and to tell a genuine first-load
-          // failure (no snackbar - EntityErrorView handles it inline)
-          // apart from a later failure that also happens to carry an
-          // empty questions list, e.g. a from-zero-questions submit (which
-          // must still notify via snackbar, since the form stays on
-          // screen instead of EntityErrorView).
-          final wasLoadedOnce = _hasLoadedOnce;
+          // Captured before the reset below, so a terminal state can tell a
+          // failed submission apart from a failed list load.
+          final wasSubmitting = _isSubmitting;
           if (state is QuestionLoaded) {
-            setState(() {
-              if (!wasLoadedOnce) {
-                _isFirstLoadError = false;
-                _hasLoadedOnce = true;
-              }
-              if (_isSubmitting) _isSubmitting = false;
-            });
+            if (_isSubmitting) setState(() => _isSubmitting = false);
+            // Only a successful submit clears the draft - never an error, and
+            // never a plain list reload.
             if (state.successMessage != null) {
               _controller.clear();
               ScaffoldMessenger.of(
@@ -102,14 +82,16 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
               ).showSnackBar(AppSnackBar.success(state.successMessage!));
             }
           } else if (state is QuestionError) {
-            setState(() {
-              if (!wasLoadedOnce) {
-                _isFirstLoadError = true;
-                _hasLoadedOnce = true;
-              }
-              if (_isSubmitting) _isSubmitting = false;
-            });
-            if (state.questions.isNotEmpty || wasLoadedOnce) {
+            if (_isSubmitting) setState(() => _isSubmitting = false);
+            // A failed submit always gets a snackbar: the form stays on
+            // screen, and the questions section below it may well be scrolled
+            // out of view behind the keyboard, so it is not reliable feedback
+            // for an action the user just took. A failure that arrives with
+            // questions already loaded also gets one, since the section keeps
+            // showing that (now stale) list. The only silent case is a list
+            // load that failed with nothing to show, where the inline
+            // EntityErrorView in the questions section *is* the feedback.
+            if (wasSubmitting || state.questions.isNotEmpty) {
               ScaffoldMessenger.of(
                 context,
               ).showSnackBar(AppSnackBar.error(state.message));
@@ -117,21 +99,11 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
           }
         },
         builder: (context, state) {
-          if (state is QuestionLoading && !_hasLoadedOnce) {
-            return const SkeletonEntityList(icon: Icons.question_answer);
-          }
-
-          if (state is QuestionError && _isFirstLoadError) {
-            return EntityErrorView(
-              message: state.message,
-              onRetry: () =>
-                  context.read<QuestionBloc>().add(GetQuestionsEvent()),
-            );
-          }
-
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              // Everything down to the Submit button is state-independent:
+              // there is no branch above this that can replace it.
               Text(
                 'Have a question about your farm? Ask us directly - '
                 'we read every question and answer here.',
@@ -167,14 +139,73 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
-              if (state.questions.isEmpty)
-                const Text('No questions yet.')
-              else
-                for (final q in state.questions) _QuestionTile(question: q),
+              _QuestionsSection(state: state),
             ],
           );
         },
       ),
+    );
+  }
+}
+
+/// The "Your questions" section - the only part of the page that varies with
+/// bloc state.
+///
+/// Every branch is bounded and renders inline, below the form: none of them
+/// expands to fill the page or scrolls on its own, so whatever this section
+/// shows, the form above it stays visible and usable.
+class _QuestionsSection extends StatelessWidget {
+  const _QuestionsSection({required this.state});
+
+  final QuestionState state;
+
+  @override
+  Widget build(BuildContext context) {
+    // Local binding so the `is` checks below promote.
+    final state = this.state;
+
+    // Data first, whatever the state class is. QuestionBloc threads the
+    // current questions through the QuestionLoading it emits for a background
+    // refresh or a submit, and through a QuestionError for a failed one; all
+    // of those mean "we still have the previous list", so keep showing it
+    // rather than replacing it with a spinner or an error view.
+    final questions = state.questions;
+    if (questions.isNotEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final question in questions) _QuestionTile(question: question),
+        ],
+      );
+    }
+
+    // Nothing to show, and the last thing that happened failed. Retrying is
+    // always a list reload: if the failure came from a submit instead, the
+    // draft is still sitting in the field above, so the user can simply submit
+    // again. Note this needs no "was this the first load?" bookkeeping - it is
+    // a plain read of the current state, so it cannot latch on and hide a list
+    // that a later, unrelated error arrives on top of (that list is non-empty,
+    // and so was already returned above).
+    if (state is QuestionError) {
+      return EntityErrorView(
+        message: state.message,
+        onRetry: () => context.read<QuestionBloc>().add(GetQuestionsEvent()),
+      );
+    }
+
+    // The load succeeded and there is genuinely nothing to show yet.
+    if (state is QuestionLoaded) {
+      return const Text('No questions yet.');
+    }
+
+    // QuestionInitial, or a QuestionLoading with no data behind it yet. This
+    // also catches the Loading of a from-zero-questions submit, which is a
+    // purely cosmetic overlap: a spinner instead of "No questions yet." for a
+    // moment, in a section that is about to be replaced by the new question
+    // anyway. Nothing is hidden either way.
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 24),
+      child: Center(child: CircularProgressIndicator()),
     );
   }
 }
@@ -197,6 +228,9 @@ class _QuestionTile extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
+            // Answer visibility depends on answerText alone, never on
+            // status/isAnswered: an answer that has been written must show
+            // even if the status field lags behind.
             if (question.answerText != null &&
                 question.answerText!.trim().isNotEmpty) ...[
               const Divider(),
