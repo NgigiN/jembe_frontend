@@ -14,6 +14,7 @@ import 'package:farm_tracker/features/content/data/repositories/question_reposit
 import 'package:farm_tracker/features/content/domain/repositories/content_repository.dart';
 import 'package:farm_tracker/features/content/domain/repositories/question_repository.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
+import 'package:farm_tracker/features/content/presentation/bloc/question_bloc.dart';
 import 'package:farm_tracker/features/farm/data/datasources/activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/analysis_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/animal_remote_data_source.dart';
@@ -246,6 +247,7 @@ Future<void> init() async {
       ),
     )
     ..registerFactory(() => ContentBloc(repository: sl()))
+    ..registerFactory(() => QuestionBloc(repository: sl()))
     // Use Cases
     ..registerLazySingleton(() => GoogleSignInUseCase(sl()))
     ..registerLazySingleton(() => GetLands(sl()))
