@@ -6,6 +6,7 @@ import 'package:farm_tracker/core/theme/app_theme.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
@@ -95,6 +96,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           create: (_) => di.sl<CostCategoryBloc>(),
         ),
         BlocProvider<ProfileBloc>(create: (_) => di.sl<ProfileBloc>()),
+        BlocProvider<ContentBloc>(create: (_) => di.sl<ContentBloc>()),
         BlocProvider<ThemeBloc>(create: (_) => ThemeBloc()),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(
