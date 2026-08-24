@@ -191,7 +191,7 @@ void main() {
         revenues: const [],
         now: _now,
       );
-      expect(result.weeklyStreak, greaterThanOrEqualTo(1));
+      expect(result.weeklyStreak, 1);
     });
 
     test(

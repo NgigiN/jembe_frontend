@@ -136,7 +136,9 @@ class FarmHealthCalculator {
   ///
   /// The current, still-in-progress week is exempt from ending the streak
   /// even when it has zero records so far: only a *fully elapsed* week
-  /// with nothing recorded breaks the chain.
+  /// with nothing recorded breaks the chain. When the current week *does*
+  /// already have a record, that week counts toward the streak just like
+  /// any other week - it is not merely exempted from breaking it.
   int _weeklyStreak({
     required List<Activity> activities,
     required List<Input> inputs,
