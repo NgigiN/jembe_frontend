@@ -1,16 +1,22 @@
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/activity_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/harvest_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/input_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/revenue_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:farm_tracker/features/farm_health/domain/farm_health_calculator.dart';
 import 'package:farm_tracker/injection_container.dart';
 import 'package:flutter/material.dart';
@@ -38,12 +44,45 @@ class _FarmHealthCardState extends State<FarmHealthCard> {
 
   @override
   Widget build(BuildContext context) {
-    final herds = context.watch<HerdBloc>().state.herds;
-    final seasons = context.watch<SeasonBloc>().state.seasons;
-    final activities = context.watch<ActivityBloc>().state.activities;
-    final inputs = context.watch<InputBloc>().state.inputs;
-    final harvests = context.watch<HarvestBloc>().state.harvests;
-    final revenues = context.watch<RevenueBloc>().state.revenues;
+    final herdState = context.watch<HerdBloc>().state;
+    final seasonState = context.watch<SeasonBloc>().state;
+    final activityState = context.watch<ActivityBloc>().state;
+    final inputState = context.watch<InputBloc>().state;
+    final harvestState = context.watch<HarvestBloc>().state;
+    final revenueState = context.watch<RevenueBloc>().state;
+
+    final anyUnsettled =
+        herdState is HerdInitial ||
+        herdState is HerdLoading ||
+        seasonState is SeasonInitial ||
+        seasonState is SeasonLoading ||
+        activityState is ActivityInitial ||
+        activityState is ActivityLoading ||
+        inputState is InputInitial ||
+        inputState is InputLoading ||
+        harvestState is HarvestInitial ||
+        harvestState is HarvestLoading ||
+        revenueState is RevenueInitial ||
+        revenueState is RevenueLoading;
+
+    final anyError =
+        herdState is HerdError ||
+        seasonState is SeasonError ||
+        activityState is ActivityError ||
+        inputState is InputError ||
+        harvestState is HarvestError ||
+        revenueState is RevenueError;
+
+    if (anyUnsettled || anyError) {
+      return const SizedBox.shrink();
+    }
+
+    final herds = herdState.herds;
+    final seasons = seasonState.seasons;
+    final activities = activityState.activities;
+    final inputs = inputState.inputs;
+    final harvests = harvestState.harvests;
+    final revenues = revenueState.revenues;
 
     const calculator = FarmHealthCalculator();
     final result = calculator.calculate(
