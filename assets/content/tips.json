@@ -1,0 +1,35 @@
+[
+  {
+    "id": "dairy-mastitis-prevention",
+    "title": "Preventing mastitis in dairy cattle",
+    "summary": "Simple daily habits that lower the risk of mastitis before it costs you milk.",
+    "body": "Mastitis is one of the most common and costly problems in dairy cattle. Keep the milking area and the cow's udder clean and dry before and after milking. Milk the same cow last if she has had mastitis before, to avoid spreading infection to other cows. Watch for swelling, heat, or unusual milk (clots, watery texture, blood) and separate any affected cow's milk immediately. If you notice these signs, contact your local vet or agrovet promptly rather than waiting - early treatment is far more effective than late treatment.",
+    "language": "en",
+    "source": "KALRO - general dairy cattle husbandry guidance",
+    "animalTypeTags": ["dairy cattle", "cattle", "cow"],
+    "cropTags": [],
+    "publishedAt": "2026-08-01"
+  },
+  {
+    "id": "poultry-biosecurity-basics",
+    "title": "Basic biosecurity for a small poultry flock",
+    "summary": "A few low-cost habits that meaningfully cut disease risk in backyard and small commercial flocks.",
+    "body": "Most poultry disease outbreaks trace back to something being carried in from outside: dirty footwear, unwashed hands, or contact with sick or wild birds. Keep a dedicated pair of boots or sandals for the poultry area only. Wash your hands before and after handling birds or eggs. Keep new birds separate from the rest of the flock for at least a week before mixing them in, and watch for coughing, discharge, or sudden deaths during that time. Keep feed and water containers clean and covered to avoid attracting wild birds and rodents, which are common disease carriers.",
+    "language": "en",
+    "source": "KALRO - general poultry husbandry guidance",
+    "animalTypeTags": ["poultry", "chicken", "kienyeji chicken", "broilers", "layers"],
+    "cropTags": [],
+    "publishedAt": "2026-08-01"
+  },
+  {
+    "id": "maize-early-weed-control",
+    "title": "Why early weeding matters most for maize",
+    "summary": "The first few weeks after planting are when weeding has the biggest effect on your final yield.",
+    "body": "Maize is most vulnerable to weed competition in the first 3-6 weeks after emergence, while the young plants are still establishing their root systems. Weeds competing for water, sunlight, and nutrients during this window can reduce yield significantly, even if you weed thoroughly later in the season. Aim to do your first weeding as soon as weeds are visible, rather than waiting for a scheduled date. A second weeding a few weeks later, before the maize canopy closes over and shades out most new weed growth, is usually enough for the rest of the season.",
+    "language": "en",
+    "source": "KALRO - general maize agronomy guidance",
+    "animalTypeTags": [],
+    "cropTags": ["maize"],
+    "publishedAt": "2026-08-01"
+  }
+]
