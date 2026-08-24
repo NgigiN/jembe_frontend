@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/auth/data/datasources/auth_remote_data_source.dart';
@@ -393,6 +394,7 @@ Future<void> init() async {
     ..registerLazySingleton<ProfileRemoteDataSource>(
       () => ProfileRemoteDataSourceImpl(dio: sl()),
     )
+    ..registerLazySingleton(() => AnalyticsService(dio: sl()))
     // External - Dio client (preferred for new code)
     ..registerLazySingleton<Dio>(DioClientFactory.create);
 }
