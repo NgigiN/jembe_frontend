@@ -19,6 +19,7 @@ void main() {
       expect(model.status, 'unanswered');
       expect(model.isAnswered, isFalse);
       expect(model.answerText, isNull);
+      expect(model.answeredAt, isNull);
     });
 
     test('fromJson parses an answered question', () {
@@ -39,6 +40,7 @@ void main() {
         model.answerText,
         'Every 3 months is a common schedule - check with your vet.',
       );
+      expect(model.answeredAt, DateTime.parse('2026-08-10T00:00:00Z'));
     });
   });
 }
