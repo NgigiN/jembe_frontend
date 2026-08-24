@@ -39,7 +39,7 @@ class AnalyticsService {
     _buffer.clear();
 
     try {
-      await _dio.post('/api/v1/events', data: {'events': events});
+      await _dio.post<void>('/api/v1/events', data: {'events': events});
     } catch (e) {
       appLogger.warning(
         LogCategory.general,
