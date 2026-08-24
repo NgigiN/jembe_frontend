@@ -350,6 +350,19 @@ class _SettingsPageState extends State<SettingsPage> {
                     const SizedBox(height: 24),
                     _buildSettingsCard(
                       context,
+                      title: 'Help',
+                      child: ListTile(
+                        leading: const Icon(Icons.help_outline),
+                        title: const Text('Ask Us a Question'),
+                        subtitle: const Text(
+                          'Get help directly from the Jembe team',
+                        ),
+                        onTap: () => context.push(AppRoutePath.askQuestion),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSettingsCard(
+                      context,
                       title: 'Danger Zone',
                       child: ListTile(
                         leading: const Icon(

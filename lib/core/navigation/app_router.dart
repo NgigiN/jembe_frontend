@@ -3,6 +3,7 @@ import 'package:farm_tracker/core/logging/logging_navigator.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/google_login_page.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/onboarding_page.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/splash_page.dart';
+import 'package:farm_tracker/features/content/presentation/pages/ask_question_page.dart';
 import 'package:farm_tracker/features/content/presentation/pages/content_detail_page.dart';
 import 'package:farm_tracker/features/content/presentation/pages/content_list_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/activity_page.dart';
@@ -49,6 +50,7 @@ class AppRouteName {
   static const harvests = 'harvests';
   static const contentTips = 'content-tips';
   static const contentDetail = 'content-detail';
+  static const askQuestion = 'ask-question';
 }
 
 class AppRoutePath {
@@ -76,6 +78,7 @@ class AppRoutePath {
   static const harvests = '/harvests';
   static const contentTips = '/content';
   static const contentDetailTemplate = '/content/:id';
+  static const askQuestion = '/ask-question';
 
   static String inputsFor(String sourceType) => '/inputs/$sourceType';
   static String activitiesFor(String sourceType) => '/activities/$sourceType';
@@ -237,6 +240,12 @@ class AppRouter {
           final id = state.pathParameters['id'] ?? '';
           return _slidePage(ContentDetailPage(contentId: id), state);
         },
+      ),
+      GoRoute(
+        name: AppRouteName.askQuestion,
+        path: AppRoutePath.askQuestion,
+        pageBuilder: (context, state) =>
+            _slidePage(const AskQuestionPage(), state),
       ),
     ],
   );
