@@ -1,5 +1,7 @@
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
 import 'package:farm_tracker/features/content/domain/entities/question.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/question_bloc.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/question_event.dart';
@@ -18,6 +20,11 @@ class AskQuestionPage extends StatefulWidget {
 class _AskQuestionPageState extends State<AskQuestionPage> {
   final _controller = TextEditingController();
 
+  // Tracked locally rather than derived from `state is QuestionLoading`,
+  // because that state also covers the initial GetQuestionsEvent list-load
+  // triggered from initState, not just an in-flight submission.
+  bool _isSubmitting = false;
+
   @override
   void initState() {
     super.initState();
@@ -34,6 +41,7 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
     sl<AnalyticsService>().track('question_submitted');
+    setState(() => _isSubmitting = true);
     context.read<QuestionBloc>().add(SubmitQuestionEvent(text));
   }
 
@@ -43,19 +51,36 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
       appBar: AppBar(title: const Text('Ask Us')),
       body: BlocConsumer<QuestionBloc, QuestionState>(
         listener: (context, state) {
-          if (state is QuestionLoaded && state.successMessage != null) {
-            _controller.clear();
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(AppSnackBar.success(state.successMessage!));
+          if (state is QuestionLoaded) {
+            if (_isSubmitting) setState(() => _isSubmitting = false);
+            if (state.successMessage != null) {
+              _controller.clear();
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(AppSnackBar.success(state.successMessage!));
+            }
           } else if (state is QuestionError) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(AppSnackBar.error(state.message));
+            if (_isSubmitting) setState(() => _isSubmitting = false);
+            if (state.questions.isNotEmpty) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(AppSnackBar.error(state.message));
+            }
           }
         },
         builder: (context, state) {
-          final isSubmitting = state is QuestionLoading;
+          if (state is QuestionLoading && state.questions.isEmpty) {
+            return const SkeletonEntityList(icon: Icons.question_answer);
+          }
+
+          if (state is QuestionError && state.questions.isEmpty) {
+            return EntityErrorView(
+              message: state.message,
+              onRetry: () =>
+                  context.read<QuestionBloc>().add(GetQuestionsEvent()),
+            );
+          }
+
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -78,8 +103,8 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: isSubmitting ? null : _submit,
-                  child: isSubmitting
+                  onPressed: _isSubmitting ? null : _submit,
+                  child: _isSubmitting
                       ? const SizedBox(
                           width: 16,
                           height: 16,
@@ -124,7 +149,8 @@ class _QuestionTile extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
-            if (question.isAnswered && question.answerText != null) ...[
+            if (question.answerText != null &&
+                question.answerText!.trim().isNotEmpty) ...[
               const Divider(),
               Text(question.answerText!),
             ] else

@@ -1,6 +1,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
+import 'package:farm_tracker/features/content/domain/entities/question.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/question_bloc.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/question_event.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/question_state.dart';
@@ -69,12 +70,26 @@ void main() {
   testWidgets(
     'a failed submit does not clear the typed question from the field',
     (tester) async {
+      // A submit failure happens after questions have already been loaded,
+      // so the loading/error states here carry forward an existing
+      // question rather than an empty list - an empty-list QuestionError
+      // is the distinct first-load-failure case (see the retry-view test
+      // below), which now renders EntityErrorView instead of the form.
+      final existingQuestion = Question(
+        id: 'q0',
+        questionText: 'An earlier question',
+        status: 'unanswered',
+        createdAt: DateTime(2026),
+      );
       final bloc = MockQuestionBloc();
       whenListen(
         bloc,
         Stream<QuestionState>.fromIterable([
-          const QuestionLoading(),
-          const QuestionError('Failed to submit question'),
+          QuestionLoading(questions: [existingQuestion]),
+          QuestionError(
+            'Failed to submit question',
+            questions: [existingQuestion],
+          ),
         ]),
         initialState: QuestionInitial(),
       );
@@ -106,6 +121,74 @@ void main() {
       // AutomatedTestWidgetsFlutterBinding asserts no Timer is left pending
       // when a test ends, so drain it explicitly here rather than waiting.
       await sl<AnalyticsService>().flush();
+    },
+  );
+
+  testWidgets(
+    'a first-load error with no cached questions shows a retry view, '
+    'not "No questions yet."',
+    (tester) async {
+      final bloc = MockQuestionBloc();
+      whenListen(
+        bloc,
+        const Stream<QuestionState>.empty(),
+        initialState: const QuestionError('Failed to load questions'),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider<QuestionBloc>.value(
+            value: bloc,
+            child: const AskQuestionPage(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Failed to load questions'), findsOneWidget);
+      expect(find.text('Try Again'), findsOneWidget);
+      expect(find.text('No questions yet.'), findsNothing);
+      expect(find.byType(TextField), findsNothing);
+
+      await tester.tap(find.text('Try Again'));
+      await tester.pump();
+      verify(() => bloc.add(any(that: isA<GetQuestionsEvent>())))
+          .called(greaterThanOrEqualTo(1));
+    },
+  );
+
+  testWidgets(
+    'an answer renders once answerText is set, regardless of status',
+    (tester) async {
+      final answeredQuestion = Question(
+        id: 'q1',
+        questionText: 'When should I vaccinate my calves?',
+        status: 'unanswered',
+        createdAt: DateTime(2026),
+        answerText: 'Vaccinate calves between 2 and 4 months old.',
+      );
+      final bloc = MockQuestionBloc();
+      whenListen(
+        bloc,
+        const Stream<QuestionState>.empty(),
+        initialState: QuestionLoaded(questions: [answeredQuestion]),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider<QuestionBloc>.value(
+            value: bloc,
+            child: const AskQuestionPage(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        find.text('Vaccinate calves between 2 and 4 months old.'),
+        findsOneWidget,
+      );
+      expect(find.text('Awaiting a reply'), findsNothing);
     },
   );
 }
