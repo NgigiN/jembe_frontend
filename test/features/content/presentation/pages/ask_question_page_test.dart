@@ -1,6 +1,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/features/content/domain/entities/question.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/question_bloc.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/question_event.dart';
@@ -85,6 +86,11 @@ void main() {
       whenListen(
         bloc,
         Stream<QuestionState>.fromIterable([
+          // The initial GetQuestionsEvent settling first (as it would in
+          // the real app) is what marks the page as having loaded once, so
+          // the submit's own Loading/Error below are correctly treated as
+          // "later" states rather than a first-load failure.
+          QuestionLoaded(questions: [existingQuestion]),
           QuestionLoading(questions: [existingQuestion]),
           QuestionError(
             'Failed to submit question',
@@ -189,6 +195,60 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Awaiting a reply'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a from-zero-questions submit failure keeps the form and typed text '
+    'visible, and still tells the user something went wrong',
+    (tester) async {
+      // QuestionBloc threads the *current* questions list through the
+      // Loading/Error it emits for a submit. For a user with no existing
+      // questions, that list is empty - structurally identical to a
+      // genuine first-load failure's empty list. The page must still tell
+      // the two apart: this must fall through to the normal form (with the
+      // typed draft intact), not the first-load EntityErrorView.
+      final bloc = MockQuestionBloc();
+      whenListen(
+        bloc,
+        Stream<QuestionState>.fromIterable([
+          const QuestionLoaded(questions: []),
+          const QuestionLoading(),
+          const QuestionError('Failed to submit question'),
+        ]),
+        initialState: QuestionInitial(),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider<QuestionBloc>.value(
+            value: bloc,
+            child: const AskQuestionPage(),
+          ),
+        ),
+      );
+
+      await tester.enterText(
+        find.byType(TextField),
+        'Why is my chicken not laying eggs?',
+      );
+      await tester.tap(find.text('Submit'));
+      await tester.pump();
+      await tester.pump(); // let the error state land and the snackbar show
+
+      // The form (and the typed draft) is still on screen - not replaced
+      // by EntityErrorView, which offers no way back to the draft.
+      expect(find.byType(EntityErrorView), findsNothing);
+      expect(find.byType(TextField), findsOneWidget);
+      expect(
+        find.text('Why is my chicken not laying eggs?'),
+        findsOneWidget,
+      );
+
+      // The user is still told the submission failed, via the snackbar.
+      expect(find.text('Failed to submit question'), findsOneWidget);
+
+      await sl<AnalyticsService>().flush();
     },
   );
 }

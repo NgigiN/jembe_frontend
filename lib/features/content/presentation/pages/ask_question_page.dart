@@ -25,6 +25,19 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
   // triggered from initState, not just an in-flight submission.
   bool _isSubmitting = false;
 
+  // True once the first GetQuestionsEvent has settled (QuestionLoaded or
+  // QuestionError). Needed because QuestionBloc threads the *current*
+  // questions list through every subsequent QuestionLoading/QuestionError
+  // it emits, including a from-zero-questions submit's - so for a user
+  // with no existing questions, a submit failure looks structurally
+  // identical (empty questions list) to a genuine first-load failure.
+  // Gating the skeleton/retry-view branches on `!_hasLoadedOnce` instead of
+  // `state.questions.isEmpty` distinguishes "the first load hasn't
+  // finished yet" from "some later state that happens to carry an empty
+  // list too", so a from-zero submit keeps the form (and typed text)
+  // visible instead of being replaced by EntityErrorView with no way back.
+  bool _hasLoadedOnce = false;
+
   @override
   void initState() {
     super.initState();
@@ -51,8 +64,19 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
       appBar: AppBar(title: const Text('Ask Us')),
       body: BlocConsumer<QuestionBloc, QuestionState>(
         listener: (context, state) {
+          // Captured before any mutation below: true only if an earlier
+          // GetQuestionsEvent already settled. Used to tell a genuine
+          // first-load failure (no snackbar - EntityErrorView handles it
+          // inline) apart from a later failure that also happens to carry
+          // an empty questions list, e.g. a from-zero-questions submit
+          // (which must still notify the user via snackbar, since the
+          // form stays on screen instead of EntityErrorView).
+          final wasLoadedOnce = _hasLoadedOnce;
           if (state is QuestionLoaded) {
-            if (_isSubmitting) setState(() => _isSubmitting = false);
+            setState(() {
+              if (!_hasLoadedOnce) _hasLoadedOnce = true;
+              if (_isSubmitting) _isSubmitting = false;
+            });
             if (state.successMessage != null) {
               _controller.clear();
               ScaffoldMessenger.of(
@@ -60,8 +84,11 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
               ).showSnackBar(AppSnackBar.success(state.successMessage!));
             }
           } else if (state is QuestionError) {
-            if (_isSubmitting) setState(() => _isSubmitting = false);
-            if (state.questions.isNotEmpty) {
+            setState(() {
+              if (!_hasLoadedOnce) _hasLoadedOnce = true;
+              if (_isSubmitting) _isSubmitting = false;
+            });
+            if (state.questions.isNotEmpty || wasLoadedOnce) {
               ScaffoldMessenger.of(
                 context,
               ).showSnackBar(AppSnackBar.error(state.message));
@@ -69,11 +96,11 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
           }
         },
         builder: (context, state) {
-          if (state is QuestionLoading && state.questions.isEmpty) {
+          if (state is QuestionLoading && !_hasLoadedOnce) {
             return const SkeletonEntityList(icon: Icons.question_answer);
           }
 
-          if (state is QuestionError && state.questions.isEmpty) {
+          if (state is QuestionError && !_hasLoadedOnce) {
             return EntityErrorView(
               message: state.message,
               onRetry: () =>
