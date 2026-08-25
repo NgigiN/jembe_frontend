@@ -38,7 +38,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
         queryParams['end_date'] = endDate.toIso8601String().split('T')[0];
       }
 
-      final response = await dio.get(
+      final response = await dio.get<dynamic>(
         '/api/v1/revenue',
         queryParameters: queryParams.isEmpty ? null : queryParams,
       );
@@ -67,7 +67,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
   @override
   Future<RevenueModel> getRevenueById(String id) async {
     try {
-      final response = await dio.get('/api/v1/revenue/$id');
+      final response = await dio.get<dynamic>('/api/v1/revenue/$id');
 
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
@@ -85,7 +85,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
   @override
   Future<RevenueModel> addRevenue(RevenueModel revenue) async {
     try {
-      final response = await dio.post(
+      final response = await dio.post<dynamic>(
         '/api/v1/revenue',
         data: revenue.toJson(),
       );
@@ -106,7 +106,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
   @override
   Future<RevenueModel> updateRevenue(RevenueModel revenue) async {
     try {
-      final response = await dio.put(
+      final response = await dio.put<dynamic>(
         '/api/v1/revenue/${revenue.id}',
         data: revenue.toJson(),
       );
@@ -127,7 +127,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
   @override
   Future<void> deleteRevenue(String id) async {
     try {
-      final response = await dio.delete('/api/v1/revenue/$id');
+      final response = await dio.delete<dynamic>('/api/v1/revenue/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         final msg = extractServerErrorMessage(response.data);

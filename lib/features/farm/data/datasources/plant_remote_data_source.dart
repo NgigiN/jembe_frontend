@@ -18,7 +18,7 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
   @override
   Future<List<PlantModel>> getPlants() async {
     try {
-      final response = await dio.get('/api/v1/plants');
+      final response = await dio.get<dynamic>('/api/v1/plants');
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -41,7 +41,7 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
   @override
   Future<PlantModel> addPlant(PlantModel plant) async {
     try {
-      final response = await dio.post(
+      final response = await dio.post<dynamic>(
         '/api/v1/plants',
         data: {'name': plant.name, 'variety': plant.variety},
       );
@@ -62,7 +62,7 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
   @override
   Future<PlantModel> updatePlant(PlantModel plant) async {
     try {
-      final response = await dio.put(
+      final response = await dio.put<dynamic>(
         '/api/v1/plants/${plant.id}',
         data: {'name': plant.name, 'variety': plant.variety},
       );
@@ -83,7 +83,7 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
   @override
   Future<void> deletePlant(String id) async {
     try {
-      final response = await dio.delete('/api/v1/plants/$id');
+      final response = await dio.delete<dynamic>('/api/v1/plants/$id');
 
       if (response.statusCode != 200) {
         final msg = extractServerErrorMessage(response.data);

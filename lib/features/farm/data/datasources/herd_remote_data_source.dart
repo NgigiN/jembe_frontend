@@ -18,7 +18,7 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
   @override
   Future<List<HerdModel>> getHerds() async {
     try {
-      final response = await dio.get('/api/v1/herds');
+      final response = await dio.get<dynamic>('/api/v1/herds');
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -42,7 +42,7 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
   @override
   Future<HerdModel> addHerd(HerdModel herd) async {
     try {
-      final response = await dio.post('/api/v1/herds', data: herd.toJson());
+      final response = await dio.post<dynamic>('/api/v1/herds', data: herd.toJson());
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
@@ -60,7 +60,7 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
   @override
   Future<HerdModel> updateHerd(HerdModel herd) async {
     try {
-      final response = await dio.put(
+      final response = await dio.put<dynamic>(
         '/api/v1/herds/${herd.id}',
         data: herd.toJson(),
       );
@@ -81,7 +81,7 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
   @override
   Future<void> deleteHerd(String id) async {
     try {
-      final response = await dio.delete('/api/v1/herds/$id');
+      final response = await dio.delete<dynamic>('/api/v1/herds/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         final msg = extractServerErrorMessage(response.data);

@@ -16,7 +16,7 @@ class QuestionRemoteDataSourceImpl implements QuestionRemoteDataSource {
   @override
   Future<QuestionModel> submitQuestion(String questionText) async {
     try {
-      final response = await dio.post(
+      final response = await dio.post<dynamic>(
         '/api/v1/questions',
         data: {'question_text': questionText},
       );
@@ -34,7 +34,7 @@ class QuestionRemoteDataSourceImpl implements QuestionRemoteDataSource {
   @override
   Future<List<QuestionModel>> getQuestions() async {
     try {
-      final response = await dio.get('/api/v1/questions');
+      final response = await dio.get<dynamic>('/api/v1/questions');
       if (response.statusCode == 200) {
         final data = response.data;
         if (data is List) {

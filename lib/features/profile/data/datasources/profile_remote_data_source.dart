@@ -27,7 +27,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   @override
   Future<UserModel> getProfile() async {
     try {
-      final response = await dio.get('/api/v1/profile');
+      final response = await dio.get<dynamic>('/api/v1/profile');
 
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
@@ -55,7 +55,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
     String? location,
   }) async {
     try {
-      final response = await dio.put(
+      final response = await dio.put<dynamic>(
         '/api/v1/profile',
         data: {
           'first_name': firstName,
@@ -82,7 +82,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
     required String newPassword,
   }) async {
     try {
-      final response = await dio.put(
+      final response = await dio.put<dynamic>(
         '/api/v1/profile/password',
         data: {'old_password': oldPassword, 'new_password': newPassword},
       );
@@ -100,7 +100,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   @override
   Future<void> deleteAccount() async {
     try {
-      final response = await dio.delete('/api/v1/profile');
+      final response = await dio.delete<dynamic>('/api/v1/profile');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         final msg = extractServerErrorMessage(response.data);
