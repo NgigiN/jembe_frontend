@@ -1,7 +1,7 @@
 import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
-import 'package:farm_tracker/features/farm_health/domain/farm_health_calculator.dart';
+import 'package:farm_tracker/features/farm_activity/domain/farm_activity_calculator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 final _now = DateTime(2026, 8, 24);
@@ -43,7 +43,7 @@ Activity _activityFor(String sourceType, String sourceId, DateTime createdAt) =>
     );
 
 void main() {
-  const calculator = FarmHealthCalculator();
+  const calculator = FarmActivityCalculator();
 
   group('freshness scoring boundaries', () {
     test('0-14 days since last activity scores 100 (fresh)', () {
@@ -61,7 +61,7 @@ void main() {
       );
 
       expect(result.score, 100);
-      expect(result.level, FarmHealthLevel.thriving);
+      expect(result.level, FarmActivityLevel.thriving);
     });
 
     test('15 days since last activity scores 60 (aging), not 100', () {
@@ -131,7 +131,7 @@ void main() {
         now: _now,
       );
       expect(at61.score, 0);
-      expect(at61.level, FarmHealthLevel.needsAttention);
+      expect(at61.level, FarmActivityLevel.needsAttention);
     });
 
     test('a herd with no linked records at all scores 0 (never)', () {
@@ -161,7 +161,7 @@ void main() {
         now: _now,
       );
       expect(result.score, 100);
-      expect(result.level, FarmHealthLevel.thriving);
+      expect(result.level, FarmActivityLevel.thriving);
     });
 
     test('zero herds and zero seasons yields a null score, not a fabricated 0', () {

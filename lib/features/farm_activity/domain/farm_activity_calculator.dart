@@ -5,10 +5,10 @@ import 'package:farm_tracker/features/farm/domain/entities/input.dart';
 import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 
-enum FarmHealthLevel { thriving, onTrack, needsAttention }
+enum FarmActivityLevel { thriving, onTrack, needsAttention }
 
-class FarmHealthResult {
-  const FarmHealthResult({
+class FarmActivityResult {
+  const FarmActivityResult({
     required this.score,
     required this.level,
     required this.weeklyStreak,
@@ -17,17 +17,19 @@ class FarmHealthResult {
   /// Null when the farmer has zero herds and zero seasons - there is
   /// nothing to score yet, and that's not the same as a 0.
   final int? score;
-  final FarmHealthLevel? level;
+  final FarmActivityLevel? level;
   final int weeklyStreak;
 }
 
 /// Pure, deterministic, no-ML computation over data already loaded
 /// elsewhere in the app. See the design spec's "Farm-health score +
-/// streak" section for the exact bucket cutoffs this mirrors.
-class FarmHealthCalculator {
-  const FarmHealthCalculator();
+/// streak" section for the exact bucket cutoffs this mirrors (renamed
+/// to "Farm Activity Score" post-implementation - this measures
+/// record-keeping freshness/cadence, not animal or crop health).
+class FarmActivityCalculator {
+  const FarmActivityCalculator();
 
-  FarmHealthResult calculate({
+  FarmActivityResult calculate({
     required List<Herd> herds,
     required List<Season> seasons,
     required List<Activity> activities,
@@ -52,7 +54,7 @@ class FarmHealthCalculator {
     ];
 
     int? averageScore;
-    FarmHealthLevel? level;
+    FarmActivityLevel? level;
     if (scores.isNotEmpty) {
       averageScore = (scores.reduce((a, b) => a + b) / scores.length).round();
       level = _levelFor(averageScore);
@@ -66,7 +68,7 @@ class FarmHealthCalculator {
       now: effectiveNow,
     );
 
-    return FarmHealthResult(score: averageScore, level: level, weeklyStreak: streak);
+    return FarmActivityResult(score: averageScore, level: level, weeklyStreak: streak);
   }
 
   DateTime? _mostRecentForHerd(
@@ -120,10 +122,10 @@ class FarmHealthCalculator {
     return 0;
   }
 
-  FarmHealthLevel _levelFor(int score) {
-    if (score >= 70) return FarmHealthLevel.thriving;
-    if (score >= 35) return FarmHealthLevel.onTrack;
-    return FarmHealthLevel.needsAttention;
+  FarmActivityLevel _levelFor(int score) {
+    if (score >= 70) return FarmActivityLevel.thriving;
+    if (score >= 35) return FarmActivityLevel.onTrack;
+    return FarmActivityLevel.needsAttention;
   }
 
   /// Consecutive weeks, walking backward from the current week, that have

@@ -20,7 +20,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/revenue_state.dart'
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
-import 'package:farm_tracker/features/farm_health/presentation/widgets/farm_health_card.dart';
+import 'package:farm_tracker/features/farm_activity/presentation/widgets/farm_activity_card.dart';
 import 'package:farm_tracker/injection_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -109,13 +109,13 @@ void main() {
           BlocProvider<HarvestBloc>.value(value: harvestBloc),
           BlocProvider<RevenueBloc>.value(value: revenueBloc),
         ],
-        child: const MaterialApp(home: Scaffold(body: FarmHealthCard())),
+        child: const MaterialApp(home: Scaffold(body: FarmActivityCard())),
       ),
     );
 
     expect(find.byType(Card), findsNothing);
 
-    // FarmHealthCard.initState() calls AnalyticsService.track(), which
+    // FarmActivityCard.initState() calls AnalyticsService.track(), which
     // schedules a real 30s flush Timer. flutter_test's
     // AutomatedTestWidgetsFlutterBinding asserts no Timer is left pending
     // when a test ends, so drain it explicitly here rather than waiting.
@@ -194,7 +194,7 @@ void main() {
             BlocProvider<HarvestBloc>.value(value: harvestBloc),
             BlocProvider<RevenueBloc>.value(value: revenueBloc),
           ],
-          child: const MaterialApp(home: Scaffold(body: FarmHealthCard())),
+          child: const MaterialApp(home: Scaffold(body: FarmActivityCard())),
         ),
       );
 

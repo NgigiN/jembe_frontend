@@ -17,19 +17,19 @@ import 'package:farm_tracker/features/farm/presentation/bloc/revenue_state.dart'
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
-import 'package:farm_tracker/features/farm_health/domain/farm_health_calculator.dart';
+import 'package:farm_tracker/features/farm_activity/domain/farm_activity_calculator.dart';
 import 'package:farm_tracker/injection_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class FarmHealthCard extends StatefulWidget {
-  const FarmHealthCard({super.key});
+class FarmActivityCard extends StatefulWidget {
+  const FarmActivityCard({super.key});
 
   @override
-  State<FarmHealthCard> createState() => _FarmHealthCardState();
+  State<FarmActivityCard> createState() => _FarmActivityCardState();
 }
 
-class _FarmHealthCardState extends State<FarmHealthCard> {
+class _FarmActivityCardState extends State<FarmActivityCard> {
   @override
   void initState() {
     super.initState();
@@ -39,7 +39,7 @@ class _FarmHealthCardState extends State<FarmHealthCard> {
     context.read<InputBloc>().add(GetInputsEvent());
     context.read<HarvestBloc>().add(GetHarvestsEvent());
     context.read<RevenueBloc>().add(LoadRevenues());
-    sl<AnalyticsService>().track('farm_health_viewed');
+    sl<AnalyticsService>().track('farm_activity_viewed');
   }
 
   @override
@@ -84,7 +84,7 @@ class _FarmHealthCardState extends State<FarmHealthCard> {
     final harvests = harvestState.harvests;
     final revenues = revenueState.revenues;
 
-    const calculator = FarmHealthCalculator();
+    const calculator = FarmActivityCalculator();
     final result = calculator.calculate(
       herds: herds,
       seasons: seasons,
@@ -129,21 +129,21 @@ class _FarmHealthCardState extends State<FarmHealthCard> {
     );
   }
 
-  IconData _iconFor(FarmHealthLevel level) => switch (level) {
-    FarmHealthLevel.thriving => Icons.eco,
-    FarmHealthLevel.onTrack => Icons.trending_up,
-    FarmHealthLevel.needsAttention => Icons.warning_amber,
+  IconData _iconFor(FarmActivityLevel level) => switch (level) {
+    FarmActivityLevel.thriving => Icons.eco,
+    FarmActivityLevel.onTrack => Icons.trending_up,
+    FarmActivityLevel.needsAttention => Icons.warning_amber,
   };
 
-  Color _colorFor(FarmHealthLevel level) => switch (level) {
-    FarmHealthLevel.thriving => Colors.green,
-    FarmHealthLevel.onTrack => Colors.orange,
-    FarmHealthLevel.needsAttention => Colors.red,
+  Color _colorFor(FarmActivityLevel level) => switch (level) {
+    FarmActivityLevel.thriving => Colors.green,
+    FarmActivityLevel.onTrack => Colors.orange,
+    FarmActivityLevel.needsAttention => Colors.red,
   };
 
-  String _labelFor(FarmHealthLevel level) => switch (level) {
-    FarmHealthLevel.thriving => 'Thriving',
-    FarmHealthLevel.onTrack => 'On track',
-    FarmHealthLevel.needsAttention => 'Needs attention',
+  String _labelFor(FarmActivityLevel level) => switch (level) {
+    FarmActivityLevel.thriving => 'Thriving',
+    FarmActivityLevel.onTrack => 'On track',
+    FarmActivityLevel.needsAttention => 'Needs attention',
   };
 }
