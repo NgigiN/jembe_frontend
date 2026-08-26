@@ -11,12 +11,13 @@ class MonthlySummaryModel extends MonthlySummary {
 
   factory MonthlySummaryModel.fromJson(Map<String, dynamic> json) {
     return MonthlySummaryModel(
-      month: json['month'] ?? '',
-      totalCosts: (json['total_costs'] ?? 0.0).toDouble(),
-      totalRevenue: (json['total_revenue'] ?? 0.0).toDouble(),
-      profit: (json['profit'] ?? 0.0).toDouble(),
+      month: (json['month'] as String?) ?? '',
+      totalCosts: ((json['total_costs'] as num?) ?? 0).toDouble(),
+      totalRevenue: ((json['total_revenue'] as num?) ?? 0).toDouble(),
+      profit: ((json['profit'] as num?) ?? 0).toDouble(),
       breakdown: MonthlySummaryBreakdownModel.fromJson(
-        json['breakdown'] ?? {'costs': {}, 'revenue': {}},
+        (json['breakdown'] as Map<String, dynamic>?) ??
+            {'costs': {}, 'revenue': {}},
       ),
     );
   }
@@ -40,8 +41,12 @@ class MonthlySummaryBreakdownModel extends MonthlySummaryBreakdown {
 
   factory MonthlySummaryBreakdownModel.fromJson(Map<String, dynamic> json) {
     return MonthlySummaryBreakdownModel(
-      costs: MonthlyCostBreakdownModel.fromJson(json['costs'] ?? {}),
-      revenue: MonthlyRevenueBreakdownModel.fromJson(json['revenue'] ?? {}),
+      costs: MonthlyCostBreakdownModel.fromJson(
+        (json['costs'] as Map<String, dynamic>?) ?? {},
+      ),
+      revenue: MonthlyRevenueBreakdownModel.fromJson(
+        (json['revenue'] as Map<String, dynamic>?) ?? {},
+      ),
     );
   }
 
@@ -62,18 +67,14 @@ class MonthlyCostBreakdownModel extends MonthlyCostBreakdown {
 
   factory MonthlyCostBreakdownModel.fromJson(Map<String, dynamic> json) {
     return MonthlyCostBreakdownModel(
-      plant: (json['plant'] ?? 0.0).toDouble(),
-      animal: (json['animal'] ?? 0.0).toDouble(),
-      infrastructure: (json['infrastructure'] ?? 0.0).toDouble(),
+      plant: ((json['plant'] as num?) ?? 0).toDouble(),
+      animal: ((json['animal'] as num?) ?? 0).toDouble(),
+      infrastructure: ((json['infrastructure'] as num?) ?? 0).toDouble(),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'plant': plant,
-      'animal': animal,
-      'infrastructure': infrastructure,
-    };
+    return {'plant': plant, 'animal': animal, 'infrastructure': infrastructure};
   }
 }
 
@@ -85,15 +86,12 @@ class MonthlyRevenueBreakdownModel extends MonthlyRevenueBreakdown {
 
   factory MonthlyRevenueBreakdownModel.fromJson(Map<String, dynamic> json) {
     return MonthlyRevenueBreakdownModel(
-      plant: (json['plant'] ?? 0.0).toDouble(),
-      animal: (json['animal'] ?? 0.0).toDouble(),
+      plant: ((json['plant'] as num?) ?? 0).toDouble(),
+      animal: ((json['animal'] as num?) ?? 0).toDouble(),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'plant': plant,
-      'animal': animal,
-    };
+    return {'plant': plant, 'animal': animal};
   }
 }

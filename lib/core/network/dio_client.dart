@@ -50,6 +50,17 @@ class DioClientFactory {
         onError: (error, handler) {
           if (error.response?.statusCode == 401) {
             // Token expired - could trigger refresh here
+            //
+            // NOTE: AnalyticsService (core/analytics/analytics_service.dart)
+            // shares this Dio instance and posts to /api/v1/events on a
+            // timer/size-triggered flush, including before login. Those
+            // pre-login flushes are expected to 401 and are silently
+            // dropped by AnalyticsService - a failed analytics flush must
+            // never throw, retry, or surface an error to the user. If a
+            // future force-logout or token-refresh action is added on this
+            // 401 branch, it needs an explicit carve-out that skips
+            // analytics requests (e.g. check the request path), or it will
+            // turn routine dropped telemetry into user-visible auth churn.
             appLogger.warning(
               LogCategory.auth,
               'Unauthorized request - token may be expired',

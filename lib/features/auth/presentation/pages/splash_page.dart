@@ -1,10 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
+import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
+import 'package:farm_tracker/injection_container.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -17,6 +19,7 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
+    sl<AnalyticsService>().track('app_open');
     // Check for existing login after a short delay
     Future.delayed(const Duration(seconds: 2), () {
       context.read<AuthBloc>().add(CheckExistingLoginEvent());

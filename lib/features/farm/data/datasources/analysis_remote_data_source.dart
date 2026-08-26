@@ -23,7 +23,7 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
   Future<FarmDetailedCostModel> getTotalCostsBySeason() async {
     try {
       appLogger.info(LogCategory.farm, 'Fetching unified total costs');
-      final response = await dio.get('/api/v1/analytics/total-costs');
+      final response = await dio.get<dynamic>('/api/v1/analytics/total-costs');
 
       appLogger.debug(
         LogCategory.http,
@@ -57,7 +57,7 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
   Future<List<CostBreakdownModel>> getCostBreakdownByInputType() async {
     try {
       appLogger.info(LogCategory.farm, 'Fetching cost breakdown by input type');
-      final response = await dio.get('/api/v1/analytics/cost-breakdown');
+      final response = await dio.get<dynamic>('/api/v1/analytics/cost-breakdown');
 
       appLogger.debug(
         LogCategory.http,
@@ -103,7 +103,7 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
         LogCategory.farm,
         'Fetching annual cost summary (monthly breakdown)',
       );
-      final response = await dio.get(
+      final response = await dio.get<dynamic>(
         '/api/v1/analytics/monthly-summary',
         queryParameters: {
           'start_date': startDate.toIso8601String().split('T')[0],

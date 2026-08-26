@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/auth/data/datasources/auth_remote_data_source.dart';
@@ -6,6 +7,14 @@ import 'package:farm_tracker/features/auth/data/repositories/auth_repository_imp
 import 'package:farm_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:farm_tracker/features/content/data/datasources/content_local_data_source.dart';
+import 'package:farm_tracker/features/content/data/datasources/question_remote_data_source.dart';
+import 'package:farm_tracker/features/content/data/repositories/content_repository_impl.dart';
+import 'package:farm_tracker/features/content/data/repositories/question_repository_impl.dart';
+import 'package:farm_tracker/features/content/domain/repositories/content_repository.dart';
+import 'package:farm_tracker/features/content/domain/repositories/question_repository.dart';
+import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
+import 'package:farm_tracker/features/content/presentation/bloc/question_bloc.dart';
 import 'package:farm_tracker/features/farm/data/datasources/activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/analysis_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/animal_remote_data_source.dart';
@@ -237,6 +246,8 @@ Future<void> init() async {
         deleteAccount: sl(),
       ),
     )
+    ..registerFactory(() => ContentBloc(repository: sl()))
+    ..registerFactory(() => QuestionBloc(repository: sl()))
     // Use Cases
     ..registerLazySingleton(() => GoogleSignInUseCase(sl()))
     ..registerLazySingleton(() => GetLands(sl()))
@@ -344,6 +355,12 @@ Future<void> init() async {
     ..registerLazySingleton<ProfileRepository>(
       () => ProfileRepositoryImpl(remoteDataSource: sl()),
     )
+    ..registerLazySingleton<ContentRepository>(
+      () => ContentRepositoryImpl(localDataSource: sl()),
+    )
+    ..registerLazySingleton<QuestionRepository>(
+      () => QuestionRepositoryImpl(remoteDataSource: sl()),
+    )
     // Data Sources
     ..registerLazySingleton<AuthRemoteDataSource>(
       () => AuthRemoteDataSourceImpl(dio: sl()),
@@ -393,6 +410,13 @@ Future<void> init() async {
     ..registerLazySingleton<ProfileRemoteDataSource>(
       () => ProfileRemoteDataSourceImpl(dio: sl()),
     )
+    ..registerLazySingleton<ContentLocalDataSource>(
+      () => ContentLocalDataSourceImpl(),
+    )
+    ..registerLazySingleton<QuestionRemoteDataSource>(
+      () => QuestionRemoteDataSourceImpl(dio: sl()),
+    )
+    ..registerLazySingleton(() => AnalyticsService(dio: sl()))
     // External - Dio client (preferred for new code)
     ..registerLazySingleton<Dio>(DioClientFactory.create);
 }

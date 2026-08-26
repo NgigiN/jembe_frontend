@@ -29,7 +29,7 @@ class CostCategoryRemoteDataSourceImpl implements CostCategoryRemoteDataSource {
     String? category,
   }) async {
     try {
-      final response = await dio.get(
+      final response = await dio.get<dynamic>(
         '/api/v1/cost-categories',
         queryParameters: {
           if (type != null) 'type': type,
@@ -57,7 +57,7 @@ class CostCategoryRemoteDataSourceImpl implements CostCategoryRemoteDataSource {
     required String category,
   }) async {
     try {
-      final response = await dio.post(
+      final response = await dio.post<dynamic>(
         '/api/v1/cost-categories',
         data: {'name': name, 'type': type, 'category': category},
       );
@@ -77,7 +77,7 @@ class CostCategoryRemoteDataSourceImpl implements CostCategoryRemoteDataSource {
   @override
   Future<void> deleteCostCategory(String id) async {
     try {
-      final response = await dio.delete('/api/v1/cost-categories/$id');
+      final response = await dio.delete<dynamic>('/api/v1/cost-categories/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         final msg = extractServerErrorMessage(response.data);

@@ -18,7 +18,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
   @override
   Future<List<SeasonModel>> getSeasons() async {
     try {
-      final response = await dio.get('/api/v1/seasons');
+      final response = await dio.get<dynamic>('/api/v1/seasons');
 
       appLogger.debug(
         LogCategory.http,
@@ -55,7 +55,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
   @override
   Future<SeasonModel> addSeason(SeasonModel season) async {
     try {
-      final response = await dio.post(
+      final response = await dio.post<dynamic>(
         '/api/v1/seasons',
         data: {
           'name': season.name,
@@ -82,7 +82,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
   @override
   Future<SeasonModel> updateSeason(SeasonModel season) async {
     try {
-      final response = await dio.put(
+      final response = await dio.put<dynamic>(
         '/api/v1/seasons/${season.id}',
         data: {
           'name': season.name,
@@ -109,7 +109,7 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
   @override
   Future<void> deleteSeason(String id) async {
     try {
-      final response = await dio.delete('/api/v1/seasons/$id');
+      final response = await dio.delete<dynamic>('/api/v1/seasons/$id');
 
       if (response.statusCode != 200) {
         final msg = extractServerErrorMessage(response.data);

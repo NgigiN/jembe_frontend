@@ -156,7 +156,7 @@ class _PlantPageState extends State<PlantPage> {
         }
 
         final plant = PlantModel.create(
-          userId: userId ?? '',
+          userId: userId,
           name: sanitizeText(nameController.text),
           variety: sanitizeOptionalText(varietyController.text),
         );

@@ -10,6 +10,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/widgets/enterprise_picker.dart';
+import 'package:farm_tracker/features/farm_activity/presentation/widgets/farm_activity_card.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_event.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_state.dart';
@@ -54,6 +55,8 @@ class AnalysisPage extends StatelessWidget {
                 ),
               ),
               SizedBox(height: context.paddingLarge),
+              const FarmActivityCard(),
+              SizedBox(height: context.paddingLarge),
               Expanded(
                 child: GridView.count(
                   crossAxisCount: context.screenWidth > 600 ? 3 : 2,
@@ -82,13 +85,6 @@ class AnalysisPage extends StatelessWidget {
                       Colors.green,
                       () => _showAnnualSummary(context),
                     ),
-                    // _buildAnalysisCard(
-                    //   context,
-                    //   'Performance Insights',
-                    //   Icons.trending_up,
-                    //   Colors.purple,
-                    //   () => _showPerformanceInsights(context),
-                    // ),
                   ],
                 ),
               ),
@@ -162,13 +158,6 @@ class AnalysisPage extends StatelessWidget {
 
   void _showAnnualSummary(BuildContext context) {
     context.push(AppRoutePath.annualSummary);
-  }
-
-  void _showPerformanceInsights(BuildContext context) {
-    // TODO: Implement performance insights
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Performance insights coming soon!')),
-    );
   }
 }
 

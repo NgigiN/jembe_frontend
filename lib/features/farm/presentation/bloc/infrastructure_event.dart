@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import 'package:farm_tracker/features/farm/domain/entities/infrastructure.dart';
 
 abstract class InfrastructureEvent extends Equatable {
   const InfrastructureEvent();
