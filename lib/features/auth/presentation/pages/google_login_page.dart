@@ -44,7 +44,7 @@ class GoogleLoginPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
                   Text(
-                    'Welcome to Neema Farm',
+                    'Welcome to Shamba+',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),

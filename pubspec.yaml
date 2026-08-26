@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.0.0+5
 
 environment:
   sdk: ^3.8.0
@@ -59,6 +59,7 @@ dev_dependencies:
   flutter_gen_runner: ^5.4.0
   mocktail: ^1.0.3
   very_good_analysis: ^5.1.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -81,6 +82,11 @@ flutter:
 
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/farmer_app.png"
 
 flutter_gen:
   output: lib/gen/
