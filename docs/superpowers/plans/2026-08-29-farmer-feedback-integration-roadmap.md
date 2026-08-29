@@ -49,7 +49,7 @@ frontend changes, no backfill (see spec for why).
       clean on branch `feat/plant-cost-categories` (backend repo)
 - [x] PR into `dev`: https://github.com/NgigiN/farmers_backend/pull/13
 
-## 2. New animal/land fields — in progress
+## 2. New animal/land fields — done
 
 - [x] Backend: `Land.TenureType`, `Animal.Sex`, `Animal.AcquisitionSource`
       added, validated, tested (`go build`/`go vet`/`gofmt`/`go test ./...`
@@ -59,18 +59,34 @@ frontend changes, no backfill (see spec for why).
   - [x] PR into `dev`: https://github.com/NgigiN/farmers_backend/pull/14
 - [x] Frontend: `Land.tenureType` — entity/model round-tripping,
       Add/Edit Land dropdown, details-sheet display, all TDD'd and green.
-      Committed on `feat/creatable-entity-pickers`
-      (PR https://github.com/NgigiN/jembe_frontend/pull/7).
-- [ ] Frontend: `Animal.sex` / `Animal.acquisitionSource` — **blocked**:
-      there is no individual-Animal CRUD UI anywhere in the frontend
-      (only `Herd`-level aggregate tracking exists; `AnimalModel` is
-      referenced only by the repository/data layer, no bloc or
-      add/edit page). Adding these as "simple form field additions" per
-      the original spec isn't possible until it's decided whether to
-      build a new Animal CRUD page/bloc, or take another approach.
-      Flagged to the user; not yet resolved.
-- [ ] "Bought" → auto-prompt into the existing Input add-flow — depends
-      on the above.
+      Also caught and fixed a real shipped bug found while building this:
+      `LandRepositoryImpl.addLand`/`updateLand` and
+      `LandRemoteDataSourceImpl` weren't threading `tenureType` through at
+      all, silently dropping it before it ever reached the backend.
+- [x] Frontend: `Animal.sex` / `Animal.acquisitionSource` — the
+      Animal-UI blocker from before was resolved by building a full new
+      individual-Animal CRUD page from scratch (design spec:
+      `docs/superpowers/specs/2026-08-29-animal-crud-ui-design.md`;
+      implementation plan:
+      `docs/superpowers/plans/2026-08-29-animal-crud-ui-implementation.md`).
+      `AnimalBloc`/`AnimalPage` (add/edit/list/details/delete), a
+      herd-picker filtered by animal type, a new `/animals-list` route
+      and 7th setup-wizard step, all TDD'd and green. Also fixed the same
+      class of repository-layer field-dropping bug pre-emptively in
+      `AnimalRepositoryImpl` before it could ship broken.
+- [x] "Bought" → auto-prompt into the existing Input add-flow —
+      `input_page.dart`'s private `_showAddInputDialog` extracted into a
+      reusable, lockable top-level `showAddInputDialog`, wired to fire
+      (fire-and-forget) when a new animal is added as "Bought," or when
+      an existing animal's acquisition source transitions into "Bought"
+      on edit (not on every re-save of an already-bought animal). No
+      backend changes needed — `Input.AnimalID` already existed
+      end-to-end on both sides.
+- [x] Committed on `feat/creatable-entity-pickers`
+      (PR https://github.com/NgigiN/jembe_frontend/pull/7). Full test
+      suite green (127/128; the one failure is the stock Flutter counter
+      smoke test, pre-existing and unrelated), `flutter analyze` clean
+      (0 errors).
 
 ## 3. Plant maturity duration
 
@@ -99,5 +115,4 @@ the size.
 
 ---
 
-**Next step:** resolve the Animal-UI question blocking the rest of item 2,
-then continue to item 3.
+**Next step:** item 3 (plant maturity duration).
