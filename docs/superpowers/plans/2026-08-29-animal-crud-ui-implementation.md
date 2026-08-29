@@ -3170,7 +3170,7 @@ In `_showEditAnimalDialog`, capture the pre-edit value and compare after update,
 Run: `flutter test test/features/farm/presentation/pages/animal_page_test.dart`
 Expected: PASS (10/10).
 
-- [ ] **Step 5: Run the full suite and analyzer one final time, then commit**
+- [x] **Step 5: Run the full suite and analyzer one final time, then commit**
 
 ```bash
 flutter analyze
@@ -3180,7 +3180,7 @@ git commit -m "feat: auto-prompt the cost-log form when an animal transitions to
 git push
 ```
 
-- [ ] **Step 6: Update the roadmap doc**
+- [x] **Step 6: Update the roadmap doc**
 
 Read `docs/superpowers/plans/2026-08-29-farmer-feedback-integration-roadmap.md` in full, then update item 2's status to fully complete (matching the pattern already used for items 0 and 1: check off `Animal.sex`/`Animal.acquisitionSource` frontend, the Bought-prompt integration, and reference this plan and its PR).
 
