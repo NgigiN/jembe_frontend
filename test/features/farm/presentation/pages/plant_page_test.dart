@@ -5,18 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:skeletonizer/skeletonizer.dart';
-import 'package:farm_tracker/features/farm/domain/entities/land.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
-import 'package:farm_tracker/features/farm/presentation/pages/land_page.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/plant_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/plant_state.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/plant_page.dart';
 
-class MockLandBloc extends MockBloc<LandEvent, LandState>
-    implements LandBloc {}
+class MockPlantBloc extends MockBloc<PlantEvent, PlantState>
+    implements PlantBloc {}
 
-/// Stubs the flutter_secure_storage platform channel so
-/// UserUtils.getCurrentUserId() resolves without touching real native code.
 void _mockSecureStorageUserId(String userId) {
   const channel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -28,45 +25,18 @@ void _mockSecureStorageUserId(String userId) {
 }
 
 void main() {
-  testWidgets(
-    'shows a skeleton (not a spinner) while lands are loading',
-    (tester) async {
-      final landBloc = MockLandBloc();
-      whenListen(
-        landBloc,
-        Stream<LandState>.value(const LandLoading()),
-        initialState: const LandLoading(),
-      );
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: BlocProvider<LandBloc>.value(
-            value: landBloc,
-            child: const LandPage(),
-          ),
-        ),
-      );
-
-      final skeletonizerFinder = find.byWidgetPredicate(
-        (widget) => widget is Skeletonizer,
-      );
-      expect(skeletonizerFinder, findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsNothing);
-    },
-  );
-
-  group('showAddLandDialog', () {
-    late MockLandBloc landBloc;
-    late StreamController<LandState> stateController;
+  group('showAddPlantDialog', () {
+    late MockPlantBloc plantBloc;
+    late StreamController<PlantState> stateController;
 
     setUp(() {
       _mockSecureStorageUserId('user-1');
-      landBloc = MockLandBloc();
-      stateController = StreamController<LandState>.broadcast();
+      plantBloc = MockPlantBloc();
+      stateController = StreamController<PlantState>.broadcast();
       whenListen(
-        landBloc,
+        plantBloc,
         stateController.stream,
-        initialState: const LandLoaded(lands: []),
+        initialState: const PlantLoaded(plants: []),
       );
     });
 
@@ -74,11 +44,11 @@ void main() {
 
     Widget buildHarness(ValueChanged<Future<String?>> capture) {
       return MaterialApp(
-        home: BlocProvider<LandBloc>.value(
-          value: landBloc,
+        home: BlocProvider<PlantBloc>.value(
+          value: plantBloc,
           child: Builder(
             builder: (context) => ElevatedButton(
-              onPressed: () => capture(showAddLandDialog(context)),
+              onPressed: () => capture(showAddPlantDialog(context)),
               child: const Text('open'),
             ),
           ),
@@ -87,7 +57,7 @@ void main() {
     }
 
     testWidgets(
-      'returns the new land id once the bloc reports it added',
+      'returns the new plant id once the bloc reports it added',
       (tester) async {
         late Future<String?> resultFuture;
         await tester.pumpWidget(
@@ -98,31 +68,31 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.enterText(
-          find.widgetWithText(TextFormField, 'Land Name *'),
-          'North Field',
+          find.widgetWithText(TextFormField, 'Plant Name *'),
+          'Maize',
         );
 
         final now = DateTime.now();
         stateController.add(
-          LandLoaded(
-            lands: [
-              Land(
-                id: 'land-42',
+          PlantLoaded(
+            plants: [
+              Plant(
+                id: 'plant-1',
                 userId: 'user-1',
-                name: 'North Field',
+                name: 'Maize',
                 createdAt: now,
                 updatedAt: now,
               ),
             ],
-            successMessage: 'Land added',
+            successMessage: 'Crop added',
           ),
         );
 
-        await tester.tap(find.text('Add Land'));
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Add Plant'));
         await tester.pumpAndSettle();
 
         final result = await tester.runAsync(() => resultFuture);
-        expect(result, 'land-42');
+        expect(result, 'plant-1');
       },
     );
 

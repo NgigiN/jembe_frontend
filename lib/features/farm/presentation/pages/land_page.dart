@@ -25,6 +25,70 @@ import 'package:farm_tracker/features/farm/data/models/land_model.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 
+/// Opens the standard "Add Land" form and resolves once it closes: the new
+/// land's id if the add succeeded, or null if the sheet was dismissed
+/// without submitting. Lets other pickers (e.g. Season's land dropdown)
+/// reuse this exact flow instead of duplicating it.
+Future<String?> showAddLandDialog(BuildContext context) async {
+  final bloc = context.read<LandBloc>();
+  final beforeIds = bloc.state.lands.map((land) => land.id).toSet();
+  String? newId;
+
+  final subscription = bloc.stream.listen((state) {
+    if (state is LandLoaded && state.successMessage == 'Land added') {
+      for (final land in state.lands) {
+        if (!beforeIds.contains(land.id)) {
+          newId = land.id;
+          break;
+        }
+      }
+    }
+  });
+
+  final formKey = GlobalKey<FormState>();
+  final nameController = TextEditingController();
+  final sizeController = TextEditingController();
+  final locationController = TextEditingController();
+  final soilTypeController = TextEditingController();
+
+  await EntityFormSheet.show(
+    context: context,
+    title: 'Add New Land',
+    submitLabel: 'Add Land',
+    formKey: formKey,
+    fields: _LandPageState._landFormFields(
+      nameController: nameController,
+      sizeController: sizeController,
+      locationController: locationController,
+      soilTypeController: soilTypeController,
+    ),
+    onSubmit: (sheetContext) async {
+      final userId = await UserUtils.getCurrentUserId();
+      if (userId == null) {
+        ScaffoldMessenger.of(sheetContext).showSnackBar(
+          const SnackBar(
+            content: Text('User not authenticated'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      final land = LandModel.create(
+        userId: userId,
+        name: sanitizeText(nameController.text),
+        size: parseOptionalNonNegativeDecimal(sizeController.text),
+        location: sanitizeOptionalText(locationController.text),
+        soilType: sanitizeOptionalText(soilTypeController.text),
+      );
+      bloc.add(AddLandEvent(land));
+      Navigator.pop(sheetContext);
+    },
+  );
+
+  await subscription.cancel();
+  return newId;
+}
+
 class LandPage extends StatefulWidget {
   const LandPage({super.key});
 
@@ -139,45 +203,7 @@ class _LandPageState extends State<LandPage> {
   }
 
   void _showAddLandDialog() {
-    final formKey = GlobalKey<FormState>();
-    final nameController = TextEditingController();
-    final sizeController = TextEditingController();
-    final locationController = TextEditingController();
-    final soilTypeController = TextEditingController();
-
-    EntityFormSheet.show(
-      context: context,
-      title: 'Add New Land',
-      submitLabel: 'Add Land',
-      formKey: formKey,
-      fields: _landFormFields(
-        nameController: nameController,
-        sizeController: sizeController,
-        locationController: locationController,
-        soilTypeController: soilTypeController,
-      ),
-      onSubmit: (sheetContext) async {
-        final userId = await UserUtils.getCurrentUserId();
-        if (userId == null) {
-          ScaffoldMessenger.of(sheetContext).showSnackBar(
-            const SnackBar(
-              content: Text('User not authenticated'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-        final land = LandModel.create(
-          userId: userId,
-          name: sanitizeText(nameController.text),
-          size: parseOptionalNonNegativeDecimal(sizeController.text),
-          location: sanitizeOptionalText(locationController.text),
-          soilType: sanitizeOptionalText(soilTypeController.text),
-        );
-        context.read<LandBloc>().add(AddLandEvent(land));
-        Navigator.pop(sheetContext);
-      },
-    );
+    showAddLandDialog(context);
   }
 
   void _showEditLandDialog(Land land) {
@@ -221,7 +247,7 @@ class _LandPageState extends State<LandPage> {
     );
   }
 
-  List<Widget> _landFormFields({
+  static List<Widget> _landFormFields({
     required TextEditingController nameController,
     required TextEditingController sizeController,
     required TextEditingController locationController,
