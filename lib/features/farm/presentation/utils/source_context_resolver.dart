@@ -1,3 +1,4 @@
+import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
@@ -50,4 +51,11 @@ String herdName(List<Herd> herds, String herdId) {
     }
   }
   return 'Unknown herd';
+}
+
+String animalTypeName(List<AnimalType> animalTypes, String animalTypeId) {
+  for (final animalType in animalTypes) {
+    if (animalType.id == animalTypeId) return animalType.name;
+  }
+  return 'Unknown type';
 }

@@ -10,6 +10,7 @@ import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dar
 import 'package:farm_tracker/features/content/presentation/bloc/question_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/animal_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
@@ -85,6 +86,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         BlocProvider<HarvestBloc>(create: (_) => di.sl<HarvestBloc>()),
         BlocProvider<AnimalTypeBloc>(create: (_) => di.sl<AnimalTypeBloc>()),
         BlocProvider<HerdBloc>(create: (_) => di.sl<HerdBloc>()),
+        BlocProvider<AnimalBloc>(create: (_) => di.sl<AnimalBloc>()),
         BlocProvider<HerdActivityBloc>(
           create: (_) => di.sl<HerdActivityBloc>(),
         ),

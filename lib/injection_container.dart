@@ -111,6 +111,7 @@ import 'package:farm_tracker/features/farm/domain/usecases/update_revenue.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_season.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/animal_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
@@ -204,6 +205,14 @@ Future<void> init() async {
         addHerd: sl(),
         updateHerd: sl(),
         deleteHerd: sl(),
+      ),
+    )
+    ..registerFactory(
+      () => AnimalBloc(
+        getAnimals: sl(),
+        addAnimal: sl(),
+        updateAnimal: sl(),
+        deleteAnimal: sl(),
       ),
     )
     ..registerFactory(() => HerdActivityBloc(addHerdActivity: sl()))
