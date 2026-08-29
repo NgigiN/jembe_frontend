@@ -10,33 +10,34 @@
 > — this doc exists so nothing on the list gets forgotten and the order is
 > clear.
 
-## 0. Creatable entity pickers — in progress
+## 0. Creatable entity pickers — done, PR open
 
 Branch: `feat/creatable-entity-pickers`. Design: see this session's earlier
-brainstorm (not re-written — already approved and partly built).
+brainstorm (not re-written).
 
-- [x] `EntityPickerWithAdd<T>` generic widget, tested
+- [x] `EntityPickerWithAdd<T>` generic widget, tested (incl. optional
+      `prefixIcon`)
 - [x] Land add-dialog extracted (`showAddLandDialog`), tested
 - [x] Plant add-dialog extracted (`showAddPlantDialog`), tested
 - [x] AnimalType add-dialog extracted (`showAddAnimalTypeDialog`), tested
-- [ ] Herd add-dialog extracted (`showAddHerdDialog`) — more involved: has
-      its own nested `StatefulBuilder` + `BlocBuilder<AnimalTypeBloc>` for a
-      live animal-type dropdown, plus `_herdFormFields`,
-      `_buildNoAnimalTypesWarning`, `_showSheetError`, `_submitAddHerd` all
-      need extracting together
-- [ ] Season add-dialog extracted (`showAddSeasonDialog`) — has two of its
-      own nested dropdowns (Plant, Land)
-- [ ] Wire `EntityPickerWithAdd` into all 8 call sites:
-  - [ ] `season_page.dart` — Plant picker
-  - [ ] `season_page.dart` — Land picker
-  - [ ] `herd_page.dart` — AnimalType picker
-  - [ ] `revenue_page.dart` — Category picker
-  - [ ] `revenue_page.dart` — Season picker
-  - [ ] `revenue_page.dart` — Herd picker
-  - [ ] `harvest_page.dart` — Season picker
-  - [ ] `herd_activity_page.dart` — Herd picker
-- [ ] Push branch, open PR into `dev` once the above lands and behavior is
-      demonstrable end to end
+- [x] Herd add-dialog extracted (`showAddHerdDialog`), tested
+- [x] Season add-dialog extracted (`showAddSeasonDialog`), tested — its own
+      Plant/Land pickers upgraded from a one-time snapshot to reactive
+      `BlocBuilder` + `EntityPickerWithAdd`
+- [x] Wired into all 7 dropdowns that actually reference an entity list:
+  - [x] `season_page.dart` — Plant picker
+  - [x] `season_page.dart` — Land picker
+  - [x] `herd_page.dart` — AnimalType picker (also upgraded to reactive)
+  - [x] `revenue_page.dart` — Season picker
+  - [x] `revenue_page.dart` — Herd picker
+  - [x] `harvest_page.dart` — Season picker
+  - [x] `herd_activity_page.dart` — Herd picker
+  - `revenue_page.dart`'s "Select Category" checked and correctly excluded
+    — fixed Plant/Animal toggle, not an entity list
+- [x] Full test suite green (97/98; the one failure is the stock Flutter
+      counter smoke test, pre-existing and unrelated), `flutter analyze`
+      clean (0 errors)
+- [ ] PR into `dev`
 
 ## 1. Default cost category additions
 
