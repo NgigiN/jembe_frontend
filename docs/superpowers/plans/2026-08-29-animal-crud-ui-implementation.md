@@ -16,6 +16,7 @@
 - TDD per step: write the failing test, run it and confirm it fails for the right reason, write minimal code, run it and confirm it passes, commit. Do not skip the RED verification.
 - Before editing any file for the first time in this plan, read it in full first (do not assume its contents from this plan's summaries) — this codebase's session convention (see project memory `feedback_read_before_write.md`) is to verify via the file itself, not `git status`, before treating anything as safe to overwrite.
 - Widget tests must never simulate opening a `DropdownButtonFormField`'s (or `EntityPickerWithAdd`'s) overlay menu via `tester.tap()` — this Flutter SDK version's overlay/hit-test geometry is unreliable inside scrollable bottom sheets in this codebase's test harness (confirmed this session across five failed tap-based attempts). Instead, get the widget instance via `tester.widget<T>(find.byType(T))` and invoke its `onChanged` (or `onTypeChanged`) callback directly, then `await tester.pumpAndSettle()`.
+- **Correction found during Task 8 execution (two parts):** (1) `harness()`/`buildHarness()` test scaffolding must wrap `MaterialApp` itself with `MultiBlocProvider` — `MultiBlocProvider(child: MaterialApp(...))`, not `MaterialApp(home: MultiBlocProvider(...))` — matching how `main.dart`'s real `MyApp` wires providers above `MaterialApp.router`. `showModalBottomSheet`/`showDialog` push a new route as a *sibling* within the same `Navigator`, so a provider placed only inside `home:` is not an ancestor of that new route's own build context. This was invisible in every earlier task's tests (Land, Herd, Animal) because none of those forms contain a widget that does its *own* internal `context.read`/`BlocBuilder` lookup — they only read blocs once via the *caller's* context before the sheet opens. `CostCategoryTypeSelector` is the first widget in this plan to do its own internal `BlocBuilder<CostCategoryBloc, CostCategoryState>` lookup from inside the sheet, which is what exposes this. (2) `CostCategoryTypeSelector.onTypeChanged` is exactly the same kind of plain-callback prop as `EntityPickerWithAdd.onChanged`, wrapping its own required/validated inner `DropdownButtonFormField` — the same dual `FormFieldState.didChange(value)` + `.onTypeChanged(value)` drive applies to it (find its inner field via `find.ancestor(of: find.text(<its labelText>), matching: find.byType(DropdownButtonFormField<String>))`, since it has no `Key` of its own).
 - **Correction found during Task 7 execution:** `animals_page.dart`'s setup-wizard body is a plain `ListView(children: [...])`, but Flutter still virtualizes a `ListView`'s children by viewport/cache-extent even when given a fixed `children:` list — widgets below the fold (confirmed here: everything from step 6 onward) are never built as Elements until the list is actually scrolled, so `find.text(...)` finds nothing for them even after `pumpAndSettle()`. Scroll first with `await tester.dragUntilVisible(find.text(<target>), find.byType(ListView), const Offset(0, -200)); await tester.pumpAndSettle();` before asserting on a step past the first few — this exact pattern already exists in `test/features/farm/presentation/pages/settings_page_test.dart` for the same reason.
 - **Correction found during Task 4 execution, applies to every later task that submits a form after setting a *required/validated* dropdown field** (this affects the Animal Type and Herd pickers specifically, since both carry a `requiredSelection` validator — it does NOT affect Sex/Acquisition Source, which are optional with no validator): calling `.onChanged(value)` directly on `EntityPickerWithAdd`'s widget instance (or on a validated `DropdownButtonFormField`'s widget instance) only updates the outer closure variable — it never touches the inner `DropdownButtonFormField`'s own `FormFieldState`, which is what `Form.validate()` actually reads. Left uncorrected, `Form.validate()` silently keeps failing forever, `onSubmit` never runs, the sheet never closes, and `await tester.runAsync(() => resultFuture)` hangs until the test framework's own timeout (confirmed this session: a 10-minute real hang, not a quick failure). For any *required* dropdown field, drive both: the widget's `FormFieldState` via `tester.state<FormFieldState<String>>(find.descendant(of: find.byType(<PickerType>), matching: find.byType(DropdownButtonFormField<String>))).didChange(value)`, **and** the picker's own `onChanged(value)` callback (for the outer closure variable the submit handler actually reads) — both are needed together. Tasks 6, 9, and 10 below submit the form after setting Animal Type/Herd and must use this same dual-call pattern, not the plain `.onChanged(value)` shown in Task 4's original test draft.
 - Commit after every task (or every step marked "Commit") on the existing branch `feat/creatable-entity-pickers` — no new branch. Push after each commit, matching this session's established pattern (the branch has an open PR, `NgigiN/jembe_frontend#7`, already targeting `dev`).
@@ -2179,7 +2180,7 @@ git push
 - Consumes: `InputModel.create` (unchanged — already has `animalId`), `CostCategoryTypeSelector` (unchanged).
 - Produces: top-level `Future<void> showAddInputDialog(BuildContext context, {String? sourceType, String? lockedHerdId, int? lockedAnimalId})`. Task 9 and Task 10 call this with `lockedHerdId`/`lockedAnimalId` set; `_InputPageState`'s own FAB calls it with just `sourceType: widget.sourceType`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `test/features/farm/presentation/pages/input_page_test.dart`:
 
@@ -2297,17 +2298,20 @@ void main() {
     );
   });
 
+  // MultiBlocProvider wraps MaterialApp itself (matching main.dart's real
+  // wiring), not just its `home:` content — see the Global Constraints
+  // correction above for why this matters here specifically.
   Widget harness(ValueChanged<BuildContext> captureContext) {
-    return MaterialApp(
-      home: MultiBlocProvider(
-        providers: [
-          BlocProvider<InputBloc>.value(value: inputBloc),
-          BlocProvider<HerdBloc>.value(value: herdBloc),
-          BlocProvider<SeasonBloc>.value(value: seasonBloc),
-          BlocProvider<LandBloc>.value(value: landBloc),
-          BlocProvider<CostCategoryBloc>.value(value: costCategoryBloc),
-        ],
-        child: Builder(
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<InputBloc>.value(value: inputBloc),
+        BlocProvider<HerdBloc>.value(value: herdBloc),
+        BlocProvider<SeasonBloc>.value(value: seasonBloc),
+        BlocProvider<LandBloc>.value(value: landBloc),
+        BlocProvider<CostCategoryBloc>.value(value: costCategoryBloc),
+      ],
+      child: MaterialApp(
+        home: Builder(
           builder: (context) {
             captureContext(context);
             return const Scaffold(body: SizedBox());
@@ -2328,9 +2332,28 @@ void main() {
 
       expect(find.text('Select Herd *'), findsOneWidget);
 
+      // Select Herd is required/validated — drive the inner FormFieldState
+      // too, or Form.validate() fails silently and "Add Input" never
+      // submits (same pitfall as the Animal Type/Herd pickers in Task 4).
+      final herdDropdownFinder = find.ancestor(
+        of: find.text('Select Herd *'),
+        matching: find.byType(DropdownButtonFormField<String>),
+      );
+      tester.state<FormFieldState<String>>(herdDropdownFinder).didChange('herd-1');
+      tester.widget<DropdownButtonFormField<String>>(herdDropdownFinder).onChanged!('herd-1');
+      await tester.pumpAndSettle();
+
+      // CostCategoryTypeSelector.onTypeChanged is the same kind of plain
+      // callback prop wrapping a required inner DropdownButtonFormField —
+      // same dual-drive requirement.
       final typeSelector = tester.widget<CostCategoryTypeSelector>(
         find.byType(CostCategoryTypeSelector),
       );
+      final typeDropdownFinder = find.ancestor(
+        of: find.text('Input Type *'),
+        matching: find.byType(DropdownButtonFormField<String>),
+      );
+      tester.state<FormFieldState<String>>(typeDropdownFinder).didChange('Feed');
       typeSelector.onTypeChanged('Feed');
       await tester.pumpAndSettle();
 
@@ -2370,6 +2393,11 @@ void main() {
       final typeSelector = tester.widget<CostCategoryTypeSelector>(
         find.byType(CostCategoryTypeSelector),
       );
+      final typeDropdownFinder = find.ancestor(
+        of: find.text('Input Type *'),
+        matching: find.byType(DropdownButtonFormField<String>),
+      );
+      tester.state<FormFieldState<String>>(typeDropdownFinder).didChange('Purchase');
       typeSelector.onTypeChanged('Purchase');
       await tester.pumpAndSettle();
 
@@ -2391,12 +2419,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `flutter test test/features/farm/presentation/pages/input_page_test.dart`
 Expected: FAIL to compile — `showAddInputDialog` is not a top-level function yet (it's a private method on `_InputPageState`).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Read `lib/features/farm/presentation/pages/input_page.dart` in full first. Move `_showAddInputDialog` out of `_InputPageState` to become a top-level function, replacing every use of `widget.sourceType` with an explicit `sourceType` parameter (defaulting to `'plant'`, matching the current `widget.sourceType ?? 'plant'` behavior) and adding the two lock parameters:
 
@@ -2655,12 +2683,12 @@ Update `_InputPageState`'s FAB (the only remaining call site) to pass `sourceTyp
 
 Remove the old private `_showAddInputDialog` method from `_InputPageState` entirely (it has been replaced by the top-level function above) — leave `_showEditInputDialog` and `_showDeleteConfirmation` untouched, they are out of scope for this task.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `flutter test test/features/farm/presentation/pages/input_page_test.dart`
 Expected: PASS (2/2).
 
-- [ ] **Step 5: Run the full suite and analyzer, then commit**
+- [x] **Step 5: Run the full suite and analyzer, then commit**
 
 Run `flutter analyze` and `flutter test` — confirm no regressions in any other page that might reference `_showAddInputDialog` (none do; it was private to `input_page.dart`).
 
