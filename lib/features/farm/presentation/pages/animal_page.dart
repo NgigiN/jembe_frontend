@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
@@ -32,6 +34,7 @@ import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animal_type_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/input_page.dart';
 import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
 
 /// Opens the standard "Add Animal" form and resolves once it closes: the
@@ -64,6 +67,9 @@ Future<String?> showAddAnimalDialog(BuildContext context) async {
   final animalTypes = context.read<AnimalTypeBloc>().state.animalTypes;
   final herds = context.read<HerdBloc>().state.herds;
 
+  String? committedHerdId;
+  String? committedAcquisitionSource;
+
   await EntityFormSheet.show(
     context: context,
     title: 'Add New Animal',
@@ -93,6 +99,8 @@ Future<String?> showAddAnimalDialog(BuildContext context) async {
         );
         return;
       }
+      committedHerdId = herdIdNotifier.value;
+      committedAcquisitionSource = selectedAcquisitionSource;
       final animal = AnimalModel.create(
         userId: userId,
         name: sanitizeText(nameController.text),
@@ -108,6 +116,18 @@ Future<String?> showAddAnimalDialog(BuildContext context) async {
   );
 
   await subscription.cancel();
+
+  if (committedAcquisitionSource == 'bought' && newId != null && context.mounted) {
+    unawaited(
+      showAddInputDialog(
+        context,
+        sourceType: 'animal',
+        lockedHerdId: committedHerdId,
+        lockedAnimalId: int.tryParse(newId!),
+      ),
+    );
+  }
+
   return newId;
 }
 

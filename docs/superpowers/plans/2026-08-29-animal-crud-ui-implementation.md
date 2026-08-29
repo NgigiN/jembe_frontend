@@ -16,6 +16,7 @@
 - TDD per step: write the failing test, run it and confirm it fails for the right reason, write minimal code, run it and confirm it passes, commit. Do not skip the RED verification.
 - Before editing any file for the first time in this plan, read it in full first (do not assume its contents from this plan's summaries) — this codebase's session convention (see project memory `feedback_read_before_write.md`) is to verify via the file itself, not `git status`, before treating anything as safe to overwrite.
 - Widget tests must never simulate opening a `DropdownButtonFormField`'s (or `EntityPickerWithAdd`'s) overlay menu via `tester.tap()` — this Flutter SDK version's overlay/hit-test geometry is unreliable inside scrollable bottom sheets in this codebase's test harness (confirmed this session across five failed tap-based attempts). Instead, get the widget instance via `tester.widget<T>(find.byType(T))` and invoke its `onChanged` (or `onTypeChanged`) callback directly, then `await tester.pumpAndSettle()`.
+- **Correction found during Task 9 execution — real deadlock, not just a test-code fix:** the plan's original design had `showAddAnimalDialog` `await showAddInputDialog(...)` inline before returning `newId`, meaning `resultFuture` (the thing the test awaits via `tester.runAsync(() => resultFuture)`) would not resolve until the *second* modal sheet had been pushed. This deadlocks: `runAsync()` escapes Flutter's FakeAsync test zone to let real async gaps (platform channels, real timers) elapse, but `showModalBottomSheet`'s route-push internally schedules work tied to a new *frame*, which only advances via `tester.pump()` in the FakeAsync zone — code executing inside `runAsync()` never yields back to let a pump happen, so the two block each other forever (confirmed as a genuine hang: reproduced with `flutter test`'s own 10-minute per-test timeout, not just an impatient bash wrapper — the stack trace bottoms out in `dart:isolate _RawReceivePort._handleMessage`, `runAsync`'s own zone-bridging mechanism). The fix is architectural, in production code, not test code: `showAddAnimalDialog` fires `showAddInputDialog(...)` with `unawaited(...)` (`dart:async`) instead of `await`, so its own returned Future resolves as soon as the *first* sheet closes — matching the design spec's framing that the animal save and the cost prompt are "sequential, independent writes," not something the animal dialog's own caller should block on. The test then needs one more `await tester.pumpAndSettle();` *after* `await tester.runAsync(() => resultFuture)` to let the now fire-and-forget second sheet actually open before asserting on it. General lesson: never let code awaited through `tester.runAsync()` also push a new route or otherwise touch the widget tree — keep `runAsync()` scoped to the specific real-async gap (here, `UserUtils.getCurrentUserId()`'s platform channel call) and drive anything after it with normal `pump()`/`pumpAndSettle()` instead.
 - **Correction found during Task 8 execution (two parts):** (1) `harness()`/`buildHarness()` test scaffolding must wrap `MaterialApp` itself with `MultiBlocProvider` — `MultiBlocProvider(child: MaterialApp(...))`, not `MaterialApp(home: MultiBlocProvider(...))` — matching how `main.dart`'s real `MyApp` wires providers above `MaterialApp.router`. `showModalBottomSheet`/`showDialog` push a new route as a *sibling* within the same `Navigator`, so a provider placed only inside `home:` is not an ancestor of that new route's own build context. This was invisible in every earlier task's tests (Land, Herd, Animal) because none of those forms contain a widget that does its *own* internal `context.read`/`BlocBuilder` lookup — they only read blocs once via the *caller's* context before the sheet opens. `CostCategoryTypeSelector` is the first widget in this plan to do its own internal `BlocBuilder<CostCategoryBloc, CostCategoryState>` lookup from inside the sheet, which is what exposes this. (2) `CostCategoryTypeSelector.onTypeChanged` is exactly the same kind of plain-callback prop as `EntityPickerWithAdd.onChanged`, wrapping its own required/validated inner `DropdownButtonFormField` — the same dual `FormFieldState.didChange(value)` + `.onTypeChanged(value)` drive applies to it (find its inner field via `find.ancestor(of: find.text(<its labelText>), matching: find.byType(DropdownButtonFormField<String>))`, since it has no `Key` of its own).
 - **Correction found during Task 7 execution:** `animals_page.dart`'s setup-wizard body is a plain `ListView(children: [...])`, but Flutter still virtualizes a `ListView`'s children by viewport/cache-extent even when given a fixed `children:` list — widgets below the fold (confirmed here: everything from step 6 onward) are never built as Elements until the list is actually scrolled, so `find.text(...)` finds nothing for them even after `pumpAndSettle()`. Scroll first with `await tester.dragUntilVisible(find.text(<target>), find.byType(ListView), const Offset(0, -200)); await tester.pumpAndSettle();` before asserting on a step past the first few — this exact pattern already exists in `test/features/farm/presentation/pages/settings_page_test.dart` for the same reason.
 - **Correction found during Task 4 execution, applies to every later task that submits a form after setting a *required/validated* dropdown field** (this affects the Animal Type and Herd pickers specifically, since both carry a `requiredSelection` validator — it does NOT affect Sex/Acquisition Source, which are optional with no validator): calling `.onChanged(value)` directly on `EntityPickerWithAdd`'s widget instance (or on a validated `DropdownButtonFormField`'s widget instance) only updates the outer closure variable — it never touches the inner `DropdownButtonFormField`'s own `FormFieldState`, which is what `Form.validate()` actually reads. Left uncorrected, `Form.validate()` silently keeps failing forever, `onSubmit` never runs, the sheet never closes, and `await tester.runAsync(() => resultFuture)` hangs until the test framework's own timeout (confirmed this session: a 10-minute real hang, not a quick failure). For any *required* dropdown field, drive both: the widget's `FormFieldState` via `tester.state<FormFieldState<String>>(find.descendant(of: find.byType(<PickerType>), matching: find.byType(DropdownButtonFormField<String>))).didChange(value)`, **and** the picker's own `onChanged(value)` callback (for the outer closure variable the submit handler actually reads) — both are needed together. Tasks 6, 9, and 10 below submit the form after setting Animal Type/Herd and must use this same dual-call pattern, not the plain `.onChanged(value)` shown in Task 4's original test draft.
@@ -2709,7 +2710,7 @@ git push
 **Interfaces:**
 - Consumes: `showAddInputDialog` (Task 8).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to the `showAddAnimalDialog` group:
 
@@ -2790,6 +2791,11 @@ Add to the `showAddAnimalDialog` group:
       await tester.pumpAndSettle();
       await tester.runAsync(() => resultFuture);
 
+      // The cost-log prompt is fire-and-forget from showAddAnimalDialog's
+      // own return (see the Global Constraints correction on runAsync +
+      // route-pushing deadlocks) — pump once more to let it actually open.
+      await tester.pumpAndSettle();
+
       expect(find.text('Add New Animal Input'), findsOneWidget);
     });
 ```
@@ -2868,20 +2874,26 @@ And add these four providers to `buildHarness`'s `MultiBlocProvider.providers` l
             BlocProvider<CostCategoryBloc>.value(value: costCategoryBloc),
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `flutter test test/features/farm/presentation/pages/animal_page_test.dart`
 Expected: FAIL — no "Add New Animal Input" text appears; nothing currently calls `showAddInputDialog` from the animal add flow.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `lib/features/farm/presentation/pages/animal_page.dart`, add the import:
 
 ```dart
+import 'dart:async';
+
 import 'package:farm_tracker/features/farm/presentation/pages/input_page.dart';
 ```
 
-`showAddAnimalDialog` already sets up a `bloc.stream.listen(...)` subscription *before* `EntityFormSheet.show` runs, capturing the newly-added animal's id into the `newId` closure variable once the bloc reports success (this is the same proven pattern `showAddLandDialog` already uses, and it matters here: subscribing only *after* dispatching `AddAnimalEvent` would risk missing a state the bloc already emitted before the listener attached). Reuse that existing `newId`/`subscription` — do not add a second, separately-timed listener inside `onSubmit`. Capture `selectedAcquisitionSource` and `herdIdNotifier.value` into local variables inside `onSubmit` (since the fields powering the form are gone once the sheet closes), then act on them after `EntityFormSheet.show` resolves:
+(`dart:async` provides `unawaited` — see below for why it's needed. If `animal_page.dart` doesn't already import `dart:async`, add it as the file's first import line, matching this codebase's convention of a blank line after `dart:` imports before `package:` imports.)
+
+`showAddAnimalDialog` already sets up a `bloc.stream.listen(...)` subscription *before* `EntityFormSheet.show` runs, capturing the newly-added animal's id into the `newId` closure variable once the bloc reports success (this is the same proven pattern `showAddLandDialog` already uses, and it matters here: subscribing only *after* dispatching `AddAnimalEvent` would risk missing a state the bloc already emitted before the listener attached). Reuse that existing `newId`/`subscription` — do not add a second, separately-timed listener inside `onSubmit`. Capture `selectedAcquisitionSource` and `herdIdNotifier.value` into local variables inside `onSubmit` (since the fields powering the form are gone once the sheet closes), then act on them after `EntityFormSheet.show` resolves.
+
+**Do not `await showAddInputDialog(...)` here** — call it with `unawaited(...)` instead. Awaiting it inline was the original draft and it deadlocks for real: it would make `showAddAnimalDialog`'s own returned Future depend on the second sheet's route actually being pushed, and a widget test driving that return value through `tester.runAsync()` (needed for the earlier `UserUtils.getCurrentUserId()` platform-channel call) hangs forever, because `runAsync()`'s real-async zone and the route-push's frame-scheduling can't unblock each other (see the Global Constraints correction above — this was reproduced as a genuine hang against `flutter test`'s own 10-minute per-test timeout, not just impatience). Firing it unawaited also matches the design spec's framing: the animal save and the cost prompt are sequential, independent writes, not something the animal dialog's own caller should block on.
 
 ```dart
   String? committedHerdId;
@@ -2935,11 +2947,13 @@ import 'package:farm_tracker/features/farm/presentation/pages/input_page.dart';
   await subscription.cancel();
 
   if (committedAcquisitionSource == 'bought' && newId != null && context.mounted) {
-    await showAddInputDialog(
-      context,
-      sourceType: 'animal',
-      lockedHerdId: committedHerdId,
-      lockedAnimalId: int.tryParse(newId!),
+    unawaited(
+      showAddInputDialog(
+        context,
+        sourceType: 'animal',
+        lockedHerdId: committedHerdId,
+        lockedAnimalId: int.tryParse(newId!),
+      ),
     );
   }
 
@@ -2949,12 +2963,12 @@ import 'package:farm_tracker/features/farm/presentation/pages/input_page.dart';
 
 This replaces the tail end of `showAddAnimalDialog` from Task 5 (the `await EntityFormSheet.show(...)` call through the closing `return newId;` and function-closing `}`) — everything above `await EntityFormSheet.show(...)` (the `bloc`/`beforeIds`/`newId`/`subscription`/controllers/notifiers setup) stays exactly as Task 5 left it, with `committedHerdId`/`committedAcquisitionSource` added alongside the other locals.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `flutter test test/features/farm/presentation/pages/animal_page_test.dart`
 Expected: PASS (8/8).
 
-- [ ] **Step 5: Run the full suite and analyzer, then commit**
+- [x] **Step 5: Run the full suite and analyzer, then commit**
 
 ```bash
 git add lib/features/farm/presentation/pages/animal_page.dart test/features/farm/presentation/pages/animal_page_test.dart

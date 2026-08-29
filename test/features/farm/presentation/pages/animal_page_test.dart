@@ -11,15 +11,29 @@ import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
+import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/input_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/input_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/input_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animal_page.dart';
 
 class MockAnimalBloc extends MockBloc<AnimalEvent, AnimalState>
@@ -29,6 +43,15 @@ class MockAnimalTypeBloc extends MockBloc<AnimalTypeEvent, AnimalTypeState>
     implements AnimalTypeBloc {}
 
 class MockHerdBloc extends MockBloc<HerdEvent, HerdState> implements HerdBloc {}
+
+class MockInputBloc extends MockBloc<InputEvent, InputState> implements InputBloc {}
+
+class MockSeasonBloc extends MockBloc<SeasonEvent, SeasonState> implements SeasonBloc {}
+
+class MockLandBloc extends MockBloc<LandEvent, LandState> implements LandBloc {}
+
+class MockCostCategoryBloc extends MockBloc<CostCategoryEvent, CostCategoryState>
+    implements CostCategoryBloc {}
 
 final now = DateTime.now();
 
@@ -131,6 +154,10 @@ void main() {
     late MockAnimalBloc animalBloc;
     late MockAnimalTypeBloc animalTypeBloc;
     late MockHerdBloc herdBloc;
+    late MockInputBloc inputBloc;
+    late MockSeasonBloc seasonBloc;
+    late MockLandBloc landBloc;
+    late MockCostCategoryBloc costCategoryBloc;
     late StreamController<AnimalState> stateController;
 
     setUpAll(() {
@@ -142,6 +169,30 @@ void main() {
       animalBloc = MockAnimalBloc();
       animalTypeBloc = MockAnimalTypeBloc();
       herdBloc = MockHerdBloc();
+      inputBloc = MockInputBloc();
+      seasonBloc = MockSeasonBloc();
+      landBloc = MockLandBloc();
+      costCategoryBloc = MockCostCategoryBloc();
+      whenListen(
+        inputBloc,
+        const Stream<InputState>.empty(),
+        initialState: const InputLoaded(inputs: []),
+      );
+      whenListen(
+        seasonBloc,
+        const Stream<SeasonState>.empty(),
+        initialState: const SeasonLoaded(seasons: []),
+      );
+      whenListen(
+        landBloc,
+        const Stream<LandState>.empty(),
+        initialState: const LandLoaded(lands: []),
+      );
+      whenListen(
+        costCategoryBloc,
+        const Stream<CostCategoryState>.empty(),
+        initialState: const CostCategoryLoaded([]),
+      );
       stateController = StreamController<AnimalState>.broadcast();
       whenListen(
         animalBloc,
@@ -202,15 +253,25 @@ void main() {
 
     tearDown(() => stateController.close());
 
+    // MultiBlocProvider wraps MaterialApp itself, not just its home:
+    // content: showAddInputDialog (triggered internally on "Bought") opens
+    // a second modal sheet containing CostCategoryTypeSelector, which does
+    // its own internal BlocBuilder<CostCategoryBloc, ...> lookup - that
+    // sheet is a sibling route within the same Navigator, so it can't see
+    // a provider placed only inside home:.
     Widget buildHarness(ValueChanged<Future<String?>> capture) {
-      return MaterialApp(
-        home: MultiBlocProvider(
-          providers: [
-            BlocProvider<AnimalBloc>.value(value: animalBloc),
-            BlocProvider<AnimalTypeBloc>.value(value: animalTypeBloc),
-            BlocProvider<HerdBloc>.value(value: herdBloc),
-          ],
-          child: Builder(
+      return MultiBlocProvider(
+        providers: [
+          BlocProvider<AnimalBloc>.value(value: animalBloc),
+          BlocProvider<AnimalTypeBloc>.value(value: animalTypeBloc),
+          BlocProvider<HerdBloc>.value(value: herdBloc),
+          BlocProvider<InputBloc>.value(value: inputBloc),
+          BlocProvider<SeasonBloc>.value(value: seasonBloc),
+          BlocProvider<LandBloc>.value(value: landBloc),
+          BlocProvider<CostCategoryBloc>.value(value: costCategoryBloc),
+        ],
+        child: MaterialApp(
+          home: Builder(
             builder: (context) => ElevatedButton(
               onPressed: () => capture(showAddAnimalDialog(context)),
               child: const Text('open'),
@@ -370,6 +431,90 @@ void main() {
         find.byType(EntityPickerWithAdd<Herd>),
       );
       expect(herdPicker.selectedId, isNull);
+    });
+
+    testWidgets('selecting Bought opens the cost-log prompt after the animal saves', (
+      tester,
+    ) async {
+      late Future<String?> resultFuture;
+      await tester.pumpWidget(buildHarness((future) => resultFuture = future));
+
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Name *'),
+        'Bessie',
+      );
+
+      // Animal Type and Herd are required/validated fields — per the Global
+      // Constraints correction, drive both the inner FormFieldState and the
+      // picker's own onChanged, or Form.validate() fails forever and this
+      // hangs on the later runAsync(() => resultFuture).
+      tester
+          .state<FormFieldState<String>>(
+            find.descendant(
+              of: find.byType(EntityPickerWithAdd<AnimalType>),
+              matching: find.byType(DropdownButtonFormField<String>),
+            ),
+          )
+          .didChange('type-1');
+      tester
+          .widget<EntityPickerWithAdd<AnimalType>>(
+            find.byType(EntityPickerWithAdd<AnimalType>),
+          )
+          .onChanged('type-1');
+      await tester.pumpAndSettle();
+
+      tester
+          .state<FormFieldState<String>>(
+            find.descendant(
+              of: find.byType(EntityPickerWithAdd<Herd>),
+              matching: find.byType(DropdownButtonFormField<String>),
+            ),
+          )
+          .didChange('herd-1');
+      tester
+          .widget<EntityPickerWithAdd<Herd>>(find.byType(EntityPickerWithAdd<Herd>))
+          .onChanged('herd-1');
+      await tester.pumpAndSettle();
+
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('animal-acquisition-source-field')),
+          )
+          .onChanged!('bought');
+      await tester.pumpAndSettle();
+
+      stateController.add(
+        AnimalLoaded(
+          animals: [
+            Animal(
+              id: 'animal-1',
+              userId: 'user-1',
+              name: 'Bessie',
+              animalTypeId: 'type-1',
+              herdId: 'herd-1',
+              birthDate: now,
+              acquisitionSource: 'bought',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          ],
+          successMessage: 'Animal added',
+        ),
+      );
+
+      await tester.tap(find.text('Add Animal'));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() => resultFuture);
+
+      // The cost-log prompt is fire-and-forget from showAddAnimalDialog's
+      // own return (see the Global Constraints correction on runAsync +
+      // route-pushing deadlocks) — pump once more to let it actually open.
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add New Animal Input'), findsOneWidget);
     });
   });
 
