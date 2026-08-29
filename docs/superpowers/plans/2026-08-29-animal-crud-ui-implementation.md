@@ -1746,7 +1746,7 @@ Mirrors `LandPage`'s `_showEditLandDialog`/`_showLandDetails`/`_showDeleteConfir
 - Consumes: `EntityDetailsSheet`, `EntityDeleteDialog`, `EntityDetailRow` (unchanged), `UpdateAnimalEvent`/`DeleteAnimalEvent` (Task 3).
 - Produces: nothing new consumed elsewhere in this plan.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add a new group to `test/features/farm/presentation/pages/animal_page_test.dart`:
 
@@ -1865,12 +1865,12 @@ Add a new group to `test/features/farm/presentation/pages/animal_page_test.dart`
   });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `flutter test test/features/farm/presentation/pages/animal_page_test.dart`
 Expected: FAIL — tapping "Bessie" does nothing (Task 3 left `onTap: () {}`), so no details sheet, no "Edit"/"Delete" text found.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `lib/features/farm/presentation/pages/animal_page.dart`, add these imports:
 
@@ -1979,12 +1979,12 @@ Replace the list-item's `onTap: () {}` with `onTap: () => _showAnimalDetails(con
   }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `flutter test test/features/farm/presentation/pages/animal_page_test.dart`
 Expected: PASS (7/7).
 
-- [ ] **Step 5: Run the full suite and analyzer, then commit**
+- [x] **Step 5: Run the full suite and analyzer, then commit**
 
 ```bash
 git add lib/features/farm/presentation/pages/animal_page.dart test/features/farm/presentation/pages/animal_page_test.dart

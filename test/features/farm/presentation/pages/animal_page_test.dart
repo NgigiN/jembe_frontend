@@ -372,4 +372,117 @@ void main() {
       expect(herdPicker.selectedId, isNull);
     });
   });
+
+  group('editing an animal', () {
+    late MockAnimalBloc animalBloc;
+    late MockAnimalTypeBloc animalTypeBloc;
+    late MockHerdBloc herdBloc;
+    late Animal existingAnimal;
+
+    setUpAll(() {
+      registerFallbackValue(GetAnimalsEvent());
+    });
+
+    setUp(() {
+      existingAnimal = Animal(
+        id: 'animal-1',
+        userId: 'user-1',
+        name: 'Bessie',
+        animalTypeId: 'type-1',
+        herdId: 'herd-1',
+        birthDate: now,
+        sex: 'female',
+        acquisitionSource: 'bredOnFarm',
+        createdAt: now,
+        updatedAt: now,
+      );
+      animalBloc = MockAnimalBloc();
+      animalTypeBloc = MockAnimalTypeBloc();
+      herdBloc = MockHerdBloc();
+      whenListen(
+        animalBloc,
+        Stream<AnimalState>.value(AnimalLoaded(animals: [existingAnimal])),
+        initialState: AnimalLoaded(animals: [existingAnimal]),
+      );
+      whenListen(
+        animalTypeBloc,
+        const Stream<AnimalTypeState>.empty(),
+        initialState: AnimalTypeLoaded([
+          AnimalType(
+            id: 'type-1',
+            userId: 'user-1',
+            name: 'Cow',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        ]),
+      );
+      whenListen(
+        herdBloc,
+        const Stream<HerdState>.empty(),
+        initialState: HerdLoaded([
+          Herd(
+            id: 'herd-1',
+            userId: 'user-1',
+            name: 'Cow Herd',
+            animalTypeId: 'type-1',
+            location: 'North Field',
+            initialHeadCount: 5,
+            currentHeadCount: 5,
+            startDate: now,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        ]),
+      );
+    });
+
+    testWidgets('shows details, edits sex, and dispatches UpdateAnimalEvent', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _harness(animalBloc: animalBloc, animalTypeBloc: animalTypeBloc, herdBloc: herdBloc),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Bessie'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Female'), findsOneWidget);
+
+      await tester.tap(find.text('Edit'));
+      await tester.pumpAndSettle();
+
+      final sexDropdown = tester.widget<DropdownButtonFormField<String>>(
+        find.byKey(const Key('animal-sex-field')),
+      );
+      sexDropdown.onChanged!('male');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Update Animal'));
+      await tester.pumpAndSettle();
+
+      final captured = verify(() => animalBloc.add(captureAny())).captured;
+      final event = captured.whereType<UpdateAnimalEvent>().single;
+      expect(event.animal.sex, 'male');
+    });
+
+    testWidgets('deletes the animal on confirmation', (tester) async {
+      await tester.pumpWidget(
+        _harness(animalBloc: animalBloc, animalTypeBloc: animalTypeBloc, herdBloc: herdBloc),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Bessie'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Delete').last);
+      await tester.pumpAndSettle();
+
+      verify(() => animalBloc.add(DeleteAnimalEvent('animal-1'))).called(1);
+    });
+  });
 }

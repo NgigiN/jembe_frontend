@@ -11,6 +11,9 @@ import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
@@ -303,7 +306,7 @@ class _AnimalPageState extends State<AnimalPage> {
                 iconColor: AppColors.animalCategory,
                 title: animal.name,
                 subtitle: _animalSubtitle(animal, animalTypes, herds),
-                onTap: () {},
+                onTap: () => _showAnimalDetails(context, animal, animalTypes, herds),
               );
             },
           );
@@ -320,5 +323,100 @@ class _AnimalPageState extends State<AnimalPage> {
 
   String _animalSubtitle(Animal animal, List<AnimalType> animalTypes, List<Herd> herds) {
     return '${animalTypeName(animalTypes, animal.animalTypeId)} · ${herdName(herds, animal.herdId)}';
+  }
+
+  void _showAnimalDetails(
+    BuildContext context,
+    Animal animal,
+    List<AnimalType> animalTypes,
+    List<Herd> herds,
+  ) {
+    EntityDetailsSheet.show(
+      context: context,
+      title: animal.name,
+      details: [
+        EntityDetailRow('Type', animalTypeName(animalTypes, animal.animalTypeId)),
+        EntityDetailRow('Herd', herdName(herds, animal.herdId)),
+        EntityDetailRow('Birth Date', _formatDate(animal.birthDate)),
+        EntityDetailRow(
+          'Sex',
+          animal.sex?.isNotEmpty == true
+              ? animal.sex![0].toUpperCase() + animal.sex!.substring(1)
+              : '—',
+        ),
+        EntityDetailRow(
+          'Acquisition Source',
+          animal.acquisitionSource?.isNotEmpty == true
+              ? animal.acquisitionSource![0].toUpperCase() +
+                  animal.acquisitionSource!.substring(1)
+              : '—',
+        ),
+      ],
+      onEdit: () => _showEditAnimalDialog(animal, animalTypes, herds),
+      onDelete: () => _showDeleteConfirmation(animal),
+    );
+  }
+
+  void _showEditAnimalDialog(
+    Animal animal,
+    List<AnimalType> animalTypes,
+    List<Herd> herds,
+  ) {
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController(text: animal.name);
+    final animalTypeIdNotifier = ValueNotifier<String?>(animal.animalTypeId);
+    final herdIdNotifier = ValueNotifier<String?>(animal.herdId);
+    var selectedBirthDate = animal.birthDate;
+    var selectedSex = animal.sex;
+    var selectedAcquisitionSource = animal.acquisitionSource;
+
+    EntityFormSheet.show(
+      context: context,
+      title: 'Edit Animal',
+      heightFactor: 0.7,
+      submitLabel: 'Update Animal',
+      formKey: formKey,
+      fields: _animalFormFields(
+        nameController: nameController,
+        animalTypes: animalTypes,
+        herds: herds,
+        animalTypeIdNotifier: animalTypeIdNotifier,
+        herdIdNotifier: herdIdNotifier,
+        selectedBirthDate: selectedBirthDate,
+        selectedSex: selectedSex,
+        selectedAcquisitionSource: selectedAcquisitionSource,
+        onBirthDateChanged: (value) => selectedBirthDate = value,
+        onSexChanged: (value) => selectedSex = value,
+        onAcquisitionSourceChanged: (value) => selectedAcquisitionSource = value,
+      ),
+      onSubmit: (sheetContext) async {
+        final updatedAnimal = AnimalModel(
+          id: animal.id,
+          userId: animal.userId,
+          name: sanitizeText(nameController.text),
+          animalTypeId: animalTypeIdNotifier.value!,
+          herdId: herdIdNotifier.value!,
+          birthDate: selectedBirthDate,
+          sex: selectedSex,
+          acquisitionSource: selectedAcquisitionSource,
+          createdAt: animal.createdAt,
+          updatedAt: DateTime.now(),
+        );
+        context.read<AnimalBloc>().add(UpdateAnimalEvent(updatedAnimal));
+        Navigator.pop(sheetContext);
+      },
+    );
+  }
+
+  void _showDeleteConfirmation(Animal animal) async {
+    final confirmed = await EntityDeleteDialog.show(
+      context: context,
+      title: 'Delete Animal',
+      message:
+          'Are you sure you want to delete "${animal.name}"? This action cannot be undone.',
+    );
+    if (confirmed == true) {
+      context.read<AnimalBloc>().add(DeleteAnimalEvent(animal.id));
+    }
   }
 }
