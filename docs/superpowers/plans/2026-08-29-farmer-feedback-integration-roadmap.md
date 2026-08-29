@@ -37,13 +37,17 @@ brainstorm (not re-written).
 - [x] Full test suite green (97/98; the one failure is the stock Flutter
       counter smoke test, pre-existing and unrelated), `flutter analyze`
       clean (0 errors)
-- [ ] PR into `dev`
+- [x] PR into `dev`: https://github.com/NgigiN/jembe_frontend/pull/7
 
-## 1. Default cost category additions
+## 1. Default cost category additions — done, PR open
 
-Backend-only. Add `Land Preparation` and `Top Dressing` to
+Backend-only. Added `Land Preparation` and `Top Dressing` to
 `defaultPlantActivityCategories` in `cost_category_service.go`. No
 frontend changes, no backfill (see spec for why).
+
+- [x] Categories added, `go build`/`go vet`/`gofmt`/`go test ./...` all
+      clean on branch `feat/plant-cost-categories` (backend repo)
+- [x] PR into `dev`: https://github.com/NgigiN/farmers_backend/pull/13
 
 ## 2. New animal/land fields
 
