@@ -1407,7 +1407,7 @@ Per the approved design: selecting an Animal Type filters the Herd picker to her
 - Consumes: `_animalFormFields` (Task 4) — its signature changes from separate `selectedAnimalTypeId`/`selectedHerdId`/`onAnimalTypeChanged`/`onHerdChanged` params to two `ValueNotifier<String?>` params (`animalTypeIdNotifier`, `herdIdNotifier`); `showAddAnimalDialog` (Task 4) is updated to match.
 - Produces: nothing new consumed elsewhere — this is a self-contained UX refinement to the same form.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to the `showAddAnimalDialog` group in `test/features/farm/presentation/pages/animal_page_test.dart` (this test needs a second herd of a different type in `herdBloc`'s state — update that `setUp`'s `HerdLoaded([...])` to include two herds):
 
@@ -1532,12 +1532,12 @@ Then add the new test:
     });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `flutter test test/features/farm/presentation/pages/animal_page_test.dart`
 Expected: FAIL — the herd picker's `items` list is unfiltered (both herds always present), and the selection doesn't clear.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `lib/features/farm/presentation/pages/animal_page.dart`, change `showAddAnimalDialog` to hold notifiers instead of plain variables for these two fields:
 
@@ -1719,12 +1719,12 @@ List<Widget> _animalFormFields({
 
 (Only the animal-type/herd block changed from Task 4 — the birth-date field, sex dropdown, and acquisition-source dropdown above are copied verbatim from Task 4's version, since `_animalFormFields` is being fully replaced in this step, not patched.)
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `flutter test test/features/farm/presentation/pages/animal_page_test.dart`
 Expected: PASS (5/5).
 
-- [ ] **Step 5: Run the full suite and analyzer, then commit**
+- [x] **Step 5: Run the full suite and analyzer, then commit**
 
 ```bash
 git add lib/features/farm/presentation/pages/animal_page.dart test/features/farm/presentation/pages/animal_page_test.dart

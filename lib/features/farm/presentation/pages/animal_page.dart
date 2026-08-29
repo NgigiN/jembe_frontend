@@ -52,8 +52,8 @@ Future<String?> showAddAnimalDialog(BuildContext context) async {
 
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
-  String? selectedAnimalTypeId;
-  String? selectedHerdId;
+  final animalTypeIdNotifier = ValueNotifier<String?>(null);
+  final herdIdNotifier = ValueNotifier<String?>(null);
   var selectedBirthDate = DateTime.now();
   String? selectedSex;
   String? selectedAcquisitionSource;
@@ -70,13 +70,11 @@ Future<String?> showAddAnimalDialog(BuildContext context) async {
       nameController: nameController,
       animalTypes: animalTypes,
       herds: herds,
-      selectedAnimalTypeId: selectedAnimalTypeId,
-      selectedHerdId: selectedHerdId,
+      animalTypeIdNotifier: animalTypeIdNotifier,
+      herdIdNotifier: herdIdNotifier,
       selectedBirthDate: selectedBirthDate,
       selectedSex: selectedSex,
       selectedAcquisitionSource: selectedAcquisitionSource,
-      onAnimalTypeChanged: (value) => selectedAnimalTypeId = value,
-      onHerdChanged: (value) => selectedHerdId = value,
       onBirthDateChanged: (value) => selectedBirthDate = value,
       onSexChanged: (value) => selectedSex = value,
       onAcquisitionSourceChanged: (value) => selectedAcquisitionSource = value,
@@ -95,8 +93,8 @@ Future<String?> showAddAnimalDialog(BuildContext context) async {
       final animal = AnimalModel.create(
         userId: userId,
         name: sanitizeText(nameController.text),
-        animalTypeId: selectedAnimalTypeId!,
-        herdId: selectedHerdId!,
+        animalTypeId: animalTypeIdNotifier.value!,
+        herdId: herdIdNotifier.value!,
         birthDate: selectedBirthDate,
         sex: selectedSex,
         acquisitionSource: selectedAcquisitionSource,
@@ -114,13 +112,11 @@ List<Widget> _animalFormFields({
   required TextEditingController nameController,
   required List<AnimalType> animalTypes,
   required List<Herd> herds,
-  required String? selectedAnimalTypeId,
-  required String? selectedHerdId,
+  required ValueNotifier<String?> animalTypeIdNotifier,
+  required ValueNotifier<String?> herdIdNotifier,
   required DateTime selectedBirthDate,
   String? selectedSex,
   String? selectedAcquisitionSource,
-  required ValueChanged<String?> onAnimalTypeChanged,
-  required ValueChanged<String?> onHerdChanged,
   required ValueChanged<DateTime> onBirthDateChanged,
   ValueChanged<String?>? onSexChanged,
   ValueChanged<String?>? onAcquisitionSourceChanged,
@@ -132,26 +128,47 @@ List<Widget> _animalFormFields({
       validator: (value) => requiredName(value, fieldLabel: 'Name'),
     ),
     const SizedBox(height: 16),
-    EntityPickerWithAdd<AnimalType>(
-      items: animalTypes,
-      selectedId: selectedAnimalTypeId,
-      idOf: (type) => type.id,
-      labelOf: (type) => type.name,
-      labelText: 'Animal Type *',
-      validator: (value) => requiredSelection(value, fieldLabel: 'animal type'),
-      onChanged: onAnimalTypeChanged,
-      onAddNew: showAddAnimalTypeDialog,
-    ),
-    const SizedBox(height: 16),
-    EntityPickerWithAdd<Herd>(
-      items: herds,
-      selectedId: selectedHerdId,
-      idOf: (herd) => herd.id,
-      labelOf: (herd) => '${herd.name} (${herd.location})',
-      labelText: 'Herd *',
-      validator: (value) => requiredSelection(value, fieldLabel: 'herd'),
-      onChanged: onHerdChanged,
-      onAddNew: showAddHerdDialog,
+    ListenableBuilder(
+      listenable: Listenable.merge([animalTypeIdNotifier, herdIdNotifier]),
+      builder: (context, _) {
+        final filteredHerds = herds
+            .where((herd) =>
+                animalTypeIdNotifier.value == null ||
+                herd.animalTypeId == animalTypeIdNotifier.value)
+            .toList();
+        return Column(
+          children: [
+            EntityPickerWithAdd<AnimalType>(
+              items: animalTypes,
+              selectedId: animalTypeIdNotifier.value,
+              idOf: (type) => type.id,
+              labelOf: (type) => type.name,
+              labelText: 'Animal Type *',
+              validator: (value) =>
+                  requiredSelection(value, fieldLabel: 'animal type'),
+              onChanged: (value) {
+                animalTypeIdNotifier.value = value;
+                final stillValid = herds.any((herd) =>
+                    herd.id == herdIdNotifier.value &&
+                    herd.animalTypeId == value);
+                if (!stillValid) herdIdNotifier.value = null;
+              },
+              onAddNew: showAddAnimalTypeDialog,
+            ),
+            const SizedBox(height: 16),
+            EntityPickerWithAdd<Herd>(
+              items: filteredHerds,
+              selectedId: herdIdNotifier.value,
+              idOf: (herd) => herd.id,
+              labelOf: (herd) => '${herd.name} (${herd.location})',
+              labelText: 'Herd *',
+              validator: (value) => requiredSelection(value, fieldLabel: 'herd'),
+              onChanged: (value) => herdIdNotifier.value = value,
+              onAddNew: showAddHerdDialog,
+            ),
+          ],
+        );
+      },
     ),
     const SizedBox(height: 16),
     FormField<DateTime>(

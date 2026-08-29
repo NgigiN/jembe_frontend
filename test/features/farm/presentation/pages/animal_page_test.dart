@@ -159,6 +159,13 @@ void main() {
             createdAt: now,
             updatedAt: now,
           ),
+          AnimalType(
+            id: 'type-2',
+            userId: 'user-1',
+            name: 'Goat',
+            createdAt: now,
+            updatedAt: now,
+          ),
         ]),
       );
       whenListen(
@@ -168,11 +175,23 @@ void main() {
           Herd(
             id: 'herd-1',
             userId: 'user-1',
-            name: 'Main Herd',
+            name: 'Cow Herd',
             animalTypeId: 'type-1',
             location: 'North Field',
             initialHeadCount: 5,
             currentHeadCount: 5,
+            startDate: now,
+            createdAt: now,
+            updatedAt: now,
+          ),
+          Herd(
+            id: 'herd-2',
+            userId: 'user-1',
+            name: 'Goat Herd',
+            animalTypeId: 'type-2',
+            location: 'South Field',
+            initialHeadCount: 3,
+            currentHeadCount: 3,
             startDate: now,
             createdAt: now,
             updatedAt: now,
@@ -292,6 +311,65 @@ void main() {
       expect(event.animal.herdId, 'herd-1');
       expect(event.animal.sex, 'female');
       expect(event.animal.acquisitionSource, 'bredOnFarm');
+    });
+
+    testWidgets('herd picker only shows herds matching the selected animal type', (
+      tester,
+    ) async {
+      late Future<String?> resultFuture;
+      await tester.pumpWidget(buildHarness((future) => resultFuture = future));
+
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      final typePicker = tester.widget<EntityPickerWithAdd<AnimalType>>(
+        find.byType(EntityPickerWithAdd<AnimalType>),
+      );
+      typePicker.onChanged('type-1');
+      await tester.pumpAndSettle();
+
+      var herdPicker = tester.widget<EntityPickerWithAdd<Herd>>(
+        find.byType(EntityPickerWithAdd<Herd>),
+      );
+      expect(herdPicker.items.map((h) => h.id), ['herd-1']);
+
+      typePicker.onChanged('type-2');
+      await tester.pumpAndSettle();
+
+      herdPicker = tester.widget<EntityPickerWithAdd<Herd>>(
+        find.byType(EntityPickerWithAdd<Herd>),
+      );
+      expect(herdPicker.items.map((h) => h.id), ['herd-2']);
+    });
+
+    testWidgets('changing animal type clears a now-invalid herd selection', (
+      tester,
+    ) async {
+      late Future<String?> resultFuture;
+      await tester.pumpWidget(buildHarness((future) => resultFuture = future));
+
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      final typePicker = tester.widget<EntityPickerWithAdd<AnimalType>>(
+        find.byType(EntityPickerWithAdd<AnimalType>),
+      );
+      typePicker.onChanged('type-1');
+      await tester.pumpAndSettle();
+
+      var herdPicker = tester.widget<EntityPickerWithAdd<Herd>>(
+        find.byType(EntityPickerWithAdd<Herd>),
+      );
+      herdPicker.onChanged('herd-1');
+      await tester.pumpAndSettle();
+
+      typePicker.onChanged('type-2');
+      await tester.pumpAndSettle();
+
+      herdPicker = tester.widget<EntityPickerWithAdd<Herd>>(
+        find.byType(EntityPickerWithAdd<Herd>),
+      );
+      expect(herdPicker.selectedId, isNull);
     });
   });
 }
