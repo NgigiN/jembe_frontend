@@ -183,6 +183,17 @@ class _AnimalsPageState extends State<AnimalsPage> {
                         onTap: () =>
                             context.push(AppRoutePath.infrastructure),
                       ),
+                      StepConnector(isActive: hasHerd),
+                      SetupStepCard(
+                        stepNumber: 7,
+                        title: 'Track Individual Animals',
+                        subtitle: 'Record details for each animal in your herds',
+                        status: hasHerd
+                            ? StepStatus.available
+                            : StepStatus.locked,
+                        onTap: () =>
+                            context.push(AppRoutePath.animalsList),
+                      ),
                       RelatedContentSection(
                         matchNames: animalTypeNames,
                         kind: ContentMatchKind.animal,

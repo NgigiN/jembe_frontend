@@ -8,6 +8,7 @@ import 'package:farm_tracker/features/content/presentation/pages/content_detail_
 import 'package:farm_tracker/features/content/presentation/pages/content_list_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/activity_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/analysis_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/animal_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animal_type_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animals_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/harvest_page.dart';
@@ -39,6 +40,7 @@ class AppRouteName {
   static const seasons = 'seasons';
   static const animalTypes = 'animal-types';
   static const herds = 'herds';
+  static const animalsList = 'animals-list';
   static const inputs = 'inputs';
   static const activities = 'activities';
   static const totalCosts = 'total-costs';
@@ -67,6 +69,7 @@ class AppRoutePath {
   static const seasons = '/seasons';
   static const animalTypes = '/animal-types';
   static const herds = '/herds';
+  static const animalsList = '/animals-list';
   static const inputsTemplate = '/inputs/:sourceType';
   static const activitiesTemplate = '/activities/:sourceType';
   static const totalCosts = '/analytics/total-costs';
@@ -169,6 +172,11 @@ class AppRouter {
         name: AppRouteName.herds,
         path: AppRoutePath.herds,
         pageBuilder: (context, state) => _slidePage(const HerdPage(), state),
+      ),
+      GoRoute(
+        name: AppRouteName.animalsList,
+        path: AppRoutePath.animalsList,
+        pageBuilder: (context, state) => _slidePage(const AnimalPage(), state),
       ),
       GoRoute(
         name: AppRouteName.inputs,

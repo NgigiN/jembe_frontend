@@ -16,6 +16,7 @@
 - TDD per step: write the failing test, run it and confirm it fails for the right reason, write minimal code, run it and confirm it passes, commit. Do not skip the RED verification.
 - Before editing any file for the first time in this plan, read it in full first (do not assume its contents from this plan's summaries) — this codebase's session convention (see project memory `feedback_read_before_write.md`) is to verify via the file itself, not `git status`, before treating anything as safe to overwrite.
 - Widget tests must never simulate opening a `DropdownButtonFormField`'s (or `EntityPickerWithAdd`'s) overlay menu via `tester.tap()` — this Flutter SDK version's overlay/hit-test geometry is unreliable inside scrollable bottom sheets in this codebase's test harness (confirmed this session across five failed tap-based attempts). Instead, get the widget instance via `tester.widget<T>(find.byType(T))` and invoke its `onChanged` (or `onTypeChanged`) callback directly, then `await tester.pumpAndSettle()`.
+- **Correction found during Task 7 execution:** `animals_page.dart`'s setup-wizard body is a plain `ListView(children: [...])`, but Flutter still virtualizes a `ListView`'s children by viewport/cache-extent even when given a fixed `children:` list — widgets below the fold (confirmed here: everything from step 6 onward) are never built as Elements until the list is actually scrolled, so `find.text(...)` finds nothing for them even after `pumpAndSettle()`. Scroll first with `await tester.dragUntilVisible(find.text(<target>), find.byType(ListView), const Offset(0, -200)); await tester.pumpAndSettle();` before asserting on a step past the first few — this exact pattern already exists in `test/features/farm/presentation/pages/settings_page_test.dart` for the same reason.
 - **Correction found during Task 4 execution, applies to every later task that submits a form after setting a *required/validated* dropdown field** (this affects the Animal Type and Herd pickers specifically, since both carry a `requiredSelection` validator — it does NOT affect Sex/Acquisition Source, which are optional with no validator): calling `.onChanged(value)` directly on `EntityPickerWithAdd`'s widget instance (or on a validated `DropdownButtonFormField`'s widget instance) only updates the outer closure variable — it never touches the inner `DropdownButtonFormField`'s own `FormFieldState`, which is what `Form.validate()` actually reads. Left uncorrected, `Form.validate()` silently keeps failing forever, `onSubmit` never runs, the sheet never closes, and `await tester.runAsync(() => resultFuture)` hangs until the test framework's own timeout (confirmed this session: a 10-minute real hang, not a quick failure). For any *required* dropdown field, drive both: the widget's `FormFieldState` via `tester.state<FormFieldState<String>>(find.descendant(of: find.byType(<PickerType>), matching: find.byType(DropdownButtonFormField<String>))).didChange(value)`, **and** the picker's own `onChanged(value)` callback (for the outer closure variable the submit handler actually reads) — both are needed together. Tasks 6, 9, and 10 below submit the form after setting Animal Type/Herd and must use this same dual-call pattern, not the plain `.onChanged(value)` shown in Task 4's original test draft.
 - Commit after every task (or every step marked "Commit") on the existing branch `feat/creatable-entity-pickers` — no new branch. Push after each commit, matching this session's established pattern (the branch has an open PR, `NgigiN/jembe_frontend#7`, already targeting `dev`).
 - Stage only the files a task actually touches; review `git status --short` before every commit.
@@ -2005,7 +2006,7 @@ git push
 - Consumes: `AnimalPage` (Task 3).
 - Produces: `AppRouteName.animalsList` (`'animals-list'`), `AppRoutePath.animalsList` (`'/animals-list'`) — nothing later in this plan depends on these, but they're the permanent public names for this route.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `test/features/farm/presentation/pages/animals_page_test.dart`:
 
@@ -2014,6 +2015,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_event.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_state.dart';
@@ -2075,10 +2077,20 @@ void main() {
     whenListen(
       contentBloc,
       const Stream<ContentState>.empty(),
-      initialState: const ContentInitial(),
+      initialState: ContentInitial(),
     );
 
     await tester.pumpWidget(harness());
+    await tester.pumpAndSettle();
+
+    // ListView virtualizes by viewport even with a fixed children: list —
+    // steps below the fold (this one included) aren't built until scrolled
+    // into view, so find.text() finds nothing for them without this.
+    await tester.dragUntilVisible(
+      find.text('Track Individual Animals'),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Track Individual Animals'), findsOneWidget);
@@ -2088,12 +2100,12 @@ void main() {
 
 (This first test only checks the step renders — a second, richer test asserting the "available"/"locked" visual state would need to inspect `SetupStepCard.status`, which this file's own precedent (steps 1-6) has never tested either; keep this test to the same minimal bar as the rest of the untested file it's being added to.)
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `flutter test test/features/farm/presentation/pages/animals_page_test.dart`
 Expected: FAIL — no "Track Individual Animals" text exists yet.
 
-- [ ] **Step 3: Implement — router**
+- [x] **Step 3: Implement — router**
 
 Read `lib/core/navigation/app_router.dart` in full first. Add the import between `analysis_page.dart` and `animal_type_page.dart`:
 
@@ -2123,7 +2135,7 @@ Add a new `GoRoute` right after the existing `herds` route:
       ),
 ```
 
-- [ ] **Step 4: Implement — wizard step**
+- [x] **Step 4: Implement — wizard step**
 
 Read `lib/features/farm/presentation/pages/animals_page.dart` in full first. Insert a 7th step between the existing step 6 ("Manage Infrastructure") and `RelatedContentSection`:
 
@@ -2140,12 +2152,12 @@ Read `lib/features/farm/presentation/pages/animals_page.dart` in full first. Ins
 
 (No new imports needed — `AppRoutePath` is already imported, `context.push` is already used by the other steps.)
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `flutter test test/features/farm/presentation/pages/animals_page_test.dart`
 Expected: PASS (1/1).
 
-- [ ] **Step 6: Run the full suite and analyzer, then commit**
+- [x] **Step 6: Run the full suite and analyzer, then commit**
 
 ```bash
 git add lib/core/navigation/app_router.dart lib/features/farm/presentation/pages/animals_page.dart test/features/farm/presentation/pages/animals_page_test.dart
