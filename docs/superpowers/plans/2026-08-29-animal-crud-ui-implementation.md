@@ -15,7 +15,8 @@
 - No backend changes in this plan — `Animal.Sex`/`Animal.AcquisitionSource` (backend PR `farmers_backend#14`) and `Input.AnimalID` already exist end-to-end.
 - TDD per step: write the failing test, run it and confirm it fails for the right reason, write minimal code, run it and confirm it passes, commit. Do not skip the RED verification.
 - Before editing any file for the first time in this plan, read it in full first (do not assume its contents from this plan's summaries) — this codebase's session convention (see project memory `feedback_read_before_write.md`) is to verify via the file itself, not `git status`, before treating anything as safe to overwrite.
-- Widget tests must never simulate opening a `DropdownButtonFormField`'s (or `EntityPickerWithAdd`'s) overlay menu via `tester.tap()` — this Flutter SDK version's overlay/hit-test geometry is unreliable inside scrollable bottom sheets in this codebase's test harness (confirmed this session across five failed tap-based attempts). Instead, get the widget instance via `tester.widget<T>(find.byType(T))` and invoke its `onChanged` (or `onTypeChanged`) callback directly, then `await tester.pumpAndSettle()`. Every test step below already uses this technique — do not substitute a tap-based approach.
+- Widget tests must never simulate opening a `DropdownButtonFormField`'s (or `EntityPickerWithAdd`'s) overlay menu via `tester.tap()` — this Flutter SDK version's overlay/hit-test geometry is unreliable inside scrollable bottom sheets in this codebase's test harness (confirmed this session across five failed tap-based attempts). Instead, get the widget instance via `tester.widget<T>(find.byType(T))` and invoke its `onChanged` (or `onTypeChanged`) callback directly, then `await tester.pumpAndSettle()`.
+- **Correction found during Task 4 execution, applies to every later task that submits a form after setting a *required/validated* dropdown field** (this affects the Animal Type and Herd pickers specifically, since both carry a `requiredSelection` validator — it does NOT affect Sex/Acquisition Source, which are optional with no validator): calling `.onChanged(value)` directly on `EntityPickerWithAdd`'s widget instance (or on a validated `DropdownButtonFormField`'s widget instance) only updates the outer closure variable — it never touches the inner `DropdownButtonFormField`'s own `FormFieldState`, which is what `Form.validate()` actually reads. Left uncorrected, `Form.validate()` silently keeps failing forever, `onSubmit` never runs, the sheet never closes, and `await tester.runAsync(() => resultFuture)` hangs until the test framework's own timeout (confirmed this session: a 10-minute real hang, not a quick failure). For any *required* dropdown field, drive both: the widget's `FormFieldState` via `tester.state<FormFieldState<String>>(find.descendant(of: find.byType(<PickerType>), matching: find.byType(DropdownButtonFormField<String>))).didChange(value)`, **and** the picker's own `onChanged(value)` callback (for the outer closure variable the submit handler actually reads) — both are needed together. Tasks 6, 9, and 10 below submit the form after setting Animal Type/Herd and must use this same dual-call pattern, not the plain `.onChanged(value)` shown in Task 4's original test draft.
 - Commit after every task (or every step marked "Commit") on the existing branch `feat/creatable-entity-pickers` — no new branch. Push after each commit, matching this session's established pattern (the branch has an open PR, `NgigiN/jembe_frontend#7`, already targeting `dev`).
 - Stage only the files a task actually touches; review `git status --short` before every commit.
 
@@ -31,7 +32,7 @@
 **Interfaces:**
 - Produces: `Animal.sex` (`String?`), `Animal.acquisitionSource` (`String?`); `AnimalModel.create({..., String? sex, String? acquisitionSource})`; `AnimalModel.fromJson`/`toJson` round-trip both fields under keys `sex`/`acquisition_source`. Every later task that constructs an `Animal`/`AnimalModel` uses these exact field names.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `test/features/farm/data/models/animal_model_test.dart`:
 
@@ -123,12 +124,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `flutter test test/features/farm/data/models/animal_model_test.dart`
 Expected: FAIL to compile — `sex`/`acquisitionSource` are not defined named parameters on `AnimalModel.create`.
 
-- [ ] **Step 3: Implement — `Animal` entity**
+- [x] **Step 3: Implement — `Animal` entity**
 
 In `lib/features/farm/domain/entities/animal.dart`, add the two fields as optional (read the file first — do not assume its current shape from this plan):
 
@@ -178,7 +179,7 @@ class Animal extends Equatable {
 }
 ```
 
-- [ ] **Step 4: Implement — `AnimalModel`**
+- [x] **Step 4: Implement — `AnimalModel`**
 
 In `lib/features/farm/data/models/animal_model.dart`, thread `sex`/`acquisitionSource` through the constructor, `create`, `fromJson`, and `toJson`:
 
@@ -263,12 +264,12 @@ class AnimalModel extends Animal {
 }
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `flutter test test/features/farm/data/models/animal_model_test.dart`
 Expected: PASS (5/5).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/features/farm/domain/entities/animal.dart lib/features/farm/data/models/animal_model.dart test/features/farm/data/models/animal_model_test.dart
@@ -290,7 +291,7 @@ This mirrors a real bug found and fixed this session in `LandRepositoryImpl`: it
 - Consumes: `Animal.sex`/`Animal.acquisitionSource` (Task 1), `AnimalModel.create`/`AnimalModel(...)` (Task 1), `AnimalRemoteDataSource` (`lib/features/farm/data/datasources/animal_remote_data_source.dart` — unchanged, already exists).
 - Produces: nothing new consumed by later tasks — this closes a gap so `AnimalBloc` (Task 3) genuinely persists the two new fields.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `test/features/farm/data/repositories/animal_repository_impl_test.dart`:
 
@@ -383,12 +384,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `flutter test test/features/farm/data/repositories/animal_repository_impl_test.dart`
 Expected: FAIL — both `sex` and `acquisitionSource` are `null` on the captured model, because `AnimalRepositoryImpl` doesn't pass them through yet.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Read `lib/features/farm/data/repositories/animal_repository_impl.dart` in full, then apply:
 
@@ -442,12 +443,12 @@ Read `lib/features/farm/data/repositories/animal_repository_impl.dart` in full, 
 
 (Leave `getAnimals` and `deleteAnimal` untouched — only `addAnimal`/`updateAnimal` reconstruct a model.)
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `flutter test test/features/farm/data/repositories/animal_repository_impl_test.dart`
 Expected: PASS (2/2).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/features/farm/data/repositories/animal_repository_impl.dart test/features/farm/data/repositories/animal_repository_impl_test.dart
@@ -474,7 +475,7 @@ No bloc anywhere in this codebase has a direct unit test — bloc behavior is pr
 - Consumes: `GetAnimals`, `AddAnimal`+`AddAnimalParams`, `UpdateAnimal`+`UpdateAnimalParams`, `DeleteAnimal`+`DeleteAnimalParams` (`lib/features/farm/domain/usecases/{get_animals,add_animal,update_animal,delete_animal}.dart` — already exist, unchanged), `Animal` (Task 1).
 - Produces: `GetAnimalsEvent`, `AddAnimalEvent(Animal)`, `UpdateAnimalEvent(Animal)`, `DeleteAnimalEvent(String id)`; `AnimalState.animals` (`List<Animal>`), `AnimalInitial`, `AnimalLoading({animals})`, `AnimalLoaded({required animals, successMessage})`, `AnimalError(message, {animals})`; `AnimalBloc({getAnimals, addAnimal, updateAnimal, deleteAnimal})`. `AnimalPage` (a `StatefulWidget`, no const constructor args). Every later task's tests reference these exact names.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `test/features/farm/presentation/pages/animal_page_test.dart`:
 
@@ -593,12 +594,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `flutter test test/features/farm/presentation/pages/animal_page_test.dart`
 Expected: FAIL to compile — none of `AnimalBloc`, `AnimalEvent`, `AnimalState`, `AnimalPage` exist yet.
 
-- [ ] **Step 3: Implement `AnimalEvent`**
+- [x] **Step 3: Implement `AnimalEvent`**
 
 Create `lib/features/farm/presentation/bloc/animal_event.dart`:
 
@@ -638,7 +639,7 @@ class DeleteAnimalEvent extends AnimalEvent {
 }
 ```
 
-- [ ] **Step 4: Implement `AnimalState`**
+- [x] **Step 4: Implement `AnimalState`**
 
 Create `lib/features/farm/presentation/bloc/animal_state.dart`:
 
@@ -677,7 +678,7 @@ class AnimalError extends AnimalState {
 }
 ```
 
-- [ ] **Step 5: Implement `AnimalBloc`**
+- [x] **Step 5: Implement `AnimalBloc`**
 
 Create `lib/features/farm/presentation/bloc/animal_bloc.dart`:
 
@@ -772,7 +773,7 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
 }
 ```
 
-- [ ] **Step 6: Implement `AnimalPage` (list only)**
+- [x] **Step 6: Implement `AnimalPage` (list only)**
 
 Create `lib/features/farm/presentation/pages/animal_page.dart`:
 
@@ -912,7 +913,7 @@ This needs `import 'package:farm_tracker/features/farm/domain/entities/animal_ty
 
 Note: the FAB's `onPressed: () {}` and the card's `onTap: () {}` are deliberately no-ops here — Task 4 (add) and Task 6 (edit/details/delete) fill them in. This keeps this task's diff reviewable on its own list-rendering behavior.
 
-- [ ] **Step 7: Wire DI — `injection_container.dart`**
+- [x] **Step 7: Wire DI — `injection_container.dart`**
 
 Read `lib/injection_container.dart` in full first. Add the import alphabetically between `analysis_bloc.dart` and `animal_type_bloc.dart` (around line 113):
 
@@ -935,7 +936,7 @@ Add the factory registration right after the existing `HerdBloc` registration an
 
 (`GetAnimals`, `AddAnimal`, `UpdateAnimal`, `DeleteAnimal`, `AnimalRepository`, `AnimalRemoteDataSource` are all already registered — no other injection_container.dart changes needed.)
 
-- [ ] **Step 8: Wire DI — `main.dart`**
+- [x] **Step 8: Wire DI — `main.dart`**
 
 Read `lib/main.dart` in full first. Add the import alphabetically between `activity_bloc.dart` and `analysis_bloc.dart`... actually between `analysis_bloc.dart` (present) and `animal_type_bloc.dart` (present) — i.e. right before the existing `animal_type_bloc.dart` import:
 
@@ -949,17 +950,17 @@ Add the provider right after `BlocProvider<HerdBloc>(...)` and before `BlocProvi
         BlocProvider<AnimalBloc>(create: (_) => di.sl<AnimalBloc>()),
 ```
 
-- [ ] **Step 9: Run test to verify it passes**
+- [x] **Step 9: Run test to verify it passes**
 
 Run: `flutter test test/features/farm/presentation/pages/animal_page_test.dart`
 Expected: PASS (2/2).
 
-- [ ] **Step 10: Run the full suite and analyzer**
+- [x] **Step 10: Run the full suite and analyzer**
 
 Run: `flutter analyze` — expect no new errors (existing `info`-level lints are pre-existing and out of scope).
 Run: `flutter test` — expect the same pass count as before this task plus the new tests, with only the pre-existing stale `test/widget_test.dart` counter test failing (unrelated to this work, confirmed earlier this session).
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add lib/features/farm/presentation/bloc/animal_event.dart lib/features/farm/presentation/bloc/animal_state.dart lib/features/farm/presentation/bloc/animal_bloc.dart lib/features/farm/presentation/pages/animal_page.dart lib/features/farm/presentation/utils/source_context_resolver.dart lib/injection_container.dart lib/main.dart test/features/farm/presentation/pages/animal_page_test.dart
@@ -979,7 +980,7 @@ git push
 - Consumes: `EntityPickerWithAdd<T>` (`lib/core/widgets/crud/entity_picker_with_add.dart` — unchanged), `showAddAnimalTypeDialog` (`lib/features/farm/presentation/pages/animal_type_page.dart`), `showAddHerdDialog` (`lib/features/farm/presentation/pages/herd_page.dart`), `EntityFormSheet.show` (`lib/core/widgets/crud/entity_form_sheet.dart`), `AnimalModel.create` (Task 1).
 - Produces: top-level `Future<String?> showAddAnimalDialog(BuildContext context)` — later tasks (9) call this same function; it must keep this exact signature.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `test/features/farm/presentation/pages/animal_page_test.dart` (append inside `main()`, alongside the existing tests). Add these imports at the top of the file (`animal_page.dart`'s import is already present from Task 3):
 
@@ -1078,15 +1079,36 @@ import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
         'Bessie',
       );
 
+      // Animal Type and Herd are *required* fields with validators, so
+      // Form.validate() reads their inner DropdownButtonFormField's own
+      // FormFieldState, not just the outer onChanged callback — drive both,
+      // per the Global Constraints correction above, or the sheet never
+      // closes and this test hangs until the framework's own timeout.
       final typePicker = tester.widget<EntityPickerWithAdd<AnimalType>>(
         find.byType(EntityPickerWithAdd<AnimalType>),
       );
+      tester
+          .state<FormFieldState<String>>(
+            find.descendant(
+              of: find.byType(EntityPickerWithAdd<AnimalType>),
+              matching: find.byType(DropdownButtonFormField<String>),
+            ),
+          )
+          .didChange('type-1');
       typePicker.onChanged('type-1');
       await tester.pumpAndSettle();
 
       final herdPicker = tester.widget<EntityPickerWithAdd<Herd>>(
         find.byType(EntityPickerWithAdd<Herd>),
       );
+      tester
+          .state<FormFieldState<String>>(
+            find.descendant(
+              of: find.byType(EntityPickerWithAdd<Herd>),
+              matching: find.byType(DropdownButtonFormField<String>),
+            ),
+          )
+          .didChange('herd-1');
       herdPicker.onChanged('herd-1');
       await tester.pumpAndSettle();
 
@@ -1139,12 +1161,12 @@ import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 
 This group reuses the file-level `final now = DateTime.now();` declared above `main()` in Task 3 — no new declaration needed.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `flutter test test/features/farm/presentation/pages/animal_page_test.dart`
 Expected: FAIL — `showAddAnimalDialog` is not defined, and `Key('animal-sex-field')`/`Key('animal-acquisition-source-field')` don't exist yet.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `lib/features/farm/presentation/pages/animal_page.dart`, add these imports:
 
@@ -1356,12 +1378,12 @@ Wire the FAB to call it — replace the Task 3 placeholder in `_AnimalPageState.
       ),
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `flutter test test/features/farm/presentation/pages/animal_page_test.dart`
 Expected: PASS (3/3).
 
-- [ ] **Step 5: Run the full suite and analyzer, then commit**
+- [x] **Step 5: Run the full suite and analyzer, then commit**
 
 Run: `flutter analyze` and `flutter test`, confirm no new failures.
 
@@ -2666,6 +2688,18 @@ Add to the `showAddAnimalDialog` group:
         'Bessie',
       );
 
+      // Animal Type and Herd are required/validated fields — per the Global
+      // Constraints correction, drive both the inner FormFieldState and the
+      // picker's own onChanged, or Form.validate() fails forever and this
+      // hangs on the later runAsync(() => resultFuture).
+      tester
+          .state<FormFieldState<String>>(
+            find.descendant(
+              of: find.byType(EntityPickerWithAdd<AnimalType>),
+              matching: find.byType(DropdownButtonFormField<String>),
+            ),
+          )
+          .didChange('type-1');
       tester
           .widget<EntityPickerWithAdd<AnimalType>>(
             find.byType(EntityPickerWithAdd<AnimalType>),
@@ -2673,6 +2707,14 @@ Add to the `showAddAnimalDialog` group:
           .onChanged('type-1');
       await tester.pumpAndSettle();
 
+      tester
+          .state<FormFieldState<String>>(
+            find.descendant(
+              of: find.byType(EntityPickerWithAdd<Herd>),
+              matching: find.byType(DropdownButtonFormField<String>),
+            ),
+          )
+          .didChange('herd-1');
       tester
           .widget<EntityPickerWithAdd<Herd>>(find.byType(EntityPickerWithAdd<Herd>))
           .onChanged('herd-1');

@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
 import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/data/models/animal_model.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_state.dart';
@@ -20,7 +27,189 @@ import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/animal_type_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
 import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
+
+/// Opens the standard "Add Animal" form and resolves once it closes: the
+/// new animal's id if the add succeeded, or null if the sheet was
+/// dismissed without submitting.
+Future<String?> showAddAnimalDialog(BuildContext context) async {
+  final bloc = context.read<AnimalBloc>();
+  final beforeIds = bloc.state.animals.map((animal) => animal.id).toSet();
+  String? newId;
+
+  final subscription = bloc.stream.listen((state) {
+    if (state is AnimalLoaded && state.successMessage == 'Animal added') {
+      for (final animal in state.animals) {
+        if (!beforeIds.contains(animal.id)) {
+          newId = animal.id;
+          break;
+        }
+      }
+    }
+  });
+
+  final formKey = GlobalKey<FormState>();
+  final nameController = TextEditingController();
+  String? selectedAnimalTypeId;
+  String? selectedHerdId;
+  var selectedBirthDate = DateTime.now();
+  String? selectedSex;
+  String? selectedAcquisitionSource;
+
+  final animalTypes = context.read<AnimalTypeBloc>().state.animalTypes;
+  final herds = context.read<HerdBloc>().state.herds;
+
+  await EntityFormSheet.show(
+    context: context,
+    title: 'Add New Animal',
+    submitLabel: 'Add Animal',
+    formKey: formKey,
+    fields: _animalFormFields(
+      nameController: nameController,
+      animalTypes: animalTypes,
+      herds: herds,
+      selectedAnimalTypeId: selectedAnimalTypeId,
+      selectedHerdId: selectedHerdId,
+      selectedBirthDate: selectedBirthDate,
+      selectedSex: selectedSex,
+      selectedAcquisitionSource: selectedAcquisitionSource,
+      onAnimalTypeChanged: (value) => selectedAnimalTypeId = value,
+      onHerdChanged: (value) => selectedHerdId = value,
+      onBirthDateChanged: (value) => selectedBirthDate = value,
+      onSexChanged: (value) => selectedSex = value,
+      onAcquisitionSourceChanged: (value) => selectedAcquisitionSource = value,
+    ),
+    onSubmit: (sheetContext) async {
+      final userId = await UserUtils.getCurrentUserId();
+      if (userId == null) {
+        ScaffoldMessenger.of(sheetContext).showSnackBar(
+          const SnackBar(
+            content: Text('User not authenticated'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      final animal = AnimalModel.create(
+        userId: userId,
+        name: sanitizeText(nameController.text),
+        animalTypeId: selectedAnimalTypeId!,
+        herdId: selectedHerdId!,
+        birthDate: selectedBirthDate,
+        sex: selectedSex,
+        acquisitionSource: selectedAcquisitionSource,
+      );
+      bloc.add(AddAnimalEvent(animal));
+      Navigator.pop(sheetContext);
+    },
+  );
+
+  await subscription.cancel();
+  return newId;
+}
+
+List<Widget> _animalFormFields({
+  required TextEditingController nameController,
+  required List<AnimalType> animalTypes,
+  required List<Herd> herds,
+  required String? selectedAnimalTypeId,
+  required String? selectedHerdId,
+  required DateTime selectedBirthDate,
+  String? selectedSex,
+  String? selectedAcquisitionSource,
+  required ValueChanged<String?> onAnimalTypeChanged,
+  required ValueChanged<String?> onHerdChanged,
+  required ValueChanged<DateTime> onBirthDateChanged,
+  ValueChanged<String?>? onSexChanged,
+  ValueChanged<String?>? onAcquisitionSourceChanged,
+}) {
+  return [
+    ValidatedNameField(
+      controller: nameController,
+      labelText: 'Name *',
+      validator: (value) => requiredName(value, fieldLabel: 'Name'),
+    ),
+    const SizedBox(height: 16),
+    EntityPickerWithAdd<AnimalType>(
+      items: animalTypes,
+      selectedId: selectedAnimalTypeId,
+      idOf: (type) => type.id,
+      labelOf: (type) => type.name,
+      labelText: 'Animal Type *',
+      validator: (value) => requiredSelection(value, fieldLabel: 'animal type'),
+      onChanged: onAnimalTypeChanged,
+      onAddNew: showAddAnimalTypeDialog,
+    ),
+    const SizedBox(height: 16),
+    EntityPickerWithAdd<Herd>(
+      items: herds,
+      selectedId: selectedHerdId,
+      idOf: (herd) => herd.id,
+      labelOf: (herd) => '${herd.name} (${herd.location})',
+      labelText: 'Herd *',
+      validator: (value) => requiredSelection(value, fieldLabel: 'herd'),
+      onChanged: onHerdChanged,
+      onAddNew: showAddHerdDialog,
+    ),
+    const SizedBox(height: 16),
+    FormField<DateTime>(
+      initialValue: selectedBirthDate,
+      builder: (field) => ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Birth Date'),
+        subtitle: Text(_formatDate(selectedBirthDate)),
+        trailing: const Icon(Icons.calendar_today),
+        onTap: () async {
+          final date = await showDatePicker(
+            context: field.context,
+            initialDate: selectedBirthDate,
+            firstDate: DateTime(2000),
+            lastDate: DateTime.now(),
+          );
+          if (date != null) {
+            onBirthDateChanged(date);
+            field.didChange(date);
+          }
+        },
+      ),
+    ),
+    const SizedBox(height: 16),
+    DropdownButtonFormField<String>(
+      key: const Key('animal-sex-field'),
+      initialValue: selectedSex,
+      decoration: const InputDecoration(
+        labelText: 'Sex (Optional)',
+        border: OutlineInputBorder(),
+      ),
+      items: const [
+        DropdownMenuItem(value: 'male', child: Text('Male')),
+        DropdownMenuItem(value: 'female', child: Text('Female')),
+      ],
+      onChanged: onSexChanged,
+    ),
+    const SizedBox(height: 16),
+    DropdownButtonFormField<String>(
+      key: const Key('animal-acquisition-source-field'),
+      initialValue: selectedAcquisitionSource,
+      decoration: const InputDecoration(
+        labelText: 'Acquisition Source (Optional)',
+        border: OutlineInputBorder(),
+      ),
+      items: const [
+        DropdownMenuItem(value: 'bought', child: Text('Bought')),
+        DropdownMenuItem(value: 'bredOnFarm', child: Text('Bred on Farm')),
+        DropdownMenuItem(value: 'gift', child: Text('Gift')),
+      ],
+      onChanged: onAcquisitionSourceChanged,
+    ),
+  ];
+}
+
+String _formatDate(DateTime date) {
+  return '${date.day}/${date.month}/${date.year}';
+}
 
 class AnimalPage extends StatefulWidget {
   const AnimalPage({super.key});
@@ -105,7 +294,7 @@ class _AnimalPageState extends State<AnimalPage> {
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
-          onPressed: () {},
+          onPressed: () => showAddAnimalDialog(context),
           child: const Icon(Icons.add),
         ),
       ),
