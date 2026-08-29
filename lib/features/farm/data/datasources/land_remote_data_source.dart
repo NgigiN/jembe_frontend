@@ -48,6 +48,7 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
           'size': land.size,
           'location': land.location,
           'soil_type': land.soilType,
+          'tenure_type': land.tenureType,
         },
       );
 
@@ -74,6 +75,7 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
           'size': land.size,
           'location': land.location,
           'soil_type': land.soilType,
+          'tenure_type': land.tenureType,
         },
       );
 
