@@ -50,6 +50,7 @@ Future<String?> showAddLandDialog(BuildContext context) async {
   final sizeController = TextEditingController();
   final locationController = TextEditingController();
   final soilTypeController = TextEditingController();
+  String? selectedTenureType;
 
   await EntityFormSheet.show(
     context: context,
@@ -61,6 +62,7 @@ Future<String?> showAddLandDialog(BuildContext context) async {
       sizeController: sizeController,
       locationController: locationController,
       soilTypeController: soilTypeController,
+      onTenureTypeChanged: (value) => selectedTenureType = value,
     ),
     onSubmit: (sheetContext) async {
       final userId = await UserUtils.getCurrentUserId();
@@ -79,6 +81,7 @@ Future<String?> showAddLandDialog(BuildContext context) async {
         size: parseOptionalNonNegativeDecimal(sizeController.text),
         location: sanitizeOptionalText(locationController.text),
         soilType: sanitizeOptionalText(soilTypeController.text),
+        tenureType: selectedTenureType,
       );
       bloc.add(AddLandEvent(land));
       Navigator.pop(sheetContext);
@@ -196,6 +199,12 @@ class _LandPageState extends State<LandPage> {
           'Soil Type',
           land.soilType?.isNotEmpty == true ? land.soilType! : '—',
         ),
+        EntityDetailRow(
+          'Tenure',
+          land.tenureType?.isNotEmpty == true
+              ? land.tenureType![0].toUpperCase() + land.tenureType!.substring(1)
+              : '—',
+        ),
       ],
       onEdit: () => _showEditLandDialog(land),
       onDelete: () => _showDeleteConfirmation(land),
@@ -214,6 +223,7 @@ class _LandPageState extends State<LandPage> {
     );
     final locationController = TextEditingController(text: land.location ?? '');
     final soilTypeController = TextEditingController(text: land.soilType ?? '');
+    String? selectedTenureType = land.tenureType;
 
     EntityFormSheet.show(
       context: context,
@@ -229,6 +239,8 @@ class _LandPageState extends State<LandPage> {
         sizeHint: 'Enter land size in acres',
         locationHint: 'Enter land location (optional)',
         soilTypeHint: 'Enter soil type (optional)',
+        selectedTenureType: selectedTenureType,
+        onTenureTypeChanged: (value) => selectedTenureType = value,
       ),
       onSubmit: (sheetContext) async {
         final updatedLand = LandModel(
@@ -238,6 +250,7 @@ class _LandPageState extends State<LandPage> {
           size: parseOptionalNonNegativeDecimal(sizeController.text),
           location: sanitizeOptionalText(locationController.text),
           soilType: sanitizeOptionalText(soilTypeController.text),
+          tenureType: selectedTenureType,
           createdAt: land.createdAt,
           updatedAt: DateTime.now(),
         );
@@ -255,6 +268,8 @@ class _LandPageState extends State<LandPage> {
     String? sizeHint,
     String? locationHint,
     String? soilTypeHint,
+    String? selectedTenureType,
+    ValueChanged<String?>? onTenureTypeChanged,
   }) {
     return [
       ValidatedNameField(
@@ -290,6 +305,19 @@ class _LandPageState extends State<LandPage> {
         maxLength: FieldLimits.soilTypeMax,
         buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
             null,
+      ),
+      const SizedBox(height: 16),
+      DropdownButtonFormField<String>(
+        initialValue: selectedTenureType,
+        decoration: const InputDecoration(
+          labelText: 'Tenure (Optional)',
+          border: OutlineInputBorder(),
+        ),
+        items: const [
+          DropdownMenuItem(value: 'owned', child: Text('Owned')),
+          DropdownMenuItem(value: 'rented', child: Text('Rented')),
+        ],
+        onChanged: onTenureTypeChanged,
       ),
     ];
   }

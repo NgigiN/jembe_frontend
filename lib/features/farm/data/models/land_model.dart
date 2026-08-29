@@ -7,6 +7,7 @@ class LandModel extends Land {
     double? size,
     String? location,
     String? soilType,
+    String? tenureType,
   }) {
     final now = DateTime.now();
     return LandModel(
@@ -16,6 +17,7 @@ class LandModel extends Land {
       size: size,
       location: location,
       soilType: soilType,
+      tenureType: tenureType,
       createdAt: now,
       updatedAt: now,
     );
@@ -29,12 +31,14 @@ class LandModel extends Land {
     super.size,
     super.location,
     super.soilType,
+    super.tenureType,
   });
 
   factory LandModel.fromJson(Map<String, dynamic> json) {
     final sizeValue = json['Size'] ?? json['size'];
     final locationValue = json['Location'] ?? json['location'];
     final soilTypeValue = json['SoilType'] ?? json['soil_type'];
+    final tenureTypeValue = json['TenureType'] ?? json['tenure_type'];
 
     return LandModel(
       id: (json['ID'] ?? json['id'] ?? '').toString(),
@@ -43,6 +47,7 @@ class LandModel extends Land {
       size: sizeValue != null ? (sizeValue as num).toDouble() : null,
       location: locationValue?.toString(),
       soilType: soilTypeValue?.toString(),
+      tenureType: tenureTypeValue?.toString(),
       createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
       updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );
@@ -64,6 +69,7 @@ class LandModel extends Land {
       'size': size,
       'location': location,
       'soil_type': soilType,
+      'tenure_type': tenureType,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

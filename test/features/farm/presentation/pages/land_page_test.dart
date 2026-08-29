@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
@@ -58,6 +59,10 @@ void main() {
   group('showAddLandDialog', () {
     late MockLandBloc landBloc;
     late StreamController<LandState> stateController;
+
+    setUpAll(() {
+      registerFallbackValue(GetLandsEvent());
+    });
 
     setUp(() {
       _mockSecureStorageUserId('user-1');
@@ -127,6 +132,45 @@ void main() {
     );
 
     testWidgets(
+      'submits the selected tenure type on the dispatched AddLandEvent',
+      (tester) async {
+        late Future<String?> resultFuture;
+        await tester.pumpWidget(
+          buildHarness((future) => resultFuture = future),
+        );
+
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Land Name *'),
+          'North Field',
+        );
+
+        // The dropdown-menu-overlay open/select interaction is Flutter's own
+        // widget behavior, already covered by the framework's tests; what
+        // this test cares about is that selecting a value flows through to
+        // the submitted event, so the callback is invoked directly rather
+        // than fighting the overlay's tap mechanics.
+        final dropdown = tester.widget<DropdownButtonFormField<String>>(
+          find.byType(DropdownButtonFormField<String>),
+        );
+        dropdown.onChanged!('rented');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Add Land'));
+        await tester.pumpAndSettle();
+        await tester.runAsync(() => resultFuture);
+
+        final captured = verify(
+          () => landBloc.add(captureAny()),
+        ).captured;
+        final event = captured.single as AddLandEvent;
+        expect(event.land.tenureType, 'rented');
+      },
+    );
+
+    testWidgets(
       'returns null when the sheet is closed without submitting',
       (tester) async {
         late Future<String?> resultFuture;
@@ -142,6 +186,93 @@ void main() {
 
         final result = await tester.runAsync(() => resultFuture);
         expect(result, isNull);
+      },
+    );
+  });
+
+  group('editing a land', () {
+    late MockLandBloc landBloc;
+    late Land existingLand;
+
+    setUpAll(() {
+      registerFallbackValue(GetLandsEvent());
+    });
+
+    setUp(() {
+      _mockSecureStorageUserId('user-1');
+      final now = DateTime.now();
+      existingLand = Land(
+        id: 'land-1',
+        userId: 'user-1',
+        name: 'North Field',
+        tenureType: 'owned',
+        createdAt: now,
+        updatedAt: now,
+      );
+      landBloc = MockLandBloc();
+      whenListen(
+        landBloc,
+        Stream<LandState>.value(LandLoaded(lands: [existingLand])),
+        initialState: LandLoaded(lands: [existingLand]),
+      );
+    });
+
+    testWidgets(
+      'shows the tenure type, capitalized, in the land details sheet',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: BlocProvider<LandBloc>.value(
+              value: landBloc,
+              child: const LandPage(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('North Field'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Owned'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'pre-fills the tenure dropdown from the land and submits the '
+      'updated value on UpdateLandEvent',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: BlocProvider<LandBloc>.value(
+              value: landBloc,
+              child: const LandPage(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('North Field'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Edit'));
+        await tester.pumpAndSettle();
+
+        final dropdown = tester.widget<DropdownButtonFormField<String>>(
+          find.byType(DropdownButtonFormField<String>),
+        );
+        expect(dropdown.initialValue, 'owned');
+
+        dropdown.onChanged!('rented');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Update Land'));
+        await tester.pumpAndSettle();
+
+        final captured = verify(
+          () => landBloc.add(captureAny()),
+        ).captured;
+        final event = captured.whereType<UpdateLandEvent>().single;
+        expect(event.land.tenureType, 'rented');
       },
     );
   });
