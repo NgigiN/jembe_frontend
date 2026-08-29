@@ -49,13 +49,28 @@ frontend changes, no backfill (see spec for why).
       clean on branch `feat/plant-cost-categories` (backend repo)
 - [x] PR into `dev`: https://github.com/NgigiN/farmers_backend/pull/13
 
-## 2. New animal/land fields
+## 2. New animal/land fields — in progress
 
-- `Land.tenureType` (owned/rented)
-- `Animal.sex` (male/female)
-- `Animal.acquisitionSource` (bought/bredOnFarm/gift) + auto-prompt into
-  the existing Input add-flow when "bought" is selected
-- Backend model + migration for all three, frontend entity/form updates
+- [x] Backend: `Land.TenureType`, `Animal.Sex`, `Animal.AcquisitionSource`
+      added, validated, tested (`go build`/`go vet`/`gofmt`/`go test ./...`
+      all clean). Also fixed a pre-existing bug in `LandService.Update`'s
+      `.Select()` allowlist that would have silently dropped the new
+      field on update.
+  - [x] PR into `dev`: https://github.com/NgigiN/farmers_backend/pull/14
+- [x] Frontend: `Land.tenureType` — entity/model round-tripping,
+      Add/Edit Land dropdown, details-sheet display, all TDD'd and green.
+      Committed on `feat/creatable-entity-pickers`
+      (PR https://github.com/NgigiN/jembe_frontend/pull/7).
+- [ ] Frontend: `Animal.sex` / `Animal.acquisitionSource` — **blocked**:
+      there is no individual-Animal CRUD UI anywhere in the frontend
+      (only `Herd`-level aggregate tracking exists; `AnimalModel` is
+      referenced only by the repository/data layer, no bloc or
+      add/edit page). Adding these as "simple form field additions" per
+      the original spec isn't possible until it's decided whether to
+      build a new Animal CRUD page/bloc, or take another approach.
+      Flagged to the user; not yet resolved.
+- [ ] "Bought" → auto-prompt into the existing Input add-flow — depends
+      on the above.
 
 ## 3. Plant maturity duration
 
@@ -84,4 +99,5 @@ the size.
 
 ---
 
-**Next step:** finish item 0 (creatable pickers), then start item 1.
+**Next step:** resolve the Animal-UI question blocking the rest of item 2,
+then continue to item 3.
