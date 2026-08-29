@@ -21,6 +21,11 @@ import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
+import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/season_page.dart';
 
 class RevenuePage extends StatefulWidget {
   const RevenuePage({super.key});
@@ -601,24 +606,19 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                                 );
                               }
                               if (state is SeasonLoaded) {
-                                return DropdownButtonFormField<String>(
-                                  initialValue: _selectedSourceId,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Select Season',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  items: state.seasons.map((s) {
-                                    return DropdownMenuItem(
-                                      value: s.id,
-                                      child: Text(s.name),
-                                    );
-                                  }).toList(),
+                                return EntityPickerWithAdd<Season>(
+                                  items: state.seasons,
+                                  selectedId: _selectedSourceId,
+                                  idOf: (s) => s.id,
+                                  labelOf: (s) => s.name,
+                                  labelText: 'Select Season',
                                   onChanged: (v) =>
                                       setState(() => _selectedSourceId = v),
                                   validator: (v) => requiredSelection(
                                     v,
                                     fieldLabel: 'season',
                                   ),
+                                  onAddNew: showAddSeasonDialog,
                                 );
                               }
                               return const Text('No seasons found');
@@ -633,22 +633,17 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                                 );
                               }
                               if (state is HerdLoaded) {
-                                return DropdownButtonFormField<String>(
-                                  initialValue: _selectedSourceId,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Select Herd',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  items: state.herds.map((h) {
-                                    return DropdownMenuItem(
-                                      value: h.id,
-                                      child: Text('${h.name} (${h.location})'),
-                                    );
-                                  }).toList(),
+                                return EntityPickerWithAdd<Herd>(
+                                  items: state.herds,
+                                  selectedId: _selectedSourceId,
+                                  idOf: (h) => h.id,
+                                  labelOf: (h) => '${h.name} (${h.location})',
+                                  labelText: 'Select Herd',
                                   onChanged: (v) =>
                                       setState(() => _selectedSourceId = v),
                                   validator: (v) =>
                                       requiredSelection(v, fieldLabel: 'herd'),
+                                  onAddNew: showAddHerdDialog,
                                 );
                               }
                               return const Text('No herds found');

@@ -16,6 +16,8 @@ import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/season_page.dart';
 import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
 import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/harvest.dart';
@@ -247,22 +249,26 @@ class _HarvestPageState extends State<HarvestPage> {
                       key: formKey,
                       child: Column(
                         children: [
-                          DropdownButtonFormField<String>(
-                            initialValue: selectedSeasonId,
-                            decoration: const InputDecoration(
-                              labelText: 'Season *',
-                              border: OutlineInputBorder(),
-                            ),
-                            items: seasons.map((season) {
-                              return DropdownMenuItem<String>(
-                                value: season.id,
-                                child: Text(season.name),
+                          BlocBuilder<SeasonBloc, SeasonState>(
+                            builder: (context, seasonState) {
+                              final liveSeasons = seasonState is SeasonLoaded
+                                  ? seasonState.seasons
+                                  : seasons;
+                              return EntityPickerWithAdd<Season>(
+                                items: liveSeasons,
+                                selectedId: selectedSeasonId,
+                                idOf: (season) => season.id,
+                                labelOf: (season) => season.name,
+                                labelText: 'Season *',
+                                validator: (value) => requiredSelection(
+                                  value,
+                                  fieldLabel: 'season',
+                                ),
+                                onChanged: (value) {
+                                  setState(() => selectedSeasonId = value);
+                                },
+                                onAddNew: showAddSeasonDialog,
                               );
-                            }).toList(),
-                            validator: (value) =>
-                                requiredSelection(value, fieldLabel: 'season'),
-                            onChanged: (value) {
-                              setState(() => selectedSeasonId = value);
                             },
                           ),
                           const SizedBox(height: 16),

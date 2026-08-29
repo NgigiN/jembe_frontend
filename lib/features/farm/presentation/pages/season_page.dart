@@ -29,7 +29,188 @@ import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 import 'package:farm_tracker/features/farm/data/models/season_model.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/land_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/plant_page.dart';
+
+/// Opens the standard "Add New Season" form and resolves once it closes:
+/// the new season's id if the add succeeded, or null if the sheet was
+/// dismissed without submitting. Plant and Land are read reactively (not a
+/// one-time snapshot) so adding one inline via the pickers' "+" buttons
+/// makes it immediately selectable without closing and reopening the sheet.
+Future<String?> showAddSeasonDialog(BuildContext context) async {
+  final seasonBloc = context.read<SeasonBloc>();
+  final landBloc = context.read<LandBloc>();
+  final plantBloc = context.read<PlantBloc>();
+  final beforeIds = seasonBloc.state.seasons.map((season) => season.id).toSet();
+  String? newId;
+
+  final subscription = seasonBloc.stream.listen((state) {
+    if (state is SeasonLoaded && state.successMessage == 'Season created') {
+      for (final season in state.seasons) {
+        if (!beforeIds.contains(season.id)) {
+          newId = season.id;
+          break;
+        }
+      }
+    }
+  });
+
+  final formKey = GlobalKey<FormState>();
+  final nameController = TextEditingController();
+  DateTime? selectedStartDate;
+  DateTime? selectedEndDate;
+  String? selectedPlantId;
+  String? selectedLandId;
+
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) => StatefulBuilder(
+      builder: (sheetContext, setSheetState) => BlocBuilder<PlantBloc, PlantState>(
+        bloc: plantBloc,
+        builder: (plantBuilderContext, plantState) {
+          final plants = plantState is PlantLoaded ? plantState.plants : <Plant>[];
+          return BlocBuilder<LandBloc, LandState>(
+            bloc: landBloc,
+            builder: (landBuilderContext, landState) {
+              final lands = landState is LandLoaded ? landState.lands : <Land>[];
+
+              return EntityFormSheet.container(
+                context: sheetContext,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Add New Season',
+                            style: Theme.of(sheetContext)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(sheetContext),
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Expanded(
+                        child: EntityFormSheet.scrollableForm(
+                          context: sheetContext,
+                          child: Form(
+                            key: formKey,
+                            child: _SeasonPageState._seasonFormFields(
+                              context: sheetContext,
+                              nameController: nameController,
+                              plants: plants,
+                              lands: lands,
+                              selectedPlantId: selectedPlantId,
+                              selectedLandId: selectedLandId,
+                              selectedStartDate: selectedStartDate,
+                              selectedEndDate: selectedEndDate,
+                              onPlantChanged: (value) =>
+                                  setSheetState(() => selectedPlantId = value),
+                              onLandChanged: (value) =>
+                                  setSheetState(() => selectedLandId = value),
+                              onStartDateChanged: (value) =>
+                                  setSheetState(() => selectedStartDate = value),
+                              onEndDateChanged: (value) =>
+                                  setSheetState(() => selectedEndDate = value),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (!(formKey.currentState?.validate() ?? false)) {
+                              return;
+                            }
+                            _submitAddSeason(
+                              seasonBloc: seasonBloc,
+                              sheetContext: sheetContext,
+                              nameController: nameController,
+                              selectedPlantId: selectedPlantId,
+                              selectedLandId: selectedLandId,
+                              selectedStartDate: selectedStartDate,
+                              selectedEndDate: selectedEndDate,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: const Text(
+                            'Add Season',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    ),
+  );
+
+  await subscription.cancel();
+  return newId;
+}
+
+/// Validates and submits the "Add New Season" form. A top-level function
+/// (not inlined in the button's onPressed) for the same reason as
+/// `_submitAddHerd` in herd_page.dart: the selected-date variables are
+/// captured, mutable closure state, so Dart won't promote their
+/// nullability after a null check inline — passing them as plain
+/// parameters here lets it.
+Future<void> _submitAddSeason({
+  required SeasonBloc seasonBloc,
+  required BuildContext sheetContext,
+  required TextEditingController nameController,
+  required String? selectedPlantId,
+  required String? selectedLandId,
+  required DateTime? selectedStartDate,
+  required DateTime? selectedEndDate,
+}) async {
+  final userId = await UserUtils.getCurrentUserId();
+  if (userId == null) {
+    ScaffoldMessenger.of(sheetContext).showSnackBar(
+      const SnackBar(
+        content: Text('User not authenticated'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
+
+  final season = SeasonModel.create(
+    userId: userId,
+    name: sanitizeText(nameController.text),
+    plantId: selectedPlantId!,
+    landId: selectedLandId!,
+    startDate: selectedStartDate!,
+    endDate: selectedEndDate,
+  );
+  seasonBloc.add(AddSeasonEvent(season));
+  Navigator.pop(sheetContext);
+}
 
 class SeasonPage extends StatefulWidget {
   const SeasonPage({super.key});
@@ -126,7 +307,7 @@ class _SeasonPageState extends State<SeasonPage> {
     );
   }
 
-  String _formatDate(DateTime date) {
+  static String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
 
@@ -153,134 +334,7 @@ class _SeasonPageState extends State<SeasonPage> {
   }
 
   void _showAddSeasonDialog() {
-    final formKey = GlobalKey<FormState>();
-    final nameController = TextEditingController();
-    DateTime? selectedStartDate;
-    DateTime? selectedEndDate;
-    String? selectedPlantId;
-    String? selectedLandId;
-
-    final landState = context.read<LandBloc>().state;
-    final lands = landState is LandLoaded ? landState.lands : <Land>[];
-
-    final plantState = context.read<PlantBloc>().state;
-    final plants = plantState is PlantLoaded ? plantState.plants : <Plant>[];
-
-    if (lands.isEmpty || plants.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add at least one land and one plant first'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (sheetContext, setSheetState) => EntityFormSheet.container(
-          context: sheetContext,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Add New Season',
-                      style: Theme.of(sheetContext)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(sheetContext),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: EntityFormSheet.scrollableForm(
-                    context: sheetContext,
-                    child: Form(
-                      key: formKey,
-                      child: _seasonFormFields(
-                        context: sheetContext,
-                        nameController: nameController,
-                        plants: plants,
-                        lands: lands,
-                        selectedPlantId: selectedPlantId,
-                        selectedLandId: selectedLandId,
-                        selectedStartDate: selectedStartDate,
-                        selectedEndDate: selectedEndDate,
-                        onPlantChanged: (value) =>
-                            setSheetState(() => selectedPlantId = value),
-                        onLandChanged: (value) =>
-                            setSheetState(() => selectedLandId = value),
-                        onStartDateChanged: (value) =>
-                            setSheetState(() => selectedStartDate = value),
-                        onEndDateChanged: (value) =>
-                            setSheetState(() => selectedEndDate = value),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      if (!(formKey.currentState?.validate() ?? false)) {
-                        return;
-                      }
-
-                      final userId = await UserUtils.getCurrentUserId();
-                      if (userId == null) {
-                        ScaffoldMessenger.of(sheetContext).showSnackBar(
-                          const SnackBar(
-                            content: Text('User not authenticated'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      final season = SeasonModel.create(
-                        userId: userId,
-                        name: sanitizeText(nameController.text),
-                        plantId: selectedPlantId!,
-                        landId: selectedLandId!,
-                        startDate: selectedStartDate!,
-                        endDate: selectedEndDate,
-                      );
-                      context.read<SeasonBloc>().add(AddSeasonEvent(season));
-                      Navigator.pop(sheetContext);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: const Text(
-                      'Add Season',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    showAddSeasonDialog(context);
   }
 
   void _showEditSeasonDialog(Season season) {
@@ -415,7 +469,7 @@ class _SeasonPageState extends State<SeasonPage> {
     );
   }
 
-  Widget _seasonFormFields({
+  static Widget _seasonFormFields({
     required BuildContext context,
     required TextEditingController nameController,
     required List<Plant> plants,
@@ -441,46 +495,38 @@ class _SeasonPageState extends State<SeasonPage> {
           validator: (value) => requiredName(value, fieldLabel: 'Season name'),
         ),
         const SizedBox(height: 16),
-        DropdownButtonFormField<String>(
-          initialValue: selectedPlantId,
-          decoration: const InputDecoration(
-            labelText: 'Select Plant *',
-            border: OutlineInputBorder(),
-          ),
-          items: plants.map((plant) {
-            final name = plant.name;
+        EntityPickerWithAdd<Plant>(
+          items: plants,
+          selectedId: selectedPlantId,
+          idOf: (plant) => plant.id,
+          labelOf: (plant) {
             final variety = plant.variety ?? '';
-            final displayName =
-                variety.isNotEmpty ? '$name ($variety)' : name;
-            return DropdownMenuItem<String>(
-              value: plant.id,
-              child: Text(displayName),
-            );
-          }).toList(),
+            return variety.isNotEmpty
+                ? '${plant.name} ($variety)'
+                : plant.name;
+          },
+          labelText: 'Select Plant *',
           validator: (value) =>
               requiredSelection(value, fieldLabel: 'plant'),
           onChanged: onPlantChanged,
+          onAddNew: showAddPlantDialog,
         ),
         const SizedBox(height: 16),
-        DropdownButtonFormField<String>(
-          initialValue: selectedLandId,
-          decoration: const InputDecoration(
-            labelText: 'Select Land *',
-            border: OutlineInputBorder(),
-          ),
-          items: lands.map((land) {
-            final name = land.name;
+        EntityPickerWithAdd<Land>(
+          items: lands,
+          selectedId: selectedLandId,
+          idOf: (land) => land.id,
+          labelOf: (land) {
             final location = land.location ?? '';
-            final displayName =
-                location.isNotEmpty ? '$name ($location)' : name;
-            return DropdownMenuItem<String>(
-              value: land.id,
-              child: Text(displayName),
-            );
-          }).toList(),
+            return location.isNotEmpty
+                ? '${land.name} ($location)'
+                : land.name;
+          },
+          labelText: 'Select Land *',
           validator: (value) =>
               requiredSelection(value, fieldLabel: 'land'),
           onChanged: onLandChanged,
+          onAddNew: showAddLandDialog,
         ),
         const SizedBox(height: 16),
         FormField<DateTime?>(

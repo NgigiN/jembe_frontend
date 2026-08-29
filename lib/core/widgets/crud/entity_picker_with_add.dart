@@ -14,6 +14,7 @@ class EntityPickerWithAdd<T> extends StatelessWidget {
     required this.onAddNew,
     this.hintText,
     this.validator,
+    this.prefixIcon,
     super.key,
   });
 
@@ -25,6 +26,7 @@ class EntityPickerWithAdd<T> extends StatelessWidget {
   final String labelText;
   final String? hintText;
   final FormFieldValidator<String>? validator;
+  final Widget? prefixIcon;
   final Future<String?> Function(BuildContext context) onAddNew;
 
   @override
@@ -39,6 +41,7 @@ class EntityPickerWithAdd<T> extends StatelessWidget {
             decoration: InputDecoration(
               labelText: labelText,
               hintText: hintText,
+              prefixIcon: prefixIcon,
               border: const OutlineInputBorder(),
             ),
             items: items

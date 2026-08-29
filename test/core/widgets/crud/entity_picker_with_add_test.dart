@@ -102,4 +102,32 @@ void main() {
       expect(changedCalled, isFalse);
     },
   );
+
+  testWidgets('passes prefixIcon through to the dropdown decoration', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: EntityPickerWithAdd<_TestItem>(
+            items: items,
+            selectedId: null,
+            idOf: (item) => item.id,
+            labelOf: (item) => item.label,
+            labelText: 'Select Herd',
+            prefixIcon: const Icon(Icons.pets),
+            onChanged: (_) {},
+            onAddNew: (_) async => null,
+          ),
+        ),
+      ),
+    );
+
+    final field = tester.widget<DropdownButtonFormField<String>>(
+      find.byType(DropdownButtonFormField<String>),
+    );
+    final decoration = field.decoration;
+    expect(decoration.prefixIcon, isA<Icon>());
+    expect((decoration.prefixIcon! as Icon).icon, Icons.pets);
+  });
 }

@@ -15,7 +15,9 @@ import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/animal_type_page.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
@@ -25,6 +27,193 @@ import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+
+/// Validates and submits the "Register New Herd" form. A top-level function
+/// (not inlined in the button's onPressed) because `selectedStartDate` is a
+/// captured, mutable closure variable — Dart won't promote its nullability
+/// after a null check inline, but it will for a plain parameter here.
+Future<void> _submitAddHerd({
+  required HerdBloc herdBloc,
+  required BuildContext sheetContext,
+  required TextEditingController nameController,
+  required TextEditingController locationController,
+  required TextEditingController headCountController,
+  required String? selectedAnimalTypeId,
+  required DateTime? selectedStartDate,
+  required DateTime? selectedEndDate,
+}) async {
+  final headCount = parsePositiveInt(headCountController.text);
+  if (headCount == null) return;
+  if (selectedStartDate == null) return;
+
+  final userId = await UserUtils.getCurrentUserId();
+  if (userId == null) {
+    _HerdPageState._showSheetError(sheetContext, 'User not authenticated');
+    return;
+  }
+
+  herdBloc.add(
+    AddHerdEvent(
+      sanitizeText(nameController.text),
+      selectedAnimalTypeId!,
+      sanitizeText(locationController.text),
+      userId,
+      headCount,
+      startDate: selectedStartDate,
+      endDate: selectedEndDate,
+    ),
+  );
+  Navigator.pop(sheetContext);
+}
+
+/// Opens the standard "Register New Herd" form and resolves once it closes:
+/// the new herd's id if the add succeeded, or null if the sheet was
+/// dismissed without submitting. Lets other pickers reuse this exact flow
+/// instead of duplicating it.
+Future<String?> showAddHerdDialog(BuildContext context) async {
+  final herdBloc = context.read<HerdBloc>();
+  final beforeIds = herdBloc.state.herds.map((herd) => herd.id).toSet();
+  String? newId;
+
+  final subscription = herdBloc.stream.listen((state) {
+    if (state is HerdLoaded && state.successMessage == 'Herd created') {
+      for (final herd in state.herds) {
+        if (!beforeIds.contains(herd.id)) {
+          newId = herd.id;
+          break;
+        }
+      }
+    }
+  });
+
+  final formKey = GlobalKey<FormState>();
+  final nameController = TextEditingController();
+  final locationController = TextEditingController();
+  final headCountController = TextEditingController();
+  String? selectedAnimalTypeId;
+  DateTime? selectedStartDate;
+  DateTime? selectedEndDate;
+
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) => StatefulBuilder(
+      builder: (sheetContext, setSheetState) =>
+          BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
+        bloc: context.read<AnimalTypeBloc>(),
+        builder: (builderContext, animalTypeState) {
+          final animalTypes = animalTypeState is AnimalTypeLoaded
+              ? animalTypeState.animalTypes
+              : <AnimalType>[];
+
+          return EntityFormSheet.container(
+            context: sheetContext,
+            heightFactor: 0.75,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Register New Herd',
+                        style: Theme.of(sheetContext)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(sheetContext),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: EntityFormSheet.scrollableForm(
+                      context: sheetContext,
+                      child: Form(
+                        key: formKey,
+                        child: Column(
+                          children: _HerdPageState._herdFormFields(
+                            context: builderContext,
+                            nameController: nameController,
+                            locationController: locationController,
+                            headCountController: headCountController,
+                            animalTypes: animalTypes,
+                            selectedAnimalTypeId: selectedAnimalTypeId,
+                            selectedStartDate: selectedStartDate,
+                            selectedEndDate: selectedEndDate,
+                            onAnimalTypeChanged: (value) {
+                              setSheetState(() {
+                                selectedAnimalTypeId = value;
+                              });
+                            },
+                            onStartDateChanged: (value) {
+                              setSheetState(() {
+                                selectedStartDate = value;
+                              });
+                            },
+                            onEndDateChanged: (value) {
+                              setSheetState(() {
+                                selectedEndDate = value;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: animalTypes.isEmpty
+                          ? null
+                          : () {
+                              if (!(formKey.currentState?.validate() ??
+                                  false)) {
+                                return;
+                              }
+                              _submitAddHerd(
+                                herdBloc: herdBloc,
+                                sheetContext: sheetContext,
+                                nameController: nameController,
+                                locationController: locationController,
+                                headCountController: headCountController,
+                                selectedAnimalTypeId: selectedAnimalTypeId,
+                                selectedStartDate: selectedStartDate,
+                                selectedEndDate: selectedEndDate,
+                              );
+                            },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text(
+                        'Register Herd',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    ),
+  );
+
+  await subscription.cancel();
+  return newId;
+}
 
 class HerdPage extends StatefulWidget {
   const HerdPage({super.key});
@@ -135,7 +324,7 @@ class _HerdPageState extends State<HerdPage> {
     );
   }
 
-  String _formatDate(DateTime date) {
+  static String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
 
@@ -160,160 +349,7 @@ class _HerdPageState extends State<HerdPage> {
   }
 
   void _showAddHerdDialog() {
-    final formKey = GlobalKey<FormState>();
-    final nameController = TextEditingController();
-    final locationController = TextEditingController();
-    final headCountController = TextEditingController();
-    String? selectedAnimalTypeId;
-    DateTime? selectedStartDate;
-    DateTime? selectedEndDate;
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (sheetContext, setSheetState) =>
-            BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
-          builder: (context, animalTypeState) {
-            final animalTypes = animalTypeState is AnimalTypeLoaded
-                ? animalTypeState.animalTypes
-                : <AnimalType>[];
-
-            return EntityFormSheet.container(
-              context: sheetContext,
-              heightFactor: 0.75,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Register New Herd',
-                          style: Theme.of(sheetContext)
-                              .textTheme
-                              .titleLarge
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(sheetContext),
-                          icon: const Icon(Icons.close),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Expanded(
-                      child: EntityFormSheet.scrollableForm(
-                        context: sheetContext,
-                        child: Form(
-                          key: formKey,
-                          child: Column(
-                            children: _herdFormFields(
-                              context: context,
-                              nameController: nameController,
-                              locationController: locationController,
-                              headCountController: headCountController,
-                              animalTypes: animalTypes,
-                              selectedAnimalTypeId: selectedAnimalTypeId,
-                              selectedStartDate: selectedStartDate,
-                              selectedEndDate: selectedEndDate,
-                              onAnimalTypeChanged: (value) {
-                                setSheetState(() {
-                                  selectedAnimalTypeId = value;
-                                });
-                              },
-                              onStartDateChanged: (value) {
-                                setSheetState(() {
-                                  selectedStartDate = value;
-                                });
-                              },
-                              onEndDateChanged: (value) {
-                                setSheetState(() {
-                                  selectedEndDate = value;
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: animalTypes.isEmpty
-                            ? null
-                            : () {
-                                if (!(formKey.currentState?.validate() ?? false)) {
-                                  return;
-                                }
-                                _submitAddHerd(
-                                  sheetContext,
-                                  nameController,
-                                  locationController,
-                                  headCountController,
-                                  selectedAnimalTypeId,
-                                  selectedStartDate,
-                                  selectedEndDate,
-                                );
-                              },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text(
-                          'Register Herd',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Future<void> _submitAddHerd(
-    BuildContext sheetContext,
-    TextEditingController nameController,
-    TextEditingController locationController,
-    TextEditingController headCountController,
-    String? selectedAnimalTypeId,
-    DateTime? selectedStartDate,
-    DateTime? selectedEndDate,
-  ) async {
-    final headCount = parsePositiveInt(headCountController.text);
-    if (headCount == null) return;
-    if (selectedStartDate == null) return;
-
-    final userId = await UserUtils.getCurrentUserId();
-    if (userId == null) {
-      _showSheetError(sheetContext, 'User not authenticated');
-      return;
-    }
-
-    context.read<HerdBloc>().add(
-      AddHerdEvent(
-        sanitizeText(nameController.text),
-        selectedAnimalTypeId!,
-        sanitizeText(locationController.text),
-        userId,
-        headCount,
-        startDate: selectedStartDate,
-        endDate: selectedEndDate,
-      ),
-    );
-    Navigator.pop(sheetContext);
+    showAddHerdDialog(context);
   }
 
   void _showEditHerdDialog(Herd herd) {
@@ -474,7 +510,7 @@ class _HerdPageState extends State<HerdPage> {
     Navigator.pop(sheetContext);
   }
 
-  List<Widget> _herdFormFields({
+  static List<Widget> _herdFormFields({
     required BuildContext context,
     required TextEditingController nameController,
     required TextEditingController locationController,
@@ -496,27 +532,17 @@ class _HerdPageState extends State<HerdPage> {
         validator: (value) => requiredName(value, fieldLabel: 'Herd name'),
       ),
       const SizedBox(height: 16),
-      if (animalTypes.isEmpty)
-        _buildNoAnimalTypesWarning()
-      else
-        DropdownButtonFormField<String>(
-          value: selectedAnimalTypeId,
-          decoration: const InputDecoration(
-            labelText: 'Animal Type *',
-            border: OutlineInputBorder(),
-          ),
-          items: animalTypes
-              .map(
-                (type) => DropdownMenuItem<String>(
-                  value: type.id,
-                  child: Text(type.name),
-                ),
-              )
-              .toList(),
-          onChanged: onAnimalTypeChanged,
-          validator: (value) =>
-              requiredSelection(value, fieldLabel: 'animal type'),
-        ),
+      EntityPickerWithAdd<AnimalType>(
+        items: animalTypes,
+        selectedId: selectedAnimalTypeId,
+        idOf: (type) => type.id,
+        labelOf: (type) => type.name,
+        labelText: 'Animal Type *',
+        validator: (value) =>
+            requiredSelection(value, fieldLabel: 'animal type'),
+        onChanged: onAnimalTypeChanged,
+        onAddNew: showAddAnimalTypeDialog,
+      ),
       const SizedBox(height: 16),
       ValidatedLocationField(
         controller: locationController,
@@ -644,30 +670,7 @@ class _HerdPageState extends State<HerdPage> {
     ];
   }
 
-  Widget _buildNoAnimalTypesWarning() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange.shade200),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline, color: Colors.orange.shade700),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'No animal types available. Please add animal types first.',
-              style: TextStyle(color: Colors.orange.shade900),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSheetError(BuildContext sheetContext, String message) {
+  static void _showSheetError(BuildContext sheetContext, String message) {
     ScaffoldMessenger.of(sheetContext).showSnackBar(
       SnackBar(
         content: Text(message),

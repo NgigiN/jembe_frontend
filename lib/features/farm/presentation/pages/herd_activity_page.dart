@@ -7,7 +7,9 @@ import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_state.dart';
@@ -179,28 +181,20 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                               ),
                             ),
                             const Divider(height: 32),
-                            DropdownButtonFormField<String>(
-                              value: _selectedHerdId,
-                              decoration: const InputDecoration(
-                                labelText: 'Select Herd *',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.pets),
-                              ),
-                              items: herds
-                                  .map(
-                                    (herd) => DropdownMenuItem<String>(
-                                      value: herd.id,
-                                      child: Text(
-                                        '${herd.name} (Current: ${herd.currentHeadCount})',
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
+                            EntityPickerWithAdd<Herd>(
+                              items: herds,
+                              selectedId: _selectedHerdId,
+                              idOf: (herd) => herd.id,
+                              labelOf: (herd) =>
+                                  '${herd.name} (Current: ${herd.currentHeadCount})',
+                              labelText: 'Select Herd *',
+                              prefixIcon: const Icon(Icons.pets),
                               onChanged: (value) {
                                 setState(() => _selectedHerdId = value);
                               },
                               validator: (value) =>
                                   requiredSelection(value, fieldLabel: 'herd'),
+                              onAddNew: showAddHerdDialog,
                             ),
                             const SizedBox(height: 20),
                             Text(
