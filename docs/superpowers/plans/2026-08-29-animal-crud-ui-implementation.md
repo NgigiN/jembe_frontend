@@ -2984,7 +2984,7 @@ git push
 - Modify: `lib/features/farm/presentation/pages/animal_page.dart`
 - Test: `test/features/farm/presentation/pages/animal_page_test.dart`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to the `editing an animal` group (note `existingAnimal.acquisitionSource` is `'bredOnFarm'` in that group's `setUp`, so this is a valid transition case):
 
@@ -3086,12 +3086,12 @@ Widget _harness({
 
 This changes every existing call site of `_harness(...)` (the two tests in Task 3, and the two tests already written in Task 6's `editing an animal` group) to also pass `inputBloc: inputBloc, seasonBloc: seasonBloc, landBloc: landBloc, costCategoryBloc: costCategoryBloc` — those four fields must exist in scope wherever `_harness` is called, so add the same four mock fields and `whenListen` stubs (from Task 9's list, using the shared top-level `MockInputBloc`/`MockSeasonBloc`/`MockLandBloc`/`MockCostCategoryBloc` classes) to Task 3's top-level `setUp` as well, so every `_harness` call site in the file has them available.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `flutter test test/features/farm/presentation/pages/animal_page_test.dart`
 Expected: first new test FAILS (no prompt appears); second new test already passes trivially (nothing wired yet) — proceed once the first is red for the right reason.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `_showEditAnimalDialog`, capture the pre-edit value and compare after update, mirroring Task 9's pattern:
 
@@ -3146,12 +3146,18 @@ In `_showEditAnimalDialog`, capture the pre-edit value and compare after update,
         );
         context.read<AnimalBloc>().add(UpdateAnimalEvent(updatedAnimal));
         Navigator.pop(sheetContext);
+        // unawaited for the same reason as the add flow (Task 9's Global
+        // Constraints correction) — even though nothing here awaits this
+        // dialog's own return via tester.runAsync(), keeping both flows
+        // symmetric avoids reintroducing that class of bug later.
         if (!wasBought && nowBought && context.mounted) {
-          await showAddInputDialog(
-            context,
-            sourceType: 'animal',
-            lockedHerdId: herdId,
-            lockedAnimalId: int.tryParse(animal.id),
+          unawaited(
+            showAddInputDialog(
+              context,
+              sourceType: 'animal',
+              lockedHerdId: herdId,
+              lockedAnimalId: int.tryParse(animal.id),
+            ),
           );
         }
       },
@@ -3159,7 +3165,7 @@ In `_showEditAnimalDialog`, capture the pre-edit value and compare after update,
   }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `flutter test test/features/farm/presentation/pages/animal_page_test.dart`
 Expected: PASS (10/10).

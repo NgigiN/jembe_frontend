@@ -11,8 +11,6 @@ import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
-import 'package:farm_tracker/features/farm/domain/entities/land.dart';
-import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_state.dart';
@@ -71,15 +69,23 @@ Widget _harness({
   required AnimalBloc animalBloc,
   required AnimalTypeBloc animalTypeBloc,
   required HerdBloc herdBloc,
+  required InputBloc inputBloc,
+  required SeasonBloc seasonBloc,
+  required LandBloc landBloc,
+  required CostCategoryBloc costCategoryBloc,
 }) {
-  return MaterialApp(
-    home: MultiBlocProvider(
-      providers: [
-        BlocProvider<AnimalBloc>.value(value: animalBloc),
-        BlocProvider<AnimalTypeBloc>.value(value: animalTypeBloc),
-        BlocProvider<HerdBloc>.value(value: herdBloc),
-      ],
-      child: const AnimalPage(),
+  return MultiBlocProvider(
+    providers: [
+      BlocProvider<AnimalBloc>.value(value: animalBloc),
+      BlocProvider<AnimalTypeBloc>.value(value: animalTypeBloc),
+      BlocProvider<HerdBloc>.value(value: herdBloc),
+      BlocProvider<InputBloc>.value(value: inputBloc),
+      BlocProvider<SeasonBloc>.value(value: seasonBloc),
+      BlocProvider<LandBloc>.value(value: landBloc),
+      BlocProvider<CostCategoryBloc>.value(value: costCategoryBloc),
+    ],
+    child: const MaterialApp(
+      home: AnimalPage(),
     ),
   );
 }
@@ -88,11 +94,19 @@ void main() {
   late MockAnimalBloc animalBloc;
   late MockAnimalTypeBloc animalTypeBloc;
   late MockHerdBloc herdBloc;
+  late MockInputBloc inputBloc;
+  late MockSeasonBloc seasonBloc;
+  late MockLandBloc landBloc;
+  late MockCostCategoryBloc costCategoryBloc;
 
   setUp(() {
     animalBloc = MockAnimalBloc();
     animalTypeBloc = MockAnimalTypeBloc();
     herdBloc = MockHerdBloc();
+    inputBloc = MockInputBloc();
+    seasonBloc = MockSeasonBloc();
+    landBloc = MockLandBloc();
+    costCategoryBloc = MockCostCategoryBloc();
     whenListen(
       animalTypeBloc,
       const Stream<AnimalTypeState>.empty(),
@@ -102,6 +116,26 @@ void main() {
       herdBloc,
       const Stream<HerdState>.empty(),
       initialState: const HerdLoaded([]),
+    );
+    whenListen(
+      inputBloc,
+      const Stream<InputState>.empty(),
+      initialState: const InputLoaded(inputs: []),
+    );
+    whenListen(
+      seasonBloc,
+      const Stream<SeasonState>.empty(),
+      initialState: const SeasonLoaded(seasons: []),
+    );
+    whenListen(
+      landBloc,
+      const Stream<LandState>.empty(),
+      initialState: const LandLoaded(lands: []),
+    );
+    whenListen(
+      costCategoryBloc,
+      const Stream<CostCategoryState>.empty(),
+      initialState: const CostCategoryLoaded([]),
     );
   });
 
@@ -115,7 +149,15 @@ void main() {
     );
 
     await tester.pumpWidget(
-      _harness(animalBloc: animalBloc, animalTypeBloc: animalTypeBloc, herdBloc: herdBloc),
+      _harness(
+        animalBloc: animalBloc,
+        animalTypeBloc: animalTypeBloc,
+        herdBloc: herdBloc,
+        inputBloc: inputBloc,
+        seasonBloc: seasonBloc,
+        landBloc: landBloc,
+        costCategoryBloc: costCategoryBloc,
+      ),
     );
 
     final skeletonizerFinder = find.byWidgetPredicate(
@@ -143,7 +185,15 @@ void main() {
     );
 
     await tester.pumpWidget(
-      _harness(animalBloc: animalBloc, animalTypeBloc: animalTypeBloc, herdBloc: herdBloc),
+      _harness(
+        animalBloc: animalBloc,
+        animalTypeBloc: animalTypeBloc,
+        herdBloc: herdBloc,
+        inputBloc: inputBloc,
+        seasonBloc: seasonBloc,
+        landBloc: landBloc,
+        costCategoryBloc: costCategoryBloc,
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -377,8 +427,7 @@ void main() {
     testWidgets('herd picker only shows herds matching the selected animal type', (
       tester,
     ) async {
-      late Future<String?> resultFuture;
-      await tester.pumpWidget(buildHarness((future) => resultFuture = future));
+      await tester.pumpWidget(buildHarness((_) {}));
 
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
@@ -406,8 +455,7 @@ void main() {
     testWidgets('changing animal type clears a now-invalid herd selection', (
       tester,
     ) async {
-      late Future<String?> resultFuture;
-      await tester.pumpWidget(buildHarness((future) => resultFuture = future));
+      await tester.pumpWidget(buildHarness((_) {}));
 
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
@@ -522,6 +570,10 @@ void main() {
     late MockAnimalBloc animalBloc;
     late MockAnimalTypeBloc animalTypeBloc;
     late MockHerdBloc herdBloc;
+    late MockInputBloc inputBloc;
+    late MockSeasonBloc seasonBloc;
+    late MockLandBloc landBloc;
+    late MockCostCategoryBloc costCategoryBloc;
     late Animal existingAnimal;
 
     setUpAll(() {
@@ -544,6 +596,30 @@ void main() {
       animalBloc = MockAnimalBloc();
       animalTypeBloc = MockAnimalTypeBloc();
       herdBloc = MockHerdBloc();
+      inputBloc = MockInputBloc();
+      seasonBloc = MockSeasonBloc();
+      landBloc = MockLandBloc();
+      costCategoryBloc = MockCostCategoryBloc();
+      whenListen(
+        inputBloc,
+        const Stream<InputState>.empty(),
+        initialState: const InputLoaded(inputs: []),
+      );
+      whenListen(
+        seasonBloc,
+        const Stream<SeasonState>.empty(),
+        initialState: const SeasonLoaded(seasons: []),
+      );
+      whenListen(
+        landBloc,
+        const Stream<LandState>.empty(),
+        initialState: const LandLoaded(lands: []),
+      );
+      whenListen(
+        costCategoryBloc,
+        const Stream<CostCategoryState>.empty(),
+        initialState: const CostCategoryLoaded([]),
+      );
       whenListen(
         animalBloc,
         Stream<AnimalState>.value(AnimalLoaded(animals: [existingAnimal])),
@@ -586,7 +662,15 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _harness(animalBloc: animalBloc, animalTypeBloc: animalTypeBloc, herdBloc: herdBloc),
+        _harness(
+          animalBloc: animalBloc,
+          animalTypeBloc: animalTypeBloc,
+          herdBloc: herdBloc,
+          inputBloc: inputBloc,
+          seasonBloc: seasonBloc,
+          landBloc: landBloc,
+          costCategoryBloc: costCategoryBloc,
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -614,7 +698,15 @@ void main() {
 
     testWidgets('deletes the animal on confirmation', (tester) async {
       await tester.pumpWidget(
-        _harness(animalBloc: animalBloc, animalTypeBloc: animalTypeBloc, herdBloc: herdBloc),
+        _harness(
+          animalBloc: animalBloc,
+          animalTypeBloc: animalTypeBloc,
+          herdBloc: herdBloc,
+          inputBloc: inputBloc,
+          seasonBloc: seasonBloc,
+          landBloc: landBloc,
+          costCategoryBloc: costCategoryBloc,
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -628,6 +720,85 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(() => animalBloc.add(DeleteAnimalEvent('animal-1'))).called(1);
+    });
+
+    testWidgets('opens the cost-log prompt when acquisition source transitions to Bought', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _harness(
+          animalBloc: animalBloc,
+          animalTypeBloc: animalTypeBloc,
+          herdBloc: herdBloc,
+          inputBloc: inputBloc,
+          seasonBloc: seasonBloc,
+          landBloc: landBloc,
+          costCategoryBloc: costCategoryBloc,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Bessie'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit'));
+      await tester.pumpAndSettle();
+
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('animal-acquisition-source-field')),
+          )
+          .onChanged!('bought');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Update Animal'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add New Animal Input'), findsOneWidget);
+    });
+
+    testWidgets('does not re-prompt when acquisition source was already Bought', (
+      tester,
+    ) async {
+      existingAnimal = Animal(
+        id: 'animal-1',
+        userId: 'user-1',
+        name: 'Bessie',
+        animalTypeId: 'type-1',
+        herdId: 'herd-1',
+        birthDate: now,
+        sex: 'female',
+        acquisitionSource: 'bought',
+        createdAt: now,
+        updatedAt: now,
+      );
+      whenListen(
+        animalBloc,
+        Stream<AnimalState>.value(AnimalLoaded(animals: [existingAnimal])),
+        initialState: AnimalLoaded(animals: [existingAnimal]),
+      );
+
+      await tester.pumpWidget(
+        _harness(
+          animalBloc: animalBloc,
+          animalTypeBloc: animalTypeBloc,
+          herdBloc: herdBloc,
+          inputBloc: inputBloc,
+          seasonBloc: seasonBloc,
+          landBloc: landBloc,
+          costCategoryBloc: costCategoryBloc,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Bessie'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Update Animal'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add New Animal Input'), findsNothing);
     });
   });
 }

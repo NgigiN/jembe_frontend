@@ -6,9 +6,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
-import 'package:farm_tracker/features/farm/domain/entities/input.dart';
-import 'package:farm_tracker/features/farm/domain/entities/land.dart';
-import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_state.dart';
@@ -186,7 +183,7 @@ void main() {
       final captured = verify(() => inputBloc.add(captureAny())).captured;
       final event = captured.whereType<AddInputEvent>().single;
       expect(event.input.sourceType, 'animal');
-      expect((event.input as Input).animalId, isNull);
+      expect(event.input.animalId, isNull);
     },
   );
 

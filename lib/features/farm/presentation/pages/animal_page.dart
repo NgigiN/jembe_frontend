@@ -25,10 +25,8 @@ import 'package:farm_tracker/features/farm/presentation/bloc/animal_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
@@ -389,6 +387,7 @@ class _AnimalPageState extends State<AnimalPage> {
     var selectedBirthDate = animal.birthDate;
     var selectedSex = animal.sex;
     var selectedAcquisitionSource = animal.acquisitionSource;
+    final wasBought = animal.acquisitionSource == 'bought';
 
     EntityFormSheet.show(
       context: context,
@@ -410,12 +409,14 @@ class _AnimalPageState extends State<AnimalPage> {
         onAcquisitionSourceChanged: (value) => selectedAcquisitionSource = value,
       ),
       onSubmit: (sheetContext) async {
+        final herdId = herdIdNotifier.value!;
+        final nowBought = selectedAcquisitionSource == 'bought';
         final updatedAnimal = AnimalModel(
           id: animal.id,
           userId: animal.userId,
           name: sanitizeText(nameController.text),
           animalTypeId: animalTypeIdNotifier.value!,
-          herdId: herdIdNotifier.value!,
+          herdId: herdId,
           birthDate: selectedBirthDate,
           sex: selectedSex,
           acquisitionSource: selectedAcquisitionSource,
@@ -424,6 +425,16 @@ class _AnimalPageState extends State<AnimalPage> {
         );
         context.read<AnimalBloc>().add(UpdateAnimalEvent(updatedAnimal));
         Navigator.pop(sheetContext);
+        if (!wasBought && nowBought && context.mounted) {
+          unawaited(
+            showAddInputDialog(
+              context,
+              sourceType: 'animal',
+              lockedHerdId: herdId,
+              lockedAnimalId: int.tryParse(animal.id),
+            ),
+          );
+        }
       },
     );
   }
