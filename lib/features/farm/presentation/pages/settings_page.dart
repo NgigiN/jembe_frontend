@@ -300,6 +300,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         padding: const EdgeInsets.all(16),
                         child: DropdownButtonFormField<int>(
                           initialValue: _fiscalYearStartMonth,
+                          isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Our farm year starts in',
                             border: OutlineInputBorder(),

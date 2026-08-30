@@ -217,6 +217,7 @@ List<Widget> _animalFormFields({
     DropdownButtonFormField<String>(
       key: const Key('animal-sex-field'),
       initialValue: selectedSex,
+      isExpanded: true,
       decoration: const InputDecoration(
         labelText: 'Sex (Optional)',
         border: OutlineInputBorder(),
@@ -231,6 +232,7 @@ List<Widget> _animalFormFields({
     DropdownButtonFormField<String>(
       key: const Key('animal-acquisition-source-field'),
       initialValue: selectedAcquisitionSource,
+      isExpanded: true,
       decoration: const InputDecoration(
         labelText: 'Acquisition Source (Optional)',
         border: OutlineInputBorder(),

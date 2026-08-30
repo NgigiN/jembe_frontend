@@ -575,6 +575,7 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
                           initialValue: _source,
+                          isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Select Category',
                             border: OutlineInputBorder(),

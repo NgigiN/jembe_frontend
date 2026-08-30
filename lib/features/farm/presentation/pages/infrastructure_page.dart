@@ -226,6 +226,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                         children: [
                           DropdownButtonFormField<String>(
                             value: selectedType,
+                            isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'Infrastructure Type *',
                               border: OutlineInputBorder(),

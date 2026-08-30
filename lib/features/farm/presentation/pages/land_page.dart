@@ -309,6 +309,7 @@ class _LandPageState extends State<LandPage> {
       const SizedBox(height: 16),
       DropdownButtonFormField<String>(
         initialValue: selectedTenureType,
+        isExpanded: true,
         decoration: const InputDecoration(
           labelText: 'Tenure (Optional)',
           border: OutlineInputBorder(),

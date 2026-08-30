@@ -44,6 +44,7 @@ class CostCategoryTypeSelector extends StatelessWidget {
             Expanded(
               child: DropdownButtonFormField<String>(
                 initialValue: selectedType.isEmpty ? null : selectedType,
+                isExpanded: true,
                 decoration: InputDecoration(
                   labelText: labelText,
                   border: const OutlineInputBorder(),
