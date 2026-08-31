@@ -20,7 +20,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       if (!_supportsGoogleSignIn) {
         const message =
             'Google Sign-In is only available on Android. '
-            'Connect a phone or emulator, then run ./run_local.sh.';
+            'Connect a phone or emulator, then run ./scripts/run_local.sh.';
         appLogger.warning(LogCategory.auth, message);
         emit(AuthError(message));
         return;

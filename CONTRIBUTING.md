@@ -87,7 +87,7 @@ Before submitting a PR, ensure:
 2. Run `flutter pub get`
 3. Run `flutter analyze`
 4. Run `flutter test --coverage`
-5. Build release: `./build_production.sh`
+5. Build release: `./scripts/build_production.sh`
 6. Verify size: `flutter build appbundle --analyze-size`
 7. Test on physical device
 8. Update CHANGELOG.md
