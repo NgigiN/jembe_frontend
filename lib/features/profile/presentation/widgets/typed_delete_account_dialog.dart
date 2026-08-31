@@ -67,7 +67,6 @@ class _TypedDeleteAccountDialogContentState
             controller: _controller,
             onChanged: _onChanged,
             autofocus: true,
-            decoration: const InputDecoration(border: OutlineInputBorder()),
           ),
         ],
       ),

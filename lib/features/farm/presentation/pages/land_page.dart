@@ -298,7 +298,6 @@ class _LandPageState extends State<LandPage> {
         decoration: InputDecoration(
           labelText: 'Soil Type',
           hintText: soilTypeHint,
-          border: const OutlineInputBorder(),
         ),
         validator: optionalSoilType,
         inputFormatters: shortLabelFormatters(maxLength: FieldLimits.soilTypeMax),
@@ -312,7 +311,6 @@ class _LandPageState extends State<LandPage> {
         isExpanded: true,
         decoration: const InputDecoration(
           labelText: 'Tenure (Optional)',
-          border: OutlineInputBorder(),
         ),
         items: const [
           DropdownMenuItem(value: 'owned', child: Text('Owned')),

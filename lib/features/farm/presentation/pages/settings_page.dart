@@ -303,7 +303,6 @@ class _SettingsPageState extends State<SettingsPage> {
                           isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Our farm year starts in',
-                            border: OutlineInputBorder(),
                           ),
                           items: const [
                             DropdownMenuItem(value: 1, child: Text('January')),

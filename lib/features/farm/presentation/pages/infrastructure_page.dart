@@ -229,7 +229,6 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                             isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'Infrastructure Type *',
-                              border: OutlineInputBorder(),
                             ),
                             items: _infrastructureTypes
                                 .map(

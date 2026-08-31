@@ -131,7 +131,6 @@ Future<void> showAddInputDialog(
                             isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'Select Season *',
-                              border: OutlineInputBorder(),
                             ),
                             items: seasons.map((season) {
                               return DropdownMenuItem<String>(
@@ -153,7 +152,6 @@ Future<void> showAddInputDialog(
                             isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'Select Herd *',
-                              border: OutlineInputBorder(),
                             ),
                             items: herds.map((herd) {
                               return DropdownMenuItem<String>(
@@ -523,7 +521,6 @@ class _InputPageState extends State<InputPage> {
                               isExpanded: true,
                               decoration: const InputDecoration(
                                 labelText: 'Select Season *',
-                                border: OutlineInputBorder(),
                               ),
                               items: seasons.map((season) {
                                 return DropdownMenuItem<String>(
@@ -545,7 +542,6 @@ class _InputPageState extends State<InputPage> {
                               isExpanded: true,
                               decoration: const InputDecoration(
                                 labelText: 'Select Herd *',
-                                border: OutlineInputBorder(),
                               ),
                               items: herds
                                   .map<DropdownMenuItem<String>>((herd) {

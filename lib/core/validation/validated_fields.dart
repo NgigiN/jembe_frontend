@@ -28,7 +28,6 @@ class ValidatedNameField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: labelText,
         hintText: hintText,
-        border: const OutlineInputBorder(),
         prefixIcon: prefixIcon,
       ),
       validator: validator,
@@ -64,7 +63,6 @@ class ValidatedLocationField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: labelText,
         hintText: hintText,
-        border: const OutlineInputBorder(),
         prefixIcon: prefixIcon,
       ),
       validator: validator,
@@ -102,7 +100,6 @@ class ValidatedDecimalField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: labelText,
         hintText: hintText,
-        border: const OutlineInputBorder(),
         prefixIcon: prefixIcon,
       ),
       validator: validator,
@@ -135,7 +132,6 @@ class ValidatedIntegerField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: labelText,
         hintText: hintText,
-        border: const OutlineInputBorder(),
         prefixIcon: prefixIcon,
       ),
       validator: validator,
@@ -165,7 +161,6 @@ class ValidatedNotesField extends StatelessWidget {
       controller: controller,
       decoration: InputDecoration(
         labelText: labelText,
-        border: const OutlineInputBorder(),
         alignLabelWithHint: true,
       ),
       validator: validator,

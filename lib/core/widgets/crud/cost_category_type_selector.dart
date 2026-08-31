@@ -47,7 +47,6 @@ class CostCategoryTypeSelector extends StatelessWidget {
                 isExpanded: true,
                 decoration: InputDecoration(
                   labelText: labelText,
-                  border: const OutlineInputBorder(),
                   hintText: hintText,
                   suffixIcon: costCategoryState is CostCategoryLoading
                       ? const Padding(

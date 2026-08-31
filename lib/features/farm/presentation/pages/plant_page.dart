@@ -237,7 +237,6 @@ class _PlantPageState extends State<PlantPage> {
         controller: varietyController,
         decoration: const InputDecoration(
           labelText: 'Variety (Optional)',
-          border: OutlineInputBorder(),
         ),
         validator: optionalVariety,
         inputFormatters: nameFormatters(maxLength: FieldLimits.varietyMax),

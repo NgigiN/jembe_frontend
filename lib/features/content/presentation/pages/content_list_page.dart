@@ -48,7 +48,6 @@ class _ContentListPageState extends State<ContentListPage> {
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.search),
                 hintText: 'Search tips...',
-                border: OutlineInputBorder(),
               ),
               onChanged: (value) => setState(() => _query = value),
             ),

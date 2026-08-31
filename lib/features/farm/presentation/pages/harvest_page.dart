@@ -284,7 +284,6 @@ class _HarvestPageState extends State<HarvestPage> {
                             isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'Unit *',
-                              border: OutlineInputBorder(),
                             ),
                             items: [
                               ...harvestUnitPresets.map(

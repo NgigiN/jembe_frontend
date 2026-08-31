@@ -42,7 +42,6 @@ class EntityPickerWithAdd<T> extends StatelessWidget {
               labelText: labelText,
               hintText: hintText,
               prefixIcon: prefixIcon,
-              border: const OutlineInputBorder(),
             ),
             items: items
                 .map(

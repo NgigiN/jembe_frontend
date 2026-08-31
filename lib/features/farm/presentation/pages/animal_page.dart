@@ -220,7 +220,6 @@ List<Widget> _animalFormFields({
       isExpanded: true,
       decoration: const InputDecoration(
         labelText: 'Sex (Optional)',
-        border: OutlineInputBorder(),
       ),
       items: const [
         DropdownMenuItem(value: 'male', child: Text('Male')),
@@ -235,7 +234,6 @@ List<Widget> _animalFormFields({
       isExpanded: true,
       decoration: const InputDecoration(
         labelText: 'Acquisition Source (Optional)',
-        border: OutlineInputBorder(),
       ),
       items: const [
         DropdownMenuItem(value: 'bought', child: Text('Bought')),

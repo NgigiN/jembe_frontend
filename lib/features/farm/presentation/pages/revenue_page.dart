@@ -578,7 +578,6 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                           isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Select Category',
-                            border: OutlineInputBorder(),
                           ),
                           items: const [
                             DropdownMenuItem(

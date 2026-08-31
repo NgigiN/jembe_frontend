@@ -116,7 +116,6 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
                 maxLength: 1000,
                 decoration: const InputDecoration(
                   hintText: 'Type your question...',
-                  border: OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 8),
