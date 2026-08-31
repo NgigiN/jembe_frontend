@@ -74,7 +74,8 @@ class CostCategoryTypeSelector extends StatelessWidget {
               icon: const Icon(Icons.tune),
               tooltip: 'Manage custom types',
               style: IconButton.styleFrom(
-                backgroundColor: Colors.grey.shade100,
+                backgroundColor:
+                    Theme.of(context).colorScheme.surfaceContainerHighest,
               ),
             ),
             IconButton(
@@ -205,9 +206,9 @@ class CostCategoryTypeSelector extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'Swipe left on a custom type to delete it.',
-                style: Theme.of(
-                  sheetContext,
-                ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 16),
               if (customCategories.isEmpty)
@@ -217,7 +218,9 @@ class CostCategoryTypeSelector extends StatelessWidget {
                     child: Text(
                       'No custom types yet.\nTap + to add one.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: TextStyle(
+                        color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 )
@@ -277,7 +280,7 @@ class CostCategoryTypeSelector extends StatelessWidget {
                             ),
                             trailing: Icon(
                               Icons.swipe_left,
-                              color: Colors.grey.shade400,
+                              color: Theme.of(context).colorScheme.outline,
                               size: 20,
                             ),
                           ),

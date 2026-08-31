@@ -25,7 +25,7 @@ class SetupStepCard extends StatelessWidget {
     final color = switch (status) {
       StepStatus.completed => Colors.green,
       StepStatus.available => Theme.of(context).colorScheme.primary,
-      StepStatus.locked => Colors.grey,
+      StepStatus.locked => Theme.of(context).colorScheme.outline,
     };
 
     return Padding(
@@ -76,7 +76,7 @@ class SetupStepCard extends StatelessWidget {
                       ),
                     StepStatus.locked => Icon(
                         Icons.lock,
-                        color: Colors.grey.shade400,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         size: 18,
                       ),
                   },
@@ -92,7 +92,7 @@ class SetupStepCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: status == StepStatus.locked
-                            ? Colors.grey
+                            ? Theme.of(context).colorScheme.onSurfaceVariant
                             : null,
                       ),
                     ),
@@ -100,11 +100,7 @@ class SetupStepCard extends StatelessWidget {
                     Text(
                       summary ?? subtitle,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: status == StepStatus.locked
-                            ? Colors.grey.shade500
-                            : Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],

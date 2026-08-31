@@ -1029,7 +1029,7 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSubLabel('Costs'),
+                  _buildSubLabel(context, 'Costs'),
                   _buildMiniBreakdownRow(
                     'Plant',
                     summary.breakdown.costs.plant,
@@ -1053,7 +1053,7 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSubLabel('Revenue'),
+                  _buildSubLabel(context, 'Revenue'),
                   _buildMiniBreakdownRow(
                     'Plant',
                     summary.breakdown.revenue.plant,
@@ -1073,15 +1073,15 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
     );
   }
 
-  Widget _buildSubLabel(String label) {
+  Widget _buildSubLabel(BuildContext context, String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w500,
-          color: Colors.grey,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
     );
@@ -1279,7 +1279,7 @@ class StreakPage extends StatelessWidget {
       statusText = 'No activity in $days days';
     }
     final statusColor = days == null
-        ? Colors.grey
+        ? Theme.of(context).colorScheme.onSurfaceVariant
         : (isFresh ? Colors.green : Colors.red);
 
     return Card(
