@@ -1,3 +1,4 @@
+import 'package:farm_tracker/core/widgets/lively_tap.dart';
 import 'package:farm_tracker/features/content/domain/entities/content_item.dart';
 import 'package:farm_tracker/features/content/presentation/widgets/content_card.dart';
 import 'package:flutter/material.dart';
@@ -30,6 +31,7 @@ void main() {
 
     expect(find.text('Preventing mastitis'), findsOneWidget);
     expect(find.text('Three habits that help.'), findsOneWidget);
+    expect(find.byType(LivelyTap), findsOneWidget);
 
     await tester.tap(find.byType(ContentCard));
     expect(tapped, isTrue);

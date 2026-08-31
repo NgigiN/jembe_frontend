@@ -1,3 +1,4 @@
+import 'package:farm_tracker/core/widgets/lively_tap.dart';
 import 'package:farm_tracker/features/content/domain/entities/content_item.dart';
 import 'package:flutter/material.dart';
 
@@ -9,17 +10,19 @@ class ContentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        title: Text(item.title),
-        subtitle: Text(
-          item.summary,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
+    return LivelyTap(
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: ListTile(
+          title: Text(item.title),
+          subtitle: Text(
+            item.summary,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: onTap,
         ),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
       ),
     );
   }
