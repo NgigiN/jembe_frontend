@@ -1,6 +1,8 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
+import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_event.dart';
@@ -20,11 +22,13 @@ import 'package:farm_tracker/features/farm/presentation/bloc/revenue_state.dart'
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/analysis_page.dart';
 import 'package:farm_tracker/features/farm_activity/presentation/widgets/farm_activity_card.dart';
 import 'package:farm_tracker/injection_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockHerdBloc extends MockBloc<HerdEvent, HerdState>
@@ -46,6 +50,33 @@ class MockRevenueBloc extends MockBloc<RevenueEvent, RevenueState>
     implements RevenueBloc {}
 
 class MockDio extends Mock implements Dio {}
+
+final _now = DateTime(2026, 8, 24);
+
+Herd _herd(String id) => Herd(
+  id: id,
+  userId: 'u',
+  name: 'Herd $id',
+  animalTypeId: 'a',
+  location: 'x',
+  initialHeadCount: 1,
+  currentHeadCount: 1,
+  startDate: _now,
+  createdAt: _now,
+  updatedAt: _now,
+);
+
+Activity _activityFor(String sourceType, String sourceId, DateTime createdAt) =>
+    Activity(
+      id: 'act-${createdAt.toIso8601String()}',
+      sourceType: sourceType,
+      sourceId: sourceId,
+      type: 'x',
+      cost: 0,
+      date: createdAt,
+      createdAt: createdAt,
+      updatedAt: createdAt,
+    );
 
 void main() {
   setUp(() {
@@ -206,4 +237,179 @@ void main() {
       await sl<AnalyticsService>().flush();
     },
   );
+
+  group('when settled with a real level', () {
+    Future<void> pumpSettled(
+      WidgetTester tester, {
+      required List<Herd> herds,
+      required List<Activity> activities,
+    }) async {
+      final herdBloc = MockHerdBloc();
+      final seasonBloc = MockSeasonBloc();
+      final activityBloc = MockActivityBloc();
+      final inputBloc = MockInputBloc();
+      final harvestBloc = MockHarvestBloc();
+      final revenueBloc = MockRevenueBloc();
+
+      whenListen(
+        herdBloc,
+        Stream<HerdState>.value(HerdLoaded(herds)),
+        initialState: HerdLoaded(herds),
+      );
+      whenListen(
+        seasonBloc,
+        Stream<SeasonState>.value(const SeasonLoaded(seasons: [])),
+        initialState: const SeasonLoaded(seasons: []),
+      );
+      whenListen(
+        activityBloc,
+        Stream<ActivityState>.value(ActivityLoaded(activities: activities)),
+        initialState: ActivityLoaded(activities: activities),
+      );
+      whenListen(
+        inputBloc,
+        Stream<InputState>.value(const InputLoaded(inputs: [])),
+        initialState: const InputLoaded(inputs: []),
+      );
+      whenListen(
+        harvestBloc,
+        Stream<HarvestState>.value(const HarvestLoaded(harvests: [])),
+        initialState: const HarvestLoaded(harvests: []),
+      );
+      whenListen(
+        revenueBloc,
+        Stream<RevenueState>.value(const RevenueLoaded()),
+        initialState: const RevenueLoaded(),
+      );
+
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider<HerdBloc>.value(value: herdBloc),
+            BlocProvider<SeasonBloc>.value(value: seasonBloc),
+            BlocProvider<ActivityBloc>.value(value: activityBloc),
+            BlocProvider<InputBloc>.value(value: inputBloc),
+            BlocProvider<HarvestBloc>.value(value: harvestBloc),
+            BlocProvider<RevenueBloc>.value(value: revenueBloc),
+          ],
+          child: MaterialApp(
+            home: Scaffold(body: FarmActivityCard(now: _now)),
+          ),
+        ),
+      );
+    }
+
+    testWidgets(
+      'renders as a tappable analysis-style tile with icon, label, and Tap to view',
+      (tester) async {
+        await pumpSettled(
+          tester,
+          herds: [_herd('h1')],
+          activities: [_activityFor('animal', 'h1', _now)],
+        );
+
+        expect(find.text('Thriving'), findsOneWidget);
+        expect(find.text('Tap to view'), findsOneWidget);
+        expect(find.byIcon(Icons.eco), findsOneWidget);
+        expect(find.byType(InkWell), findsWidgets);
+
+        await sl<AnalyticsService>().flush();
+      },
+    );
+
+    testWidgets('still shows the weekly streak subtitle', (tester) async {
+      await pumpSettled(
+        tester,
+        herds: [_herd('h1')],
+        activities: [_activityFor('animal', 'h1', _now)],
+      );
+
+      expect(find.text('1-week streak'), findsOneWidget);
+
+      await sl<AnalyticsService>().flush();
+    });
+  });
+
+  group('navigation', () {
+    testWidgets('tapping the card pushes the streak page', (tester) async {
+      final herdBloc = MockHerdBloc();
+      final seasonBloc = MockSeasonBloc();
+      final activityBloc = MockActivityBloc();
+      final inputBloc = MockInputBloc();
+      final harvestBloc = MockHarvestBloc();
+      final revenueBloc = MockRevenueBloc();
+
+      whenListen(
+        herdBloc,
+        Stream<HerdState>.value(HerdLoaded([_herd('h1')])),
+        initialState: HerdLoaded([_herd('h1')]),
+      );
+      whenListen(
+        seasonBloc,
+        Stream<SeasonState>.value(const SeasonLoaded(seasons: [])),
+        initialState: const SeasonLoaded(seasons: []),
+      );
+      whenListen(
+        activityBloc,
+        Stream<ActivityState>.value(
+          ActivityLoaded(activities: [_activityFor('animal', 'h1', _now)]),
+        ),
+        initialState: ActivityLoaded(
+          activities: [_activityFor('animal', 'h1', _now)],
+        ),
+      );
+      whenListen(
+        inputBloc,
+        Stream<InputState>.value(const InputLoaded(inputs: [])),
+        initialState: const InputLoaded(inputs: []),
+      );
+      whenListen(
+        harvestBloc,
+        Stream<HarvestState>.value(const HarvestLoaded(harvests: [])),
+        initialState: const HarvestLoaded(harvests: []),
+      );
+      whenListen(
+        revenueBloc,
+        Stream<RevenueState>.value(const RevenueLoaded()),
+        initialState: const RevenueLoaded(),
+      );
+
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) =>
+                Scaffold(body: FarmActivityCard(now: _now)),
+          ),
+          GoRoute(
+            name: AppRouteName.streak,
+            path: AppRoutePath.streak,
+            builder: (context, state) => const StreakPage(),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider<HerdBloc>.value(value: herdBloc),
+            BlocProvider<SeasonBloc>.value(value: seasonBloc),
+            BlocProvider<ActivityBloc>.value(value: activityBloc),
+            BlocProvider<InputBloc>.value(value: inputBloc),
+            BlocProvider<HarvestBloc>.value(value: harvestBloc),
+            BlocProvider<RevenueBloc>.value(value: revenueBloc),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+
+      await tester.tap(find.byType(InkWell));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Farm Activity Streak'), findsOneWidget);
+
+      await sl<AnalyticsService>().flush();
+    });
+  });
 }

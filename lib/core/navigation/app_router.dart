@@ -46,6 +46,7 @@ class AppRouteName {
   static const totalCosts = 'total-costs';
   static const costBreakdown = 'cost-breakdown';
   static const annualSummary = 'annual-summary';
+  static const streak = 'streak';
   static const revenueAdd = 'revenue-add';
   static const infrastructure = 'infrastructure';
   static const herdActivities = 'herd-activities';
@@ -75,6 +76,7 @@ class AppRoutePath {
   static const totalCosts = '/analytics/total-costs';
   static const costBreakdown = '/analytics/cost-breakdown';
   static const annualSummary = '/analytics/annual-summary';
+  static const streak = '/analytics/streak';
   static const revenueAdd = '/revenue/add';
   static const infrastructure = '/infrastructure';
   static const herdActivities = '/herd-activities';
@@ -211,6 +213,11 @@ class AppRouter {
         path: AppRoutePath.annualSummary,
         pageBuilder: (context, state) =>
             _slidePage(const AnnualSummaryPage(), state),
+      ),
+      GoRoute(
+        name: AppRouteName.streak,
+        path: AppRoutePath.streak,
+        pageBuilder: (context, state) => _slidePage(const StreakPage(), state),
       ),
       GoRoute(
         name: AppRouteName.revenueAdd,

@@ -12,6 +12,7 @@ class FarmActivityResult {
     required this.score,
     required this.level,
     required this.weeklyStreak,
+    required this.breakdown,
   });
 
   /// Null when the farmer has zero herds and zero seasons - there is
@@ -19,6 +20,25 @@ class FarmActivityResult {
   final int? score;
   final FarmActivityLevel? level;
   final int weeklyStreak;
+
+  /// One entry per herd/season, sorted stalest-first (never-active first,
+  /// then oldest to freshest), for surfacing exactly what's dragging the
+  /// score down.
+  final List<EnterpriseFreshness> breakdown;
+}
+
+class EnterpriseFreshness {
+  const EnterpriseFreshness({
+    required this.name,
+    required this.isHerd,
+    required this.daysSinceLastActivity,
+  });
+
+  final String name;
+  final bool isHerd;
+
+  /// Null when there is no recorded activity/input/harvest/revenue at all.
+  final int? daysSinceLastActivity;
 }
 
 /// Pure, deterministic, no-ML computation over data already loaded
@@ -40,17 +60,26 @@ class FarmActivityCalculator {
   }) {
     final effectiveNow = now ?? DateTime.now();
 
-    final scores = <int>[
+    final herdMostRecent = <String, DateTime?>{
       for (final herd in herds)
-        _freshnessScore(
-          _mostRecentForHerd(herd.id, activities, inputs, revenues),
-          effectiveNow,
-        ),
+        herd.id: _mostRecentForHerd(herd.id, activities, inputs, revenues),
+    };
+    final seasonMostRecent = <String, DateTime?>{
       for (final season in seasons)
-        _freshnessScore(
-          _mostRecentForSeason(season.id, activities, inputs, harvests, revenues),
-          effectiveNow,
+        season.id: _mostRecentForSeason(
+          season.id,
+          activities,
+          inputs,
+          harvests,
+          revenues,
         ),
+    };
+
+    final scores = <int>[
+      for (final mostRecent in herdMostRecent.values)
+        _freshnessScore(mostRecent, effectiveNow),
+      for (final mostRecent in seasonMostRecent.values)
+        _freshnessScore(mostRecent, effectiveNow),
     ];
 
     int? averageScore;
@@ -68,7 +97,45 @@ class FarmActivityCalculator {
       now: effectiveNow,
     );
 
-    return FarmActivityResult(score: averageScore, level: level, weeklyStreak: streak);
+    final breakdown = <EnterpriseFreshness>[
+      for (final herd in herds)
+        EnterpriseFreshness(
+          name: herd.name,
+          isHerd: true,
+          daysSinceLastActivity: _daysSince(herdMostRecent[herd.id], effectiveNow),
+        ),
+      for (final season in seasons)
+        EnterpriseFreshness(
+          name: season.name,
+          isHerd: false,
+          daysSinceLastActivity: _daysSince(
+            seasonMostRecent[season.id],
+            effectiveNow,
+          ),
+        ),
+    ]..sort(_stalestFirst);
+
+    return FarmActivityResult(
+      score: averageScore,
+      level: level,
+      weeklyStreak: streak,
+      breakdown: breakdown,
+    );
+  }
+
+  int? _daysSince(DateTime? mostRecent, DateTime now) {
+    if (mostRecent == null) return null;
+    return now.difference(mostRecent).inDays;
+  }
+
+  /// Never-active (null) sorts first, then oldest to freshest.
+  int _stalestFirst(EnterpriseFreshness a, EnterpriseFreshness b) {
+    final aDays = a.daysSinceLastActivity;
+    final bDays = b.daysSinceLastActivity;
+    if (aDays == null && bDays == null) return 0;
+    if (aDays == null) return -1;
+    if (bDays == null) return 1;
+    return bDays.compareTo(aDays);
   }
 
   DateTime? _mostRecentForHerd(

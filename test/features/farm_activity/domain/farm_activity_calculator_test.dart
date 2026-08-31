@@ -179,6 +179,97 @@ void main() {
     });
   });
 
+  group('breakdown', () {
+    test('is empty when there are no herds or seasons', () {
+      final result = calculator.calculate(
+        herds: const [],
+        seasons: const [],
+        activities: const [],
+        inputs: const [],
+        harvests: const [],
+        revenues: const [],
+        now: _now,
+      );
+      expect(result.breakdown, isEmpty);
+    });
+
+    test('has one entry per herd and season, with the right name and kind', () {
+      final herd = _herd('h1');
+      final season = _season('s1');
+      final result = calculator.calculate(
+        herds: [herd],
+        seasons: [season],
+        activities: [
+          _activityFor('animal', 'h1', _now),
+          _activityFor('plant', 's1', _now),
+        ],
+        inputs: const [],
+        harvests: const [],
+        revenues: const [],
+        now: _now,
+      );
+
+      expect(result.breakdown, hasLength(2));
+      final herdEntry = result.breakdown.firstWhere((e) => e.isHerd);
+      final seasonEntry = result.breakdown.firstWhere((e) => !e.isHerd);
+      expect(herdEntry.name, 'Herd h1');
+      expect(seasonEntry.name, 'Season s1');
+    });
+
+    test('daysSinceLastActivity is the exact day count since the most recent record', () {
+      final herd = _herd('h1');
+      final result = calculator.calculate(
+        herds: [herd],
+        seasons: const [],
+        activities: [_activityFor('animal', 'h1', _now.subtract(const Duration(days: 10)))],
+        inputs: const [],
+        harvests: const [],
+        revenues: const [],
+        now: _now,
+      );
+
+      expect(result.breakdown.single.daysSinceLastActivity, 10);
+    });
+
+    test('daysSinceLastActivity is null when there is no recorded activity at all', () {
+      final herd = _herd('h1');
+      final result = calculator.calculate(
+        herds: [herd],
+        seasons: const [],
+        activities: const [],
+        inputs: const [],
+        harvests: const [],
+        revenues: const [],
+        now: _now,
+      );
+
+      expect(result.breakdown.single.daysSinceLastActivity, isNull);
+    });
+
+    test('is sorted stalest-first: never-active, then oldest to freshest', () {
+      final fresh = _herd('fresh');
+      final stale = _herd('stale');
+      final never = _herd('never');
+      final result = calculator.calculate(
+        herds: [fresh, stale, never],
+        seasons: const [],
+        activities: [
+          _activityFor('animal', 'fresh', _now.subtract(const Duration(days: 5))),
+          _activityFor('animal', 'stale', _now.subtract(const Duration(days: 45))),
+        ],
+        inputs: const [],
+        harvests: const [],
+        revenues: const [],
+        now: _now,
+      );
+
+      expect(
+        result.breakdown.map((e) => e.name),
+        ['Herd never', 'Herd stale', 'Herd fresh'],
+      );
+    });
+  });
+
   group('weekly streak', () {
     test('an activity in the current (in-progress) week never breaks the streak', () {
       final herd = _herd('h1');

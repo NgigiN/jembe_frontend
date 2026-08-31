@@ -1,4 +1,5 @@
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
+import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_state.dart';
@@ -18,12 +19,17 @@ import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:farm_tracker/features/farm_activity/domain/farm_activity_calculator.dart';
+import 'package:farm_tracker/features/farm_activity/presentation/farm_activity_level_style.dart';
 import 'package:farm_tracker/injection_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class FarmActivityCard extends StatefulWidget {
-  const FarmActivityCard({super.key});
+  const FarmActivityCard({this.now, super.key});
+
+  /// Overridable for tests; defaults to the real current time.
+  final DateTime? now;
 
   @override
   State<FarmActivityCard> createState() => _FarmActivityCardState();
@@ -92,58 +98,64 @@ class _FarmActivityCardState extends State<FarmActivityCard> {
       inputs: inputs,
       harvests: harvests,
       revenues: revenues,
+      now: widget.now,
     );
 
     final level = result.level;
     if (level == null) return const SizedBox.shrink();
 
+    final color = farmActivityColorFor(level);
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(_iconFor(level), color: _colorFor(level), size: 32),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _labelFor(level),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (result.weeklyStreak > 0)
-                    Text(
-                      '${result.weeklyStreak}-week streak',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                ],
-              ),
+      child: InkWell(
+        onTap: () => context.push(AppRoutePath.streak),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                color.withValues(alpha: 0.1),
+                color.withValues(alpha: 0.05),
+              ],
             ),
-          ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(farmActivityIconFor(level), size: 40, color: color),
+              const SizedBox(height: 12),
+              Text(
+                farmActivityLabelFor(level),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (result.weeklyStreak > 0) ...[
+                const SizedBox(height: 4),
+                Text(
+                  '${result.weeklyStreak}-week streak',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: color),
+                ),
+              ],
+              const SizedBox(height: 8),
+              Text(
+                'Tap to view',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: color),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
-
-  IconData _iconFor(FarmActivityLevel level) => switch (level) {
-    FarmActivityLevel.thriving => Icons.eco,
-    FarmActivityLevel.onTrack => Icons.trending_up,
-    FarmActivityLevel.needsAttention => Icons.warning_amber,
-  };
-
-  Color _colorFor(FarmActivityLevel level) => switch (level) {
-    FarmActivityLevel.thriving => Colors.green,
-    FarmActivityLevel.onTrack => Colors.orange,
-    FarmActivityLevel.needsAttention => Colors.red,
-  };
-
-  String _labelFor(FarmActivityLevel level) => switch (level) {
-    FarmActivityLevel.thriving => 'Thriving',
-    FarmActivityLevel.onTrack => 'On track',
-    FarmActivityLevel.needsAttention => 'Needs attention',
-  };
 }
