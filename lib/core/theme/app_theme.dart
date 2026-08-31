@@ -1,27 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/app_typography.dart';
 
 class AppTheme {
-  static ThemeData getLightTheme() {
+  static ThemeData getLightTheme(ColorScheme colorScheme) {
     return ThemeData(
       useMaterial3: true,
-      colorScheme: AppColors.lightColorScheme,
+      colorScheme: colorScheme,
       textTheme: AppTypography.getTextTheme(),
-      scaffoldBackgroundColor: AppColors.backgroundWhite,
+      scaffoldBackgroundColor: colorScheme.surface,
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.lightColorScheme.primary,
-        foregroundColor: AppColors.lightColorScheme.onPrimary,
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: AppTypography.getTextTheme().titleLarge?.copyWith(
-          color: AppColors.lightColorScheme.onPrimary,
+          color: colorScheme.onPrimary,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.lightColorScheme.primary,
-          foregroundColor: AppColors.lightColorScheme.onPrimary,
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           textStyle: AppTypography.getTextTheme().labelLarge,
@@ -35,40 +34,40 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         filled: true,
-        fillColor: Colors.grey.shade50,
+        fillColor: colorScheme.surfaceContainerHighest,
       ),
     );
   }
 
-  static ThemeData getDarkTheme() {
+  static ThemeData getDarkTheme(ColorScheme colorScheme) {
     return ThemeData(
       useMaterial3: true,
-      colorScheme: AppColors.darkColorScheme,
+      colorScheme: colorScheme,
       textTheme: AppTypography.getTextTheme().apply(
         bodyColor: Colors.white70,
         displayColor: Colors.white,
       ),
-      scaffoldBackgroundColor: AppColors.darkColorScheme.surface,
+      scaffoldBackgroundColor: colorScheme.surface,
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.darkColorScheme.primaryContainer,
-        foregroundColor: AppColors.darkColorScheme.onPrimaryContainer,
+        backgroundColor: colorScheme.primaryContainer,
+        foregroundColor: colorScheme.onPrimaryContainer,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: AppTypography.getTextTheme().titleLarge?.copyWith(
-          color: AppColors.darkColorScheme.onPrimaryContainer,
+          color: colorScheme.onPrimaryContainer,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.darkColorScheme.primary,
-          foregroundColor: AppColors.darkColorScheme.onPrimary,
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           textStyle: AppTypography.getTextTheme().labelLarge,
         ),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.darkColorScheme.surfaceContainerHighest,
+        color: colorScheme.surfaceContainerHighest,
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         clipBehavior: Clip.antiAlias,
@@ -76,7 +75,7 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         filled: true,
-        fillColor: AppColors.darkColorScheme.surfaceContainerHighest,
+        fillColor: colorScheme.surfaceContainerHighest,
       ),
     );
   }

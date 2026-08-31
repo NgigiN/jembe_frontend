@@ -2,6 +2,7 @@ import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/app_theme.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
@@ -107,8 +108,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         builder: (context, themeState) {
           return MaterialApp.router(
             title: 'Shamba+',
-            theme: AppTheme.getLightTheme(),
-            darkTheme: AppTheme.getDarkTheme(),
+            theme: AppTheme.getLightTheme(AppColors.lightColorScheme),
+            darkTheme: AppTheme.getDarkTheme(AppColors.darkColorScheme),
             themeMode: themeState.themeMode,
             routerConfig: appRouter.router,
             debugShowCheckedModeBanner: false,
