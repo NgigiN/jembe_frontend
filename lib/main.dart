@@ -1,3 +1,4 @@
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
@@ -104,15 +105,23 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         BlocProvider<QuestionBloc>(create: (_) => di.sl<QuestionBloc>()),
         BlocProvider<ThemeBloc>(create: (_) => ThemeBloc()),
       ],
-      child: BlocBuilder<ThemeBloc, ThemeState>(
-        builder: (context, themeState) {
-          return MaterialApp.router(
-            title: 'Shamba+',
-            theme: AppTheme.getLightTheme(AppColors.lightColorScheme),
-            darkTheme: AppTheme.getDarkTheme(AppColors.darkColorScheme),
-            themeMode: themeState.themeMode,
-            routerConfig: appRouter.router,
-            debugShowCheckedModeBanner: false,
+      child: DynamicColorBuilder(
+        builder: (lightDynamic, darkDynamic) {
+          return BlocBuilder<ThemeBloc, ThemeState>(
+            builder: (context, themeState) {
+              return MaterialApp.router(
+                title: 'Shamba+',
+                theme: AppTheme.getLightTheme(
+                  lightDynamic ?? AppColors.lightColorScheme,
+                ),
+                darkTheme: AppTheme.getDarkTheme(
+                  darkDynamic ?? AppColors.darkColorScheme,
+                ),
+                themeMode: themeState.themeMode,
+                routerConfig: appRouter.router,
+                debugShowCheckedModeBanner: false,
+              );
+            },
           );
         },
       ),
