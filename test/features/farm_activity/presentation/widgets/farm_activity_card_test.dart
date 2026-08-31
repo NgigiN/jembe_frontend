@@ -2,6 +2,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/widgets/lively_tap.dart';
 import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
@@ -312,6 +313,7 @@ void main() {
         expect(find.text('Tap to view'), findsOneWidget);
         expect(find.byIcon(Icons.eco), findsOneWidget);
         expect(find.byType(InkWell), findsWidgets);
+        expect(find.byType(LivelyTap), findsOneWidget);
 
         await sl<AnalyticsService>().flush();
       },
