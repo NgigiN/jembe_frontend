@@ -1,3 +1,4 @@
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:flutter/material.dart';
 
 class TypedDeleteAccountDialog {
@@ -79,7 +80,9 @@ class _TypedDeleteAccountDialogContentState
           onPressed: _isConfirmed
               ? () => Navigator.of(context).pop(true)
               : null,
-          style: TextButton.styleFrom(foregroundColor: Colors.red),
+          style: TextButton.styleFrom(
+            foregroundColor: context.statusColors.negative,
+          ),
           child: const Text('Delete'),
         ),
       ],
