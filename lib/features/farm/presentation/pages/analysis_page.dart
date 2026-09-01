@@ -1,5 +1,7 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/utils/responsive_utils.dart';
 import 'package:farm_tracker/core/widgets/lively_tap.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
@@ -63,21 +65,21 @@ class AnalysisPage extends StatelessWidget {
                       context,
                       'Total Costs by Season',
                       Icons.attach_money,
-                      Colors.blue,
+                      Theme.of(context).colorScheme.primary,
                       () => _showTotalCostsBySeason(context),
                     ),
                     _buildAnalysisCard(
                       context,
                       'Cost Breakdown',
                       Icons.pie_chart,
-                      Colors.orange,
+                      Theme.of(context).colorScheme.secondary,
                       () => _showCostBreakdown(context),
                     ),
                     _buildAnalysisCard(
                       context,
                       'Annual Summary',
                       Icons.calendar_today,
-                      Colors.green,
+                      Theme.of(context).colorScheme.tertiary,
                       () => _showAnnualSummary(context),
                     ),
                     const FarmActivityCard(),
@@ -309,7 +311,8 @@ class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
 
   Widget _buildCostDetailItem(BuildContext context, CostDetail detail) {
     final isPlant = detail.type.toLowerCase() == 'plant';
-    final Color itemColor = isPlant ? Colors.green : Colors.blue;
+    final itemColor =
+        isPlant ? AppColors.plantCategory : AppColors.animalCategory;
     final icon = isPlant ? Icons.grass : Icons.pets;
 
     return Card(
@@ -478,7 +481,11 @@ class _CostBreakdownPageState extends State<CostBreakdownPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error, size: 64, color: Colors.red.shade300),
+                  Icon(
+                    Icons.error,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     state.message,
@@ -541,7 +548,7 @@ class _CostBreakdownPageState extends State<CostBreakdownPage> {
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.orange.shade700,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                               ),
@@ -798,13 +805,13 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
                 'Total Revenue',
                 totalAnnualRevenue,
                 Icons.trending_up,
-                Colors.greenAccent,
+                Colors.white,
               ),
               _buildOverviewStat(
                 'Total Costs',
                 totalAnnualCosts,
                 Icons.trending_down,
-                Colors.orangeAccent,
+                Colors.white,
               ),
             ],
           ),
@@ -896,9 +903,7 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Theme.of(
-                context,
-              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
@@ -929,15 +934,18 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: (isProfit ? Colors.green : Colors.red).withValues(
-                      alpha: 0.1,
-                    ),
+                    color: (isProfit
+                            ? context.statusColors.positive
+                            : context.statusColors.negative)
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     isProfit ? 'PROFIT' : 'LOSS',
                     style: TextStyle(
-                      color: isProfit ? Colors.green : Colors.red,
+                      color: isProfit
+                          ? context.statusColors.positive
+                          : context.statusColors.negative,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
@@ -957,19 +965,21 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
                       context,
                       'Revenue',
                       summary.totalRevenue,
-                      Colors.green,
+                      context.statusColors.positive,
                     ),
                     _buildCompactStat(
                       context,
                       'Costs',
                       summary.totalCosts,
-                      Colors.orange,
+                      Theme.of(context).colorScheme.onSurface,
                     ),
                     _buildCompactStat(
                       context,
                       'Net',
                       summary.profit,
-                      isProfit ? Colors.blue : Colors.red,
+                      isProfit
+                          ? context.statusColors.positive
+                          : context.statusColors.negative,
                     ),
                   ],
                 ),
@@ -998,7 +1008,7 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
           'KES ${value.toStringAsFixed(0)}',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: value < 0 ? Colors.red : color,
+            color: value < 0 ? context.statusColors.negative : color,
             fontSize: 15,
           ),
         ),
@@ -1026,17 +1036,17 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
                   _buildMiniBreakdownRow(
                     'Plant',
                     summary.breakdown.costs.plant,
-                    Colors.green.shade300,
+                    AppColors.plantCategory,
                   ),
                   _buildMiniBreakdownRow(
                     'Animal',
                     summary.breakdown.costs.animal,
-                    Colors.blue.shade300,
+                    AppColors.animalCategory,
                   ),
                   _buildMiniBreakdownRow(
                     'Infra',
                     summary.breakdown.costs.infrastructure,
-                    Colors.brown.shade300,
+                    Theme.of(context).colorScheme.tertiary,
                   ),
                 ],
               ),
@@ -1050,12 +1060,12 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
                   _buildMiniBreakdownRow(
                     'Plant',
                     summary.breakdown.revenue.plant,
-                    Colors.green,
+                    AppColors.plantCategory,
                   ),
                   _buildMiniBreakdownRow(
                     'Animal',
                     summary.breakdown.revenue.animal,
-                    Colors.blue,
+                    AppColors.animalCategory,
                   ),
                 ],
               ),
@@ -1241,7 +1251,7 @@ class _StreakPageState extends State<StreakPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.orange.withValues(alpha: 0.1),
+        color: context.statusColors.positive.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -1286,7 +1296,9 @@ class _StreakPageState extends State<StreakPage> {
     }
     final statusColor = days == null
         ? Theme.of(context).colorScheme.onSurfaceVariant
-        : (isFresh ? Colors.green : Colors.red);
+        : (isFresh
+            ? context.statusColors.positive
+            : context.statusColors.negative);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
