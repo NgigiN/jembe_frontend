@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
@@ -29,7 +30,6 @@ import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 import 'package:farm_tracker/features/farm/data/models/season_model.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/land_page.dart';
@@ -193,10 +193,7 @@ Future<void> _submitAddSeason({
   final userId = await UserUtils.getCurrentUserId();
   if (userId == null) {
     ScaffoldMessenger.of(sheetContext).showSnackBar(
-      const SnackBar(
-        content: Text('User not authenticated'),
-        backgroundColor: Colors.red,
-      ),
+      AppSnackBar.error(sheetContext, 'User not authenticated'),
     );
     return;
   }

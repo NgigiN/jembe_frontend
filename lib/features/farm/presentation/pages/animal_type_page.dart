@@ -60,10 +60,7 @@ Future<String?> showAddAnimalTypeDialog(BuildContext context) async {
       final userId = await UserUtils.getCurrentUserId();
       if (userId == null) {
         ScaffoldMessenger.of(sheetContext).showSnackBar(
-          const SnackBar(
-            content: Text('User not authenticated'),
-            backgroundColor: Colors.red,
-          ),
+          AppSnackBar.error(sheetContext, 'User not authenticated'),
         );
         return;
       }
