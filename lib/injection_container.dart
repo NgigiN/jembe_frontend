@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
+import 'package:farm_tracker/core/audio/sound_service.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/auth/data/datasources/auth_remote_data_source.dart';
@@ -426,6 +427,7 @@ Future<void> init() async {
       () => QuestionRemoteDataSourceImpl(dio: sl()),
     )
     ..registerLazySingleton(() => AnalyticsService(dio: sl()))
+    ..registerLazySingleton(() => SoundService())
     // External - Dio client (preferred for new code)
     ..registerLazySingleton<Dio>(DioClientFactory.create);
 }
