@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
@@ -354,9 +355,9 @@ class _SeasonPageState extends State<SeasonPage> {
 
     if (lands.isEmpty || plants.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No lands or plants available for editing'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('No lands or plants available for editing'),
+          backgroundColor: context.statusColors.warning,
         ),
       );
       return;
