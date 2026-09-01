@@ -1,3 +1,4 @@
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/core/utils/responsive_utils.dart';
 import 'package:farm_tracker/core/widgets/lively_tap.dart';
@@ -1136,11 +1137,18 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
   }
 }
 
-class StreakPage extends StatelessWidget {
+class StreakPage extends StatefulWidget {
   const StreakPage({this.now, super.key});
 
   /// Overridable for tests; defaults to the real current time.
   final DateTime? now;
+
+  @override
+  State<StreakPage> createState() => _StreakPageState();
+}
+
+class _StreakPageState extends State<StreakPage> {
+  FarmActivityLevel? _previousLevel;
 
   @override
   Widget build(BuildContext context) {
@@ -1159,10 +1167,16 @@ class StreakPage extends StatelessWidget {
       inputs: inputs,
       harvests: harvests,
       revenues: revenues,
-      now: now,
+      now: widget.now,
     );
 
     final level = result.level;
+
+    if (level == FarmActivityLevel.thriving &&
+        _previousLevel != FarmActivityLevel.thriving) {
+      SuccessFeedback.thriving();
+    }
+    _previousLevel = level;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Farm Activity Streak')),
