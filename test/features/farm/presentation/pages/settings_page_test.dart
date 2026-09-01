@@ -124,6 +124,17 @@ void main() {
         initialState: const ThemeState(themeMode: ThemeMode.light),
       );
 
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        calls.add(call);
+        return null;
+      });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
       await tester.pumpWidget(
         MaterialApp(
           home: MultiBlocProvider(
@@ -164,6 +175,13 @@ void main() {
       verify(
         () => profileBloc.add(any(that: isA<DeleteAccountEvent>())),
       ).called(1);
+      final hapticCalls =
+          calls.where((c) => c.method == 'HapticFeedback.vibrate');
+      expect(hapticCalls, hasLength(1));
+      expect(
+        hapticCalls.single.arguments,
+        'HapticFeedbackType.mediumImpact',
+      );
     },
   );
 

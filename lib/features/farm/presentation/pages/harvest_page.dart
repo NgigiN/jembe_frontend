@@ -176,6 +176,7 @@ class _HarvestPageState extends State<HarvestPage> {
           'Delete ${_formatQuantity(harvest.quantity)} ${harvest.unit}? This cannot be undone.',
     );
     if (confirmed == true && context.mounted) {
+      SuccessFeedback.deleted();
       context.read<HarvestBloc>().add(DeleteHarvestEvent(harvest.id));
     }
   }

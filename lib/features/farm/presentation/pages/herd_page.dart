@@ -690,6 +690,7 @@ class _HerdPageState extends State<HerdPage> {
           'Are you sure you want to delete "${herd.name}"? This action cannot be undone.',
     );
     if (confirmed == true) {
+      SuccessFeedback.deleted();
       context.read<HerdBloc>().add(DeleteHerdEvent(herd.id));
     }
   }

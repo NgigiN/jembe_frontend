@@ -654,6 +654,7 @@ class _SeasonPageState extends State<SeasonPage> {
           'Are you sure you want to delete "${season.name}"? This action cannot be undone.',
     );
     if (confirmed == true) {
+      SuccessFeedback.deleted();
       context.read<SeasonBloc>().add(DeleteSeasonEvent(season.id));
     }
   }

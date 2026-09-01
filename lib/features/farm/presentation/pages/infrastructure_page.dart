@@ -430,6 +430,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
           'Are you sure you want to delete "${item.name}"? This action cannot be undone.',
     );
     if (confirmed == true) {
+      SuccessFeedback.deleted();
       context.read<InfrastructureBloc>().add(
         DeleteInfrastructureEvent(item.id),
       );

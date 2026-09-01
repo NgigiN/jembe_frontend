@@ -697,6 +697,17 @@ void main() {
     });
 
     testWidgets('deletes the animal on confirmation', (tester) async {
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        calls.add(call);
+        return null;
+      });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
       await tester.pumpWidget(
         _harness(
           animalBloc: animalBloc,
@@ -720,6 +731,12 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(() => animalBloc.add(DeleteAnimalEvent('animal-1'))).called(1);
+      final deleteHapticCalls = calls.where(
+        (c) =>
+            c.method == 'HapticFeedback.vibrate' &&
+            c.arguments == 'HapticFeedbackType.mediumImpact',
+      );
+      expect(deleteHapticCalls, hasLength(1));
     });
 
     testWidgets('opens the cost-log prompt when acquisition source transitions to Bought', (

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:farm_tracker/core/audio/sound_service.dart';
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/features/profile/presentation/widgets/typed_delete_account_dialog.dart';
@@ -108,6 +109,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
     if (confirmed ?? false) {
       if (!mounted) return;
+      SuccessFeedback.deleted();
       context.read<ProfileBloc>().add(DeleteAccountEvent());
     }
   }

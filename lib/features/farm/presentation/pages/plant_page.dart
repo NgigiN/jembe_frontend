@@ -258,6 +258,7 @@ class _PlantPageState extends State<PlantPage> {
           'Are you sure you want to delete "${plant.name}"${plant.variety != null ? ' (${plant.variety})' : ''}? This action cannot be undone.',
     );
     if (confirmed == true) {
+      SuccessFeedback.deleted();
       context.read<PlantBloc>().add(DeletePlantEvent(plant.id));
     }
   }

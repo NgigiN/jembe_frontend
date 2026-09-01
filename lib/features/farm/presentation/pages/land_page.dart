@@ -332,6 +332,7 @@ class _LandPageState extends State<LandPage> {
           'Are you sure you want to delete "${land.name}"${land.location != null ? ' (${land.location})' : ''}? This action cannot be undone.',
     );
     if (confirmed == true) {
+      SuccessFeedback.deleted();
       context.read<LandBloc>().add(DeleteLandEvent(land.id));
     }
   }

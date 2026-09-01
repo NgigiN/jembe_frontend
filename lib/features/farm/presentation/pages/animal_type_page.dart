@@ -252,6 +252,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
           'Are you sure you want to delete "${animalType.name}"? This action cannot be undone.',
     );
     if (confirmed == true) {
+      SuccessFeedback.deleted();
       context.read<AnimalTypeBloc>().add(
         DeleteAnimalTypeEvent(animalType.id),
       );
