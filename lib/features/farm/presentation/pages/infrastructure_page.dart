@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
@@ -375,6 +376,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
     final notes = sanitizeOptionalText(notesController.text);
 
     if (isEditing && item != null) {
+      SuccessFeedback.saved();
       context.read<InfrastructureBloc>().add(
         UpdateInfrastructureEvent(
           id: item.id,
@@ -396,6 +398,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
       return;
     }
 
+    SuccessFeedback.saved();
     context.read<InfrastructureBloc>().add(
       AddInfrastructureEvent(
         type: selectedType,

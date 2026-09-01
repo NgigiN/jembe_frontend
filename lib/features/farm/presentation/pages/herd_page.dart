@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
@@ -52,6 +53,7 @@ Future<void> _submitAddHerd({
     return;
   }
 
+  SuccessFeedback.saved();
   herdBloc.add(
     AddHerdEvent(
       sanitizeText(nameController.text),
@@ -496,6 +498,7 @@ class _HerdPageState extends State<HerdPage> {
     if (headCount == null) return;
     if (selectedStartDate == null) return;
 
+    SuccessFeedback.saved();
     context.read<HerdBloc>().add(
       UpdateHerdEvent(
         herd.id,

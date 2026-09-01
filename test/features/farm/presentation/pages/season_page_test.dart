@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:farm_tracker/core/audio/sound_service.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
@@ -19,9 +20,18 @@ import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/season_page.dart';
+import 'package:farm_tracker/injection_container.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MockSeasonBloc extends MockBloc<SeasonEvent, SeasonState>
     implements SeasonBloc {}
+
+class _FakeSoundPlayer implements SoundPlayer {
+  final calls = <String>[];
+
+  @override
+  Future<void> play(String assetPath) async => calls.add(assetPath);
+}
 
 class MockLandBloc extends MockBloc<LandEvent, LandState>
     implements LandBloc {}
@@ -127,9 +137,12 @@ void main() {
     late MockLandBloc landBloc;
     late MockPlantBloc plantBloc;
     late StreamController<SeasonState> stateController;
+    late _FakeSoundPlayer soundPlayer;
+    final platformCalls = <MethodCall>[];
     final now = DateTime.now();
 
     setUp(() {
+      SharedPreferences.setMockInitialValues({});
       _mockSecureStorageUserId('user-1');
       seasonBloc = MockSeasonBloc();
       landBloc = MockLandBloc();
@@ -170,9 +183,24 @@ void main() {
           ],
         ),
       );
+      platformCalls.clear();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        platformCalls.add(call);
+        return null;
+      });
+      soundPlayer = _FakeSoundPlayer();
+      sl.registerLazySingleton<SoundService>(
+        () => SoundService(player: soundPlayer),
+      );
     });
 
-    tearDown(() => stateController.close());
+    tearDown(() {
+      stateController.close();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+      sl.unregister<SoundService>();
+    });
 
     Widget buildHarness(ValueChanged<Future<String?>> capture) {
       return MaterialApp(
@@ -249,6 +277,16 @@ void main() {
 
         final result = await tester.runAsync(() => resultFuture);
         expect(result, 'season-1');
+
+        final hapticCalls = platformCalls.where(
+          (c) => c.method == 'HapticFeedback.vibrate',
+        );
+        expect(hapticCalls, hasLength(1));
+        expect(
+          hapticCalls.single.arguments,
+          'HapticFeedbackType.lightImpact',
+        );
+        expect(soundPlayer.calls, ['sounds/success.mp3']);
       },
     );
 

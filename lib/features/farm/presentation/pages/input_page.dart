@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
@@ -257,6 +258,7 @@ Future<void> showAddInputDialog(
                       date: selectedDate!,
                       notes: sanitizeOptionalText(notesController.text),
                     );
+                    SuccessFeedback.saved();
                     context.read<InputBloc>().add(AddInputEvent(input));
                     Navigator.pop(context);
                   },
@@ -657,6 +659,7 @@ class _InputPageState extends State<InputPage> {
                         updatedAt: DateTime.now(),
                       );
 
+                      SuccessFeedback.saved();
                       context
                           .read<InputBloc>()
                           .add(UpdateInputEvent(updatedInput));

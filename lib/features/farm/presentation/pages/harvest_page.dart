@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/constants/harvest_units.dart';
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
@@ -402,6 +403,7 @@ class _HarvestPageState extends State<HarvestPage> {
                           date: selectedDate,
                           notes: notes,
                         );
+                        SuccessFeedback.saved();
                         context
                             .read<HarvestBloc>()
                             .add(AddHarvestEvent(newHarvest));
@@ -417,6 +419,7 @@ class _HarvestPageState extends State<HarvestPage> {
                           createdAt: harvest.createdAt,
                           updatedAt: DateTime.now(),
                         );
+                        SuccessFeedback.saved();
                         context
                             .read<HarvestBloc>()
                             .add(UpdateHarvestEvent(updatedHarvest));
