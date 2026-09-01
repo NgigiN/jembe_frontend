@@ -1,4 +1,5 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
@@ -229,18 +230,18 @@ class _ActivityPageState extends State<ActivityPage> {
 
     if (isPlant && seasons.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add at least one season first'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('Please add at least one season first'),
+          backgroundColor: context.statusColors.warning,
         ),
       );
       return;
     }
     if (!isPlant && herds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add at least one herd first'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('Please add at least one herd first'),
+          backgroundColor: context.statusColors.warning,
         ),
       );
       return;
@@ -344,7 +345,6 @@ class _ActivityPageState extends State<ActivityPage> {
                             selectedType: typeController.text,
                             labelText: 'Activity Type *',
                             hintText: 'Select activity type',
-                            addButtonBackgroundColor: Colors.green.shade50,
                             validator: (value) => requiredName(
                               value,
                               fieldLabel: 'Activity type',
@@ -479,9 +479,9 @@ class _ActivityPageState extends State<ActivityPage> {
 
     if ((isPlant && seasons.isEmpty) || (!isPlant && herds.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No seasons or herds available for editing'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('No seasons or herds available for editing'),
+          backgroundColor: context.statusColors.warning,
         ),
       );
       return;
@@ -584,7 +584,6 @@ class _ActivityPageState extends State<ActivityPage> {
                             sourceType: selectedSourceType,
                             selectedType: selectedType ?? '',
                             labelText: 'Activity Type *',
-                            addButtonBackgroundColor: Colors.blue.shade50,
                             validator: (value) => requiredName(
                               value,
                               fieldLabel: 'Activity type',

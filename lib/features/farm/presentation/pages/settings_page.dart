@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:farm_tracker/core/audio/sound_service.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/features/profile/presentation/widgets/typed_delete_account_dialog.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
@@ -422,13 +423,13 @@ class _SettingsPageState extends State<SettingsPage> {
                       context,
                       title: 'Danger Zone',
                       child: ListTile(
-                        leading: const Icon(
+                        leading: Icon(
                           Icons.delete_forever,
-                          color: Colors.red,
+                          color: context.statusColors.negative,
                         ),
-                        title: const Text(
+                        title: Text(
                           'Delete Account',
-                          style: TextStyle(color: Colors.red),
+                          style: TextStyle(color: context.statusColors.negative),
                         ),
                         subtitle: const Text(
                           'Permanently delete your account and all farm data',

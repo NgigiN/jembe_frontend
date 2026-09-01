@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
@@ -71,18 +72,18 @@ Future<void> showAddInputDialog(
 
   if (isPlant && seasons.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please add at least one season first'),
-        backgroundColor: Colors.orange,
+      SnackBar(
+        content: const Text('Please add at least one season first'),
+        backgroundColor: context.statusColors.warning,
       ),
     );
     return;
   }
   if (!isPlant && lockedHerdId == null && herds.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please add at least one herd first'),
-        backgroundColor: Colors.orange,
+      SnackBar(
+        content: const Text('Please add at least one herd first'),
+        backgroundColor: context.statusColors.warning,
       ),
     );
     return;
@@ -174,7 +175,6 @@ Future<void> showAddInputDialog(
                           sourceType: selectedSourceType,
                           selectedType: typeController.text,
                           labelText: 'Input Type *',
-                          addButtonBackgroundColor: Colors.green.shade50,
                           validator: (value) =>
                               requiredName(value, fieldLabel: 'Input type'),
                           onTypeChanged: (value) {
@@ -471,9 +471,9 @@ class _InputPageState extends State<InputPage> {
 
     if ((isPlant && seasons.isEmpty) || (!isPlant && herds.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No seasons or herds available for editing'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('No seasons or herds available for editing'),
+          backgroundColor: context.statusColors.warning,
         ),
       );
       return;
@@ -567,7 +567,6 @@ class _InputPageState extends State<InputPage> {
                             sourceType: selectedSourceType,
                             selectedType: typeController.text,
                             labelText: 'Input Type *',
-                            addButtonBackgroundColor: Colors.blue.shade50,
                             validator: (value) => requiredName(
                               value,
                               fieldLabel: 'Input type',
