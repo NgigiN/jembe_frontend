@@ -43,19 +43,8 @@ class _PlantsPageState extends State<PlantsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Plants')),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(
-                context,
-              ).colorScheme.primaryContainer.withValues(alpha: 0.2),
-              Theme.of(context).colorScheme.surface,
-            ],
-          ),
-        ),
+      body: ColoredBox(
+        color: Theme.of(context).colorScheme.surface,
         child:
             BlocSelector<
               LandBloc,

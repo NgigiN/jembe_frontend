@@ -33,19 +33,8 @@ class AnalysisPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Farm Analysis')),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(
-                context,
-              ).colorScheme.primaryContainer.withValues(alpha: 0.3),
-              Theme.of(context).colorScheme.surface,
-            ],
-          ),
-        ),
+      body: ColoredBox(
+        color: Theme.of(context).colorScheme.surface,
         child: Padding(
           padding: EdgeInsets.all(context.paddingMedium),
           child: Column(

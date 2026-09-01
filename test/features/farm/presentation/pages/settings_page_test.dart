@@ -29,7 +29,7 @@ class MockAuthBloc extends MockBloc<AuthEvent, AuthState> implements AuthBloc {}
 void main() {
   setUpAll(() {
     registerFallbackValue(FetchProfileEvent());
-    registerFallbackValue(ToggleThemeEvent());
+    registerFallbackValue(SetThemeModeEvent(ThemeMode.system));
     SharedPreferences.setMockInitialValues({});
   });
 
@@ -77,7 +77,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // The Farm Year card sits below Profile Information; scroll to it.
-      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.dragUntilVisible(
+        find.text('January'),
+        find.byType(ListView),
+        const Offset(0, -200),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('January'), findsOneWidget);
@@ -186,7 +190,7 @@ void main() {
   );
 
   testWidgets(
-    'toggling Dark Mode fires a selection haptic and dispatches ToggleThemeEvent',
+    'selecting Dark in the Theme picker fires a selection haptic and dispatches SetThemeModeEvent',
     (tester) async {
       final profileBloc = MockProfileBloc();
       final themeBloc = MockThemeBloc();
@@ -209,8 +213,8 @@ void main() {
       );
       whenListen(
         themeBloc,
-        Stream<ThemeState>.value(const ThemeState(themeMode: ThemeMode.light)),
-        initialState: const ThemeState(themeMode: ThemeMode.light),
+        Stream<ThemeState>.value(const ThemeState(themeMode: ThemeMode.system)),
+        initialState: const ThemeState(themeMode: ThemeMode.system),
       );
 
       final calls = <MethodCall>[];
@@ -238,14 +242,20 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final switchFinder = find.descendant(
-        of: find.widgetWithText(ListTile, 'Dark Mode'),
-        matching: find.byType(Switch),
-      );
-      await tester.tap(switchFinder);
+      await tester.tap(find.text('Dark'));
       await tester.pumpAndSettle();
 
-      verify(() => themeBloc.add(any(that: isA<ToggleThemeEvent>()))).called(1);
+      verify(
+        () => themeBloc.add(
+          any(
+            that: isA<SetThemeModeEvent>().having(
+              (e) => e.mode,
+              'mode',
+              ThemeMode.dark,
+            ),
+          ),
+        ),
+      ).called(1);
       final hapticCalls =
           calls.where((c) => c.method == 'HapticFeedback.vibrate');
       expect(hapticCalls, hasLength(1));

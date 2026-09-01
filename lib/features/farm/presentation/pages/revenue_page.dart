@@ -56,19 +56,8 @@ class _RevenuePageState extends State<RevenuePage> {
           IconButton(onPressed: _loadRevenues, icon: const Icon(Icons.refresh)),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(
-                context,
-              ).colorScheme.primaryContainer.withValues(alpha: 0.2),
-              Theme.of(context).colorScheme.surface,
-            ],
-          ),
-        ),
+      body: ColoredBox(
+        color: Theme.of(context).colorScheme.surface,
         child: Column(
           children: [
             _buildFilters(),

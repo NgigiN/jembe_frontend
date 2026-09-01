@@ -152,20 +152,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
           return BlocBuilder<ThemeBloc, ThemeState>(
             builder: (context, themeState) {
-              return Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Theme.of(context)
-                          .colorScheme
-                          .primaryContainer
-                          .withValues(alpha: 0.3),
-                      Theme.of(context).colorScheme.surface,
-                    ],
-                  ),
-                ),
+              return ColoredBox(
+                color: Theme.of(context).colorScheme.surface,
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -198,29 +186,48 @@ class _SettingsPageState extends State<SettingsPage> {
                       title: 'Appearance',
                       child: Column(
                         children: [
-                          ListTile(
-                            leading: Icon(
-                              themeState.isDarkMode
-                                  ? Icons.dark_mode
-                                  : Icons.light_mode,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            title: Text(
-                              'Dark Mode',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            subtitle: Text(
-                              'Toggle application brightness',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            trailing: Switch(
-                              value: themeState.isDarkMode,
-                              onChanged: (value) {
-                                HapticFeedback.selectionClick();
-                                context.read<ThemeBloc>().add(
-                                  ToggleThemeEvent(),
-                                );
-                              },
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Theme',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Choose how the app looks',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                const SizedBox(height: 12),
+                                SegmentedButton<ThemeMode>(
+                                  segments: const [
+                                    ButtonSegment(
+                                      value: ThemeMode.system,
+                                      icon: Icon(Icons.brightness_auto),
+                                      label: Text('System'),
+                                    ),
+                                    ButtonSegment(
+                                      value: ThemeMode.light,
+                                      icon: Icon(Icons.light_mode),
+                                      label: Text('Light'),
+                                    ),
+                                    ButtonSegment(
+                                      value: ThemeMode.dark,
+                                      icon: Icon(Icons.dark_mode),
+                                      label: Text('Dark'),
+                                    ),
+                                  ],
+                                  selected: {themeState.themeMode},
+                                  onSelectionChanged: (selection) {
+                                    HapticFeedback.selectionClick();
+                                    context.read<ThemeBloc>().add(
+                                      SetThemeModeEvent(selection.first),
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
                           ),
                           const Divider(height: 1),

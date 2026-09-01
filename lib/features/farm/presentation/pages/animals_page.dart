@@ -37,20 +37,8 @@ class _AnimalsPageState extends State<AnimalsPage> {
       appBar: AppBar(
         title: const Text('Animals'),
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context)
-                  .colorScheme
-                  .primaryContainer
-                  .withValues(alpha: 0.2),
-              Theme.of(context).colorScheme.surface,
-            ],
-          ),
-        ),
+      body: ColoredBox(
+        color: Theme.of(context).colorScheme.surface,
         child: BlocBuilder<AnimalTypeBloc, AnimalTypeState>(
           builder: (context, animalTypeState) {
             final hasAnimalType = animalTypeState is AnimalTypeLoaded &&
