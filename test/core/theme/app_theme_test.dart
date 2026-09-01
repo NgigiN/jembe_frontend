@@ -1,4 +1,6 @@
+import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/app_theme.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -12,6 +14,8 @@ void main() {
     onPrimary: Color(0xFF000001),
     secondary: Color(0xFF223344),
     onSecondary: Color(0xFF000002),
+    primaryContainer: Color(0xFF1A2B3C),
+    onPrimaryContainer: Color(0xFF000009),
     error: Color(0xFF334455),
     onError: Color(0xFF000003),
     surface: Color(0xFF445566),
@@ -25,6 +29,8 @@ void main() {
     onPrimary: Color(0xFF000005),
     secondary: Color(0xFF778899),
     onSecondary: Color(0xFF000006),
+    primaryContainer: Color(0xFF6B7C8D),
+    onPrimaryContainer: Color(0xFF00000A),
     error: Color(0xFF8899AA),
     onError: Color(0xFF000007),
     surface: Color(0xFF99AABB),
@@ -52,8 +58,14 @@ void main() {
     });
 
     test('app bar colors derive from the passed-in colorScheme', () {
-      expect(theme.appBarTheme.backgroundColor, testLightScheme.primary);
-      expect(theme.appBarTheme.foregroundColor, testLightScheme.onPrimary);
+      expect(
+        theme.appBarTheme.backgroundColor,
+        testLightScheme.primaryContainer,
+      );
+      expect(
+        theme.appBarTheme.foregroundColor,
+        testLightScheme.onPrimaryContainer,
+      );
     });
 
     test('elevated button colors derive from the passed-in colorScheme', () {
@@ -61,6 +73,17 @@ void main() {
       expect(style.backgroundColor?.resolve({}), testLightScheme.primary);
       expect(style.foregroundColor?.resolve({}), testLightScheme.onPrimary);
     });
+
+    test(
+      'registers fixed StatusColors regardless of the passed colorScheme',
+      () {
+        final statusColors = theme.extension<StatusColors>();
+        expect(statusColors, isNotNull);
+        expect(statusColors!.positive, AppColors.primaryGreen.shade700);
+        expect(statusColors.warning, AppColors.primaryAmber.shade800);
+        expect(statusColors.negative, AppColors.errorRed.shade700);
+      },
+    );
   });
 
   group('getDarkTheme', () {
@@ -87,8 +110,25 @@ void main() {
     });
 
     test('app bar colors derive from the passed-in colorScheme', () {
-      expect(theme.appBarTheme.backgroundColor, testDarkScheme.primary);
-      expect(theme.appBarTheme.foregroundColor, testDarkScheme.onPrimary);
+      expect(
+        theme.appBarTheme.backgroundColor,
+        testDarkScheme.primaryContainer,
+      );
+      expect(
+        theme.appBarTheme.foregroundColor,
+        testDarkScheme.onPrimaryContainer,
+      );
     });
+
+    test(
+      'registers fixed StatusColors regardless of the passed colorScheme',
+      () {
+        final statusColors = theme.extension<StatusColors>();
+        expect(statusColors, isNotNull);
+        expect(statusColors!.positive, AppColors.primaryGreen.shade300);
+        expect(statusColors.warning, AppColors.primaryAmber.shade300);
+        expect(statusColors.negative, AppColors.errorRed.shade300);
+      },
+    );
   });
 }

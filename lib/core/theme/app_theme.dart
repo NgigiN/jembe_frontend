@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/app_typography.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
+import 'package:flutter/material.dart';
 
 class AppTheme {
   static ThemeData getLightTheme(ColorScheme colorScheme) {
@@ -9,12 +11,12 @@ class AppTheme {
       textTheme: AppTypography.getTextTheme(),
       scaffoldBackgroundColor: colorScheme.surface,
       appBarTheme: AppBarTheme(
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
+        backgroundColor: colorScheme.primaryContainer,
+        foregroundColor: colorScheme.onPrimaryContainer,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: AppTypography.getTextTheme().titleLarge?.copyWith(
-          color: colorScheme.onPrimary,
+          color: colorScheme.onPrimaryContainer,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -36,6 +38,13 @@ class AppTheme {
         filled: true,
         fillColor: colorScheme.surfaceContainerHighest,
       ),
+      extensions: [
+        StatusColors(
+          positive: AppColors.primaryGreen.shade700,
+          warning: AppColors.primaryAmber.shade800,
+          negative: AppColors.errorRed.shade700,
+        ),
+      ],
     );
   }
 
@@ -77,6 +86,13 @@ class AppTheme {
         filled: true,
         fillColor: colorScheme.surfaceContainerHighest,
       ),
+      extensions: [
+        StatusColors(
+          positive: AppColors.primaryGreen.shade300,
+          warning: AppColors.primaryAmber.shade300,
+          negative: AppColors.errorRed.shade300,
+        ),
+      ],
     );
   }
 }

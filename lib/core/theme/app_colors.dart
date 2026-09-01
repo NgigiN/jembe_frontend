@@ -6,6 +6,7 @@ class AppColors {
   static const MaterialColor primaryBlue = Colors.blue;
   static const MaterialColor primaryOrange = Colors.orange;
   static const MaterialColor primaryPurple = Colors.purple;
+  static const MaterialColor primaryAmber = Colors.amber;
   static const MaterialColor errorRed = Colors.red;
 
   static const Color backgroundWhite = Colors.white;
