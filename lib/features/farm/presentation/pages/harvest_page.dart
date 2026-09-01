@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/constants/harvest_units.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
@@ -191,9 +192,9 @@ class _HarvestPageState extends State<HarvestPage> {
 
     if (seasons.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add at least one season first'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('Please add at least one season first'),
+          backgroundColor: context.statusColors.warning,
         ),
       );
       return;

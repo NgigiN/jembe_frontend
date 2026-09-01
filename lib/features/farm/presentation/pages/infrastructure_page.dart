@@ -414,12 +414,9 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
   }
 
   void _showSheetError(BuildContext sheetContext, String message) {
-    ScaffoldMessenger.of(sheetContext).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
-    );
+    ScaffoldMessenger.of(
+      sheetContext,
+    ).showSnackBar(AppSnackBar.error(sheetContext, message));
   }
 
   Future<void> _showDeleteConfirmation(Infrastructure item) async {

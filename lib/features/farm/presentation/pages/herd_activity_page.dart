@@ -6,6 +6,7 @@ import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
@@ -177,7 +178,7 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                               'Logging events automatically updates the herd headcount.',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey.shade600,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                             ),
                             const Divider(height: 32),
@@ -225,8 +226,9 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                                       ],
                                     ),
                                     selected: _activityType == 'birth',
-                                    selectedColor: Colors.green.shade100,
-                                    checkmarkColor: Colors.green.shade800,
+                                    selectedColor: context.statusColors.positive
+                                        .withValues(alpha: 0.15),
+                                    checkmarkColor: context.statusColors.positive,
                                     onSelected: (selected) {
                                       if (selected) {
                                         setState(() => _activityType = 'birth');
@@ -256,8 +258,9 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                                       ],
                                     ),
                                     selected: _activityType == 'fatality',
-                                    selectedColor: Colors.red.shade100,
-                                    checkmarkColor: Colors.red.shade800,
+                                    selectedColor: context.statusColors.negative
+                                        .withValues(alpha: 0.15),
+                                    checkmarkColor: context.statusColors.negative,
                                     onSelected: (selected) {
                                       if (selected) {
                                         setState(
@@ -331,9 +334,9 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                               child: ElevatedButton(
                                 onPressed: isLoading ? null : _submitForm,
                                 child: isLoading
-                                    ? const CircularProgressIndicator(
+                                    ? CircularProgressIndicator(
                                         valueColor: AlwaysStoppedAnimation(
-                                          Colors.white,
+                                          Theme.of(context).colorScheme.onPrimary,
                                         ),
                                       )
                                     : const Text(
