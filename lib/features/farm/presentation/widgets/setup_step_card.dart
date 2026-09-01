@@ -24,7 +24,7 @@ class SetupStepCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (status) {
-      StepStatus.completed => Colors.green,
+      StepStatus.completed => Theme.of(context).colorScheme.secondary,
       StepStatus.available => Theme.of(context).colorScheme.primary,
       StepStatus.locked => Theme.of(context).colorScheme.outline,
     };
@@ -64,9 +64,9 @@ class SetupStepCard extends StatelessWidget {
                   ),
                   child: Center(
                     child: switch (status) {
-                      StepStatus.completed => const Icon(
+                      StepStatus.completed => Icon(
                           Icons.check,
-                          color: Colors.green,
+                          color: color,
                           size: 20,
                         ),
                       StepStatus.available => Text(
