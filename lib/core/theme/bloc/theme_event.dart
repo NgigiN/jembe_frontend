@@ -1,8 +1,13 @@
+import 'package:flutter/material.dart';
+
 abstract class ThemeEvent {}
 
-class ToggleThemeEvent extends ThemeEvent {}
+/// Loads the persisted theme preference, if any. Dispatched once from
+/// ThemeBloc's constructor so the app's initial system default is replaced
+/// by whatever the user last chose.
+class LoadThemeEvent extends ThemeEvent {}
 
-class SetThemeEvent extends ThemeEvent {
-  SetThemeEvent(this.isDark);
-  final bool isDark;
+class SetThemeModeEvent extends ThemeEvent {
+  SetThemeModeEvent(this.mode);
+  final ThemeMode mode;
 }
