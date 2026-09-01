@@ -1,3 +1,4 @@
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:flutter/material.dart';
 
 /// A dropdown for selecting an existing [T] from [items], with an inline
@@ -63,7 +64,11 @@ class EntityPickerWithAdd<T> extends StatelessWidget {
           },
           icon: const Icon(Icons.add_circle_outline),
           tooltip: 'Add new',
-          style: IconButton.styleFrom(backgroundColor: Colors.green.shade50),
+          style: IconButton.styleFrom(
+            backgroundColor: context.statusColors.positive.withValues(
+              alpha: 0.1,
+            ),
+          ),
         ),
       ],
     );
