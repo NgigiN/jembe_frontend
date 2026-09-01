@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/validation/field_limits.dart';
 import 'package:farm_tracker/core/validation/input_formatters.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
@@ -74,6 +75,7 @@ Future<String?> showAddPlantDialog(BuildContext context) async {
         name: sanitizeText(nameController.text),
         variety: sanitizeOptionalText(varietyController.text),
       );
+      SuccessFeedback.saved();
       bloc.add(AddPlantEvent(plant));
       Navigator.pop(sheetContext);
     },
@@ -216,6 +218,7 @@ class _PlantPageState extends State<PlantPage> {
           createdAt: plant.createdAt,
           updatedAt: DateTime.now(),
         );
+        SuccessFeedback.saved();
         context.read<PlantBloc>().add(UpdatePlantEvent(updatedPlant));
         Navigator.pop(sheetContext);
       },

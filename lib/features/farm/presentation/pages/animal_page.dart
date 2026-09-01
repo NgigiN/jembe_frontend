@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
@@ -108,6 +109,7 @@ Future<String?> showAddAnimalDialog(BuildContext context) async {
         sex: selectedSex,
         acquisitionSource: selectedAcquisitionSource,
       );
+      SuccessFeedback.saved();
       bloc.add(AddAnimalEvent(animal));
       Navigator.pop(sheetContext);
     },
@@ -423,6 +425,7 @@ class _AnimalPageState extends State<AnimalPage> {
           createdAt: animal.createdAt,
           updatedAt: DateTime.now(),
         );
+        SuccessFeedback.saved();
         context.read<AnimalBloc>().add(UpdateAnimalEvent(updatedAnimal));
         Navigator.pop(sheetContext);
         if (!wasBought && nowBought && context.mounted) {

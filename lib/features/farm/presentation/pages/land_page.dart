@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/validation/field_limits.dart';
 import 'package:farm_tracker/core/validation/input_formatters.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
@@ -83,6 +84,7 @@ Future<String?> showAddLandDialog(BuildContext context) async {
         soilType: sanitizeOptionalText(soilTypeController.text),
         tenureType: selectedTenureType,
       );
+      SuccessFeedback.saved();
       bloc.add(AddLandEvent(land));
       Navigator.pop(sheetContext);
     },
@@ -254,6 +256,7 @@ class _LandPageState extends State<LandPage> {
           createdAt: land.createdAt,
           updatedAt: DateTime.now(),
         );
+        SuccessFeedback.saved();
         context.read<LandBloc>().add(UpdateLandEvent(updatedLand));
         Navigator.pop(sheetContext);
       },

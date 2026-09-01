@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
@@ -67,6 +68,7 @@ Future<String?> showAddAnimalTypeDialog(BuildContext context) async {
         return;
       }
 
+      SuccessFeedback.saved();
       bloc.add(
         AddAnimalTypeEvent(
           sanitizeText(nameController.text),
@@ -208,6 +210,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
         notesController: notesController,
       ),
       onSubmit: (sheetContext) {
+        SuccessFeedback.saved();
         context.read<AnimalTypeBloc>().add(
           UpdateAnimalTypeEvent(
             animalType.id,
