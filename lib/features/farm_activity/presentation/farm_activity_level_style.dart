@@ -1,3 +1,4 @@
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/features/farm_activity/domain/farm_activity_calculator.dart';
 import 'package:flutter/material.dart';
 
@@ -10,11 +11,12 @@ IconData farmActivityIconFor(FarmActivityLevel level) => switch (level) {
   FarmActivityLevel.needsAttention => Icons.warning_amber,
 };
 
-Color farmActivityColorFor(FarmActivityLevel level) => switch (level) {
-  FarmActivityLevel.thriving => Colors.green,
-  FarmActivityLevel.onTrack => Colors.orange,
-  FarmActivityLevel.needsAttention => Colors.red,
-};
+Color farmActivityColorFor(BuildContext context, FarmActivityLevel level) =>
+    switch (level) {
+      FarmActivityLevel.thriving => context.statusColors.positive,
+      FarmActivityLevel.onTrack => context.statusColors.warning,
+      FarmActivityLevel.needsAttention => context.statusColors.negative,
+    };
 
 String farmActivityLabelFor(FarmActivityLevel level) => switch (level) {
   FarmActivityLevel.thriving => 'Thriving',

@@ -1204,7 +1204,7 @@ class _StreakPageState extends State<StreakPage> {
   }
 
   Widget _buildLevelHeader(BuildContext context, FarmActivityLevel level) {
-    final color = farmActivityColorFor(level);
+    final color = farmActivityColorFor(context, level);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(

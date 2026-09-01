@@ -105,7 +105,7 @@ class _FarmActivityCardState extends State<FarmActivityCard> {
     final level = result.level;
     if (level == null) return const SizedBox.shrink();
 
-    final color = farmActivityColorFor(level);
+    final color = farmActivityColorFor(context, level);
 
     return LivelyTap(
       child: Card(
