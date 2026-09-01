@@ -76,9 +76,10 @@ jobs:
         run: |
           SIZE=$(du -sh build/app/outputs/bundle/release/app-release.aab | cut -f1)
           echo "App bundle size: $SIZE"
-          # Fail if size exceeds 30MB (approximate check)
-          if [ $(du -m build/app/outputs/bundle/release/app-release.aab | cut -f1) -gt 30 ]; then
-            echo "ERROR: App bundle exceeds 30MB limit"
+          # Fail if size exceeds 80MB (approximate check; this is the raw
+          # multi-ABI .aab, not the smaller per-device download size)
+          if [ $(du -m build/app/outputs/bundle/release/app-release.aab | cut -f1) -gt 80 ]; then
+            echo "ERROR: App bundle exceeds 80MB limit"
             exit 1
           fi
 
