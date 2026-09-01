@@ -79,7 +79,7 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
               _controller.clear();
               ScaffoldMessenger.of(
                 context,
-              ).showSnackBar(AppSnackBar.success(state.successMessage!));
+              ).showSnackBar(AppSnackBar.success(context, state.successMessage!));
             }
           } else if (state is QuestionError) {
             if (_isSubmitting) setState(() => _isSubmitting = false);
@@ -94,7 +94,7 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
             if (wasSubmitting || state.questions.isNotEmpty) {
               ScaffoldMessenger.of(
                 context,
-              ).showSnackBar(AppSnackBar.error(state.message));
+              ).showSnackBar(AppSnackBar.error(context, state.message));
             }
           }
         },

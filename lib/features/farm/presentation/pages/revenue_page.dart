@@ -66,7 +66,7 @@ class _RevenuePageState extends State<RevenuePage> {
                 listener: (context, state) {
                   if (state is RevenueDeleted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      AppSnackBar.success('Revenue deleted successfully'),
+                      AppSnackBar.success(context, 'Revenue deleted successfully'),
                     );
                   }
                 },
@@ -522,13 +522,13 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
           if (state is RevenueAdded) {
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(AppSnackBar.success('Revenue added successfully'));
+            ).showSnackBar(AppSnackBar.success(context, 'Revenue added successfully'));
             Navigator.pop(context);
             context.read<RevenueBloc>().add(LoadRevenues());
           } else if (state is RevenueError) {
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(AppSnackBar.error(state.message));
+            ).showSnackBar(AppSnackBar.error(context, state.message));
           }
         },
         child: SingleChildScrollView(
@@ -794,7 +794,7 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
       fieldLabel: 'Date',
     );
     if (dateError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(AppSnackBar.error(dateError));
+      ScaffoldMessenger.of(context).showSnackBar(AppSnackBar.error(context, dateError));
       return;
     }
 

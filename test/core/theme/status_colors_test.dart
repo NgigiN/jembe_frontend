@@ -56,4 +56,26 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'BuildContext.statusColors falls back to colorScheme roles when no '
+    'StatusColors extension is registered, instead of crashing',
+    (tester) async {
+      final scheme = ColorScheme.fromSeed(seedColor: Colors.blue);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(colorScheme: scheme),
+          home: Builder(
+            builder: (context) {
+              final fallback = context.statusColors;
+              expect(fallback.positive, scheme.primary);
+              expect(fallback.warning, scheme.tertiary);
+              expect(fallback.negative, scheme.error);
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+    },
+  );
 }

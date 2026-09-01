@@ -61,11 +61,11 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
         listener: (context, state) {
           if (state is InfrastructureLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.success(state.successMessage!),
+              AppSnackBar.success(context, state.successMessage!),
             );
           } else if (state is InfrastructureError && state.infrastructures.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.error(state.message),
+              AppSnackBar.error(context, state.message),
             );
           }
         },

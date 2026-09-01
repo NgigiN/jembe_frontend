@@ -33,5 +33,17 @@ class StatusColors extends ThemeExtension<StatusColors> {
 }
 
 extension StatusColorsX on BuildContext {
-  StatusColors get statusColors => Theme.of(this).extension<StatusColors>()!;
+  /// Falls back to plain colorScheme roles when no [StatusColors] is
+  /// registered - always true in the real app (AppTheme always registers
+  /// one), but most widget tests build a bare MaterialApp with no theme at
+  /// all, and this must degrade gracefully there rather than crash.
+  StatusColors get statusColors {
+    final theme = Theme.of(this);
+    return theme.extension<StatusColors>() ??
+        StatusColors(
+          positive: theme.colorScheme.primary,
+          warning: theme.colorScheme.tertiary,
+          negative: theme.colorScheme.error,
+        );
+  }
 }

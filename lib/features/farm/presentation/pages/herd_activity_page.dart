@@ -89,13 +89,13 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
           listener: (context, state) {
             if (state is HerdActivitySuccess) {
               ScaffoldMessenger.of(context).showSnackBar(
-                AppSnackBar.success(state.message),
+                AppSnackBar.success(context, state.message),
               );
               context.read<HerdBloc>().add(GetHerdsEvent());
               Navigator.pop(context);
             } else if (state is HerdActivityError) {
               ScaffoldMessenger.of(context).showSnackBar(
-                AppSnackBar.error(state.message),
+                AppSnackBar.error(context, state.message),
               );
             }
           },

@@ -131,16 +131,16 @@ class _SettingsPageState extends State<SettingsPage> {
         listener: (context, state) {
           if (state is ProfileOperationSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.success(state.message),
+              AppSnackBar.success(context, state.message),
             );
             context.read<ProfileBloc>().add(FetchProfileEvent());
           } else if (state is ProfileError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.error(state.message),
+              AppSnackBar.error(context, state.message),
             );
           } else if (state is AccountDeleted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.success('Account deleted'),
+              AppSnackBar.success(context, 'Account deleted'),
             );
             context.read<AuthBloc>().add(LogoutEvent());
           }
