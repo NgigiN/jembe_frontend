@@ -1,8 +1,11 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:farm_tracker/core/audio/sound_service.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_event.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
@@ -26,6 +29,8 @@ class MockAuthBloc extends MockBloc<AuthEvent, AuthState> implements AuthBloc {}
 void main() {
   setUpAll(() {
     registerFallbackValue(FetchProfileEvent());
+    registerFallbackValue(ToggleThemeEvent());
+    SharedPreferences.setMockInitialValues({});
   });
 
   testWidgets(
@@ -159,6 +164,147 @@ void main() {
       verify(
         () => profileBloc.add(any(that: isA<DeleteAccountEvent>())),
       ).called(1);
+    },
+  );
+
+  testWidgets(
+    'toggling Dark Mode fires a selection haptic and dispatches ToggleThemeEvent',
+    (tester) async {
+      final profileBloc = MockProfileBloc();
+      final themeBloc = MockThemeBloc();
+      final authBloc = MockAuthBloc();
+
+      const user = User(
+        id: '1',
+        email: 'a@example.com',
+        firstName: 'A',
+        lastName: 'B',
+        farmName: 'Green Acres',
+        location: 'Nakuru',
+        pictureUrl: '',
+      );
+
+      whenListen(
+        profileBloc,
+        Stream<ProfileState>.value(const ProfileLoaded(user: user)),
+        initialState: const ProfileLoaded(user: user),
+      );
+      whenListen(
+        themeBloc,
+        Stream<ThemeState>.value(const ThemeState(themeMode: ThemeMode.light)),
+        initialState: const ThemeState(themeMode: ThemeMode.light),
+      );
+
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        calls.add(call);
+        return null;
+      });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<ProfileBloc>.value(value: profileBloc),
+              BlocProvider<ThemeBloc>.value(value: themeBloc),
+              BlocProvider<AuthBloc>.value(value: authBloc),
+            ],
+            child: const SettingsPage(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final switchFinder = find.descendant(
+        of: find.widgetWithText(ListTile, 'Dark Mode'),
+        matching: find.byType(Switch),
+      );
+      await tester.tap(switchFinder);
+      await tester.pumpAndSettle();
+
+      verify(() => themeBloc.add(any(that: isA<ToggleThemeEvent>()))).called(1);
+      final hapticCalls =
+          calls.where((c) => c.method == 'HapticFeedback.vibrate');
+      expect(hapticCalls, hasLength(1));
+      expect(hapticCalls.single.arguments, 'HapticFeedbackType.selectionClick');
+    },
+  );
+
+  testWidgets(
+    'Sound Effects toggle defaults on, persists the change, and fires a selection haptic',
+    (tester) async {
+      final profileBloc = MockProfileBloc();
+      final themeBloc = MockThemeBloc();
+      final authBloc = MockAuthBloc();
+
+      const user = User(
+        id: '1',
+        email: 'a@example.com',
+        firstName: 'A',
+        lastName: 'B',
+        farmName: 'Green Acres',
+        location: 'Nakuru',
+        pictureUrl: '',
+      );
+
+      whenListen(
+        profileBloc,
+        Stream<ProfileState>.value(const ProfileLoaded(user: user)),
+        initialState: const ProfileLoaded(user: user),
+      );
+      whenListen(
+        themeBloc,
+        Stream<ThemeState>.value(const ThemeState(themeMode: ThemeMode.light)),
+        initialState: const ThemeState(themeMode: ThemeMode.light),
+      );
+
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        calls.add(call);
+        return null;
+      });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<ProfileBloc>.value(value: profileBloc),
+              BlocProvider<ThemeBloc>.value(value: themeBloc),
+              BlocProvider<AuthBloc>.value(value: authBloc),
+            ],
+            child: const SettingsPage(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final switchFinder = find.descendant(
+        of: find.widgetWithText(ListTile, 'Sound Effects'),
+        matching: find.byType(Switch),
+      );
+      expect(tester.widget<Switch>(switchFinder).value, isTrue);
+
+      await tester.tap(switchFinder);
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<Switch>(switchFinder).value, isFalse);
+      final hapticCalls =
+          calls.where((c) => c.method == 'HapticFeedback.vibrate');
+      expect(hapticCalls, hasLength(1));
+      expect(hapticCalls.single.arguments, 'HapticFeedbackType.selectionClick');
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool(soundEffectsPrefsKey), isFalse);
     },
   );
 }

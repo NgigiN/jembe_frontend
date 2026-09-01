@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:farm_tracker/core/audio/sound_service.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/features/profile/presentation/widgets/typed_delete_account_dialog.dart';
@@ -32,11 +35,28 @@ class _SettingsPageState extends State<SettingsPage> {
   String _email = '';
   String _pictureUrl = '';
   int _fiscalYearStartMonth = 1;
+  bool _soundEffectsEnabled = true;
 
   @override
   void initState() {
     super.initState();
     context.read<ProfileBloc>().add(FetchProfileEvent());
+    _loadSoundEffectsPreference();
+  }
+
+  Future<void> _loadSoundEffectsPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _soundEffectsEnabled = prefs.getBool(soundEffectsPrefsKey) ?? true;
+    });
+  }
+
+  Future<void> _onSoundEffectsChanged(bool value) async {
+    await HapticFeedback.selectionClick();
+    setState(() => _soundEffectsEnabled = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(soundEffectsPrefsKey, value);
   }
 
   @override
@@ -174,27 +194,55 @@ class _SettingsPageState extends State<SettingsPage> {
                     _buildSettingsCard(
                       context,
                       title: 'Appearance',
-                      child: ListTile(
-                        leading: Icon(
-                          themeState.isDarkMode
-                              ? Icons.dark_mode
-                              : Icons.light_mode,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        title: Text(
-                          'Dark Mode',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        subtitle: Text(
-                          'Toggle application brightness',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        trailing: Switch(
-                          value: themeState.isDarkMode,
-                          onChanged: (value) {
-                            context.read<ThemeBloc>().add(ToggleThemeEvent());
-                          },
-                        ),
+                      child: Column(
+                        children: [
+                          ListTile(
+                            leading: Icon(
+                              themeState.isDarkMode
+                                  ? Icons.dark_mode
+                                  : Icons.light_mode,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            title: Text(
+                              'Dark Mode',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            subtitle: Text(
+                              'Toggle application brightness',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            trailing: Switch(
+                              value: themeState.isDarkMode,
+                              onChanged: (value) {
+                                HapticFeedback.selectionClick();
+                                context.read<ThemeBloc>().add(
+                                  ToggleThemeEvent(),
+                                );
+                              },
+                            ),
+                          ),
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: Icon(
+                              _soundEffectsEnabled
+                                  ? Icons.volume_up
+                                  : Icons.volume_off,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            title: Text(
+                              'Sound Effects',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            subtitle: Text(
+                              'Play a sound on save and other rewarding moments',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            trailing: Switch(
+                              value: _soundEffectsEnabled,
+                              onChanged: _onSoundEffectsChanged,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 24),
