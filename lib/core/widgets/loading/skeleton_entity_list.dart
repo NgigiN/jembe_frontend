@@ -25,7 +25,7 @@ class SkeletonEntityList extends StatelessWidget {
         itemCount: itemCount,
         itemBuilder: (context, index) => EntityCard(
           icon: icon,
-          iconColor: Colors.grey,
+          iconColor: Theme.of(context).colorScheme.onSurfaceVariant,
           title: 'Loading title placeholder',
           subtitle: 'Loading subtitle placeholder text',
           onTap: () {},

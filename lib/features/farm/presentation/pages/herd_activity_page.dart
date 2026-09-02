@@ -6,8 +6,11 @@ import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_state.dart';
@@ -87,13 +90,13 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
           listener: (context, state) {
             if (state is HerdActivitySuccess) {
               ScaffoldMessenger.of(context).showSnackBar(
-                AppSnackBar.success(state.message),
+                AppSnackBar.success(context, state.message),
               );
               context.read<HerdBloc>().add(GetHerdsEvent());
               Navigator.pop(context);
             } else if (state is HerdActivityError) {
               ScaffoldMessenger.of(context).showSnackBar(
-                AppSnackBar.error(state.message),
+                AppSnackBar.error(context, state.message),
               );
             }
           },
@@ -175,32 +178,24 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                               'Logging events automatically updates the herd headcount.',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey.shade600,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                             ),
                             const Divider(height: 32),
-                            DropdownButtonFormField<String>(
-                              value: _selectedHerdId,
-                              decoration: const InputDecoration(
-                                labelText: 'Select Herd *',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.pets),
-                              ),
-                              items: herds
-                                  .map(
-                                    (herd) => DropdownMenuItem<String>(
-                                      value: herd.id,
-                                      child: Text(
-                                        '${herd.name} (Current: ${herd.currentHeadCount})',
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
+                            EntityPickerWithAdd<Herd>(
+                              items: herds,
+                              selectedId: _selectedHerdId,
+                              idOf: (herd) => herd.id,
+                              labelOf: (herd) =>
+                                  '${herd.name} (Current: ${herd.currentHeadCount})',
+                              labelText: 'Select Herd *',
+                              prefixIcon: const Icon(Icons.pets),
                               onChanged: (value) {
                                 setState(() => _selectedHerdId = value);
                               },
                               validator: (value) =>
                                   requiredSelection(value, fieldLabel: 'herd'),
+                              onAddNew: showAddHerdDialog,
                             ),
                             const SizedBox(height: 20),
                             Text(
@@ -231,8 +226,9 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                                       ],
                                     ),
                                     selected: _activityType == 'birth',
-                                    selectedColor: Colors.green.shade100,
-                                    checkmarkColor: Colors.green.shade800,
+                                    selectedColor: context.statusColors.positive
+                                        .withValues(alpha: 0.15),
+                                    checkmarkColor: context.statusColors.positive,
                                     onSelected: (selected) {
                                       if (selected) {
                                         setState(() => _activityType = 'birth');
@@ -262,8 +258,9 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                                       ],
                                     ),
                                     selected: _activityType == 'fatality',
-                                    selectedColor: Colors.red.shade100,
-                                    checkmarkColor: Colors.red.shade800,
+                                    selectedColor: context.statusColors.negative
+                                        .withValues(alpha: 0.15),
+                                    checkmarkColor: context.statusColors.negative,
                                     onSelected: (selected) {
                                       if (selected) {
                                         setState(
@@ -302,15 +299,16 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                                   vertical: 16,
                                 ),
                                 decoration: BoxDecoration(
-                                  border:
-                                      Border.all(color: Colors.grey.shade400),
+                                  border: Border.all(
+                                    color: Theme.of(context).colorScheme.outline,
+                                  ),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       Icons.calendar_today,
-                                      color: Colors.grey,
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                                     ),
                                     const SizedBox(width: 12),
                                     Text(
@@ -336,9 +334,9 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                               child: ElevatedButton(
                                 onPressed: isLoading ? null : _submitForm,
                                 child: isLoading
-                                    ? const CircularProgressIndicator(
+                                    ? CircularProgressIndicator(
                                         valueColor: AlwaysStoppedAnimation(
-                                          Colors.white,
+                                          Theme.of(context).colorScheme.onPrimary,
                                         ),
                                       )
                                     : const Text(

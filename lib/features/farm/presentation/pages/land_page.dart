@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/validation/field_limits.dart';
 import 'package:farm_tracker/core/validation/input_formatters.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
@@ -24,6 +25,71 @@ import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/data/models/land_model.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+
+/// Opens the standard "Add Land" form and resolves once it closes: the new
+/// land's id if the add succeeded, or null if the sheet was dismissed
+/// without submitting. Lets other pickers (e.g. Season's land dropdown)
+/// reuse this exact flow instead of duplicating it.
+Future<String?> showAddLandDialog(BuildContext context) async {
+  final bloc = context.read<LandBloc>();
+  final beforeIds = bloc.state.lands.map((land) => land.id).toSet();
+  String? newId;
+
+  final subscription = bloc.stream.listen((state) {
+    if (state is LandLoaded && state.successMessage == 'Land added') {
+      for (final land in state.lands) {
+        if (!beforeIds.contains(land.id)) {
+          newId = land.id;
+          break;
+        }
+      }
+    }
+  });
+
+  final formKey = GlobalKey<FormState>();
+  final nameController = TextEditingController();
+  final sizeController = TextEditingController();
+  final locationController = TextEditingController();
+  final soilTypeController = TextEditingController();
+  String? selectedTenureType;
+
+  await EntityFormSheet.show(
+    context: context,
+    title: 'Add New Land',
+    submitLabel: 'Add Land',
+    formKey: formKey,
+    fields: _LandPageState._landFormFields(
+      nameController: nameController,
+      sizeController: sizeController,
+      locationController: locationController,
+      soilTypeController: soilTypeController,
+      onTenureTypeChanged: (value) => selectedTenureType = value,
+    ),
+    onSubmit: (sheetContext) async {
+      final userId = await UserUtils.getCurrentUserId();
+      if (userId == null) {
+        ScaffoldMessenger.of(sheetContext).showSnackBar(
+          AppSnackBar.error(sheetContext, 'User not authenticated'),
+        );
+        return;
+      }
+      final land = LandModel.create(
+        userId: userId,
+        name: sanitizeText(nameController.text),
+        size: parseOptionalNonNegativeDecimal(sizeController.text),
+        location: sanitizeOptionalText(locationController.text),
+        soilType: sanitizeOptionalText(soilTypeController.text),
+        tenureType: selectedTenureType,
+      );
+      SuccessFeedback.saved();
+      bloc.add(AddLandEvent(land));
+      Navigator.pop(sheetContext);
+    },
+  );
+
+  await subscription.cancel();
+  return newId;
+}
 
 class LandPage extends StatefulWidget {
   const LandPage({super.key});
@@ -54,11 +120,11 @@ class _LandPageState extends State<LandPage> {
         listener: (context, state) {
           if (state is LandLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.success(state.successMessage!),
+              AppSnackBar.success(context, state.successMessage!),
             );
           } else if (state is LandError && state.lands.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.error(state.message),
+              AppSnackBar.error(context, state.message),
             );
           }
         },
@@ -132,6 +198,12 @@ class _LandPageState extends State<LandPage> {
           'Soil Type',
           land.soilType?.isNotEmpty == true ? land.soilType! : '—',
         ),
+        EntityDetailRow(
+          'Tenure',
+          land.tenureType?.isNotEmpty == true
+              ? land.tenureType![0].toUpperCase() + land.tenureType!.substring(1)
+              : '—',
+        ),
       ],
       onEdit: () => _showEditLandDialog(land),
       onDelete: () => _showDeleteConfirmation(land),
@@ -139,45 +211,7 @@ class _LandPageState extends State<LandPage> {
   }
 
   void _showAddLandDialog() {
-    final formKey = GlobalKey<FormState>();
-    final nameController = TextEditingController();
-    final sizeController = TextEditingController();
-    final locationController = TextEditingController();
-    final soilTypeController = TextEditingController();
-
-    EntityFormSheet.show(
-      context: context,
-      title: 'Add New Land',
-      submitLabel: 'Add Land',
-      formKey: formKey,
-      fields: _landFormFields(
-        nameController: nameController,
-        sizeController: sizeController,
-        locationController: locationController,
-        soilTypeController: soilTypeController,
-      ),
-      onSubmit: (sheetContext) async {
-        final userId = await UserUtils.getCurrentUserId();
-        if (userId == null) {
-          ScaffoldMessenger.of(sheetContext).showSnackBar(
-            const SnackBar(
-              content: Text('User not authenticated'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-        final land = LandModel.create(
-          userId: userId,
-          name: sanitizeText(nameController.text),
-          size: parseOptionalNonNegativeDecimal(sizeController.text),
-          location: sanitizeOptionalText(locationController.text),
-          soilType: sanitizeOptionalText(soilTypeController.text),
-        );
-        context.read<LandBloc>().add(AddLandEvent(land));
-        Navigator.pop(sheetContext);
-      },
-    );
+    showAddLandDialog(context);
   }
 
   void _showEditLandDialog(Land land) {
@@ -188,6 +222,7 @@ class _LandPageState extends State<LandPage> {
     );
     final locationController = TextEditingController(text: land.location ?? '');
     final soilTypeController = TextEditingController(text: land.soilType ?? '');
+    String? selectedTenureType = land.tenureType;
 
     EntityFormSheet.show(
       context: context,
@@ -203,6 +238,8 @@ class _LandPageState extends State<LandPage> {
         sizeHint: 'Enter land size in acres',
         locationHint: 'Enter land location (optional)',
         soilTypeHint: 'Enter soil type (optional)',
+        selectedTenureType: selectedTenureType,
+        onTenureTypeChanged: (value) => selectedTenureType = value,
       ),
       onSubmit: (sheetContext) async {
         final updatedLand = LandModel(
@@ -212,16 +249,18 @@ class _LandPageState extends State<LandPage> {
           size: parseOptionalNonNegativeDecimal(sizeController.text),
           location: sanitizeOptionalText(locationController.text),
           soilType: sanitizeOptionalText(soilTypeController.text),
+          tenureType: selectedTenureType,
           createdAt: land.createdAt,
           updatedAt: DateTime.now(),
         );
+        SuccessFeedback.saved();
         context.read<LandBloc>().add(UpdateLandEvent(updatedLand));
         Navigator.pop(sheetContext);
       },
     );
   }
 
-  List<Widget> _landFormFields({
+  static List<Widget> _landFormFields({
     required TextEditingController nameController,
     required TextEditingController sizeController,
     required TextEditingController locationController,
@@ -229,6 +268,8 @@ class _LandPageState extends State<LandPage> {
     String? sizeHint,
     String? locationHint,
     String? soilTypeHint,
+    String? selectedTenureType,
+    ValueChanged<String?>? onTenureTypeChanged,
   }) {
     return [
       ValidatedNameField(
@@ -257,13 +298,25 @@ class _LandPageState extends State<LandPage> {
         decoration: InputDecoration(
           labelText: 'Soil Type',
           hintText: soilTypeHint,
-          border: const OutlineInputBorder(),
         ),
         validator: optionalSoilType,
         inputFormatters: shortLabelFormatters(maxLength: FieldLimits.soilTypeMax),
         maxLength: FieldLimits.soilTypeMax,
         buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
             null,
+      ),
+      const SizedBox(height: 16),
+      DropdownButtonFormField<String>(
+        initialValue: selectedTenureType,
+        isExpanded: true,
+        decoration: const InputDecoration(
+          labelText: 'Tenure (Optional)',
+        ),
+        items: const [
+          DropdownMenuItem(value: 'owned', child: Text('Owned')),
+          DropdownMenuItem(value: 'rented', child: Text('Rented')),
+        ],
+        onChanged: onTenureTypeChanged,
       ),
     ];
   }
@@ -276,6 +329,7 @@ class _LandPageState extends State<LandPage> {
           'Are you sure you want to delete "${land.name}"${land.location != null ? ' (${land.location})' : ''}? This action cannot be undone.',
     );
     if (confirmed == true) {
+      SuccessFeedback.deleted();
       context.read<LandBloc>().add(DeleteLandEvent(land.id));
     }
   }

@@ -1,12 +1,18 @@
+import 'package:dynamic_color/dynamic_color.dart';
+import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/app_theme.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
+import 'package:farm_tracker/features/content/presentation/bloc/question_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/animal_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
@@ -37,8 +43,35 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      // Flush buffered analytics before the OS may suspend/kill the app -
+      // a backgrounded Timer is not reliable, so this is the last
+      // guaranteed chance to send whatever is buffered.
+      di.sl<AnalyticsService>().flush();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +88,7 @@ class MyApp extends StatelessWidget {
         BlocProvider<HarvestBloc>(create: (_) => di.sl<HarvestBloc>()),
         BlocProvider<AnimalTypeBloc>(create: (_) => di.sl<AnimalTypeBloc>()),
         BlocProvider<HerdBloc>(create: (_) => di.sl<HerdBloc>()),
+        BlocProvider<AnimalBloc>(create: (_) => di.sl<AnimalBloc>()),
         BlocProvider<HerdActivityBloc>(
           create: (_) => di.sl<HerdActivityBloc>(),
         ),
@@ -67,17 +101,27 @@ class MyApp extends StatelessWidget {
           create: (_) => di.sl<CostCategoryBloc>(),
         ),
         BlocProvider<ProfileBloc>(create: (_) => di.sl<ProfileBloc>()),
+        BlocProvider<ContentBloc>(create: (_) => di.sl<ContentBloc>()),
+        BlocProvider<QuestionBloc>(create: (_) => di.sl<QuestionBloc>()),
         BlocProvider<ThemeBloc>(create: (_) => ThemeBloc()),
       ],
-      child: BlocBuilder<ThemeBloc, ThemeState>(
-        builder: (context, themeState) {
-          return MaterialApp.router(
-            title: 'Shamba+',
-            theme: AppTheme.getLightTheme(),
-            darkTheme: AppTheme.getDarkTheme(),
-            themeMode: themeState.themeMode,
-            routerConfig: appRouter.router,
-            debugShowCheckedModeBanner: false,
+      child: DynamicColorBuilder(
+        builder: (lightDynamic, darkDynamic) {
+          return BlocBuilder<ThemeBloc, ThemeState>(
+            builder: (context, themeState) {
+              return MaterialApp.router(
+                title: 'Shamba+',
+                theme: AppTheme.getLightTheme(
+                  lightDynamic ?? AppColors.lightColorScheme,
+                ),
+                darkTheme: AppTheme.getDarkTheme(
+                  darkDynamic ?? AppColors.darkColorScheme,
+                ),
+                themeMode: themeState.themeMode,
+                routerConfig: appRouter.router,
+                debugShowCheckedModeBanner: false,
+              );
+            },
           );
         },
       ),

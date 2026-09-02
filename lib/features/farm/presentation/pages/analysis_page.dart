@@ -1,15 +1,26 @@
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/utils/responsive_utils.dart';
+import 'package:farm_tracker/core/widgets/lively_tap.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_year.dart';
 import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/input_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/revenue_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/widgets/enterprise_picker.dart';
+import 'package:farm_tracker/features/farm_activity/domain/farm_activity_calculator.dart';
+import 'package:farm_tracker/features/farm_activity/presentation/farm_activity_level_style.dart';
+import 'package:farm_tracker/features/farm_activity/presentation/widgets/farm_activity_card.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_event.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_state.dart';
@@ -24,19 +35,8 @@ class AnalysisPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Farm Analysis')),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(
-                context,
-              ).colorScheme.primaryContainer.withValues(alpha: 0.3),
-              Theme.of(context).colorScheme.surface,
-            ],
-          ),
-        ),
+      body: ColoredBox(
+        color: Theme.of(context).colorScheme.surface,
         child: Padding(
           padding: EdgeInsets.all(context.paddingMedium),
           child: Column(
@@ -65,30 +65,24 @@ class AnalysisPage extends StatelessWidget {
                       context,
                       'Total Costs by Season',
                       Icons.attach_money,
-                      Colors.blue,
+                      Theme.of(context).colorScheme.primary,
                       () => _showTotalCostsBySeason(context),
                     ),
                     _buildAnalysisCard(
                       context,
                       'Cost Breakdown',
                       Icons.pie_chart,
-                      Colors.orange,
+                      Theme.of(context).colorScheme.secondary,
                       () => _showCostBreakdown(context),
                     ),
                     _buildAnalysisCard(
                       context,
                       'Annual Summary',
                       Icons.calendar_today,
-                      Colors.green,
+                      Theme.of(context).colorScheme.tertiary,
                       () => _showAnnualSummary(context),
                     ),
-                    // _buildAnalysisCard(
-                    //   context,
-                    //   'Performance Insights',
-                    //   Icons.trending_up,
-                    //   Colors.purple,
-                    //   () => _showPerformanceInsights(context),
-                    // ),
+                    const FarmActivityCard(),
                   ],
                 ),
               ),
@@ -106,44 +100,46 @@ class AnalysisPage extends StatelessWidget {
     Color color,
     VoidCallback onTap,
   ) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: EdgeInsets.all(context.paddingMedium),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                color.withValues(alpha: 0.1),
-                color.withValues(alpha: 0.05),
+    return LivelyTap(
+      child: Card(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: EdgeInsets.all(context.paddingMedium),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  color.withValues(alpha: 0.1),
+                  color.withValues(alpha: 0.05),
+                ],
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: context.fontSize(40), color: color),
+                const SizedBox(height: 12),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tap to view',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: color),
+                ),
               ],
             ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: context.fontSize(40), color: color),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Tap to view',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: color),
-              ),
-            ],
           ),
         ),
       ),
@@ -162,13 +158,6 @@ class AnalysisPage extends StatelessWidget {
 
   void _showAnnualSummary(BuildContext context) {
     context.push(AppRoutePath.annualSummary);
-  }
-
-  void _showPerformanceInsights(BuildContext context) {
-    // TODO: Implement performance insights
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Performance insights coming soon!')),
-    );
   }
 }
 
@@ -322,7 +311,8 @@ class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
 
   Widget _buildCostDetailItem(BuildContext context, CostDetail detail) {
     final isPlant = detail.type.toLowerCase() == 'plant';
-    final Color itemColor = isPlant ? Colors.green : Colors.blue;
+    final itemColor =
+        isPlant ? AppColors.plantCategory : AppColors.animalCategory;
     final icon = isPlant ? Icons.grass : Icons.pets;
 
     return Card(
@@ -491,7 +481,11 @@ class _CostBreakdownPageState extends State<CostBreakdownPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error, size: 64, color: Colors.red.shade300),
+                  Icon(
+                    Icons.error,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     state.message,
@@ -554,7 +548,7 @@ class _CostBreakdownPageState extends State<CostBreakdownPage> {
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.orange.shade700,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                               ),
@@ -811,13 +805,13 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
                 'Total Revenue',
                 totalAnnualRevenue,
                 Icons.trending_up,
-                Colors.greenAccent,
+                Colors.white,
               ),
               _buildOverviewStat(
                 'Total Costs',
                 totalAnnualCosts,
                 Icons.trending_down,
-                Colors.orangeAccent,
+                Colors.white,
               ),
             ],
           ),
@@ -909,9 +903,7 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Theme.of(
-                context,
-              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
@@ -942,15 +934,18 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: (isProfit ? Colors.green : Colors.red).withValues(
-                      alpha: 0.1,
-                    ),
+                    color: (isProfit
+                            ? context.statusColors.positive
+                            : context.statusColors.negative)
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     isProfit ? 'PROFIT' : 'LOSS',
                     style: TextStyle(
-                      color: isProfit ? Colors.green : Colors.red,
+                      color: isProfit
+                          ? context.statusColors.positive
+                          : context.statusColors.negative,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
@@ -970,19 +965,21 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
                       context,
                       'Revenue',
                       summary.totalRevenue,
-                      Colors.green,
+                      context.statusColors.positive,
                     ),
                     _buildCompactStat(
                       context,
                       'Costs',
                       summary.totalCosts,
-                      Colors.orange,
+                      Theme.of(context).colorScheme.onSurface,
                     ),
                     _buildCompactStat(
                       context,
                       'Net',
                       summary.profit,
-                      isProfit ? Colors.blue : Colors.red,
+                      isProfit
+                          ? context.statusColors.positive
+                          : context.statusColors.negative,
                     ),
                   ],
                 ),
@@ -1011,7 +1008,7 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
           'KES ${value.toStringAsFixed(0)}',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: value < 0 ? Colors.red : color,
+            color: value < 0 ? context.statusColors.negative : color,
             fontSize: 15,
           ),
         ),
@@ -1035,21 +1032,21 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSubLabel('Costs'),
+                  _buildSubLabel(context, 'Costs'),
                   _buildMiniBreakdownRow(
                     'Plant',
                     summary.breakdown.costs.plant,
-                    Colors.green.shade300,
+                    AppColors.plantCategory,
                   ),
                   _buildMiniBreakdownRow(
                     'Animal',
                     summary.breakdown.costs.animal,
-                    Colors.blue.shade300,
+                    AppColors.animalCategory,
                   ),
                   _buildMiniBreakdownRow(
                     'Infra',
                     summary.breakdown.costs.infrastructure,
-                    Colors.brown.shade300,
+                    Theme.of(context).colorScheme.tertiary,
                   ),
                 ],
               ),
@@ -1059,16 +1056,16 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSubLabel('Revenue'),
+                  _buildSubLabel(context, 'Revenue'),
                   _buildMiniBreakdownRow(
                     'Plant',
                     summary.breakdown.revenue.plant,
-                    Colors.green,
+                    AppColors.plantCategory,
                   ),
                   _buildMiniBreakdownRow(
                     'Animal',
                     summary.breakdown.revenue.animal,
-                    Colors.blue,
+                    AppColors.animalCategory,
                   ),
                 ],
               ),
@@ -1079,15 +1076,15 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
     );
   }
 
-  Widget _buildSubLabel(String label) {
+  Widget _buildSubLabel(BuildContext context, String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w500,
-          color: Colors.grey,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
     );
@@ -1136,5 +1133,191 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
       'December',
     ];
     return months[month - 1];
+  }
+}
+
+class StreakPage extends StatefulWidget {
+  const StreakPage({this.now, super.key});
+
+  /// Overridable for tests; defaults to the real current time.
+  final DateTime? now;
+
+  @override
+  State<StreakPage> createState() => _StreakPageState();
+}
+
+class _StreakPageState extends State<StreakPage> {
+  FarmActivityLevel? _previousLevel;
+
+  @override
+  Widget build(BuildContext context) {
+    final herds = context.watch<HerdBloc>().state.herds;
+    final seasons = context.watch<SeasonBloc>().state.seasons;
+    final activities = context.watch<ActivityBloc>().state.activities;
+    final inputs = context.watch<InputBloc>().state.inputs;
+    final harvests = context.watch<HarvestBloc>().state.harvests;
+    final revenues = context.watch<RevenueBloc>().state.revenues;
+
+    const calculator = FarmActivityCalculator();
+    final result = calculator.calculate(
+      herds: herds,
+      seasons: seasons,
+      activities: activities,
+      inputs: inputs,
+      harvests: harvests,
+      revenues: revenues,
+      now: widget.now,
+    );
+
+    final level = result.level;
+
+    if (level == FarmActivityLevel.thriving &&
+        _previousLevel != FarmActivityLevel.thriving) {
+      SuccessFeedback.thriving();
+    }
+    _previousLevel = level;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Farm Activity Streak')),
+      body: level == null
+          ? const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Text(
+                  'Nothing to track yet',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _buildLevelHeader(context, level),
+                if (result.weeklyStreak > 0) ...[
+                  const SizedBox(height: 16),
+                  _buildStreakCallout(context, result.weeklyStreak),
+                ],
+                const SizedBox(height: 24),
+                Text(
+                  'Herd & season activity',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                for (final entry in result.breakdown)
+                  _buildBreakdownItem(context, entry),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildLevelHeader(BuildContext context, FarmActivityLevel level) {
+    final color = farmActivityColorFor(context, level);
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(farmActivityIconFor(level), color: color, size: 40),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  farmActivityLabelFor(level),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(farmActivityExplanationFor(level)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStreakCallout(BuildContext context, int weeklyStreak) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.statusColors.positive.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          const Text('🔥', style: TextStyle(fontSize: 28)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$weeklyStreak-week streak',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  "You've logged something every week for the last "
+                  '$weeklyStreak week${weeklyStreak == 1 ? '' : 's'} - keep it up!',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBreakdownItem(BuildContext context, EnterpriseFreshness entry) {
+    final days = entry.daysSinceLastActivity;
+    final isFresh = days != null && days <= 14;
+    final String statusText;
+    if (days == null) {
+      statusText = 'No activity yet';
+    } else if (isFresh) {
+      statusText = days == 0
+          ? 'Active today'
+          : 'Active $days day${days == 1 ? '' : 's'} ago';
+    } else {
+      statusText = 'No activity in $days days';
+    }
+    final statusColor = days == null
+        ? Theme.of(context).colorScheme.onSurfaceVariant
+        : (isFresh
+            ? context.statusColors.positive
+            : context.statusColors.negative);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Icon(entry.isHerd ? Icons.pets : Icons.grass),
+        title: Text(entry.name),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isFresh ? Icons.check_circle : Icons.warning_amber,
+              color: statusColor,
+              size: 18,
+            ),
+            const SizedBox(width: 6),
+            Text(statusText, style: TextStyle(color: statusColor)),
+          ],
+        ),
+      ),
+    );
   }
 }

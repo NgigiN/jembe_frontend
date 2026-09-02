@@ -1,8 +1,11 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:farm_tracker/core/audio/sound_service.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_event.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
@@ -26,6 +29,8 @@ class MockAuthBloc extends MockBloc<AuthEvent, AuthState> implements AuthBloc {}
 void main() {
   setUpAll(() {
     registerFallbackValue(FetchProfileEvent());
+    registerFallbackValue(SetThemeModeEvent(ThemeMode.system));
+    SharedPreferences.setMockInitialValues({});
   });
 
   testWidgets(
@@ -72,7 +77,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // The Farm Year card sits below Profile Information; scroll to it.
-      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.dragUntilVisible(
+        find.text('January'),
+        find.byType(ListView),
+        const Offset(0, -200),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('January'), findsOneWidget);
@@ -119,6 +128,17 @@ void main() {
         initialState: const ThemeState(themeMode: ThemeMode.light),
       );
 
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        calls.add(call);
+        return null;
+      });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
       await tester.pumpWidget(
         MaterialApp(
           home: MultiBlocProvider(
@@ -159,6 +179,160 @@ void main() {
       verify(
         () => profileBloc.add(any(that: isA<DeleteAccountEvent>())),
       ).called(1);
+      final hapticCalls =
+          calls.where((c) => c.method == 'HapticFeedback.vibrate');
+      expect(hapticCalls, hasLength(1));
+      expect(
+        hapticCalls.single.arguments,
+        'HapticFeedbackType.mediumImpact',
+      );
+    },
+  );
+
+  testWidgets(
+    'selecting Dark in the Theme picker fires a selection haptic and dispatches SetThemeModeEvent',
+    (tester) async {
+      final profileBloc = MockProfileBloc();
+      final themeBloc = MockThemeBloc();
+      final authBloc = MockAuthBloc();
+
+      const user = User(
+        id: '1',
+        email: 'a@example.com',
+        firstName: 'A',
+        lastName: 'B',
+        farmName: 'Green Acres',
+        location: 'Nakuru',
+        pictureUrl: '',
+      );
+
+      whenListen(
+        profileBloc,
+        Stream<ProfileState>.value(const ProfileLoaded(user: user)),
+        initialState: const ProfileLoaded(user: user),
+      );
+      whenListen(
+        themeBloc,
+        Stream<ThemeState>.value(const ThemeState(themeMode: ThemeMode.system)),
+        initialState: const ThemeState(themeMode: ThemeMode.system),
+      );
+
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        calls.add(call);
+        return null;
+      });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<ProfileBloc>.value(value: profileBloc),
+              BlocProvider<ThemeBloc>.value(value: themeBloc),
+              BlocProvider<AuthBloc>.value(value: authBloc),
+            ],
+            child: const SettingsPage(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Dark'));
+      await tester.pumpAndSettle();
+
+      verify(
+        () => themeBloc.add(
+          any(
+            that: isA<SetThemeModeEvent>().having(
+              (e) => e.mode,
+              'mode',
+              ThemeMode.dark,
+            ),
+          ),
+        ),
+      ).called(1);
+      final hapticCalls =
+          calls.where((c) => c.method == 'HapticFeedback.vibrate');
+      expect(hapticCalls, hasLength(1));
+      expect(hapticCalls.single.arguments, 'HapticFeedbackType.selectionClick');
+    },
+  );
+
+  testWidgets(
+    'Sound Effects toggle defaults on, persists the change, and fires a selection haptic',
+    (tester) async {
+      final profileBloc = MockProfileBloc();
+      final themeBloc = MockThemeBloc();
+      final authBloc = MockAuthBloc();
+
+      const user = User(
+        id: '1',
+        email: 'a@example.com',
+        firstName: 'A',
+        lastName: 'B',
+        farmName: 'Green Acres',
+        location: 'Nakuru',
+        pictureUrl: '',
+      );
+
+      whenListen(
+        profileBloc,
+        Stream<ProfileState>.value(const ProfileLoaded(user: user)),
+        initialState: const ProfileLoaded(user: user),
+      );
+      whenListen(
+        themeBloc,
+        Stream<ThemeState>.value(const ThemeState(themeMode: ThemeMode.light)),
+        initialState: const ThemeState(themeMode: ThemeMode.light),
+      );
+
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        calls.add(call);
+        return null;
+      });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<ProfileBloc>.value(value: profileBloc),
+              BlocProvider<ThemeBloc>.value(value: themeBloc),
+              BlocProvider<AuthBloc>.value(value: authBloc),
+            ],
+            child: const SettingsPage(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final switchFinder = find.descendant(
+        of: find.widgetWithText(ListTile, 'Sound Effects'),
+        matching: find.byType(Switch),
+      );
+      expect(tester.widget<Switch>(switchFinder).value, isTrue);
+
+      await tester.tap(switchFinder);
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<Switch>(switchFinder).value, isFalse);
+      final hapticCalls =
+          calls.where((c) => c.method == 'HapticFeedback.vibrate');
+      expect(hapticCalls, hasLength(1));
+      expect(hapticCalls.single.arguments, 'HapticFeedbackType.selectionClick');
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool(soundEffectsPrefsKey), isFalse);
     },
   );
 }

@@ -15,7 +15,7 @@ class StepConnector extends StatelessWidget {
           child: Container(
             color: isActive
                 ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
-                : Colors.grey.shade200,
+                : Theme.of(context).colorScheme.outlineVariant,
           ),
         ),
       ),

@@ -22,7 +22,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
           ? {'source_type': sourceType}
           : null;
 
-      final response = await dio.get(
+      final response = await dio.get<dynamic>(
         '/api/v1/inputs',
         queryParameters: queryParams,
       );
@@ -78,7 +78,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
         requestBody['animal_id'] = input.animalId;
       }
 
-      final response = await dio.post('/api/v1/inputs', data: requestBody);
+      final response = await dio.post<dynamic>('/api/v1/inputs', data: requestBody);
 
       if (response.statusCode == 201) {
         final data = response.data as Map<String, dynamic>;
@@ -109,7 +109,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
         requestBody['animal_id'] = input.animalId;
       }
 
-      final response = await dio.put(
+      final response = await dio.put<dynamic>(
         '/api/v1/inputs/${input.id}',
         data: requestBody,
       );
@@ -130,7 +130,7 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
   @override
   Future<void> deleteInput(String id) async {
     try {
-      final response = await dio.delete('/api/v1/inputs/$id');
+      final response = await dio.delete<dynamic>('/api/v1/inputs/$id');
 
       if (response.statusCode != 200) {
         final msg = extractServerErrorMessage(response.data);

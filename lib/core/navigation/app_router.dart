@@ -3,8 +3,12 @@ import 'package:farm_tracker/core/logging/logging_navigator.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/google_login_page.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/onboarding_page.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/splash_page.dart';
+import 'package:farm_tracker/features/content/presentation/pages/ask_question_page.dart';
+import 'package:farm_tracker/features/content/presentation/pages/content_detail_page.dart';
+import 'package:farm_tracker/features/content/presentation/pages/content_list_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/activity_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/analysis_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/animal_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animal_type_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animals_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/harvest_page.dart';
@@ -36,15 +40,20 @@ class AppRouteName {
   static const seasons = 'seasons';
   static const animalTypes = 'animal-types';
   static const herds = 'herds';
+  static const animalsList = 'animals-list';
   static const inputs = 'inputs';
   static const activities = 'activities';
   static const totalCosts = 'total-costs';
   static const costBreakdown = 'cost-breakdown';
   static const annualSummary = 'annual-summary';
+  static const streak = 'streak';
   static const revenueAdd = 'revenue-add';
   static const infrastructure = 'infrastructure';
   static const herdActivities = 'herd-activities';
   static const harvests = 'harvests';
+  static const contentTips = 'content-tips';
+  static const contentDetail = 'content-detail';
+  static const askQuestion = 'ask-question';
 }
 
 class AppRoutePath {
@@ -61,18 +70,24 @@ class AppRoutePath {
   static const seasons = '/seasons';
   static const animalTypes = '/animal-types';
   static const herds = '/herds';
+  static const animalsList = '/animals-list';
   static const inputsTemplate = '/inputs/:sourceType';
   static const activitiesTemplate = '/activities/:sourceType';
   static const totalCosts = '/analytics/total-costs';
   static const costBreakdown = '/analytics/cost-breakdown';
   static const annualSummary = '/analytics/annual-summary';
+  static const streak = '/analytics/streak';
   static const revenueAdd = '/revenue/add';
   static const infrastructure = '/infrastructure';
   static const herdActivities = '/herd-activities';
   static const harvests = '/harvests';
+  static const contentTips = '/content';
+  static const contentDetailTemplate = '/content/:id';
+  static const askQuestion = '/ask-question';
 
   static String inputsFor(String sourceType) => '/inputs/$sourceType';
   static String activitiesFor(String sourceType) => '/activities/$sourceType';
+  static String contentDetailFor(String id) => '/content/$id';
 }
 
 class AppRouter {
@@ -161,6 +176,11 @@ class AppRouter {
         pageBuilder: (context, state) => _slidePage(const HerdPage(), state),
       ),
       GoRoute(
+        name: AppRouteName.animalsList,
+        path: AppRoutePath.animalsList,
+        pageBuilder: (context, state) => _slidePage(const AnimalPage(), state),
+      ),
+      GoRoute(
         name: AppRouteName.inputs,
         path: AppRoutePath.inputsTemplate,
         pageBuilder: (context, state) {
@@ -195,6 +215,11 @@ class AppRouter {
             _slidePage(const AnnualSummaryPage(), state),
       ),
       GoRoute(
+        name: AppRouteName.streak,
+        path: AppRoutePath.streak,
+        pageBuilder: (context, state) => _slidePage(const StreakPage(), state),
+      ),
+      GoRoute(
         name: AppRouteName.revenueAdd,
         path: AppRoutePath.revenueAdd,
         pageBuilder: (context, state) =>
@@ -216,6 +241,26 @@ class AppRouter {
         name: AppRouteName.harvests,
         path: AppRoutePath.harvests,
         pageBuilder: (context, state) => _slidePage(const HarvestPage(), state),
+      ),
+      GoRoute(
+        name: AppRouteName.contentTips,
+        path: AppRoutePath.contentTips,
+        pageBuilder: (context, state) =>
+            _slidePage(const ContentListPage(), state),
+      ),
+      GoRoute(
+        name: AppRouteName.contentDetail,
+        path: AppRoutePath.contentDetailTemplate,
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return _slidePage(ContentDetailPage(contentId: id), state);
+        },
+      ),
+      GoRoute(
+        name: AppRouteName.askQuestion,
+        path: AppRoutePath.askQuestion,
+        pageBuilder: (context, state) =>
+            _slidePage(const AskQuestionPage(), state),
       ),
     ],
   );

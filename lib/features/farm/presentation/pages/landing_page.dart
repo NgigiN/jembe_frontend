@@ -23,18 +23,29 @@ class LandingPage extends StatelessWidget {
           selectedIndex: _calculateIndex(context),
           onDestinationSelected: (index) => _onTabSelected(index, context),
           destinations: const [
-            NavigationDestination(icon: Icon(Icons.eco), label: 'Plants'),
             NavigationDestination(
-              icon: Icon(Icons.analytics),
+              icon: Icon(Icons.eco_outlined),
+              selectedIcon: Icon(Icons.eco),
+              label: 'Plants',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.analytics_outlined),
+              selectedIcon: Icon(Icons.analytics),
               label: 'Analytics',
             ),
-            NavigationDestination(icon: Icon(Icons.pets), label: 'Animals'),
             NavigationDestination(
-              icon: Icon(Icons.monetization_on),
+              icon: Icon(Icons.pets_outlined),
+              selectedIcon: Icon(Icons.pets),
+              label: 'Animals',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.monetization_on_outlined),
+              selectedIcon: Icon(Icons.monetization_on),
               label: 'Revenue',
             ),
             NavigationDestination(
-              icon: Icon(Icons.settings),
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
               label: 'Settings',
             ),
           ],

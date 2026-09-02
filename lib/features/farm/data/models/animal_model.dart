@@ -10,6 +10,8 @@ class AnimalModel extends Animal {
     required super.birthDate,
     required super.createdAt,
     required super.updatedAt,
+    super.sex,
+    super.acquisitionSource,
   });
 
   factory AnimalModel.create({
@@ -18,6 +20,8 @@ class AnimalModel extends Animal {
     required String animalTypeId,
     required String herdId,
     required DateTime birthDate,
+    String? sex,
+    String? acquisitionSource,
   }) {
     final now = DateTime.now();
     return AnimalModel(
@@ -27,12 +31,18 @@ class AnimalModel extends Animal {
       animalTypeId: animalTypeId,
       herdId: herdId,
       birthDate: birthDate,
+      sex: sex,
+      acquisitionSource: acquisitionSource,
       createdAt: now,
       updatedAt: now,
     );
   }
 
   factory AnimalModel.fromJson(Map<String, dynamic> json) {
+    final sexValue = json['Sex'] ?? json['sex'];
+    final acquisitionSourceValue =
+        json['AcquisitionSource'] ?? json['acquisition_source'];
+
     return AnimalModel(
       id: (json['ID'] ?? json['id'] ?? '').toString(),
       userId: (json['UserID'] ?? json['user_id'] ?? '').toString(),
@@ -40,6 +50,8 @@ class AnimalModel extends Animal {
       animalTypeId: (json['animal_type_id'] ?? json['AnimalTypeID'] ?? '').toString(),
       herdId: (json['herd_id'] ?? json['HerdID'] ?? '').toString(),
       birthDate: _parseDate(json['birth_date'] ?? json['BirthDate']),
+      sex: sexValue?.toString(),
+      acquisitionSource: acquisitionSourceValue?.toString(),
       createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
       updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
     );
@@ -59,6 +71,8 @@ class AnimalModel extends Animal {
       'animal_type_id': int.tryParse(animalTypeId) ?? animalTypeId,
       'herd_id': int.tryParse(herdId) ?? herdId,
       'birth_date': birthDate.toUtc().toIso8601String(),
+      'sex': sex,
+      'acquisition_source': acquisitionSource,
     };
   }
 }

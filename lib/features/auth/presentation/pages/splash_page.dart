@@ -1,10 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
+import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
+import 'package:farm_tracker/injection_container.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -17,6 +19,7 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
+    sl<AnalyticsService>().track('app_open');
     // Check for existing login after a short delay
     Future.delayed(const Duration(seconds: 2), () {
       context.read<AuthBloc>().add(CheckExistingLoginEvent());
@@ -36,7 +39,7 @@ class _SplashPageState extends State<SplashPage> {
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.green,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -46,7 +49,7 @@ class _SplashPageState extends State<SplashPage> {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
@@ -56,36 +59,48 @@ class _SplashPageState extends State<SplashPage> {
                     ),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.agriculture,
                   size: 60,
-                  color: Colors.green,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 30),
               // App name
-              const Text(
+              Text(
                 'Shamba+',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                 ),
               ),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Managing your farm, simplified',
-                style: TextStyle(fontSize: 16, color: Colors.white70),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Theme.of(context).colorScheme.onPrimary.withValues(
+                    alpha: 0.7,
+                  ),
+                ),
               ),
               const SizedBox(height: 50),
               // Loading indicator
-              const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Theme.of(context).colorScheme.onPrimary,
+                ),
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Checking login status...',
-                style: TextStyle(fontSize: 14, color: Colors.white70),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onPrimary.withValues(
+                    alpha: 0.7,
+                  ),
+                ),
               ),
             ],
           ),

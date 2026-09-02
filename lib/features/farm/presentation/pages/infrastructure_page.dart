@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
@@ -60,11 +61,11 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
         listener: (context, state) {
           if (state is InfrastructureLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.success(state.successMessage!),
+              AppSnackBar.success(context, state.successMessage!),
             );
           } else if (state is InfrastructureError && state.infrastructures.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.error(state.message),
+              AppSnackBar.error(context, state.message),
             );
           }
         },
@@ -226,9 +227,9 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                         children: [
                           DropdownButtonFormField<String>(
                             value: selectedType,
+                            isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'Infrastructure Type *',
-                              border: OutlineInputBorder(),
                             ),
                             items: _infrastructureTypes
                                 .map(
@@ -287,14 +288,16 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                                 vertical: 16,
                               ),
                               decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade400),
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.outline,
+                                ),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.calendar_today,
-                                    color: Colors.grey,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                                   ),
                                   const SizedBox(width: 12),
                                   Text(
@@ -373,6 +376,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
     final notes = sanitizeOptionalText(notesController.text);
 
     if (isEditing && item != null) {
+      SuccessFeedback.saved();
       context.read<InfrastructureBloc>().add(
         UpdateInfrastructureEvent(
           id: item.id,
@@ -394,6 +398,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
       return;
     }
 
+    SuccessFeedback.saved();
     context.read<InfrastructureBloc>().add(
       AddInfrastructureEvent(
         type: selectedType,
@@ -409,12 +414,9 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
   }
 
   void _showSheetError(BuildContext sheetContext, String message) {
-    ScaffoldMessenger.of(sheetContext).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
-    );
+    ScaffoldMessenger.of(
+      sheetContext,
+    ).showSnackBar(AppSnackBar.error(sheetContext, message));
   }
 
   Future<void> _showDeleteConfirmation(Infrastructure item) async {
@@ -425,6 +427,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
           'Are you sure you want to delete "${item.name}"? This action cannot be undone.',
     );
     if (confirmed == true) {
+      SuccessFeedback.deleted();
       context.read<InfrastructureBloc>().add(
         DeleteInfrastructureEvent(item.id),
       );

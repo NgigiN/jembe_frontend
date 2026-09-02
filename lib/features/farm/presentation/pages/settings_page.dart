@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:farm_tracker/core/audio/sound_service.dart';
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/features/profile/presentation/widgets/typed_delete_account_dialog.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
@@ -30,11 +37,28 @@ class _SettingsPageState extends State<SettingsPage> {
   String _email = '';
   String _pictureUrl = '';
   int _fiscalYearStartMonth = 1;
+  bool _soundEffectsEnabled = true;
 
   @override
   void initState() {
     super.initState();
     context.read<ProfileBloc>().add(FetchProfileEvent());
+    _loadSoundEffectsPreference();
+  }
+
+  Future<void> _loadSoundEffectsPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _soundEffectsEnabled = prefs.getBool(soundEffectsPrefsKey) ?? true;
+    });
+  }
+
+  Future<void> _onSoundEffectsChanged(bool value) async {
+    await HapticFeedback.selectionClick();
+    setState(() => _soundEffectsEnabled = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(soundEffectsPrefsKey, value);
   }
 
   @override
@@ -86,6 +110,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
     if (confirmed ?? false) {
       if (!mounted) return;
+      SuccessFeedback.deleted();
       context.read<ProfileBloc>().add(DeleteAccountEvent());
     }
   }
@@ -107,16 +132,16 @@ class _SettingsPageState extends State<SettingsPage> {
         listener: (context, state) {
           if (state is ProfileOperationSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.success(state.message),
+              AppSnackBar.success(context, state.message),
             );
             context.read<ProfileBloc>().add(FetchProfileEvent());
           } else if (state is ProfileError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.error(state.message),
+              AppSnackBar.error(context, state.message),
             );
           } else if (state is AccountDeleted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.success('Account deleted'),
+              AppSnackBar.success(context, 'Account deleted'),
             );
             context.read<AuthBloc>().add(LogoutEvent());
           }
@@ -128,20 +153,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
           return BlocBuilder<ThemeBloc, ThemeState>(
             builder: (context, themeState) {
-              return Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Theme.of(context)
-                          .colorScheme
-                          .primaryContainer
-                          .withValues(alpha: 0.3),
-                      Theme.of(context).colorScheme.surface,
-                    ],
-                  ),
-                ),
+              return ColoredBox(
+                color: Theme.of(context).colorScheme.surface,
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -172,27 +185,74 @@ class _SettingsPageState extends State<SettingsPage> {
                     _buildSettingsCard(
                       context,
                       title: 'Appearance',
-                      child: ListTile(
-                        leading: Icon(
-                          themeState.isDarkMode
-                              ? Icons.dark_mode
-                              : Icons.light_mode,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        title: Text(
-                          'Dark Mode',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        subtitle: Text(
-                          'Toggle application brightness',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        trailing: Switch(
-                          value: themeState.isDarkMode,
-                          onChanged: (value) {
-                            context.read<ThemeBloc>().add(ToggleThemeEvent());
-                          },
-                        ),
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Theme',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Choose how the app looks',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                const SizedBox(height: 12),
+                                SegmentedButton<ThemeMode>(
+                                  segments: const [
+                                    ButtonSegment(
+                                      value: ThemeMode.system,
+                                      icon: Icon(Icons.brightness_auto),
+                                      label: Text('System'),
+                                    ),
+                                    ButtonSegment(
+                                      value: ThemeMode.light,
+                                      icon: Icon(Icons.light_mode),
+                                      label: Text('Light'),
+                                    ),
+                                    ButtonSegment(
+                                      value: ThemeMode.dark,
+                                      icon: Icon(Icons.dark_mode),
+                                      label: Text('Dark'),
+                                    ),
+                                  ],
+                                  selected: {themeState.themeMode},
+                                  onSelectionChanged: (selection) {
+                                    HapticFeedback.selectionClick();
+                                    context.read<ThemeBloc>().add(
+                                      SetThemeModeEvent(selection.first),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: Icon(
+                              _soundEffectsEnabled
+                                  ? Icons.volume_up
+                                  : Icons.volume_off,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            title: Text(
+                              'Sound Effects',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            subtitle: Text(
+                              'Play a sound on save and other rewarding moments',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            trailing: Switch(
+                              value: _soundEffectsEnabled,
+                              onChanged: _onSoundEffectsChanged,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -298,9 +358,9 @@ class _SettingsPageState extends State<SettingsPage> {
                         padding: const EdgeInsets.all(16),
                         child: DropdownButtonFormField<int>(
                           initialValue: _fiscalYearStartMonth,
+                          isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Our farm year starts in',
-                            border: OutlineInputBorder(),
                           ),
                           items: const [
                             DropdownMenuItem(value: 1, child: Text('January')),
@@ -335,15 +395,41 @@ class _SettingsPageState extends State<SettingsPage> {
                     const SizedBox(height: 24),
                     _buildSettingsCard(
                       context,
+                      title: 'Resources',
+                      child: ListTile(
+                        leading: const Icon(Icons.menu_book_outlined),
+                        title: const Text('Browse Farming Tips'),
+                        subtitle: const Text(
+                          'Guides for your crops and animals',
+                        ),
+                        onTap: () => context.push(AppRoutePath.contentTips),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSettingsCard(
+                      context,
+                      title: 'Help',
+                      child: ListTile(
+                        leading: const Icon(Icons.help_outline),
+                        title: const Text('Ask Us a Question'),
+                        subtitle: const Text(
+                          'Get help directly from the Jembe team',
+                        ),
+                        onTap: () => context.push(AppRoutePath.askQuestion),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSettingsCard(
+                      context,
                       title: 'Danger Zone',
                       child: ListTile(
-                        leading: const Icon(
+                        leading: Icon(
                           Icons.delete_forever,
-                          color: Colors.red,
+                          color: context.statusColors.negative,
                         ),
-                        title: const Text(
+                        title: Text(
                           'Delete Account',
-                          style: TextStyle(color: Colors.red),
+                          style: TextStyle(color: context.statusColors.negative),
                         ),
                         subtitle: const Text(
                           'Permanently delete your account and all farm data',

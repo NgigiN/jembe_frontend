@@ -32,6 +32,7 @@ class LandRepositoryImpl implements LandRepository {
         size: land.size,
         location: land.location,
         soilType: land.soilType,
+        tenureType: land.tenureType,
       );
 
       final result = await remoteDataSource.addLand(landModel);
@@ -54,6 +55,7 @@ class LandRepositoryImpl implements LandRepository {
         size: land.size,
         location: land.location,
         soilType: land.soilType,
+        tenureType: land.tenureType,
         createdAt: land.createdAt,
         updatedAt: land.updatedAt,
       );

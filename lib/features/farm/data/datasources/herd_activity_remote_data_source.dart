@@ -18,7 +18,7 @@ class HerdActivityRemoteDataSourceImpl implements HerdActivityRemoteDataSource {
     HerdActivityModel activity,
   ) async {
     try {
-      final response = await dio.post(
+      final response = await dio.post<dynamic>(
         '/api/v1/herds/$herdId/activities',
         data: activity.toJson(),
       );

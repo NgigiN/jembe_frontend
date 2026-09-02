@@ -22,7 +22,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
           ? {'source_type': sourceType}
           : null;
 
-      final response = await dio.get(
+      final response = await dio.get<dynamic>(
         '/api/v1/activities',
         queryParameters: queryParams,
       );

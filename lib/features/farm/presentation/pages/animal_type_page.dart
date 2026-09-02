@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
@@ -20,6 +21,65 @@ import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.d
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+
+/// Opens the standard "Add Animal Type" form and resolves once it closes:
+/// the new animal type's id if the add succeeded, or null if the sheet was
+/// dismissed without submitting. Lets other pickers (e.g. Herd's animal-type
+/// dropdown) reuse this exact flow instead of duplicating it.
+Future<String?> showAddAnimalTypeDialog(BuildContext context) async {
+  final bloc = context.read<AnimalTypeBloc>();
+  final beforeIds = bloc.state.animalTypes.map((type) => type.id).toSet();
+  String? newId;
+
+  final subscription = bloc.stream.listen((state) {
+    if (state is AnimalTypeLoaded && state.successMessage == 'Animal type added') {
+      for (final type in state.animalTypes) {
+        if (!beforeIds.contains(type.id)) {
+          newId = type.id;
+          break;
+        }
+      }
+    }
+  });
+
+  final formKey = GlobalKey<FormState>();
+  final nameController = TextEditingController();
+  final notesController = TextEditingController();
+
+  await EntityFormSheet.show(
+    context: context,
+    title: 'Add Animal Type',
+    heightFactor: 0.6,
+    submitLabel: 'Add Animal Type',
+    formKey: formKey,
+    fields: _AnimalTypePageState._animalTypeFormFields(
+      nameController: nameController,
+      notesController: notesController,
+    ),
+    onSubmit: (sheetContext) async {
+      final userId = await UserUtils.getCurrentUserId();
+      if (userId == null) {
+        ScaffoldMessenger.of(sheetContext).showSnackBar(
+          AppSnackBar.error(sheetContext, 'User not authenticated'),
+        );
+        return;
+      }
+
+      SuccessFeedback.saved();
+      bloc.add(
+        AddAnimalTypeEvent(
+          sanitizeText(nameController.text),
+          sanitizeOptionalText(notesController.text),
+          userId,
+        ),
+      );
+      Navigator.pop(sheetContext);
+    },
+  );
+
+  await subscription.cancel();
+  return newId;
+}
 
 class AnimalTypePage extends StatefulWidget {
   const AnimalTypePage({super.key});
@@ -50,11 +110,11 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
         listener: (context, state) {
           if (state is AnimalTypeLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.success(state.successMessage!),
+              AppSnackBar.success(context, state.successMessage!),
             );
           } else if (state is AnimalTypeError && state.animalTypes.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.error(state.message),
+              AppSnackBar.error(context, state.message),
             );
           }
         },
@@ -128,42 +188,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
   }
 
   void _showAddAnimalTypeDialog() {
-    final formKey = GlobalKey<FormState>();
-    final nameController = TextEditingController();
-    final notesController = TextEditingController();
-
-    EntityFormSheet.show(
-      context: context,
-      title: 'Add Animal Type',
-      heightFactor: 0.6,
-      submitLabel: 'Add Animal Type',
-      formKey: formKey,
-      fields: _animalTypeFormFields(
-        nameController: nameController,
-        notesController: notesController,
-      ),
-      onSubmit: (sheetContext) async {
-        final userId = await UserUtils.getCurrentUserId();
-        if (userId == null) {
-          ScaffoldMessenger.of(sheetContext).showSnackBar(
-            const SnackBar(
-              content: Text('User not authenticated'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-
-        context.read<AnimalTypeBloc>().add(
-          AddAnimalTypeEvent(
-            sanitizeText(nameController.text),
-            sanitizeOptionalText(notesController.text),
-            userId,
-          ),
-        );
-        Navigator.pop(sheetContext);
-      },
-    );
+    showAddAnimalTypeDialog(context);
   }
 
   void _showEditAnimalTypeDialog(AnimalType animalType) {
@@ -182,6 +207,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
         notesController: notesController,
       ),
       onSubmit: (sheetContext) {
+        SuccessFeedback.saved();
         context.read<AnimalTypeBloc>().add(
           UpdateAnimalTypeEvent(
             animalType.id,
@@ -194,7 +220,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
     );
   }
 
-  List<Widget> _animalTypeFormFields({
+  static List<Widget> _animalTypeFormFields({
     required TextEditingController nameController,
     required TextEditingController notesController,
   }) {
@@ -223,6 +249,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
           'Are you sure you want to delete "${animalType.name}"? This action cannot be undone.',
     );
     if (confirmed == true) {
+      SuccessFeedback.deleted();
       context.read<AnimalTypeBloc>().add(
         DeleteAnimalTypeEvent(animalType.id),
       );

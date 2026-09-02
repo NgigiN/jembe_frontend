@@ -31,6 +31,8 @@ class AnimalRepositoryImpl implements AnimalRepository {
         animalTypeId: animal.animalTypeId,
         herdId: animal.herdId,
         birthDate: animal.birthDate,
+        sex: animal.sex,
+        acquisitionSource: animal.acquisitionSource,
       );
 
       final result = await remoteDataSource.addAnimal(animalModel);
@@ -52,6 +54,8 @@ class AnimalRepositoryImpl implements AnimalRepository {
         animalTypeId: animal.animalTypeId,
         herdId: animal.herdId,
         birthDate: animal.birthDate,
+        sex: animal.sex,
+        acquisitionSource: animal.acquisitionSource,
         createdAt: animal.createdAt,
         updatedAt: animal.updatedAt,
       );

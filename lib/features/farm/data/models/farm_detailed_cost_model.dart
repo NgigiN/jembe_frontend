@@ -1,9 +1,7 @@
 import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
 
 class FarmDetailedCostModel extends FarmDetailedCost {
-  const FarmDetailedCostModel({
-    required List<CostDetailModel> super.details,
-  });
+  const FarmDetailedCostModel({required List<CostDetailModel> super.details});
 
   factory FarmDetailedCostModel.fromJson(Map<String, dynamic> json) {
     return FarmDetailedCostModel(
@@ -38,20 +36,20 @@ class CostDetailModel extends CostDetail {
 
   factory CostDetailModel.fromJson(Map<String, dynamic> json) {
     return CostDetailModel(
-      type: json['type'] ?? '',
-      id: json['id'] ?? 0,
-      name: json['name'] ?? '',
-      category: json['category'] ?? '',
-      location: json['location'] ?? '',
+      type: (json['type'] as String?) ?? '',
+      id: (json['id'] as int?) ?? 0,
+      name: (json['name'] as String?) ?? '',
+      category: (json['category'] as String?) ?? '',
+      location: (json['location'] as String?) ?? '',
       startDate: DateTime.parse(
-        json['start_date'] ?? DateTime.now().toIso8601String(),
+        (json['start_date'] as String?) ?? DateTime.now().toIso8601String(),
       ),
       endDate: json['end_date'] != null
-          ? DateTime.parse(json['end_date'])
+          ? DateTime.parse(json['end_date'] as String)
           : null,
-      inputCost: (json['input_cost'] ?? 0.0).toDouble(),
-      activityCost: (json['activity_cost'] ?? 0.0).toDouble(),
-      totalCost: (json['total_cost'] ?? 0.0).toDouble(),
+      inputCost: ((json['input_cost'] as num?) ?? 0).toDouble(),
+      activityCost: ((json['activity_cost'] as num?) ?? 0).toDouble(),
+      totalCost: ((json['total_cost'] as num?) ?? 0).toDouble(),
     );
   }
 

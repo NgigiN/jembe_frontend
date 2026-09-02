@@ -110,7 +110,7 @@ flutter pub run dependency_validator
 flutter build appbundle --release --analyze-size --dart-define=ENV=production
 
 # Production build
-./build_production.sh
+./scripts/build_production.sh
 ```
 
 ## 🎯 Next Steps (Optional Enhancements)
@@ -129,7 +129,7 @@ flutter build appbundle --release --analyze-size --dart-define=ENV=production
 - `lib/core/config/app_config.dart` - Release mode logging guards
 - `lib/core/network/dio_client.dart` - New Dio client factory
 - `lib/features/auth/presentation/bloc/auth_bloc.dart` - Removed FarmDataService calls
-- `build_production.sh` - Production build flags
+- `scripts/build_production.sh` - Production build flags
 - `analysis_options.yaml` - very_good_analysis rules
 - `.github/workflows/release.yml` - CI/CD pipeline
 - `CONTRIBUTING.md` - Architecture and contribution guidelines

@@ -15,7 +15,10 @@ class CostCategoryModel extends CostCategory {
       name: (json['name'] ?? json['Name'] ?? '').toString(),
       type: (json['type'] ?? json['Type'] ?? '').toString(),
       category: (json['category'] ?? json['Category'] ?? '').toString(),
-      isDefault: json['is_default'] ?? json['isDefault'] ?? false,
+      isDefault:
+          (json['is_default'] as bool?) ??
+          (json['isDefault'] as bool?) ??
+          false,
     );
   }
 

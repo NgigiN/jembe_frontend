@@ -1,7 +1,9 @@
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event.dart';
@@ -44,9 +46,9 @@ class CostCategoryTypeSelector extends StatelessWidget {
             Expanded(
               child: DropdownButtonFormField<String>(
                 initialValue: selectedType.isEmpty ? null : selectedType,
+                isExpanded: true,
                 decoration: InputDecoration(
                   labelText: labelText,
-                  border: const OutlineInputBorder(),
                   hintText: hintText,
                   suffixIcon: costCategoryState is CostCategoryLoading
                       ? const Padding(
@@ -74,7 +76,8 @@ class CostCategoryTypeSelector extends StatelessWidget {
               icon: const Icon(Icons.tune),
               tooltip: 'Manage custom types',
               style: IconButton.styleFrom(
-                backgroundColor: Colors.grey.shade100,
+                backgroundColor:
+                    Theme.of(context).colorScheme.surfaceContainerHighest,
               ),
             ),
             IconButton(
@@ -82,8 +85,8 @@ class CostCategoryTypeSelector extends StatelessWidget {
               icon: const Icon(Icons.add_circle_outline),
               tooltip: 'Add new type',
               style: IconButton.styleFrom(
-                backgroundColor:
-                    addButtonBackgroundColor ?? Colors.green.shade50,
+                backgroundColor: addButtonBackgroundColor ??
+                    context.statusColors.positive.withValues(alpha: 0.1),
               ),
             ),
           ],
@@ -145,15 +148,12 @@ class CostCategoryTypeSelector extends StatelessWidget {
               );
               Navigator.pop(dialogContext);
               onTypeChanged(name);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('$name added successfully'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(AppSnackBar.success(context, '$name added successfully'));
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade600,
+              backgroundColor: context.statusColors.positive,
               foregroundColor: Colors.white,
             ),
             child: const Text('Add'),
@@ -205,9 +205,9 @@ class CostCategoryTypeSelector extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'Swipe left on a custom type to delete it.',
-                style: Theme.of(
-                  sheetContext,
-                ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 16),
               if (customCategories.isEmpty)
@@ -217,7 +217,9 @@ class CostCategoryTypeSelector extends StatelessWidget {
                     child: Text(
                       'No custom types yet.\nTap + to add one.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: TextStyle(
+                        color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 )
@@ -242,7 +244,7 @@ class CostCategoryTypeSelector extends StatelessWidget {
                           alignment: Alignment.centerRight,
                           padding: const EdgeInsets.only(right: 20),
                           decoration: BoxDecoration(
-                            color: Colors.red.shade600,
+                            color: context.statusColors.negative,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
@@ -261,11 +263,9 @@ class CostCategoryTypeSelector extends StatelessWidget {
                             onTypeChanged('');
                           }
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                '${category.name} deleted successfully',
-                              ),
-                              backgroundColor: Colors.green,
+                            AppSnackBar.success(
+                              context,
+                              '${category.name} deleted successfully',
                             ),
                           );
                         },
@@ -277,7 +277,7 @@ class CostCategoryTypeSelector extends StatelessWidget {
                             ),
                             trailing: Icon(
                               Icons.swipe_left,
-                              color: Colors.grey.shade400,
+                              color: Theme.of(context).colorScheme.outline,
                               size: 20,
                             ),
                           ),
@@ -293,4 +293,3 @@ class CostCategoryTypeSelector extends StatelessWidget {
     );
   }
 }
-

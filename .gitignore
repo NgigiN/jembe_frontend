@@ -44,4 +44,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-S*.md
+# Local dev tooling (install/build/run helper scripts)
+/scripts/
+
+# Docs are local notes, not tracked - except the top-level README
+*.md
+!README.md

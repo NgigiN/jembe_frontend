@@ -18,7 +18,7 @@ class InfrastructureRemoteDataSourceImpl implements InfrastructureRemoteDataSour
   @override
   Future<List<InfrastructureModel>> getInfrastructures() async {
     try {
-      final response = await dio.get('/api/v1/infrastructure');
+      final response = await dio.get<dynamic>('/api/v1/infrastructure');
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -42,7 +42,7 @@ class InfrastructureRemoteDataSourceImpl implements InfrastructureRemoteDataSour
   @override
   Future<InfrastructureModel> addInfrastructure(InfrastructureModel infrastructure) async {
     try {
-      final response = await dio.post(
+      final response = await dio.post<dynamic>(
         '/api/v1/infrastructure',
         data: infrastructure.toJson(),
       );
@@ -63,7 +63,7 @@ class InfrastructureRemoteDataSourceImpl implements InfrastructureRemoteDataSour
   @override
   Future<InfrastructureModel> updateInfrastructure(InfrastructureModel infrastructure) async {
     try {
-      final response = await dio.put(
+      final response = await dio.put<dynamic>(
         '/api/v1/infrastructure/${infrastructure.id}',
         data: infrastructure.toJson(),
       );
@@ -84,7 +84,7 @@ class InfrastructureRemoteDataSourceImpl implements InfrastructureRemoteDataSour
   @override
   Future<void> deleteInfrastructure(String id) async {
     try {
-      final response = await dio.delete('/api/v1/infrastructure/$id');
+      final response = await dio.delete<dynamic>('/api/v1/infrastructure/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         final msg = extractServerErrorMessage(response.data);

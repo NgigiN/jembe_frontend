@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/constants/harvest_units.dart';
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
@@ -16,6 +18,8 @@ import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/season_page.dart';
 import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
 import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/harvest.dart';
@@ -62,11 +66,11 @@ class _HarvestPageState extends State<HarvestPage> {
         listener: (context, state) {
           if (state is HarvestLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.success(state.successMessage!),
+              AppSnackBar.success(context, state.successMessage!),
             );
           } else if (state is HarvestError && state.harvests.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.error(state.message),
+              AppSnackBar.error(context, state.message),
             );
           }
         },
@@ -173,6 +177,7 @@ class _HarvestPageState extends State<HarvestPage> {
           'Delete ${_formatQuantity(harvest.quantity)} ${harvest.unit}? This cannot be undone.',
     );
     if (confirmed == true && context.mounted) {
+      SuccessFeedback.deleted();
       context.read<HarvestBloc>().add(DeleteHarvestEvent(harvest.id));
     }
   }
@@ -187,9 +192,9 @@ class _HarvestPageState extends State<HarvestPage> {
 
     if (seasons.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add at least one season first'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('Please add at least one season first'),
+          backgroundColor: context.statusColors.warning,
         ),
       );
       return;
@@ -247,22 +252,26 @@ class _HarvestPageState extends State<HarvestPage> {
                       key: formKey,
                       child: Column(
                         children: [
-                          DropdownButtonFormField<String>(
-                            initialValue: selectedSeasonId,
-                            decoration: const InputDecoration(
-                              labelText: 'Season *',
-                              border: OutlineInputBorder(),
-                            ),
-                            items: seasons.map((season) {
-                              return DropdownMenuItem<String>(
-                                value: season.id,
-                                child: Text(season.name),
+                          BlocBuilder<SeasonBloc, SeasonState>(
+                            builder: (context, seasonState) {
+                              final liveSeasons = seasonState is SeasonLoaded
+                                  ? seasonState.seasons
+                                  : seasons;
+                              return EntityPickerWithAdd<Season>(
+                                items: liveSeasons,
+                                selectedId: selectedSeasonId,
+                                idOf: (season) => season.id,
+                                labelOf: (season) => season.name,
+                                labelText: 'Season *',
+                                validator: (value) => requiredSelection(
+                                  value,
+                                  fieldLabel: 'season',
+                                ),
+                                onChanged: (value) {
+                                  setState(() => selectedSeasonId = value);
+                                },
+                                onAddNew: showAddSeasonDialog,
                               );
-                            }).toList(),
-                            validator: (value) =>
-                                requiredSelection(value, fieldLabel: 'season'),
-                            onChanged: (value) {
-                              setState(() => selectedSeasonId = value);
                             },
                           ),
                           const SizedBox(height: 16),
@@ -275,9 +284,9 @@ class _HarvestPageState extends State<HarvestPage> {
                           const SizedBox(height: 16),
                           DropdownButtonFormField<String>(
                             initialValue: selectedUnit,
+                            isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'Unit *',
-                              border: OutlineInputBorder(),
                             ),
                             items: [
                               ...harvestUnitPresets.map(
@@ -396,6 +405,7 @@ class _HarvestPageState extends State<HarvestPage> {
                           date: selectedDate,
                           notes: notes,
                         );
+                        SuccessFeedback.saved();
                         context
                             .read<HarvestBloc>()
                             .add(AddHarvestEvent(newHarvest));
@@ -411,6 +421,7 @@ class _HarvestPageState extends State<HarvestPage> {
                           createdAt: harvest.createdAt,
                           updatedAt: DateTime.now(),
                         );
+                        SuccessFeedback.saved();
                         context
                             .read<HarvestBloc>()
                             .add(UpdateHarvestEvent(updatedHarvest));

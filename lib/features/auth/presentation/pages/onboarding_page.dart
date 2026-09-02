@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
@@ -234,7 +235,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           icon: Icons.eco,
           title: 'Start with Plants',
           subtitle: 'Add land, crops, and manage planting seasons',
-          color: Colors.green,
+          color: AppColors.plantCategory,
           isSelected: _selectedPath == 'plants',
           onTap: () => _selectPathAndContinue('plants'),
         ),
@@ -243,7 +244,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           icon: Icons.pets,
           title: 'Start with Animals',
           subtitle: 'Register animal types, herds, and track activities',
-          color: Colors.orange,
+          color: AppColors.animalCategory,
           isSelected: _selectedPath == 'animals',
           onTap: () => _selectPathAndContinue('animals'),
         ),

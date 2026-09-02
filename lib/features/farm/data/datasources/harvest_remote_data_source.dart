@@ -1,7 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
-import 'package:farm_tracker/core/logging/app_logger.dart';
-import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
 
 abstract class HarvestRemoteDataSource {
@@ -22,7 +20,7 @@ class HarvestRemoteDataSourceImpl implements HarvestRemoteDataSource {
           ? {'season_id': seasonId}
           : null;
 
-      final response = await dio.get(
+      final response = await dio.get<dynamic>(
         '/api/v1/harvests',
         queryParameters: queryParams,
       );
@@ -45,7 +43,7 @@ class HarvestRemoteDataSourceImpl implements HarvestRemoteDataSource {
   @override
   Future<HarvestModel> addHarvest(HarvestModel harvest) async {
     try {
-      final response = await dio.post(
+      final response = await dio.post<dynamic>(
         '/api/v1/harvests',
         data: harvest.toJson(),
       );
@@ -62,7 +60,7 @@ class HarvestRemoteDataSourceImpl implements HarvestRemoteDataSource {
   @override
   Future<HarvestModel> updateHarvest(HarvestModel harvest) async {
     try {
-      final response = await dio.put(
+      final response = await dio.put<dynamic>(
         '/api/v1/harvests/${harvest.id}',
         data: harvest.toJson(),
       );
@@ -79,7 +77,7 @@ class HarvestRemoteDataSourceImpl implements HarvestRemoteDataSource {
   @override
   Future<void> deleteHarvest(String id) async {
     try {
-      final response = await dio.delete('/api/v1/harvests/$id');
+      final response = await dio.delete<dynamic>('/api/v1/harvests/$id');
       if (response.statusCode != 200) {
         throw const ServerException('Failed to delete harvest');
       }

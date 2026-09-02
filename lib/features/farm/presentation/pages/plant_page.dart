@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/validation/field_limits.dart';
 import 'package:farm_tracker/core/validation/input_formatters.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
@@ -22,6 +23,64 @@ import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 import 'package:farm_tracker/features/farm/data/models/plant_model.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+
+/// Opens the standard "Add New Plant" form and resolves once it closes: the
+/// new plant's id if the add succeeded, or null if the sheet was dismissed
+/// without submitting. Lets other pickers (e.g. Season's plant dropdown)
+/// reuse this exact flow instead of duplicating it.
+Future<String?> showAddPlantDialog(BuildContext context) async {
+  final bloc = context.read<PlantBloc>();
+  final beforeIds = bloc.state.plants.map((plant) => plant.id).toSet();
+  String? newId;
+
+  final subscription = bloc.stream.listen((state) {
+    if (state is PlantLoaded && state.successMessage == 'Crop added') {
+      for (final plant in state.plants) {
+        if (!beforeIds.contains(plant.id)) {
+          newId = plant.id;
+          break;
+        }
+      }
+    }
+  });
+
+  final formKey = GlobalKey<FormState>();
+  final nameController = TextEditingController();
+  final varietyController = TextEditingController();
+
+  await EntityFormSheet.show(
+    context: context,
+    title: 'Add New Plant',
+    heightFactor: 0.5,
+    submitLabel: 'Add Plant',
+    formKey: formKey,
+    fields: _PlantPageState._plantFormFields(
+      nameController: nameController,
+      varietyController: varietyController,
+    ),
+    onSubmit: (sheetContext) async {
+      final userId = await UserUtils.getCurrentUserId();
+      if (userId == null) {
+        ScaffoldMessenger.of(sheetContext).showSnackBar(
+          AppSnackBar.error(sheetContext, 'User not authenticated'),
+        );
+        return;
+      }
+
+      final plant = PlantModel.create(
+        userId: userId,
+        name: sanitizeText(nameController.text),
+        variety: sanitizeOptionalText(varietyController.text),
+      );
+      SuccessFeedback.saved();
+      bloc.add(AddPlantEvent(plant));
+      Navigator.pop(sheetContext);
+    },
+  );
+
+  await subscription.cancel();
+  return newId;
+}
 
 class PlantPage extends StatefulWidget {
   const PlantPage({super.key});
@@ -52,11 +111,11 @@ class _PlantPageState extends State<PlantPage> {
         listener: (context, state) {
           if (state is PlantLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.success(state.successMessage!),
+              AppSnackBar.success(context, state.successMessage!),
             );
           } else if (state is PlantError && state.plants.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.error(state.message),
+              AppSnackBar.error(context, state.message),
             );
           }
         },
@@ -129,41 +188,7 @@ class _PlantPageState extends State<PlantPage> {
   }
 
   void _showAddPlantDialog() {
-    final formKey = GlobalKey<FormState>();
-    final nameController = TextEditingController();
-    final varietyController = TextEditingController();
-
-    EntityFormSheet.show(
-      context: context,
-      title: 'Add New Plant',
-      heightFactor: 0.5,
-      submitLabel: 'Add Plant',
-      formKey: formKey,
-      fields: _plantFormFields(
-        nameController: nameController,
-        varietyController: varietyController,
-      ),
-      onSubmit: (sheetContext) async {
-        final userId = await UserUtils.getCurrentUserId();
-        if (userId == null) {
-          ScaffoldMessenger.of(sheetContext).showSnackBar(
-            const SnackBar(
-              content: Text('User not authenticated'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-
-        final plant = PlantModel.create(
-          userId: userId ?? '',
-          name: sanitizeText(nameController.text),
-          variety: sanitizeOptionalText(varietyController.text),
-        );
-        context.read<PlantBloc>().add(AddPlantEvent(plant));
-        Navigator.pop(sheetContext);
-      },
-    );
+    showAddPlantDialog(context);
   }
 
   void _showEditPlantDialog(Plant plant) {
@@ -190,13 +215,14 @@ class _PlantPageState extends State<PlantPage> {
           createdAt: plant.createdAt,
           updatedAt: DateTime.now(),
         );
+        SuccessFeedback.saved();
         context.read<PlantBloc>().add(UpdatePlantEvent(updatedPlant));
         Navigator.pop(sheetContext);
       },
     );
   }
 
-  List<Widget> _plantFormFields({
+  static List<Widget> _plantFormFields({
     required TextEditingController nameController,
     required TextEditingController varietyController,
   }) {
@@ -211,7 +237,6 @@ class _PlantPageState extends State<PlantPage> {
         controller: varietyController,
         decoration: const InputDecoration(
           labelText: 'Variety (Optional)',
-          border: OutlineInputBorder(),
         ),
         validator: optionalVariety,
         inputFormatters: nameFormatters(maxLength: FieldLimits.varietyMax),
@@ -230,6 +255,7 @@ class _PlantPageState extends State<PlantPage> {
           'Are you sure you want to delete "${plant.name}"${plant.variety != null ? ' (${plant.variety})' : ''}? This action cannot be undone.',
     );
     if (confirmed == true) {
+      SuccessFeedback.deleted();
       context.read<PlantBloc>().add(DeletePlantEvent(plant.id));
     }
   }

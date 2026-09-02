@@ -1,3 +1,5 @@
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
@@ -84,11 +86,11 @@ class _ActivityPageState extends State<ActivityPage> {
         listener: (context, state) {
           if (state is ActivityLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.success(state.successMessage!),
+              AppSnackBar.success(context, state.successMessage!),
             );
           } else if (state is ActivityError && state.activities.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.error(state.message),
+              AppSnackBar.error(context, state.message),
             );
           }
         },
@@ -220,16 +222,26 @@ class _ActivityPageState extends State<ActivityPage> {
     final herdState = context.read<HerdBloc>().state;
     final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
 
-    String? selectedSourceType = 'plant';
+    final selectedSourceType = widget.sourceType ?? 'plant';
+    final isPlant = selectedSourceType == 'plant';
     String? selectedSeasonId;
     String? selectedHerdId;
     DateTime? selectedDate = DateTime.now();
 
-    if (seasons.isEmpty && herds.isEmpty) {
+    if (isPlant && seasons.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add at least one season or herd first'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('Please add at least one season first'),
+          backgroundColor: context.statusColors.warning,
+        ),
+      );
+      return;
+    }
+    if (!isPlant && herds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please add at least one herd first'),
+          backgroundColor: context.statusColors.warning,
         ),
       );
       return;
@@ -253,7 +265,7 @@ class _ActivityPageState extends State<ActivityPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Add New Activity',
+                      'Add New ${isPlant ? 'Plant' : 'Animal'} Activity',
                       style: Theme.of(context)
                           .textTheme
                           .titleLarge
@@ -273,40 +285,12 @@ class _ActivityPageState extends State<ActivityPage> {
                       key: formKey,
                       child: Column(
                         children: [
-                          DropdownButtonFormField<String>(
-                            initialValue: selectedSourceType,
-                            decoration: const InputDecoration(
-                              labelText: 'Source Type *',
-                              border: OutlineInputBorder(),
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'plant',
-                                child: Text('Plant'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'animal',
-                                child: Text('Animal'),
-                              ),
-                            ],
-                            validator: (value) =>
-                                requiredSelection(value, fieldLabel: 'source type'),
-                            onChanged: (value) {
-                              setState(() {
-                                selectedSourceType = value ?? 'plant';
-                                selectedSeasonId = null;
-                                selectedHerdId = null;
-                                typeController.clear();
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          if (selectedSourceType == 'plant')
+                          if (isPlant)
                             DropdownButtonFormField<String>(
                               initialValue: selectedSeasonId,
+                              isExpanded: true,
                               decoration: const InputDecoration(
                                 labelText: 'Select Season *',
-                                border: OutlineInputBorder(),
                               ),
                               items: seasons
                                   .map<DropdownMenuItem<String>>((season) {
@@ -323,16 +307,16 @@ class _ActivityPageState extends State<ActivityPage> {
                                 });
                               },
                             ),
-                          if (selectedSourceType == 'animal')
+                          if (!isPlant)
                             BlocBuilder<HerdBloc, HerdState>(
                               builder: (context, herdState) {
                                 if (herdState is HerdLoaded) {
                                   final herds = herdState.herds;
                                   return DropdownButtonFormField<String>(
                                     initialValue: selectedHerdId,
+                                    isExpanded: true,
                                     decoration: const InputDecoration(
                                       labelText: 'Select Herd *',
-                                      border: OutlineInputBorder(),
                                     ),
                                     items: herds.map((herd) {
                                       return DropdownMenuItem<String>(
@@ -354,16 +338,13 @@ class _ActivityPageState extends State<ActivityPage> {
                                 return const CircularProgressIndicator();
                               },
                             ),
-                          if (selectedSourceType == 'plant' ||
-                              selectedSourceType == 'animal')
-                            const SizedBox(height: 16),
+                          const SizedBox(height: 16),
                           CostCategoryTypeSelector(
                             categoryKind: 'activity',
-                            sourceType: selectedSourceType!,
+                            sourceType: selectedSourceType,
                             selectedType: typeController.text,
                             labelText: 'Activity Type *',
                             hintText: 'Select activity type',
-                            addButtonBackgroundColor: Colors.green.shade50,
                             validator: (value) => requiredName(
                               value,
                               fieldLabel: 'Activity type',
@@ -426,23 +407,22 @@ class _ActivityPageState extends State<ActivityPage> {
                         return;
                       }
 
-                      final sourceId = selectedSourceType == 'plant'
-                          ? selectedSeasonId!
-                          : selectedHerdId!;
+                      final sourceId =
+                          isPlant ? selectedSeasonId! : selectedHerdId!;
 
                       final details = sanitizeOptionalText(detailsController.text);
 
                       final activity = ActivityModel.create(
-                        sourceType: selectedSourceType!,
+                        sourceType: selectedSourceType,
                         sourceId: sourceId,
-                        animalId:
-                            selectedSourceType == 'animal' ? 0 : null,
+                        animalId: isPlant ? null : 0,
                         type: sanitizeText(typeController.text),
                         details: details,
                         cost: parseNonNegativeDecimal(costController.text),
                         date: selectedDate!,
                         notes: details,
                       );
+                      SuccessFeedback.saved();
                       context.read<ActivityBloc>().add(
                         AddActivityEvent(activity),
                       );
@@ -490,22 +470,18 @@ class _ActivityPageState extends State<ActivityPage> {
     final herdState = context.read<HerdBloc>().state;
     final herds = herdState is HerdLoaded ? herdState.herds : <Herd>[];
 
-    String? selectedSourceType = activity.sourceType;
-    var selectedSeasonId = activity.sourceType == 'plant'
-        ? activity.sourceId
-        : null;
-    var selectedHerdId = activity.sourceType == 'animal'
-        ? activity.sourceId
-        : null;
+    final selectedSourceType = activity.sourceType;
+    final isPlant = selectedSourceType == 'plant';
+    var selectedSeasonId = isPlant ? activity.sourceId : null;
+    var selectedHerdId = isPlant ? null : activity.sourceId;
     String? selectedType = activity.type;
     DateTime? selectedDate = activity.date;
 
-    if ((selectedSourceType == 'plant' && seasons.isEmpty) ||
-        (selectedSourceType == 'animal' && herds.isEmpty)) {
+    if ((isPlant && seasons.isEmpty) || (!isPlant && herds.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No seasons or herds available for editing'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('No seasons or herds available for editing'),
+          backgroundColor: context.statusColors.warning,
         ),
       );
       return;
@@ -529,7 +505,7 @@ class _ActivityPageState extends State<ActivityPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Edit Activity',
+                      'Edit ${isPlant ? 'Plant' : 'Animal'} Activity',
                       style: Theme.of(context)
                           .textTheme
                           .titleLarge
@@ -549,42 +525,12 @@ class _ActivityPageState extends State<ActivityPage> {
                       key: formKey,
                       child: Column(
                         children: [
-                          DropdownButtonFormField<String>(
-                            initialValue: selectedSourceType,
-                            decoration: const InputDecoration(
-                              labelText: 'Source Type *',
-                              border: OutlineInputBorder(),
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'plant',
-                                child: Text('Plant'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'animal',
-                                child: Text('Animal'),
-                              ),
-                            ],
-                            validator: (value) =>
-                                requiredSelection(value, fieldLabel: 'source type'),
-                            onChanged: (value) {
-                              setState(() {
-                                selectedSourceType = value ?? 'plant';
-                                if (selectedSourceType == 'plant') {
-                                  selectedHerdId = null;
-                                } else {
-                                  selectedSeasonId = null;
-                                }
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          if (selectedSourceType == 'plant')
+                          if (isPlant)
                             DropdownButtonFormField<String>(
                               initialValue: selectedSeasonId,
+                              isExpanded: true,
                               decoration: const InputDecoration(
                                 labelText: 'Select Season *',
-                                border: OutlineInputBorder(),
                               ),
                               items: seasons
                                   .map<DropdownMenuItem<String>>((season) {
@@ -601,16 +547,16 @@ class _ActivityPageState extends State<ActivityPage> {
                                 });
                               },
                             ),
-                          if (selectedSourceType == 'animal')
+                          if (!isPlant)
                             BlocBuilder<HerdBloc, HerdState>(
                               builder: (context, herdState) {
                                 if (herdState is HerdLoaded) {
                                   final herds = herdState.herds;
                                   return DropdownButtonFormField<String>(
                                     initialValue: selectedHerdId,
+                                    isExpanded: true,
                                     decoration: const InputDecoration(
                                       labelText: 'Select Herd *',
-                                      border: OutlineInputBorder(),
                                     ),
                                     items: herds.map((herd) {
                                       return DropdownMenuItem<String>(
@@ -632,15 +578,12 @@ class _ActivityPageState extends State<ActivityPage> {
                                 return const CircularProgressIndicator();
                               },
                             ),
-                          if (selectedSourceType == 'plant' ||
-                              selectedSourceType == 'animal')
-                            const SizedBox(height: 16),
+                          const SizedBox(height: 16),
                           CostCategoryTypeSelector(
                             categoryKind: 'activity',
-                            sourceType: selectedSourceType!,
+                            sourceType: selectedSourceType,
                             selectedType: selectedType ?? '',
                             labelText: 'Activity Type *',
-                            addButtonBackgroundColor: Colors.blue.shade50,
                             validator: (value) => requiredName(
                               value,
                               fieldLabel: 'Activity type',
@@ -704,16 +647,14 @@ class _ActivityPageState extends State<ActivityPage> {
                         return;
                       }
 
-                      final sourceId = selectedSourceType == 'plant'
-                          ? selectedSeasonId!
-                          : selectedHerdId!;
+                      final sourceId =
+                          isPlant ? selectedSeasonId! : selectedHerdId!;
 
                       final updatedActivity = ActivityModel(
                         id: activity.id,
-                        sourceType: selectedSourceType!,
+                        sourceType: selectedSourceType,
                         sourceId: sourceId,
-                        animalId:
-                            selectedSourceType == 'animal' ? 0 : null,
+                        animalId: isPlant ? null : 0,
                         type: sanitizeText(selectedType!),
                         details: sanitizeOptionalText(descriptionController.text),
                         cost: parseNonNegativeDecimal(costController.text),
@@ -723,6 +664,7 @@ class _ActivityPageState extends State<ActivityPage> {
                         updatedAt: DateTime.now(),
                       );
 
+                      SuccessFeedback.saved();
                       context.read<ActivityBloc>().add(
                         UpdateActivityEvent(updatedActivity),
                       );
@@ -761,6 +703,7 @@ class _ActivityPageState extends State<ActivityPage> {
           'Are you sure you want to delete this ${activity.type.toLowerCase()} activity? This action cannot be undone.',
     );
     if (confirmed ?? false) {
+      SuccessFeedback.deleted();
       context.read<ActivityBloc>().add(
         DeleteActivityEvent(activity.id),
       );

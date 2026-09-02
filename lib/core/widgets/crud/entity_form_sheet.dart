@@ -90,9 +90,19 @@ class EntityFormSheet {
   }) {
     final viewInsets = MediaQuery.viewInsetsOf(context);
     final systemPadding = MediaQuery.paddingOf(context);
-    final availableHeight = MediaQuery.sizeOf(context).height -
-        viewInsets.bottom -
-        systemPadding.bottom;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+
+    // The sheet keeps its normal heightFactor height as the keyboard rises
+    // rather than shrinking to fit whatever's left — it only shrinks if the
+    // keyboard is tall enough that the normal height would overflow above
+    // the top of the screen.
+    final heightWithoutKeyboard =
+        (screenHeight - systemPadding.bottom) * heightFactor;
+    final maxAvailableHeight =
+        screenHeight - viewInsets.bottom - systemPadding.bottom;
+    final height = heightWithoutKeyboard < maxAvailableHeight
+        ? heightWithoutKeyboard
+        : maxAvailableHeight;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -101,7 +111,7 @@ class EntityFormSheet {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOut,
-        height: availableHeight * heightFactor,
+        height: height,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -122,7 +132,6 @@ class EntityFormSheet {
     required Widget child,
   }) {
     return SingleChildScrollView(
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.only(bottom: 24),
       child: child,
     );

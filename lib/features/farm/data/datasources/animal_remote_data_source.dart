@@ -18,7 +18,7 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
   @override
   Future<List<AnimalModel>> getAnimals() async {
     try {
-      final response = await dio.get('/api/v1/animals');
+      final response = await dio.get<dynamic>('/api/v1/animals');
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -41,7 +41,7 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
   @override
   Future<AnimalModel> addAnimal(AnimalModel animal) async {
     try {
-      final response = await dio.post(
+      final response = await dio.post<dynamic>(
         '/api/v1/animals',
         data: animal.toJson(),
       );
@@ -62,7 +62,7 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
   @override
   Future<AnimalModel> updateAnimal(AnimalModel animal) async {
     try {
-      final response = await dio.put(
+      final response = await dio.put<dynamic>(
         '/api/v1/animals/${animal.id}',
         data: animal.toJson(),
       );
@@ -83,7 +83,7 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
   @override
   Future<void> deleteAnimal(String id) async {
     try {
-      final response = await dio.delete('/api/v1/animals/$id');
+      final response = await dio.delete<dynamic>('/api/v1/animals/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         final msg = extractServerErrorMessage(response.data);

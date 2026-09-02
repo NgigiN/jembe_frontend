@@ -8,6 +8,7 @@ class Land extends Equatable {
     this.size,
     this.location,
     this.soilType,
+    this.tenureType,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -17,6 +18,9 @@ class Land extends Equatable {
   final double? size;
   final String? location;
   final String? soilType;
+
+  /// "owned" or "rented". Null means not recorded.
+  final String? tenureType;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -28,6 +32,7 @@ class Land extends Equatable {
     size,
     location,
     soilType,
+    tenureType,
     createdAt,
     updatedAt,
   ];

@@ -8,6 +8,8 @@ class Animal extends Equatable {
     required this.animalTypeId,
     required this.herdId,
     required this.birthDate,
+    this.sex,
+    this.acquisitionSource,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -18,6 +20,12 @@ class Animal extends Equatable {
   final String animalTypeId;
   final String herdId;
   final DateTime birthDate;
+
+  /// "male" or "female". Null means not recorded.
+  final String? sex;
+
+  /// "bought", "bredOnFarm", or "gift". Null means not recorded.
+  final String? acquisitionSource;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -29,6 +37,8 @@ class Animal extends Equatable {
         animalTypeId,
         herdId,
         birthDate,
+        sex,
+        acquisitionSource,
         createdAt,
         updatedAt,
       ];
