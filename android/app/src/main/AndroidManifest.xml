@@ -3,10 +3,14 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- allowBackup off: all real state lives server-side, and Auto Backup
+         would upload the plaintext SharedPreferences fallback (which can
+         hold the auth token when secure storage fails) to cloud backups. -->
     <application
         android:label="Shamba+"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
         android:extractNativeLibs="false"
         android:networkSecurityConfig="@xml/network_security_config"
         android:usesCleartextTraffic="false">

@@ -36,7 +36,8 @@ class HerdActivityModel extends HerdActivity {
       activityType: (json['activity_type'] ?? json['ActivityType'] ?? '').toString(),
       count: _parseInt(json['count'] ?? json['Count']),
       date: _parseDate(json['date'] ?? json['Date']),
-      notes: (json['notes'] ?? json['Notes'] ?? '').toString(),
+      // The backend stores and returns this field as `reason`.
+      notes: (json['reason'] ?? json['Reason'] ?? '').toString(),
       createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
     );
   }
@@ -61,7 +62,7 @@ class HerdActivityModel extends HerdActivity {
       'activity_type': activityType,
       'count': count,
       'date': date.toUtc().toIso8601String(),
-      'notes': notes ?? '',
+      'reason': notes ?? '',
     };
   }
 }

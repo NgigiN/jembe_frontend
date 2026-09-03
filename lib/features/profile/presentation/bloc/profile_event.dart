@@ -33,16 +33,4 @@ class UpdateProfileEvent extends ProfileEvent {
   ];
 }
 
-class ChangePasswordEvent extends ProfileEvent {
-  const ChangePasswordEvent({
-    required this.oldPassword,
-    required this.newPassword,
-  });
-  final String oldPassword;
-  final String newPassword;
-
-  @override
-  List<Object?> get props => [oldPassword, newPassword];
-}
-
 class DeleteAccountEvent extends ProfileEvent {}
