@@ -1,3 +1,4 @@
+import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/features/auth/data/services/google_sign_in_service.dart';
@@ -7,6 +8,7 @@ import 'package:farm_tracker/features/auth/domain/entities/user.dart';
 import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
+import 'package:farm_tracker/injection_container.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart' as auth_google;
@@ -78,6 +80,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     on<LogoutEvent>((event, emit) async {
       appLogger.logAuthEvent('Logout');
+      // Drop any cached protected-resource responses so a stale cache entry
+      // can't leak the previous user's data to whoever logs in next.
+      if (sl.isRegistered<CacheStore>()) {
+        await sl<CacheStore>().clean();
+      }
       await UserStorageService.clearUserData();
       final googleSignIn = auth_google.GoogleSignIn.instance;
       try {

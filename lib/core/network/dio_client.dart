@@ -3,6 +3,7 @@ import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
@@ -24,6 +25,8 @@ void _redactedLogPrint(Object object) {
 /// Factory for creating configured Dio instances
 class DioClientFactory {
   static Dio create({
+    required CacheStore cacheStore,
+    required SessionExpiryNotifier sessionExpiry,
     String? baseUrl,
     bool enableLogging = true,
     bool enableCache = true,
@@ -56,15 +59,19 @@ class DioClientFactory {
             // timer/size-triggered flush, including before login. Those
             // pre-login flushes are expected to 401 and are silently
             // dropped by AnalyticsService - a failed analytics flush must
-            // never throw, retry, or surface an error to the user. If a
-            // future force-logout or token-refresh action is added on this
-            // 401 branch, it needs an explicit carve-out that skips
-            // analytics requests (e.g. check the request path), or it will
-            // turn routine dropped telemetry into user-visible auth churn.
-            appLogger.warning(
-              LogCategory.auth,
-              'Unauthorized request - token may be expired',
-            );
+            // never throw, retry, or surface an error to the user. The
+            // public /auth/* endpoints (e.g. a bad Google token exchange)
+            // are expected to 401 too. Both are carved out below so a
+            // routine dropped-telemetry or failed-login 401 never turns
+            // into user-visible auth churn; every other 401 forces logout.
+            if (shouldForceLogoutOn401(error.requestOptions.path)) {
+              sessionExpiry.expire();
+            } else {
+              appLogger.warning(
+                LogCategory.auth,
+                'Unauthorized request - token may be expired',
+              );
+            }
           }
           return handler.next(error);
         },
@@ -76,7 +83,7 @@ class DioClientFactory {
       dio.interceptors.add(
         DioCacheInterceptor(
           options: CacheOptions(
-            store: MemCacheStore(),
+            store: cacheStore,
             maxStale: const Duration(minutes: 5),
           ),
         ),

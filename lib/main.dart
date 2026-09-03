@@ -3,11 +3,13 @@ import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/app_theme.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/question_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
@@ -36,6 +38,16 @@ void main() async {
   AppConfig.initialize();
 
   await di.init();
+
+  // A hard 401 on a protected resource (see session_expiry_notifier.dart)
+  // forces logout regardless of which screen is active. AuthBloc is a DI
+  // singleton (see injection_container.dart), so this reaches the exact
+  // instance BlocProvider hands to the widget tree below - logout when
+  // already logged out is a harmless no-op (UserStorageService.clearUserData
+  // and GoogleSignIn.signOut are both idempotent).
+  di.sl<SessionExpiryNotifier>().addListener(() {
+    di.sl<AuthBloc>().add(LogoutEvent());
+  });
 
   // Log app startup
   appLogger.info(LogCategory.general, 'Shamba+ App Starting');
