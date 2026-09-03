@@ -15,7 +15,7 @@ ContentItem _item({
     source: 'source',
     animalTypeTags: animalTypeTags,
     cropTags: cropTags,
-    publishedAt: DateTime(2026, 8, 1),
+    publishedAt: DateTime(2026, 8),
   );
 }
 

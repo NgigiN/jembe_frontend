@@ -1,14 +1,14 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_seasons.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_season.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_season.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_season.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_seasons.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/update_season.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
   SeasonBloc({
@@ -19,7 +19,7 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
   }) : super(SeasonInitial()) {
     on<GetSeasonsEvent>((event, emit) async {
       appLogger.debug(LogCategory.farm, 'GetSeasonsEvent triggered');
-      emit(SeasonLoading());
+      emit(const SeasonLoading());
 
       final result = await getSeasons(NoParams());
       result.fold(

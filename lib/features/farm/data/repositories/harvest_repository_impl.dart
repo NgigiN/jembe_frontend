@@ -30,7 +30,7 @@ class HarvestRepositoryImpl implements HarvestRepository {
       final harvests = await remoteDataSource.getHarvests(seasonId: seasonId);
       return Right(harvests);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -42,7 +42,7 @@ class HarvestRepositoryImpl implements HarvestRepository {
       final result = await remoteDataSource.addHarvest(_toModel(harvest));
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -54,7 +54,7 @@ class HarvestRepositoryImpl implements HarvestRepository {
       final result = await remoteDataSource.updateHarvest(_toModel(harvest));
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -66,7 +66,7 @@ class HarvestRepositoryImpl implements HarvestRepository {
       await remoteDataSource.deleteHarvest(id);
       return const Right(null);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

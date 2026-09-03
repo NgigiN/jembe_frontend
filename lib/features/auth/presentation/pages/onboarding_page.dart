@@ -1,6 +1,3 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
@@ -9,6 +6,9 @@ import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_event.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_state.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
@@ -194,7 +194,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 labelText: 'Location',
                 hintText: 'e.g., Nairobi, Kenya',
                 prefixIcon: const Icon(Icons.location_on),
-                validator: (value) => requiredLocation(value),
+                validator: requiredLocation,
               ),
             ],
           ),

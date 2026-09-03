@@ -1,12 +1,6 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
@@ -33,6 +27,12 @@ import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animal_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class MockAnimalBloc extends MockBloc<AnimalEvent, AnimalState>
     implements AnimalBloc {}

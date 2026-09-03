@@ -1,24 +1,22 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
-import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
-import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
-import 'package:farm_tracker/features/farm/presentation/pages/animal_type_page.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
@@ -27,7 +25,9 @@ import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.d
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/animal_type_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Validates and submits the "Register New Herd" form. A top-level function
 /// (not inlined in the button's onPressed) because `selectedStartDate` is a
@@ -363,7 +363,7 @@ class _HerdPageState extends State<HerdPage> {
     );
     String? selectedAnimalTypeId = herd.animalTypeId;
     DateTime? selectedStartDate = herd.startDate;
-    DateTime? selectedEndDate = herd.endDate;
+    var selectedEndDate = herd.endDate;
 
     showModalBottomSheet<void>(
       context: context,
@@ -551,7 +551,7 @@ class _HerdPageState extends State<HerdPage> {
         controller: locationController,
         labelText: 'Location *',
         hintText: 'e.g., North Field A',
-        validator: (value) => requiredLocation(value),
+        validator: requiredLocation,
       ),
       const SizedBox(height: 16),
       ValidatedIntegerField(
@@ -686,7 +686,7 @@ class _HerdPageState extends State<HerdPage> {
       message:
           'Are you sure you want to delete "${herd.name}"? This action cannot be undone.',
     );
-    if (confirmed == true) {
+    if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<HerdBloc>().add(DeleteHerdEvent(herd.id));
     }

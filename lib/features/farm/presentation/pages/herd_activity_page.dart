@@ -1,22 +1,22 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
-import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
-import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class HerdActivityPage extends StatefulWidget {
   const HerdActivityPage({super.key});
@@ -283,10 +283,9 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                                   return positiveIntMax(
                                     value,
                                     max: selectedHerd.currentHeadCount,
-                                    fieldLabel: 'Count',
                                   );
                                 }
-                                return positiveInt(value, fieldLabel: 'Count');
+                                return positiveInt(value);
                               },
                             ),
                             const SizedBox(height: 20),

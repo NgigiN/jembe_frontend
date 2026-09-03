@@ -1,10 +1,10 @@
 import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
-import 'package:farm_tracker/features/farm/domain/entities/infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/repositories/infrastructure_repository.dart';
 import 'package:farm_tracker/features/farm/data/datasources/infrastructure_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/infrastructure_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/infrastructure.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/infrastructure_repository.dart';
 
 class InfrastructureRepositoryImpl implements InfrastructureRepository {
   InfrastructureRepositoryImpl({required this.remoteDataSource});
@@ -16,7 +16,7 @@ class InfrastructureRepositoryImpl implements InfrastructureRepository {
       final list = await remoteDataSource.getInfrastructures();
       return Right(list);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -47,7 +47,7 @@ class InfrastructureRepositoryImpl implements InfrastructureRepository {
       final result = await remoteDataSource.addInfrastructure(model);
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -83,7 +83,7 @@ class InfrastructureRepositoryImpl implements InfrastructureRepository {
       final result = await remoteDataSource.updateInfrastructure(updatedModel);
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -97,7 +97,7 @@ class InfrastructureRepositoryImpl implements InfrastructureRepository {
       await remoteDataSource.deleteInfrastructure(id);
       return const Right(null);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {

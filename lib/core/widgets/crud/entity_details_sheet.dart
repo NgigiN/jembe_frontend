@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:flutter/material.dart';
 
 class EntityDetailsSheet extends StatelessWidget {
   const EntityDetailsSheet({

@@ -26,7 +26,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return Right(userModel);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

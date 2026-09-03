@@ -1,15 +1,15 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animal_type_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 class MockAnimalTypeBloc extends MockBloc<AnimalTypeEvent, AnimalTypeState>
     implements AnimalTypeBloc {}

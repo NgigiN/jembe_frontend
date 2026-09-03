@@ -1,10 +1,10 @@
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
-import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
-import 'package:farm_tracker/features/farm/domain/repositories/plant_repository.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/features/farm/data/datasources/plant_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/plant_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/plant_repository.dart';
 
 class PlantRepositoryImpl implements PlantRepository {
   PlantRepositoryImpl({required this.remoteDataSource});
@@ -16,7 +16,7 @@ class PlantRepositoryImpl implements PlantRepository {
       final plants = await remoteDataSource.getPlants();
       return Right(plants);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -34,7 +34,7 @@ class PlantRepositoryImpl implements PlantRepository {
       final result = await remoteDataSource.addPlant(plantModel);
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -54,7 +54,7 @@ class PlantRepositoryImpl implements PlantRepository {
       final result = await remoteDataSource.updatePlant(plantModel);
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -66,7 +66,7 @@ class PlantRepositoryImpl implements PlantRepository {
       await remoteDataSource.deletePlant(id);
       return const Right(null);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

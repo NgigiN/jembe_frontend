@@ -1,31 +1,31 @@
-import 'package:flutter/material.dart';
+import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/utils/responsive_utils.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/utils/responsive_utils.dart';
-import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
-import 'package:farm_tracker/core/navigation/app_router.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/revenue_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/revenue_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/revenue_state.dart';
+import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
+import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/revenue_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/revenue_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/revenue_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
-import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
-import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
-import 'package:farm_tracker/features/farm/domain/entities/season.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/season_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class RevenuePage extends StatefulWidget {
   const RevenuePage({super.key});
@@ -285,7 +285,7 @@ class _RevenuePageState extends State<RevenuePage> {
   }
 
   void _showRevenueDetails(BuildContext context, Revenue revenue) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -295,7 +295,7 @@ class _RevenuePageState extends State<RevenuePage> {
 }
 
 class RevenueDetailsSheet extends StatelessWidget {
-  const RevenueDetailsSheet({super.key, required this.revenue});
+  const RevenueDetailsSheet({required this.revenue, super.key});
   final Revenue revenue;
 
   @override
@@ -449,7 +449,7 @@ class RevenueDetailsSheet extends StatelessWidget {
   }
 
   void _confirmDelete(BuildContext context, String id) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Revenue'),
@@ -710,8 +710,9 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                               firstDate: DateTime(2000),
                               lastDate: DateTime.now(),
                             );
-                            if (date != null)
+                            if (date != null) {
                               setState(() => _selectedDate = date);
+                            }
                           },
                         ),
                         const SizedBox(height: 16),
@@ -791,7 +792,6 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
 
     final dateError = validateDateNotInFuture(
       _selectedDate,
-      fieldLabel: 'Date',
     );
     if (dateError != null) {
       ScaffoldMessenger.of(context).showSnackBar(AppSnackBar.error(context, dateError));

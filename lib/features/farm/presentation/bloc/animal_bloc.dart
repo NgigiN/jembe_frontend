@@ -1,13 +1,13 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_animals.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_animal.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_animal.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_animals.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/update_animal.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
   AnimalBloc({

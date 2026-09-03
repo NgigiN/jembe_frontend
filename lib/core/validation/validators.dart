@@ -47,7 +47,7 @@ String? requiredName(String? value, {String fieldLabel = 'Name'}) =>
       maxLength: FieldLimits.nameMax,
       pattern: _namePattern,
       invalidCharsMessage:
-          '$fieldLabel may only contain letters, numbers, spaces, and - \' .',
+          "$fieldLabel may only contain letters, numbers, spaces, and - ' .",
     );
 
 String? optionalName(String? value, {String fieldLabel = 'Name'}) =>
@@ -57,7 +57,7 @@ String? optionalName(String? value, {String fieldLabel = 'Name'}) =>
       maxLength: FieldLimits.nameMax,
       pattern: _namePattern,
       invalidCharsMessage:
-          '$fieldLabel may only contain letters, numbers, spaces, and - \' .',
+          "$fieldLabel may only contain letters, numbers, spaces, and - ' .",
     );
 
 String? requiredLocation(String? value, {String fieldLabel = 'Location'}) =>
@@ -67,7 +67,7 @@ String? requiredLocation(String? value, {String fieldLabel = 'Location'}) =>
       maxLength: FieldLimits.locationMax,
       pattern: _locationPattern,
       invalidCharsMessage:
-          '$fieldLabel may only contain letters, numbers, spaces, and - \' . ,',
+          "$fieldLabel may only contain letters, numbers, spaces, and - ' . ,",
     );
 
 String? optionalLocation(String? value, {String fieldLabel = 'Location'}) =>
@@ -77,7 +77,7 @@ String? optionalLocation(String? value, {String fieldLabel = 'Location'}) =>
       maxLength: FieldLimits.locationMax,
       pattern: _locationPattern,
       invalidCharsMessage:
-          '$fieldLabel may only contain letters, numbers, spaces, and - \' . ,',
+          "$fieldLabel may only contain letters, numbers, spaces, and - ' . ,",
     );
 
 String? optionalNotes(String? value, {String fieldLabel = 'Notes'}) =>

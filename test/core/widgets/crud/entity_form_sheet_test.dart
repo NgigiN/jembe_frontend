@@ -70,7 +70,6 @@ void main() {
         tester,
         size: const Size(400, 800),
         viewInsets: const EdgeInsets.only(bottom: 300),
-        heightFactor: 0.8,
       );
 
       final height = tester.getSize(find.byType(AnimatedContainer)).height;

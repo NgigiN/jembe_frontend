@@ -1,9 +1,9 @@
-import 'package:flutter/services.dart';
 import 'package:farm_tracker/core/validation/field_limits.dart';
+import 'package:flutter/services.dart';
 
 final RegExp _namePattern = RegExp(r"^[a-zA-Z0-9\s\-'.]+$");
 final RegExp _locationPattern = RegExp(r"^[a-zA-Z0-9\s\-'.,]+$");
-final RegExp _notesPattern = RegExp(r"^[\s\S]*$");
+final RegExp _notesPattern = RegExp(r'^[\s\S]*$');
 
 List<TextInputFormatter> nameFormatters({int maxLength = FieldLimits.nameMax}) =>
     [

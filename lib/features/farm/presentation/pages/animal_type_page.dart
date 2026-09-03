@@ -1,26 +1,26 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
-import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
+import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
-import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
-import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Opens the standard "Add Animal Type" form and resolves once it closes:
 /// the new animal type's id if the add succeeded, or null if the sheet was
@@ -133,7 +133,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
 
           final animalTypes = state.animalTypes;
           if (animalTypes.isEmpty) {
-            return EntityEmptyView(
+            return const EntityEmptyView(
               icon: Icons.category,
               title: 'No animal types added yet',
               subtitle: 'Tap the + button to add your first animal type',
@@ -149,7 +149,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
                   icon: Icons.category,
                   iconColor: AppColors.animalCategory,
                   title: animalType.name,
-                  subtitle: animalType.notes?.isNotEmpty == true
+                  subtitle: animalType.notes?.isNotEmpty ?? false
                       ? animalType.notes!
                       : 'Added ${_formatDate(animalType.createdAt)}',
                   onTap: () => _showAnimalTypeDetails(animalType),
@@ -160,7 +160,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
-          onPressed: () => _showAddAnimalTypeDialog(),
+          onPressed: _showAddAnimalTypeDialog,
           child: const Icon(Icons.add),
         ),
       ),
@@ -178,7 +178,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
       details: [
         EntityDetailRow(
           'Notes',
-          animalType.notes?.isNotEmpty == true ? animalType.notes! : '—',
+          animalType.notes?.isNotEmpty ?? false ? animalType.notes! : '—',
         ),
         EntityDetailRow('Created', _formatDate(animalType.createdAt)),
       ],
@@ -241,14 +241,14 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
     ];
   }
 
-  void _showDeleteConfirmation(AnimalType animalType) async {
+  Future<void> _showDeleteConfirmation(AnimalType animalType) async {
     final confirmed = await EntityDeleteDialog.show(
       context: context,
       title: 'Delete Animal Type',
       message:
           'Are you sure you want to delete "${animalType.name}"? This action cannot be undone.',
     );
-    if (confirmed == true) {
+    if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<AnimalTypeBloc>().add(
         DeleteAnimalTypeEvent(animalType.id),

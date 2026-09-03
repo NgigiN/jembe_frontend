@@ -1,6 +1,18 @@
 import 'package:farm_tracker/features/farm/domain/entities/harvest.dart';
 
 class HarvestModel extends Harvest {
+
+  const HarvestModel({
+    required super.id,
+    required super.seasonId,
+    required super.quantity,
+    required super.unit,
+    required super.date,
+    required super.createdAt,
+    required super.updatedAt,
+    super.notes,
+    super.revenueId,
+  });
   factory HarvestModel.create({
     required String seasonId,
     required double quantity,
@@ -20,18 +32,6 @@ class HarvestModel extends Harvest {
       updatedAt: now,
     );
   }
-
-  const HarvestModel({
-    required super.id,
-    required super.seasonId,
-    required super.quantity,
-    required super.unit,
-    required super.date,
-    required super.createdAt,
-    required super.updatedAt,
-    super.notes,
-    super.revenueId,
-  });
 
   factory HarvestModel.fromJson(Map<String, dynamic> json) {
     final revenueIdValue = json['RevenueID'] ?? json['revenue_id'];

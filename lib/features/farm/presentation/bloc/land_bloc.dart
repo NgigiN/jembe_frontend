@@ -1,13 +1,13 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_lands.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_land.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_land.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_land.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_lands.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/update_land.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class LandBloc extends Bloc<LandEvent, LandState> {
 
@@ -19,7 +19,7 @@ class LandBloc extends Bloc<LandEvent, LandState> {
   })
     : super(LandInitial()) {
     on<GetLandsEvent>((event, emit) async {
-      emit(LandLoading());
+      emit(const LandLoading());
       final result = await getLands(NoParams());
       result.fold(
         (failure) => emit(LandError(resolveFailureMessage(failure, 'Failed to load lands'))),

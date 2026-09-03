@@ -22,7 +22,7 @@ void main() {
 
   group('LandModel.fromJson', () {
     test('parses snake_case tenure_type', () {
-      final land = LandModel.fromJson({
+      final land = LandModel.fromJson(const {
         'id': '1',
         'user_id': 'user-1',
         'name': 'North Field',
@@ -33,7 +33,7 @@ void main() {
     });
 
     test('parses missing tenure_type as null', () {
-      final land = LandModel.fromJson({
+      final land = LandModel.fromJson(const {
         'id': '1',
         'user_id': 'user-1',
         'name': 'North Field',

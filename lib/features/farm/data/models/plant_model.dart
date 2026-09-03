@@ -1,6 +1,14 @@
 import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 
 class PlantModel extends Plant {
+  const PlantModel({
+    required super.id,
+    required super.userId,
+    required super.name,
+    required super.createdAt,
+    required super.updatedAt,
+    super.variety,
+  });
   factory PlantModel.create({
     required String userId,
     required String name,
@@ -16,14 +24,6 @@ class PlantModel extends Plant {
       updatedAt: now,
     );
   }
-  const PlantModel({
-    required super.id,
-    required super.userId,
-    required super.name,
-    required super.createdAt,
-    required super.updatedAt,
-    super.variety,
-  });
 
   factory PlantModel.fromJson(Map<String, dynamic> json) {
     final varietyValue = json['Variety'] ?? json['variety'];

@@ -1,7 +1,4 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
@@ -13,6 +10,9 @@ import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/analysis_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 class MockAnalysisBloc extends MockBloc<AnalysisEvent, AnalysisState>
     implements AnalysisBloc {}
@@ -36,9 +36,9 @@ void main() {
         name: 'Long Rains 2026',
         plantId: 'p1',
         landId: 'l1',
-        startDate: DateTime(2026, 3, 1),
-        createdAt: DateTime(2026, 3, 1),
-        updatedAt: DateTime(2026, 3, 1),
+        startDate: DateTime(2026, 3),
+        createdAt: DateTime(2026, 3),
+        updatedAt: DateTime(2026, 3),
       );
       final closedHerd = Herd(
         id: '2',
@@ -48,10 +48,10 @@ void main() {
         location: 'Coop A',
         initialHeadCount: 100,
         currentHeadCount: 0,
-        startDate: DateTime(2025, 1, 1),
-        endDate: DateTime(2025, 2, 1),
-        createdAt: DateTime(2025, 1, 1),
-        updatedAt: DateTime(2025, 2, 1),
+        startDate: DateTime(2025),
+        endDate: DateTime(2025, 2),
+        createdAt: DateTime(2025),
+        updatedAt: DateTime(2025, 2),
       );
 
       final detailedCosts = FarmDetailedCost(
@@ -62,7 +62,7 @@ void main() {
             name: 'Long Rains 2026',
             category: 'Maize',
             location: 'Field A',
-            startDate: DateTime(2026, 3, 1),
+            startDate: DateTime(2026, 3),
             inputCost: 500,
             activityCost: 200,
             totalCost: 700,
@@ -73,8 +73,8 @@ void main() {
             name: 'Broiler Batch 1',
             category: 'Broilers',
             location: 'Coop A',
-            startDate: DateTime(2025, 1, 1),
-            endDate: DateTime(2025, 2, 1),
+            startDate: DateTime(2025),
+            endDate: DateTime(2025, 2),
             inputCost: 300,
             activityCost: 100,
             totalCost: 400,

@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('HerdModel', () {
@@ -53,10 +53,10 @@ void main() {
         location: 'Coop A',
         initialHeadCount: 100,
         currentHeadCount: 100,
-        startDate: DateTime.utc(2026, 3, 1),
+        startDate: DateTime.utc(2026, 3),
         endDate: DateTime.utc(2026, 4, 20),
-        createdAt: DateTime.utc(2026, 3, 1),
-        updatedAt: DateTime.utc(2026, 3, 1),
+        createdAt: DateTime.utc(2026, 3),
+        updatedAt: DateTime.utc(2026, 3),
       );
 
       final json = herd.toJson();

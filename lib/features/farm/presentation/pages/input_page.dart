@@ -1,45 +1,44 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/status_colors.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
-import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/cost_category_type_selector.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
-import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/input_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/input_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/input_state.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
+import 'package:farm_tracker/features/farm/data/models/input_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/entities/input.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
+import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
-import 'package:farm_tracker/features/farm/domain/entities/input.dart';
-import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
-import 'package:farm_tracker/features/farm/domain/entities/land.dart';
-import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/input_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/input_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/input_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
-import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event.dart';
-
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
-import 'package:farm_tracker/features/farm/data/models/input_model.dart';
+import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Opens the standard "Add Input" form. When [lockedHerdId] is set, the
 /// Herd picker is skipped and the input is pre-scoped to that herd (and
@@ -59,7 +58,7 @@ Future<void> showAddInputDialog(
   final selectedSourceType = sourceType ?? 'plant';
   final isPlant = selectedSourceType == 'plant';
   String? selectedSeasonId;
-  String? selectedHerdId = lockedHerdId;
+  var selectedHerdId = lockedHerdId;
 
   final seasonState = context.read<SeasonBloc>().state;
   final seasons = seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
@@ -89,7 +88,7 @@ Future<void> showAddInputDialog(
     return;
   }
 
-  showModalBottomSheet(
+  showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -349,7 +348,7 @@ class _InputPageState extends State<InputPage> {
 
           final inputs = state.inputs;
           if (inputs.isEmpty) {
-            return EntityEmptyView(
+            return const EntityEmptyView(
               icon: Icons.input,
               title: 'No inputs registered yet',
               subtitle: 'Tap the + button to add your first input',
@@ -479,7 +478,7 @@ class _InputPageState extends State<InputPage> {
       return;
     }
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -688,14 +687,14 @@ class _InputPageState extends State<InputPage> {
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, Input input) async {
+  Future<void> _showDeleteConfirmation(BuildContext context, Input input) async {
     final confirmed = await EntityDeleteDialog.show(
       context: context,
       title: 'Delete Input',
       message:
           'Are you sure you want to delete this ${input.type.toLowerCase()} input? This action cannot be undone.',
     );
-    if (confirmed == true) {
+    if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<InputBloc>().add(DeleteInputEvent(input.id));
     }

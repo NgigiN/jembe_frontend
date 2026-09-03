@@ -12,8 +12,7 @@ class AddRevenueParams extends Equatable {
     required this.type,
     required this.quantity,
     required this.unitPrice,
-    this.total,
-    required this.date,
+    required this.date, this.total,
     this.notes,
   });
   final String source;

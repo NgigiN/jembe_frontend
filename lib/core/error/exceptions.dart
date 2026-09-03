@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-abstract class Exceptions extends Equatable {
+abstract class Exceptions extends Equatable implements Exception {
   const Exceptions();
 
   @override

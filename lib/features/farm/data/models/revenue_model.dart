@@ -1,14 +1,27 @@
 import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
 
 class RevenueModel extends Revenue {
+  const RevenueModel({
+    required super.id,
+    required super.userId,
+    required super.source,
+    required super.sourceId,
+    required super.type,
+    required super.quantity,
+    required super.unitPrice,
+    required super.total,
+    required super.date,
+    required super.createdAt,
+    required super.updatedAt,
+    super.notes,
+  });
   factory RevenueModel.create({
     required String source,
     required String sourceId,
     required String type,
     required double quantity,
     required double unitPrice,
-    double? total,
-    required DateTime date,
+    required DateTime date, double? total,
     String? notes,
   }) {
     final now = DateTime.now();
@@ -28,20 +41,6 @@ class RevenueModel extends Revenue {
       updatedAt: now,
     );
   }
-  const RevenueModel({
-    required super.id,
-    required super.userId,
-    required super.source,
-    required super.sourceId,
-    required super.type,
-    required super.quantity,
-    required super.unitPrice,
-    required super.total,
-    required super.date,
-    required super.createdAt,
-    required super.updatedAt,
-    super.notes,
-  });
 
   factory RevenueModel.fromJson(Map<String, dynamic> json) {
     final notesValue = json['notes'] ?? json['Notes'];

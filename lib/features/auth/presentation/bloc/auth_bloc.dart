@@ -1,15 +1,14 @@
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_sign_in/google_sign_in.dart' as auth_google;
-import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:farm_tracker/features/auth/data/services/google_sign_in_service.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:farm_tracker/features/auth/domain/entities/user.dart';
-
+import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_sign_in/google_sign_in.dart' as auth_google;
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc({required this.googleSignInUseCase}) : super(AuthInitial()) {
@@ -29,18 +28,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       try {
         await GoogleSignInService.ensureInitialized();
 
-        final auth_google.GoogleSignIn googleSignIn = auth_google.GoogleSignIn.instance;
+        final googleSignIn = auth_google.GoogleSignIn.instance;
 
-        final auth_google.GoogleSignInAccount? account = await googleSignIn.authenticate();
+        final account = await googleSignIn.authenticate();
 
-        if (account == null) {
-          appLogger.logAuthEvent('Google Sign-In cancelled by user');
-          emit(AuthError('Sign-in cancelled'));
-          return;
-        }
-
-        final auth_google.GoogleSignInAuthentication auth = await account.authentication;
-        final String? idToken = auth.idToken;
+        final auth = account.authentication;
+        final idToken = auth.idToken;
 
         if (idToken == null) {
           emit(AuthError('Failed to retrieve ID Token from Google'));
@@ -80,7 +73,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LogoutEvent>((event, emit) async {
       appLogger.logAuthEvent('Logout');
       await UserStorageService.clearUserData();
-      final auth_google.GoogleSignIn googleSignIn = auth_google.GoogleSignIn.instance;
+      final googleSignIn = auth_google.GoogleSignIn.instance;
       try {
         await googleSignIn.signOut();
       } catch (_) {}

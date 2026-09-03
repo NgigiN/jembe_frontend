@@ -418,13 +418,13 @@ Future<void> init() async {
       () => ProfileRemoteDataSourceImpl(dio: sl()),
     )
     ..registerLazySingleton<ContentLocalDataSource>(
-      () => ContentLocalDataSourceImpl(),
+      ContentLocalDataSourceImpl.new,
     )
     ..registerLazySingleton<QuestionRemoteDataSource>(
       () => QuestionRemoteDataSourceImpl(dio: sl()),
     )
     ..registerLazySingleton(() => AnalyticsService(dio: sl()))
-    ..registerLazySingleton(() => SoundService())
+    ..registerLazySingleton(SoundService.new)
     // External - Dio client (preferred for new code)
     ..registerLazySingleton<Dio>(DioClientFactory.create);
 }

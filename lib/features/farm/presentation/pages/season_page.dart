@@ -1,40 +1,40 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/status_colors.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
-import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
-import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
-import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
+import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/data/models/season_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
+import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_state.dart';
-import 'package:farm_tracker/features/farm/domain/entities/season.dart';
-import 'package:farm_tracker/features/farm/domain/entities/land.dart';
-import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
-import 'package:farm_tracker/features/farm/data/models/season_model.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
-import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/land_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/plant_page.dart';
+import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Opens the standard "Add New Season" form and resolves once it closes:
 /// the new season's id if the add succeeded, or null if the sheet was
@@ -270,7 +270,7 @@ class _SeasonPageState extends State<SeasonPage> {
 
           final seasons = state.seasons;
           if (seasons.isEmpty) {
-            return EntityEmptyView(
+            return const EntityEmptyView(
               icon: Icons.calendar_today,
               title: 'No seasons registered yet',
               subtitle: 'Tap the + button to add your first season',
@@ -300,7 +300,7 @@ class _SeasonPageState extends State<SeasonPage> {
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
-          onPressed: () => _showAddSeasonDialog(),
+          onPressed: _showAddSeasonDialog,
           child: const Icon(Icons.add),
         ),
       ),
@@ -644,14 +644,14 @@ class _SeasonPageState extends State<SeasonPage> {
     );
   }
 
-  void _showDeleteConfirmation(Season season) async {
+  Future<void> _showDeleteConfirmation(Season season) async {
     final confirmed = await EntityDeleteDialog.show(
       context: context,
       title: 'Delete Season',
       message:
           'Are you sure you want to delete "${season.name}"? This action cannot be undone.',
     );
-    if (confirmed == true) {
+    if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<SeasonBloc>().add(DeleteSeasonEvent(season.id));
     }

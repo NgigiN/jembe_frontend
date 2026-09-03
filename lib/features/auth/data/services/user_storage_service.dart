@@ -2,10 +2,10 @@ import 'dart:convert';
 
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
-import 'package:get_it/get_it.dart';
 import 'package:farm_tracker/features/auth/data/models/user_storage_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UserStorageService {

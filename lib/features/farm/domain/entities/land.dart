@@ -5,12 +5,10 @@ class Land extends Equatable {
     required this.id,
     required this.userId,
     required this.name,
-    this.size,
+    required this.createdAt, required this.updatedAt, this.size,
     this.location,
     this.soilType,
     this.tenureType,
-    required this.createdAt,
-    required this.updatedAt,
   });
   final String id;
   final String userId;

@@ -7,8 +7,7 @@ class HerdActivityModel extends HerdActivity {
     required super.activityType,
     required super.count,
     required super.date,
-    super.notes,
-    required super.createdAt,
+    required super.createdAt, super.notes,
   });
 
   factory HerdActivityModel.create({

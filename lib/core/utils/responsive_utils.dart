@@ -18,7 +18,7 @@ extension ResponsiveContext on BuildContext {
 
   // Clamped font size constraints for extreme screen sizes
   double fontSize(double baseSize) {
-    var scaled = scaleFactor(baseSize);
+    final scaled = scaleFactor(baseSize);
     return scaled.clamp(baseSize * 0.8, baseSize * 1.5);
   }
 }

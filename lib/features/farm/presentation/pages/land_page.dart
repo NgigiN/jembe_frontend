@@ -1,30 +1,30 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/field_limits.dart';
 import 'package:farm_tracker/core/validation/input_formatters.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
-import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
+import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/data/models/land_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
-import 'package:farm_tracker/features/farm/domain/entities/land.dart';
-import 'package:farm_tracker/features/farm/data/models/land_model.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
-import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Opens the standard "Add Land" form and resolves once it closes: the new
 /// land's id if the add succeeded, or null if the sheet was dismissed
@@ -142,7 +142,7 @@ class _LandPageState extends State<LandPage> {
 
           final lands = state.lands;
           if (lands.isEmpty) {
-            return EntityEmptyView(
+            return const EntityEmptyView(
               icon: Icons.landscape,
               title: 'No lands registered yet',
               subtitle: 'Tap the + button to add your first land',
@@ -167,7 +167,7 @@ class _LandPageState extends State<LandPage> {
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
-          onPressed: () => _showAddLandDialog(),
+          onPressed: _showAddLandDialog,
           child: const Icon(Icons.add),
         ),
       ),
@@ -192,15 +192,15 @@ class _LandPageState extends State<LandPage> {
           EntityDetailRow('Size', '${land.size} acres'),
         EntityDetailRow(
           'Location',
-          land.location?.isNotEmpty == true ? land.location! : '—',
+          land.location?.isNotEmpty ?? false ? land.location! : '—',
         ),
         EntityDetailRow(
           'Soil Type',
-          land.soilType?.isNotEmpty == true ? land.soilType! : '—',
+          land.soilType?.isNotEmpty ?? false ? land.soilType! : '—',
         ),
         EntityDetailRow(
           'Tenure',
-          land.tenureType?.isNotEmpty == true
+          land.tenureType?.isNotEmpty ?? false
               ? land.tenureType![0].toUpperCase() + land.tenureType!.substring(1)
               : '—',
         ),
@@ -222,7 +222,7 @@ class _LandPageState extends State<LandPage> {
     );
     final locationController = TextEditingController(text: land.location ?? '');
     final soilTypeController = TextEditingController(text: land.soilType ?? '');
-    String? selectedTenureType = land.tenureType;
+    var selectedTenureType = land.tenureType;
 
     EntityFormSheet.show(
       context: context,
@@ -290,7 +290,7 @@ class _LandPageState extends State<LandPage> {
         controller: locationController,
         labelText: 'Location',
         hintText: locationHint,
-        validator: (value) => optionalLocation(value),
+        validator: optionalLocation,
       ),
       const SizedBox(height: 16),
       TextFormField(
@@ -300,7 +300,7 @@ class _LandPageState extends State<LandPage> {
           hintText: soilTypeHint,
         ),
         validator: optionalSoilType,
-        inputFormatters: shortLabelFormatters(maxLength: FieldLimits.soilTypeMax),
+        inputFormatters: shortLabelFormatters(),
         maxLength: FieldLimits.soilTypeMax,
         buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
             null,
@@ -321,14 +321,14 @@ class _LandPageState extends State<LandPage> {
     ];
   }
 
-  void _showDeleteConfirmation(Land land) async {
+  Future<void> _showDeleteConfirmation(Land land) async {
     final confirmed = await EntityDeleteDialog.show(
       context: context,
       title: 'Delete Land',
       message:
           'Are you sure you want to delete "${land.name}"${land.location != null ? ' (${land.location})' : ''}? This action cannot be undone.',
     );
-    if (confirmed == true) {
+    if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<LandBloc>().add(DeleteLandEvent(land.id));
     }

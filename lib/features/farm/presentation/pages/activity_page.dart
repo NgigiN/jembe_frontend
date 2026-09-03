@@ -1,30 +1,27 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/status_colors.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/crud/cost_category_type_selector.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
-import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_state.dart';
@@ -33,12 +30,15 @@ import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
+import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 
 class ActivityPage extends StatefulWidget {
   const ActivityPage({super.key, this.sourceType});
@@ -247,7 +247,7 @@ class _ActivityPageState extends State<ActivityPage> {
       return;
     }
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -487,7 +487,7 @@ class _ActivityPageState extends State<ActivityPage> {
       return;
     }
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -655,7 +655,7 @@ class _ActivityPageState extends State<ActivityPage> {
                         sourceType: selectedSourceType,
                         sourceId: sourceId,
                         animalId: isPlant ? null : 0,
-                        type: sanitizeText(selectedType!),
+                        type: sanitizeText(selectedType),
                         details: sanitizeOptionalText(descriptionController.text),
                         cost: parseNonNegativeDecimal(costController.text),
                         date: selectedDate!,

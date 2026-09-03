@@ -1,25 +1,25 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/features/farm/presentation/widgets/setup_step_card.dart';
-import 'package:farm_tracker/features/farm/presentation/widgets/step_connector.dart';
+import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
+import 'package:farm_tracker/features/content/presentation/bloc/content_event.dart';
+import 'package:farm_tracker/features/content/presentation/widgets/related_content_section.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_state.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/harvest_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/harvest_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
-import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
-import 'package:farm_tracker/features/content/presentation/bloc/content_event.dart';
-import 'package:farm_tracker/features/content/presentation/widgets/related_content_section.dart';
+import 'package:farm_tracker/features/farm/presentation/widgets/setup_step_card.dart';
+import 'package:farm_tracker/features/farm/presentation/widgets/step_connector.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class PlantsPage extends StatefulWidget {
   const PlantsPage({super.key});
@@ -65,7 +65,7 @@ class _PlantsPageState extends State<PlantsPage> {
                 }
 
                 if (landError) {
-                  return EntityEmptyView(
+                  return const EntityEmptyView(
                     icon: Icons.error_outline,
                     title: 'Could not load data',
                     subtitle: 'Pull down to retry',
@@ -206,7 +206,7 @@ class _PlantsPageState extends State<PlantsPage> {
                                       AppRoutePath.inputsFor('plant'),
                                     ),
                                   ),
-                                  StepConnector(isActive: false),
+                                  const StepConnector(isActive: false),
                                   SetupStepCard(
                                     stepNumber: 5,
                                     title: 'Log Activities',

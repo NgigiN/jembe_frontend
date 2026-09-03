@@ -1,28 +1,28 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/field_limits.dart';
 import 'package:farm_tracker/core/validation/input_formatters.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
-import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
+import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/data/models/plant_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_state.dart';
-import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
-import 'package:farm_tracker/features/farm/data/models/plant_model.dart';
-import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Opens the standard "Add New Plant" form and resolves once it closes: the
 /// new plant's id if the add succeeded, or null if the sheet was dismissed
@@ -133,7 +133,7 @@ class _PlantPageState extends State<PlantPage> {
 
           final plants = state.plants;
           if (plants.isEmpty) {
-            return EntityEmptyView(
+            return const EntityEmptyView(
               icon: Icons.eco,
               title: 'No plants registered yet',
               subtitle: 'Tap the + button to add your first plant',
@@ -149,7 +149,7 @@ class _PlantPageState extends State<PlantPage> {
                   icon: Icons.eco,
                   iconColor: AppColors.plantCategory,
                   title: plant.name,
-                  subtitle: plant.variety?.isNotEmpty == true
+                  subtitle: plant.variety?.isNotEmpty ?? false
                       ? plant.variety!
                       : 'Added ${_formatDate(plant.createdAt)}',
                   onTap: () => _showPlantDetails(plant),
@@ -160,7 +160,7 @@ class _PlantPageState extends State<PlantPage> {
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
-          onPressed: () => _showAddPlantDialog(),
+          onPressed: _showAddPlantDialog,
           child: const Icon(Icons.add),
         ),
       ),
@@ -178,7 +178,7 @@ class _PlantPageState extends State<PlantPage> {
       details: [
         EntityDetailRow(
           'Variety',
-          plant.variety?.isNotEmpty == true ? plant.variety! : '—',
+          plant.variety?.isNotEmpty ?? false ? plant.variety! : '—',
         ),
         EntityDetailRow('Created', _formatDate(plant.createdAt)),
       ],
@@ -247,14 +247,14 @@ class _PlantPageState extends State<PlantPage> {
     ];
   }
 
-  void _showDeleteConfirmation(Plant plant) async {
+  Future<void> _showDeleteConfirmation(Plant plant) async {
     final confirmed = await EntityDeleteDialog.show(
       context: context,
       title: 'Delete Plant',
       message:
           'Are you sure you want to delete "${plant.name}"${plant.variety != null ? ' (${plant.variety})' : ''}? This action cannot be undone.',
     );
-    if (confirmed == true) {
+    if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<PlantBloc>().add(DeletePlantEvent(plant.id));
     }

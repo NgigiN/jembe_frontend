@@ -11,9 +11,7 @@ class Revenue extends Equatable {
     required this.unitPrice,
     required this.total,
     required this.date,
-    this.notes,
-    required this.createdAt,
-    required this.updatedAt,
+    required this.createdAt, required this.updatedAt, this.notes,
   });
   final String id;
   final String userId;

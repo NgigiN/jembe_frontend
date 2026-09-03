@@ -1,26 +1,23 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/constants/harvest_units.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/status_colors.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
-import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
-import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
-import 'package:farm_tracker/features/farm/presentation/pages/season_page.dart';
-import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/harvest.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
@@ -30,7 +27,10 @@ import 'package:farm_tracker/features/farm/presentation/bloc/harvest_state.dart'
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/season_page.dart';
+import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class HarvestPage extends StatefulWidget {
   const HarvestPage({super.key, this.seasonId});
@@ -91,7 +91,7 @@ class _HarvestPageState extends State<HarvestPage> {
           if (state is HarvestLoaded || state is HarvestLoading) {
             final harvests = state.harvests;
             if (harvests.isEmpty) {
-              return EntityEmptyView(
+              return const EntityEmptyView(
                 icon: Icons.agriculture,
                 title: 'No harvests recorded yet',
                 subtitle: 'Tap + to record your first harvest',
@@ -176,7 +176,7 @@ class _HarvestPageState extends State<HarvestPage> {
       message:
           'Delete ${_formatQuantity(harvest.quantity)} ${harvest.unit}? This cannot be undone.',
     );
-    if (confirmed == true && context.mounted) {
+    if ((confirmed ?? false) && context.mounted) {
       SuccessFeedback.deleted();
       context.read<HarvestBloc>().add(DeleteHarvestEvent(harvest.id));
     }
@@ -207,12 +207,12 @@ class _HarvestPageState extends State<HarvestPage> {
     final notesController = TextEditingController(text: harvest?.notes ?? '');
     final customUnitController = TextEditingController();
     String? selectedSeasonId = harvest?.seasonId ?? widget.seasonId ?? seasons.first.id;
-    String selectedUnit = harvest?.unit ?? harvestUnitPresets.first;
+    var selectedUnit = harvest?.unit ?? harvestUnitPresets.first;
     if (!harvestUnitPresets.contains(selectedUnit)) {
       customUnitController.text = selectedUnit;
       selectedUnit = harvestUnitOther;
     }
-    DateTime selectedDate = harvest?.date ?? DateTime.now();
+    var selectedDate = harvest?.date ?? DateTime.now();
 
     await showModalBottomSheet<void>(
       context: context,

@@ -1,26 +1,27 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
-import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 import 'package:farm_tracker/features/farm/data/models/animal_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
+import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_state.dart';
@@ -28,13 +29,12 @@ import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.da
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
-import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
-import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animal_type_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/input_page.dart';
 import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Opens the standard "Add Animal" form and resolves once it closes: the
 /// new animal's id if the add succeeded, or null if the sheet was
@@ -135,9 +135,8 @@ List<Widget> _animalFormFields({
   required ValueNotifier<String?> animalTypeIdNotifier,
   required ValueNotifier<String?> herdIdNotifier,
   required DateTime selectedBirthDate,
-  String? selectedSex,
+  required ValueChanged<DateTime> onBirthDateChanged, String? selectedSex,
   String? selectedAcquisitionSource,
-  required ValueChanged<DateTime> onBirthDateChanged,
   ValueChanged<String?>? onSexChanged,
   ValueChanged<String?>? onAcquisitionSourceChanged,
 }) {
@@ -145,7 +144,7 @@ List<Widget> _animalFormFields({
     ValidatedNameField(
       controller: nameController,
       labelText: 'Name *',
-      validator: (value) => requiredName(value, fieldLabel: 'Name'),
+      validator: requiredName,
     ),
     const SizedBox(height: 16),
     ListenableBuilder(
@@ -306,7 +305,7 @@ class _AnimalPageState extends State<AnimalPage> {
 
           final animals = state.animals;
           if (animals.isEmpty) {
-            return EntityEmptyView(
+            return const EntityEmptyView(
               icon: Icons.pets,
               title: 'No animals registered yet',
               subtitle: 'Tap the + button to add your first animal',
@@ -357,13 +356,13 @@ class _AnimalPageState extends State<AnimalPage> {
         EntityDetailRow('Birth Date', _formatDate(animal.birthDate)),
         EntityDetailRow(
           'Sex',
-          animal.sex?.isNotEmpty == true
+          animal.sex?.isNotEmpty ?? false
               ? animal.sex![0].toUpperCase() + animal.sex!.substring(1)
               : '—',
         ),
         EntityDetailRow(
           'Acquisition Source',
-          animal.acquisitionSource?.isNotEmpty == true
+          animal.acquisitionSource?.isNotEmpty ?? false
               ? animal.acquisitionSource![0].toUpperCase() +
                   animal.acquisitionSource!.substring(1)
               : '—',
@@ -439,14 +438,14 @@ class _AnimalPageState extends State<AnimalPage> {
     );
   }
 
-  void _showDeleteConfirmation(Animal animal) async {
+  Future<void> _showDeleteConfirmation(Animal animal) async {
     final confirmed = await EntityDeleteDialog.show(
       context: context,
       title: 'Delete Animal',
       message:
           'Are you sure you want to delete "${animal.name}"? This action cannot be undone.',
     );
-    if (confirmed == true) {
+    if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<AnimalBloc>().add(DeleteAnimalEvent(animal.id));
     }

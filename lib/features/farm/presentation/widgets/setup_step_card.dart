@@ -4,22 +4,19 @@ import 'package:flutter/material.dart';
 enum StepStatus { completed, available, locked }
 
 class SetupStepCard extends StatelessWidget {
+
+  const SetupStepCard({
+    required this.stepNumber, required this.title, required this.subtitle, super.key,
+    this.summary,
+    this.status = StepStatus.available,
+    this.onTap,
+  });
   final int stepNumber;
   final String title;
   final String subtitle;
   final String? summary;
   final StepStatus status;
   final VoidCallback? onTap;
-
-  const SetupStepCard({
-    super.key,
-    required this.stepNumber,
-    required this.title,
-    required this.subtitle,
-    this.summary,
-    this.status = StepStatus.available,
-    this.onTap,
-  });
 
   @override
   Widget build(BuildContext context) {

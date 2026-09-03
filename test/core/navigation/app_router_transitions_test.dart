@@ -1,7 +1,7 @@
 import 'package:animations/animations.dart';
+import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:farm_tracker/core/navigation/app_router.dart';
 
 void main() {
   group('AppRouter.sharedAxisTransition', () {

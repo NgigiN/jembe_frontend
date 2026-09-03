@@ -1,27 +1,27 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
-import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 import 'package:farm_tracker/features/farm/domain/entities/infrastructure.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_state.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class InfrastructurePage extends StatefulWidget {
   const InfrastructurePage({super.key});
@@ -120,7 +120,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
-          onPressed: () => _showAddOrEditDialog(),
+          onPressed: _showAddOrEditDialog,
           child: const Icon(Icons.add),
         ),
       ),
@@ -226,7 +226,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                       child: Column(
                         children: [
                           DropdownButtonFormField<String>(
-                            value: selectedType,
+                            initialValue: selectedType,
                             isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'Infrastructure Type *',
@@ -250,15 +250,14 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                             controller: nameController,
                             labelText: 'Infrastructure Name *',
                             hintText: 'e.g., Main Barn, North Fence',
-                            validator: (value) =>
-                                requiredName(value, fieldLabel: 'Name'),
+                            validator: requiredName,
                           ),
                           const SizedBox(height: 16),
                           ValidatedLocationField(
                             controller: locationController,
                             labelText: 'Location *',
                             hintText: 'e.g., North Field',
-                            validator: (value) => requiredLocation(value),
+                            validator: requiredLocation,
                           ),
                           const SizedBox(height: 16),
                           ValidatedDecimalField(
@@ -364,13 +363,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
   Future<void> _submitInfrastructure(
     BuildContext sheetContext, {
     required bool isEditing,
-    Infrastructure? item,
-    required String selectedType,
-    required DateTime selectedDate,
-    required TextEditingController nameController,
-    required TextEditingController locationController,
-    required TextEditingController costController,
-    required TextEditingController notesController,
+    required String selectedType, required DateTime selectedDate, required TextEditingController nameController, required TextEditingController locationController, required TextEditingController costController, required TextEditingController notesController, Infrastructure? item,
   }) async {
     final cost = parseNonNegativeDecimal(costController.text);
     final notes = sanitizeOptionalText(notesController.text);
@@ -426,7 +419,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
       message:
           'Are you sure you want to delete "${item.name}"? This action cannot be undone.',
     );
-    if (confirmed == true) {
+    if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<InfrastructureBloc>().add(
         DeleteInfrastructureEvent(item.id),

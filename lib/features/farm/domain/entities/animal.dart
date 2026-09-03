@@ -8,10 +8,8 @@ class Animal extends Equatable {
     required this.animalTypeId,
     required this.herdId,
     required this.birthDate,
-    this.sex,
+    required this.createdAt, required this.updatedAt, this.sex,
     this.acquisitionSource,
-    required this.createdAt,
-    required this.updatedAt,
   });
 
   final String id;

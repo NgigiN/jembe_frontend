@@ -1,14 +1,14 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/features/farm/domain/entities/input.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/add_input.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/delete_input.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_inputs.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_inputs_params.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_input.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_input.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_input.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class InputBloc extends Bloc<InputEvent, InputState> {
   InputBloc({
@@ -19,7 +19,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
   }) : super(InputInitial()) {
     on<GetInputsEvent>((event, emit) async {
       appLogger.debug(LogCategory.farm, 'GetInputsEvent triggered');
-      emit(InputLoading());
+      emit(const InputLoading());
 
       final result = await getInputs(
         GetInputsParams(sourceType: event.sourceType),
