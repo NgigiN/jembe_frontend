@@ -16,12 +16,15 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage> {
+  static const splashMinDisplay = Duration(milliseconds: 300);
+
   @override
   void initState() {
     super.initState();
     sl<AnalyticsService>().track('app_open');
     // Check for existing login after a short delay
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(splashMinDisplay, () {
+      if (!mounted) return;
       context.read<AuthBloc>().add(CheckExistingLoginEvent());
     });
   }
