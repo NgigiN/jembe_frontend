@@ -112,19 +112,18 @@ class UserStorageService {
   // Update specific user fields
   static Future<void> updateUserField(String field, String value) async {
     final user = await getUserData();
-    if (user != null) {
-      final updatedUser = UserStorageModel(
-        email: field == 'email' ? value : user.email,
-        farmName: field == 'farm_name' ? value : user.farmName,
-        id: field == 'id' ? value : user.id,
-        location: field == 'location' ? value : user.location,
-        name: field == 'name' ? value : user.name,
-        token: field == 'token' ? value : user.token,
-        loginTime: user.loginTime,
-        pictureUrl: field == 'picture_url' ? value : user.pictureUrl,
-      );
-      await saveUserData(updatedUser);
-    }
+    if (user == null) return;
+    final updated = switch (field) {
+      'email' => user.copyWith(email: value),
+      'farm_name' => user.copyWith(farmName: value),
+      'id' => user.copyWith(id: value),
+      'location' => user.copyWith(location: value),
+      'name' => user.copyWith(name: value),
+      'token' => user.copyWith(token: value),
+      'picture_url' => user.copyWith(pictureUrl: value),
+      _ => user,
+    };
+    await saveUserData(updated);
   }
 
   static Future<void> _writeString(String key, String value) async {
