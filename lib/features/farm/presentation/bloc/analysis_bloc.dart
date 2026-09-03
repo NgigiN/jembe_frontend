@@ -1,16 +1,15 @@
 import 'package:equatable/equatable.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/usecases/usecase.dart';
-import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
-import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
-import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_annual_cost_summary.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_cost_breakdown.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_total_costs_by_season.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/analysis_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+export 'package:farm_tracker/features/farm/presentation/bloc/analysis_state.dart';
+
 part 'analysis_event.dart';
-part 'analysis_state.dart';
 
 class AnalysisBloc extends Bloc<AnalysisEvent, AnalysisState> {
 
@@ -18,7 +17,7 @@ class AnalysisBloc extends Bloc<AnalysisEvent, AnalysisState> {
     required this.getTotalCostsBySeason,
     required this.getCostBreakdown,
     required this.getAnnualCostSummary,
-  }) : super(AnalysisInitial()) {
+  }) : super(const AnalysisState()) {
     on<LoadTotalCostsBySeason>(_onLoadTotalCostsBySeason);
     on<LoadCostBreakdown>(_onLoadCostBreakdown);
     on<LoadAnnualCostSummary>(_onLoadAnnualCostSummary);
@@ -31,11 +30,11 @@ class AnalysisBloc extends Bloc<AnalysisEvent, AnalysisState> {
     LoadTotalCostsBySeason event,
     Emitter<AnalysisState> emit,
   ) async {
-    emit(AnalysisLoading());
+    emit(state.copyWith(isLoading: true, error: null));
     final result = await getTotalCostsBySeason(NoParams());
     result.fold(
-      (failure) => emit(AnalysisError(resolveFailureMessage(failure, 'Failed to load cost summary'))),
-      (totalCosts) => emit(TotalCostsBySeasonLoaded(totalCosts)),
+      (failure) => emit(state.copyWith(isLoading: false, error: resolveFailureMessage(failure, 'Failed to load cost summary'))),
+      (totalCosts) => emit(state.copyWith(isLoading: false, detailedCosts: totalCosts)),
     );
   }
 
@@ -43,11 +42,11 @@ class AnalysisBloc extends Bloc<AnalysisEvent, AnalysisState> {
     LoadCostBreakdown event,
     Emitter<AnalysisState> emit,
   ) async {
-    emit(AnalysisLoading());
+    emit(state.copyWith(isLoading: true, error: null));
     final result = await getCostBreakdown(NoParams());
     result.fold(
-      (failure) => emit(AnalysisError(resolveFailureMessage(failure, 'Failed to load cost breakdown'))),
-      (breakdowns) => emit(CostBreakdownLoaded(breakdowns)),
+      (failure) => emit(state.copyWith(isLoading: false, error: resolveFailureMessage(failure, 'Failed to load cost breakdown'))),
+      (breakdowns) => emit(state.copyWith(isLoading: false, breakdowns: breakdowns)),
     );
   }
 
@@ -55,7 +54,7 @@ class AnalysisBloc extends Bloc<AnalysisEvent, AnalysisState> {
     LoadAnnualCostSummary event,
     Emitter<AnalysisState> emit,
   ) async {
-    emit(AnalysisLoading());
+    emit(state.copyWith(isLoading: true, error: null));
     final result = await getAnnualCostSummary(
       GetAnnualCostSummaryParams(
         startDate: event.startDate,
@@ -63,8 +62,8 @@ class AnalysisBloc extends Bloc<AnalysisEvent, AnalysisState> {
       ),
     );
     result.fold(
-      (failure) => emit(AnalysisError(resolveFailureMessage(failure, 'Failed to load annual summary'))),
-      (summaries) => emit(AnnualCostSummaryLoaded(summaries)),
+      (failure) => emit(state.copyWith(isLoading: false, error: resolveFailureMessage(failure, 'Failed to load annual summary'))),
+      (summaries) => emit(state.copyWith(isLoading: false, summaries: summaries)),
     );
   }
 }

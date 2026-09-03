@@ -61,8 +61,10 @@ void main() {
       final decSummary = _summary('2025-12', 300, 100);
       whenListen(
         analysisBloc,
-        Stream<AnalysisState>.value(AnnualCostSummaryLoaded([decSummary])),
-        initialState: AnnualCostSummaryLoaded([decSummary]),
+        Stream<AnalysisState>.value(
+          AnalysisState(summaries: [decSummary]),
+        ),
+        initialState: AnalysisState(summaries: [decSummary]),
       );
 
       await tester.pumpWidget(
@@ -128,10 +130,12 @@ void main() {
       whenListen(
         analysisBloc,
         Stream<AnalysisState>.value(
-          const AnalysisError('Something went wrong. Please try again.'),
+          const AnalysisState(
+            error: 'Something went wrong. Please try again.',
+          ),
         ),
-        initialState: const AnalysisError(
-          'Something went wrong. Please try again.',
+        initialState: const AnalysisState(
+          error: 'Something went wrong. Please try again.',
         ),
       );
 

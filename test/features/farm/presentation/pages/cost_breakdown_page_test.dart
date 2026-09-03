@@ -60,9 +60,11 @@ void main() {
       whenListen(
         analysisBloc,
         Stream<AnalysisState>.value(
-          const CostBreakdownLoaded([seasonRow, farmWideRow]),
+          const AnalysisState(breakdowns: [seasonRow, farmWideRow]),
         ),
-        initialState: const CostBreakdownLoaded([seasonRow, farmWideRow]),
+        initialState: const AnalysisState(
+          breakdowns: [seasonRow, farmWideRow],
+        ),
       );
       whenListen(
         seasonBloc,

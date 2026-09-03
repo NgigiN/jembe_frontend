@@ -1,48 +1,43 @@
-part of 'analysis_bloc.dart';
+import 'package:equatable/equatable.dart';
+import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
+import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
+import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 
-abstract class AnalysisState extends Equatable {
-  const AnalysisState();
+/// Holds all three cost datasets at once so loading one (e.g. the cost
+/// breakdown) never evicts another already-loaded dataset (e.g. the
+/// detailed costs by season). Each field is populated independently by its
+/// own `AnalysisBloc` handler.
+class AnalysisState extends Equatable {
+  const AnalysisState({
+    this.detailedCosts,
+    this.breakdowns,
+    this.summaries,
+    this.isLoading = false,
+    this.error,
+  });
 
-  @override
-  List<Object> get props => [];
-}
+  final FarmDetailedCost? detailedCosts;
+  final List<CostBreakdown>? breakdowns;
+  final List<MonthlySummary>? summaries;
+  final bool isLoading;
+  final String? error;
 
-class AnalysisInitial extends AnalysisState {}
-
-class AnalysisLoading extends AnalysisState {}
-
-class AnalysisError extends AnalysisState {
-
-  const AnalysisError(this.message);
-  final String message;
-
-  @override
-  List<Object> get props => [message];
-}
-
-class TotalCostsBySeasonLoaded extends AnalysisState {
-
-  const TotalCostsBySeasonLoaded(this.detailedCosts);
-  final FarmDetailedCost detailedCosts;
-
-  @override
-  List<Object> get props => [detailedCosts];
-}
-
-class CostBreakdownLoaded extends AnalysisState {
-
-  const CostBreakdownLoaded(this.breakdowns);
-  final List<CostBreakdown> breakdowns;
-
-  @override
-  List<Object> get props => [breakdowns];
-}
-
-class AnnualCostSummaryLoaded extends AnalysisState {
-
-  const AnnualCostSummaryLoaded(this.summaries);
-  final List<MonthlySummary> summaries;
+  AnalysisState copyWith({
+    FarmDetailedCost? detailedCosts,
+    List<CostBreakdown>? breakdowns,
+    List<MonthlySummary>? summaries,
+    bool? isLoading,
+    String? error,
+  }) => AnalysisState(
+        detailedCosts: detailedCosts ?? this.detailedCosts,
+        breakdowns: breakdowns ?? this.breakdowns,
+        summaries: summaries ?? this.summaries,
+        isLoading: isLoading ?? this.isLoading,
+        // Not `error ?? this.error` — a handler must be able to clear a
+        // previous error by passing `error: null`.
+        error: error,
+      );
 
   @override
-  List<Object> get props => [summaries];
+  List<Object?> get props => [detailedCosts, breakdowns, summaries, isLoading, error];
 }

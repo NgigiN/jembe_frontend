@@ -84,8 +84,10 @@ void main() {
 
       whenListen(
         analysisBloc,
-        Stream<AnalysisState>.value(TotalCostsBySeasonLoaded(detailedCosts)),
-        initialState: TotalCostsBySeasonLoaded(detailedCosts),
+        Stream<AnalysisState>.value(
+          AnalysisState(detailedCosts: detailedCosts),
+        ),
+        initialState: AnalysisState(detailedCosts: detailedCosts),
       );
       whenListen(
         seasonBloc,
