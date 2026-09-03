@@ -1,5 +1,6 @@
 import 'package:animations/animations.dart';
 import 'package:farm_tracker/core/logging/logging_navigator.dart';
+import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/google_login_page.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/onboarding_page.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/splash_page.dart';
@@ -93,9 +94,36 @@ class AppRoutePath {
 class AppRouter {
   AppRouter();
 
+  /// Routes reachable without a session.
+  static const Set<String> _publicPaths = {
+    AppRoutePath.splash,
+    AppRoutePath.googleLogin,
+    AppRoutePath.onboarding,
+  };
+
+  /// Pure redirect decision (unit-tested): where to send a navigation, or
+  /// null to allow it. Defense-in-depth — the API rejects unauthenticated
+  /// calls regardless; this turns "errors on every screen" into the login
+  /// page (audit S4-C3).
+  static String? authRedirectLocation({
+    required bool loggedIn,
+    required String location,
+  }) {
+    if (loggedIn) return null;
+    if (_publicPaths.contains(location)) return null;
+    return AppRoutePath.googleLogin;
+  }
+
   final GoRouter router = GoRouter(
     initialLocation: AppRoutePath.splash,
     observers: [LoggingGoRouterObserver()],
+    redirect: (context, state) async {
+      final loggedIn = await UserStorageService.isLoggedIn();
+      return authRedirectLocation(
+        loggedIn: loggedIn,
+        location: state.matchedLocation,
+      );
+    },
     routes: [
       GoRoute(
         name: AppRouteName.splash,
