@@ -2,6 +2,7 @@ import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/features/auth/data/services/google_sign_in_service.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
+import 'package:farm_tracker/features/auth/data/utils/google_sign_in_errors.dart';
 import 'package:farm_tracker/features/auth/domain/entities/user.dart';
 import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
@@ -61,6 +62,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           },
         );
       } catch (e) {
+        if (isSignInCancellation(e)) {
+          appLogger.logAuthEvent('Google Sign-In cancelled by user');
+          emit(AuthInitial());
+          return;
+        }
         appLogger.logError('GoogleSignInRequested', e);
         emit(AuthError('Google Sign-In failed. Please try again.'));
       }
