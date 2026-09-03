@@ -50,26 +50,6 @@ class ProfileRepositoryImpl implements ProfileRepository {
   }
 
   @override
-  Future<Either<Failure, void>> changePassword({
-    required String oldPassword,
-    required String newPassword,
-  }) async {
-    try {
-      await remoteDataSource.changePassword(
-        oldPassword: oldPassword,
-        newPassword: newPassword,
-      );
-      return const Right(null);
-    } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return const Left(ServerFailure('An unexpected error occurred'));
-    }
-  }
-
-  @override
   Future<Either<Failure, void>> deleteAccount() async {
     try {
       await remoteDataSource.deleteAccount();

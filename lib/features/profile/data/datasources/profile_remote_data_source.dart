@@ -13,10 +13,6 @@ abstract class ProfileRemoteDataSource {
     String? farmName,
     String? location,
   });
-  Future<void> changePassword({
-    required String oldPassword,
-    required String newPassword,
-  });
   Future<void> deleteAccount();
 }
 
@@ -72,27 +68,6 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
       }
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException in updateProfile', e);
-      throw mapDioException(e);
-    }
-  }
-
-  @override
-  Future<void> changePassword({
-    required String oldPassword,
-    required String newPassword,
-  }) async {
-    try {
-      final response = await dio.put<dynamic>(
-        '/api/v1/profile/password',
-        data: {'old_password': oldPassword, 'new_password': newPassword},
-      );
-
-      if (response.statusCode != 200) {
-        final msg = extractServerErrorMessage(response.data);
-        throw ServerException(msg.isNotEmpty ? msg : null);
-      }
-    } on DioException catch (e) {
-      appLogger.error(LogCategory.http, 'DioException in changePassword', e);
       throw mapDioException(e);
     }
   }

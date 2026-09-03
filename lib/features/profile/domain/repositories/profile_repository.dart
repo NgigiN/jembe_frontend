@@ -11,9 +11,5 @@ abstract class ProfileRepository {
     String? farmName,
     String? location,
   });
-  Future<Either<Failure, void>> changePassword({
-    required String oldPassword,
-    required String newPassword,
-  });
   Future<Either<Failure, void>> deleteAccount();
 }
