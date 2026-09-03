@@ -51,6 +51,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  final AppRouter _appRouter = AppRouter();
+
   @override
   void initState() {
     super.initState();
@@ -75,8 +77,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final appRouter = AppRouter();
-
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(create: (_) => di.sl<AuthBloc>()),
@@ -118,7 +118,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   darkDynamic ?? AppColors.darkColorScheme,
                 ),
                 themeMode: themeState.themeMode,
-                routerConfig: appRouter.router,
+                routerConfig: _appRouter.router,
                 debugShowCheckedModeBanner: false,
               );
             },
