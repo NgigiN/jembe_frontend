@@ -127,7 +127,6 @@ import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/profile/data/datasources/profile_remote_data_source.dart';
 import 'package:farm_tracker/features/profile/data/repositories/profile_repository_impl.dart';
 import 'package:farm_tracker/features/profile/domain/repositories/profile_repository.dart';
-import 'package:farm_tracker/features/profile/domain/usecases/change_password.dart';
 import 'package:farm_tracker/features/profile/domain/usecases/delete_account.dart';
 import 'package:farm_tracker/features/profile/domain/usecases/get_profile.dart';
 import 'package:farm_tracker/features/profile/domain/usecases/update_profile.dart';
@@ -252,7 +251,6 @@ Future<void> init() async {
       () => ProfileBloc(
         getProfile: sl(),
         updateProfile: sl(),
-        changePassword: sl(),
         deleteAccount: sl(),
       ),
     )
@@ -314,7 +312,6 @@ Future<void> init() async {
     ..registerLazySingleton(() => DeleteCostCategory(sl()))
     ..registerLazySingleton(() => GetProfile(sl()))
     ..registerLazySingleton(() => UpdateProfile(sl()))
-    ..registerLazySingleton(() => ChangePassword(sl()))
     ..registerLazySingleton(() => DeleteAccount(sl()))
     // Repositories
     ..registerLazySingleton<AuthRepository>(
