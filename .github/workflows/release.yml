@@ -21,7 +21,7 @@ jobs:
       - name: Verify dependencies
         run: flutter pub run dependency_validator
       - name: Analyze code
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+        run: flutter analyze --no-fatal-infos
 
   test:
     name: Run Tests
