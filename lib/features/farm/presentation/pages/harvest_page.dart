@@ -1,5 +1,6 @@
 import 'package:farm_tracker/core/constants/harvest_units.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
@@ -466,18 +467,28 @@ class _HarvestPageState extends State<HarvestPage> {
                               bloc.add(UpdateHarvestEvent(updatedHarvest));
                             }
 
-                            final s = await bloc.stream.firstWhere(
-                              (s) =>
-                                  (s is HarvestLoaded &&
-                                      s.successMessage != null) ||
-                                  s is HarvestError,
-                            );
-                            if (!context.mounted) return;
-                            if (s is HarvestLoaded) {
-                              SuccessFeedback.saved();
-                              Navigator.pop(context);
-                            } else {
+                            try {
+                              final s = await bloc.stream.firstWhere(
+                                (s) =>
+                                    (s is HarvestLoaded &&
+                                        s.successMessage != null) ||
+                                    s is HarvestError,
+                              );
+                              if (!context.mounted) return;
+                              if (s is HarvestLoaded) {
+                                SuccessFeedback.saved();
+                                Navigator.pop(context);
+                              } else {
+                                setState(() => submitting = false);
+                              }
+                            } catch (e, st) {
+                              if (!context.mounted) return;
                               setState(() => submitting = false);
+                              appLogger.logError(
+                                'HarvestPage._showHarvestForm',
+                                e,
+                                st,
+                              );
                             }
                           },
                     style: ElevatedButton.styleFrom(

@@ -1,4 +1,5 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
@@ -486,20 +487,30 @@ class _ActivityPageState extends State<ActivityPage> {
 
                             setState(() => submitting = true);
 
-                            final bloc = context.read<ActivityBloc>()
-                              ..add(AddActivityEvent(activity));
-                            final s = await bloc.stream.firstWhere(
-                              (s) =>
-                                  (s is ActivityLoaded &&
-                                      s.successMessage != null) ||
-                                  s is ActivityError,
-                            );
-                            if (!context.mounted) return;
-                            if (s is ActivityLoaded) {
-                              SuccessFeedback.saved();
-                              Navigator.pop(context);
-                            } else {
+                            try {
+                              final bloc = context.read<ActivityBloc>()
+                                ..add(AddActivityEvent(activity));
+                              final s = await bloc.stream.firstWhere(
+                                (s) =>
+                                    (s is ActivityLoaded &&
+                                        s.successMessage != null) ||
+                                    s is ActivityError,
+                              );
+                              if (!context.mounted) return;
+                              if (s is ActivityLoaded) {
+                                SuccessFeedback.saved();
+                                Navigator.pop(context);
+                              } else {
+                                setState(() => submitting = false);
+                              }
+                            } catch (e, st) {
+                              if (!context.mounted) return;
                               setState(() => submitting = false);
+                              appLogger.logError(
+                                'ActivityPage._showAddActivityDialog',
+                                e,
+                                st,
+                              );
                             }
                           },
                     style: ElevatedButton.styleFrom(
@@ -755,20 +766,30 @@ class _ActivityPageState extends State<ActivityPage> {
 
                             setState(() => submitting = true);
 
-                            final bloc = context.read<ActivityBloc>()
-                              ..add(UpdateActivityEvent(updatedActivity));
-                            final s = await bloc.stream.firstWhere(
-                              (s) =>
-                                  (s is ActivityLoaded &&
-                                      s.successMessage != null) ||
-                                  s is ActivityError,
-                            );
-                            if (!context.mounted) return;
-                            if (s is ActivityLoaded) {
-                              SuccessFeedback.saved();
-                              Navigator.pop(context);
-                            } else {
+                            try {
+                              final bloc = context.read<ActivityBloc>()
+                                ..add(UpdateActivityEvent(updatedActivity));
+                              final s = await bloc.stream.firstWhere(
+                                (s) =>
+                                    (s is ActivityLoaded &&
+                                        s.successMessage != null) ||
+                                    s is ActivityError,
+                              );
+                              if (!context.mounted) return;
+                              if (s is ActivityLoaded) {
+                                SuccessFeedback.saved();
+                                Navigator.pop(context);
+                              } else {
+                                setState(() => submitting = false);
+                              }
+                            } catch (e, st) {
+                              if (!context.mounted) return;
                               setState(() => submitting = false);
+                              appLogger.logError(
+                                'ActivityPage._showEditActivityDialog',
+                                e,
+                                st,
+                              );
                             }
                           },
                     style: ElevatedButton.styleFrom(

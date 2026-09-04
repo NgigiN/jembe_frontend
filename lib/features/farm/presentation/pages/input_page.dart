@@ -1,4 +1,5 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
@@ -264,20 +265,30 @@ Future<void> showAddInputDialog(
 
                           setState(() => submitting = true);
 
-                          final bloc = context.read<InputBloc>()
-                            ..add(AddInputEvent(input));
-                          final s = await bloc.stream.firstWhere(
-                            (s) =>
-                                (s is InputLoaded &&
-                                    s.successMessage != null) ||
-                                s is InputError,
-                          );
-                          if (!context.mounted) return;
-                          if (s is InputLoaded) {
-                            SuccessFeedback.saved();
-                            Navigator.pop(context);
-                          } else {
+                          try {
+                            final bloc = context.read<InputBloc>()
+                              ..add(AddInputEvent(input));
+                            final s = await bloc.stream.firstWhere(
+                              (s) =>
+                                  (s is InputLoaded &&
+                                      s.successMessage != null) ||
+                                  s is InputError,
+                            );
+                            if (!context.mounted) return;
+                            if (s is InputLoaded) {
+                              SuccessFeedback.saved();
+                              Navigator.pop(context);
+                            } else {
+                              setState(() => submitting = false);
+                            }
+                          } catch (e, st) {
+                            if (!context.mounted) return;
                             setState(() => submitting = false);
+                            appLogger.logError(
+                              'InputPage.showAddInputDialog',
+                              e,
+                              st,
+                            );
                           }
                         },
                   style: ElevatedButton.styleFrom(
@@ -743,20 +754,30 @@ class _InputPageState extends State<InputPage> {
 
                             setState(() => submitting = true);
 
-                            final bloc = context.read<InputBloc>()
-                              ..add(UpdateInputEvent(updatedInput));
-                            final s = await bloc.stream.firstWhere(
-                              (s) =>
-                                  (s is InputLoaded &&
-                                      s.successMessage != null) ||
-                                  s is InputError,
-                            );
-                            if (!context.mounted) return;
-                            if (s is InputLoaded) {
-                              SuccessFeedback.saved();
-                              Navigator.pop(context);
-                            } else {
+                            try {
+                              final bloc = context.read<InputBloc>()
+                                ..add(UpdateInputEvent(updatedInput));
+                              final s = await bloc.stream.firstWhere(
+                                (s) =>
+                                    (s is InputLoaded &&
+                                        s.successMessage != null) ||
+                                    s is InputError,
+                              );
+                              if (!context.mounted) return;
+                              if (s is InputLoaded) {
+                                SuccessFeedback.saved();
+                                Navigator.pop(context);
+                              } else {
+                                setState(() => submitting = false);
+                              }
+                            } catch (e, st) {
+                              if (!context.mounted) return;
                               setState(() => submitting = false);
+                              appLogger.logError(
+                                'InputPage._showEditInputDialog',
+                                e,
+                                st,
+                              );
                             }
                           },
                     style: ElevatedButton.styleFrom(

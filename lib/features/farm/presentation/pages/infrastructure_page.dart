@@ -1,4 +1,5 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
@@ -367,23 +368,33 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                               return;
                             }
                             setSheetState(() => submitting = true);
-                            final ok = await _submitInfrastructure(
-                              sheetContext,
-                              isEditing: isEditing,
-                              item: item,
-                              selectedType: selectedType,
-                              selectedDate: selectedDate,
-                              nameController: nameController,
-                              locationController: locationController,
-                              costController: costController,
-                              notesController: notesController,
-                            );
-                            if (!sheetContext.mounted) return;
-                            if (ok) {
-                              SuccessFeedback.saved();
-                              Navigator.pop(sheetContext);
-                            } else {
+                            try {
+                              final ok = await _submitInfrastructure(
+                                sheetContext,
+                                isEditing: isEditing,
+                                item: item,
+                                selectedType: selectedType,
+                                selectedDate: selectedDate,
+                                nameController: nameController,
+                                locationController: locationController,
+                                costController: costController,
+                                notesController: notesController,
+                              );
+                              if (!sheetContext.mounted) return;
+                              if (ok) {
+                                SuccessFeedback.saved();
+                                Navigator.pop(sheetContext);
+                              } else {
+                                setSheetState(() => submitting = false);
+                              }
+                            } catch (e, st) {
+                              if (!sheetContext.mounted) return;
                               setSheetState(() => submitting = false);
+                              appLogger.logError(
+                                'InfrastructurePage._submitInfrastructure',
+                                e,
+                                st,
+                              );
                             }
                           },
                     style: ElevatedButton.styleFrom(

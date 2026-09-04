@@ -1,4 +1,5 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
@@ -146,21 +147,31 @@ Future<String?> showAddSeasonDialog(BuildContext context) async {
                                     return;
                                   }
                                   setSheetState(() => submitting = true);
-                                  final ok = await _submitAddSeason(
-                                    seasonBloc: seasonBloc,
-                                    sheetContext: sheetContext,
-                                    nameController: nameController,
-                                    selectedPlantId: selectedPlantId,
-                                    selectedLandId: selectedLandId,
-                                    selectedStartDate: selectedStartDate,
-                                    selectedEndDate: selectedEndDate,
-                                  );
-                                  if (!sheetContext.mounted) return;
-                                  if (ok) {
-                                    SuccessFeedback.saved();
-                                    Navigator.pop(sheetContext);
-                                  } else {
+                                  try {
+                                    final ok = await _submitAddSeason(
+                                      seasonBloc: seasonBloc,
+                                      sheetContext: sheetContext,
+                                      nameController: nameController,
+                                      selectedPlantId: selectedPlantId,
+                                      selectedLandId: selectedLandId,
+                                      selectedStartDate: selectedStartDate,
+                                      selectedEndDate: selectedEndDate,
+                                    );
+                                    if (!sheetContext.mounted) return;
+                                    if (ok) {
+                                      SuccessFeedback.saved();
+                                      Navigator.pop(sheetContext);
+                                    } else {
+                                      setSheetState(() => submitting = false);
+                                    }
+                                  } catch (e, st) {
+                                    if (!sheetContext.mounted) return;
                                     setSheetState(() => submitting = false);
+                                    appLogger.logError(
+                                      'SeasonPage._submitAddSeason',
+                                      e,
+                                      st,
+                                    );
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
@@ -514,20 +525,30 @@ class _SeasonPageState extends State<SeasonPage> {
 
                             setSheetState(() => submitting = true);
 
-                            final bloc = context.read<SeasonBloc>()
-                              ..add(UpdateSeasonEvent(updatedSeason));
-                            final s = await bloc.stream.firstWhere(
-                              (s) =>
-                                  (s is SeasonLoaded &&
-                                      s.successMessage != null) ||
-                                  s is SeasonError,
-                            );
-                            if (!sheetContext.mounted) return;
-                            if (s is SeasonLoaded) {
-                              SuccessFeedback.saved();
-                              Navigator.pop(sheetContext);
-                            } else {
+                            try {
+                              final bloc = context.read<SeasonBloc>()
+                                ..add(UpdateSeasonEvent(updatedSeason));
+                              final s = await bloc.stream.firstWhere(
+                                (s) =>
+                                    (s is SeasonLoaded &&
+                                        s.successMessage != null) ||
+                                    s is SeasonError,
+                              );
+                              if (!sheetContext.mounted) return;
+                              if (s is SeasonLoaded) {
+                                SuccessFeedback.saved();
+                                Navigator.pop(sheetContext);
+                              } else {
+                                setSheetState(() => submitting = false);
+                              }
+                            } catch (e, st) {
+                              if (!sheetContext.mounted) return;
                               setSheetState(() => submitting = false);
+                              appLogger.logError(
+                                'SeasonPage._showEditSeasonDialog',
+                                e,
+                                st,
+                              );
                             }
                           },
                     style: ElevatedButton.styleFrom(

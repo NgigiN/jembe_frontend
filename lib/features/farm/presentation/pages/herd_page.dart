@@ -1,4 +1,5 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
@@ -189,22 +190,32 @@ Future<String?> showAddHerdDialog(BuildContext context) async {
                                 return;
                               }
                               setSheetState(() => submitting = true);
-                              final ok = await _submitAddHerd(
-                                herdBloc: herdBloc,
-                                sheetContext: sheetContext,
-                                nameController: nameController,
-                                locationController: locationController,
-                                headCountController: headCountController,
-                                selectedAnimalTypeId: selectedAnimalTypeId,
-                                selectedStartDate: selectedStartDate,
-                                selectedEndDate: selectedEndDate,
-                              );
-                              if (!sheetContext.mounted) return;
-                              if (ok) {
-                                SuccessFeedback.saved();
-                                Navigator.pop(sheetContext);
-                              } else {
+                              try {
+                                final ok = await _submitAddHerd(
+                                  herdBloc: herdBloc,
+                                  sheetContext: sheetContext,
+                                  nameController: nameController,
+                                  locationController: locationController,
+                                  headCountController: headCountController,
+                                  selectedAnimalTypeId: selectedAnimalTypeId,
+                                  selectedStartDate: selectedStartDate,
+                                  selectedEndDate: selectedEndDate,
+                                );
+                                if (!sheetContext.mounted) return;
+                                if (ok) {
+                                  SuccessFeedback.saved();
+                                  Navigator.pop(sheetContext);
+                                } else {
+                                  setSheetState(() => submitting = false);
+                                }
+                              } catch (e, st) {
+                                if (!sheetContext.mounted) return;
                                 setSheetState(() => submitting = false);
+                                appLogger.logError(
+                                  'HerdPage._submitAddHerd',
+                                  e,
+                                  st,
+                                );
                               }
                             },
                       style: ElevatedButton.styleFrom(
@@ -511,22 +522,32 @@ class _HerdPageState extends State<HerdPage> {
                                   return;
                                 }
                                 setSheetState(() => submitting = true);
-                                final ok = await _submitEditHerd(
-                                  sheetContext,
-                                  herd,
-                                  nameController,
-                                  locationController,
-                                  headCountController,
-                                  selectedAnimalTypeId,
-                                  selectedStartDate,
-                                  selectedEndDate,
-                                );
-                                if (!sheetContext.mounted) return;
-                                if (ok) {
-                                  SuccessFeedback.saved();
-                                  Navigator.pop(sheetContext);
-                                } else {
+                                try {
+                                  final ok = await _submitEditHerd(
+                                    sheetContext,
+                                    herd,
+                                    nameController,
+                                    locationController,
+                                    headCountController,
+                                    selectedAnimalTypeId,
+                                    selectedStartDate,
+                                    selectedEndDate,
+                                  );
+                                  if (!sheetContext.mounted) return;
+                                  if (ok) {
+                                    SuccessFeedback.saved();
+                                    Navigator.pop(sheetContext);
+                                  } else {
+                                    setSheetState(() => submitting = false);
+                                  }
+                                } catch (e, st) {
+                                  if (!sheetContext.mounted) return;
                                   setSheetState(() => submitting = false);
+                                  appLogger.logError(
+                                    'HerdPage._submitEditHerd',
+                                    e,
+                                    st,
+                                  );
                                 }
                               },
                         style: ElevatedButton.styleFrom(
