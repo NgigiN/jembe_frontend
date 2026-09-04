@@ -107,6 +107,13 @@ void main() {
           'North Field',
         );
 
+        // The sheet now awaits the bloc's terminal state before it confirms
+        // and closes (P3-06), so the confirming state must be emitted after
+        // the submit is tapped, not before.
+        await tester.tap(find.text('Add Land'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
         final now = DateTime.now();
         stateController.add(
           LandLoaded(
@@ -122,8 +129,6 @@ void main() {
             successMessage: 'Land added',
           ),
         );
-
-        await tester.tap(find.text('Add Land'));
         await tester.pumpAndSettle();
 
         final result = await tester.runAsync(() => resultFuture);
@@ -159,13 +164,20 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Add Land'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        // Let the sheet's post-dispatch await resolve so onSubmit completes.
+        stateController.add(
+          const LandLoaded(lands: [], successMessage: 'Land added'),
+        );
         await tester.pumpAndSettle();
         await tester.runAsync(() => resultFuture);
 
         final captured = verify(
           () => landBloc.add(captureAny()),
         ).captured;
-        final event = captured.single as AddLandEvent;
+        final event = captured.whereType<AddLandEvent>().single;
         expect(event.land.tenureType, 'rented');
       },
     );
@@ -192,6 +204,7 @@ void main() {
 
   group('editing a land', () {
     late MockLandBloc landBloc;
+    late StreamController<LandState> stateController;
     late Land existingLand;
 
     setUpAll(() {
@@ -210,12 +223,15 @@ void main() {
         updatedAt: now,
       );
       landBloc = MockLandBloc();
+      stateController = StreamController<LandState>.broadcast();
       whenListen(
         landBloc,
-        Stream<LandState>.value(LandLoaded(lands: [existingLand])),
+        stateController.stream,
         initialState: LandLoaded(lands: [existingLand]),
       );
     });
+
+    tearDown(() => stateController.close());
 
     testWidgets(
       'shows the tenure type, capitalized, in the land details sheet',
@@ -266,6 +282,14 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Update Land'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        // The sheet awaits the bloc's terminal state before it closes (P3-06);
+        // emit the confirming state so the update onSubmit resolves.
+        stateController.add(
+          LandLoaded(lands: [existingLand], successMessage: 'Land updated'),
+        );
         await tester.pumpAndSettle();
 
         final captured = verify(

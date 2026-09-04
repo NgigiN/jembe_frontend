@@ -1,3 +1,4 @@
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:flutter/material.dart';
 
 class EntityFormSheet {
@@ -6,7 +7,7 @@ class EntityFormSheet {
     required String title,
     required List<Widget> fields,
     required String submitLabel,
-    required void Function(BuildContext sheetContext) onSubmit,
+    required Future<bool> Function(BuildContext sheetContext) onSubmit,
     GlobalKey<FormState>? formKey,
     AutovalidateMode autovalidateMode = AutovalidateMode.disabled,
     double heightFactor = 0.8,
@@ -19,63 +20,13 @@ class EntityFormSheet {
       builder: (sheetContext) => container(
         context: sheetContext,
         heightFactor: heightFactor,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(sheetContext).textTheme.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(sheetContext),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: scrollableForm(
-                  context: sheetContext,
-                  child: formKey == null
-                      ? Column(children: fields)
-                      : Form(
-                          key: formKey,
-                          autovalidateMode: autovalidateMode,
-                          child: Column(children: fields),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (formKey != null &&
-                        !(formKey.currentState?.validate() ?? false)) {
-                      return;
-                    }
-                    onSubmit(sheetContext);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: Text(
-                    submitLabel,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+        child: _EntityFormSheetBody(
+          title: title,
+          fields: fields,
+          submitLabel: submitLabel,
+          onSubmit: onSubmit,
+          formKey: formKey,
+          autovalidateMode: autovalidateMode,
         ),
       ),
     );
@@ -134,6 +85,115 @@ class EntityFormSheet {
     return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: 24),
       child: child,
+    );
+  }
+}
+
+/// The sheet's interactive body. Stays open until [onSubmit] resolves: while
+/// awaiting it shows a spinner and disables the close button; on `true` it
+/// plays the success feedback and pops; on `false` it re-enables, leaving the
+/// typed data intact.
+class _EntityFormSheetBody extends StatefulWidget {
+  const _EntityFormSheetBody({
+    required this.title,
+    required this.fields,
+    required this.submitLabel,
+    required this.onSubmit,
+    required this.formKey,
+    required this.autovalidateMode,
+  });
+
+  final String title;
+  final List<Widget> fields;
+  final String submitLabel;
+  final Future<bool> Function(BuildContext sheetContext) onSubmit;
+  final GlobalKey<FormState>? formKey;
+  final AutovalidateMode autovalidateMode;
+
+  @override
+  State<_EntityFormSheetBody> createState() => _EntityFormSheetBodyState();
+}
+
+class _EntityFormSheetBodyState extends State<_EntityFormSheetBody> {
+  bool _submitting = false;
+
+  Future<void> _handleSubmit() async {
+    if (widget.formKey != null &&
+        !(widget.formKey!.currentState?.validate() ?? false)) {
+      return;
+    }
+    setState(() => _submitting = true);
+    final ok = await widget.onSubmit(context);
+    if (!mounted) return;
+    if (ok) {
+      SuccessFeedback.saved(); // centralized: only on confirmed success
+      Navigator.pop(context);
+    } else {
+      // Stay open and re-enable; controllers keep their text.
+      setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                widget.title,
+                style: Theme.of(context).textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              IconButton(
+                onPressed:
+                    _submitting ? null : () => Navigator.pop(context),
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: EntityFormSheet.scrollableForm(
+              context: context,
+              child: widget.formKey == null
+                  ? Column(children: widget.fields)
+                  : Form(
+                      key: widget.formKey,
+                      autovalidateMode: widget.autovalidateMode,
+                      child: Column(children: widget.fields),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _submitting ? null : _handleSubmit,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: _submitting
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(
+                      widget.submitLabel,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

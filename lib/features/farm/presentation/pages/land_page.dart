@@ -71,7 +71,7 @@ Future<String?> showAddLandDialog(BuildContext context) async {
         ScaffoldMessenger.of(sheetContext).showSnackBar(
           AppSnackBar.error(sheetContext, 'User not authenticated'),
         );
-        return;
+        return false;
       }
       final land = LandModel.create(
         userId: userId,
@@ -81,9 +81,11 @@ Future<String?> showAddLandDialog(BuildContext context) async {
         soilType: sanitizeOptionalText(soilTypeController.text),
         tenureType: selectedTenureType,
       );
-      SuccessFeedback.saved();
       bloc.add(AddLandEvent(land));
-      Navigator.pop(sheetContext);
+      final s = await bloc.stream.firstWhere(
+        (s) => (s is LandLoaded && s.successMessage != null) || s is LandError,
+      );
+      return s is LandLoaded;
     },
   );
 
@@ -285,9 +287,12 @@ class _LandPageState extends State<LandPage> {
           createdAt: land.createdAt,
           updatedAt: DateTime.now(),
         );
-        SuccessFeedback.saved();
-        context.read<LandBloc>().add(UpdateLandEvent(updatedLand));
-        Navigator.pop(sheetContext);
+        final bloc = context.read<LandBloc>()
+          ..add(UpdateLandEvent(updatedLand));
+        final s = await bloc.stream.firstWhere(
+          (s) => (s is LandLoaded && s.successMessage != null) || s is LandError,
+        );
+        return s is LandLoaded;
       },
     );
   }
