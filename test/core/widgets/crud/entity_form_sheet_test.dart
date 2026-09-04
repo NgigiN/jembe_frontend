@@ -46,6 +46,9 @@ void main() {
       completer.complete(false);
       await tester.pumpAndSettle();
       expect(find.byType(TextField), findsWidgets); // sheet still open
+      // Button re-enabled: spinner gone, label back.
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('Save'), findsOneWidget);
     },
   );
 
@@ -56,6 +59,27 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Save'), findsNothing); // sheet closed
   });
+
+  testWidgets(
+    'stays open and re-enables when onSubmit throws',
+    (tester) async {
+      final completer = Completer<bool>();
+      await showSheet(tester, onSubmit: (_) => completer.future);
+
+      await tester.tap(find.text('Save'));
+      await tester.pump(); // spinner shown while awaiting
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      // A throw from onSubmit must not trap the user with a stuck spinner
+      // and a disabled close button.
+      completer.completeError(StateError('bloc closed mid-flight'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsWidgets); // sheet still open
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('Save'), findsOneWidget); // button re-enabled
+    },
+  );
 
   Future<void> pumpContainer(
     WidgetTester tester, {

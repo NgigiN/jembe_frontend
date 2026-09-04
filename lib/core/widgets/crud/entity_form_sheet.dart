@@ -1,4 +1,5 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:flutter/material.dart';
 
 class EntityFormSheet {
@@ -123,14 +124,23 @@ class _EntityFormSheetBodyState extends State<_EntityFormSheetBody> {
       return;
     }
     setState(() => _submitting = true);
-    final ok = await widget.onSubmit(context);
-    if (!mounted) return;
-    if (ok) {
-      SuccessFeedback.saved(); // centralized: only on confirmed success
-      Navigator.pop(context);
-    } else {
+    try {
+      final ok = await widget.onSubmit(context);
+      if (!mounted) return;
+      if (ok) {
+        SuccessFeedback.saved(); // centralized: only on confirmed success
+        Navigator.pop(context);
+        return; // popped — do not fall through to re-enable
+      }
       // Stay open and re-enable; controllers keep their text.
       setState(() => _submitting = false);
+    } catch (e, st) {
+      // A throw from onSubmit (e.g. a closed bloc making firstWhere throw)
+      // must never leave the button stuck spinning + the close button
+      // disabled. Re-enable, and keep a trace rather than swallowing it.
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      appLogger.logError('EntityFormSheet.onSubmit', e, st);
     }
   }
 
