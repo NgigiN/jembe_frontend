@@ -47,7 +47,7 @@ class DioClientFactory {
     // Add auth interceptor
     dio.interceptors.add(_AuthInterceptor());
 
-    // Add retry interceptor
+    // 401 -> session-expiry force-logout (with carve-outs)
     dio.interceptors.add(
       InterceptorsWrapper(
         onError: (error, handler) {

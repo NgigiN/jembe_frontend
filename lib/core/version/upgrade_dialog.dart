@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -75,9 +77,18 @@ class _UpgradeDialog extends StatelessWidget {
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Later'),
             ),
-          const FilledButton(
-            onPressed: UpgradeDialog.launchStore,
-            child: Text('Update'),
+          FilledButton(
+            onPressed: forced
+                ? UpgradeDialog.launchStore
+                : () {
+                    // Optional prompt only: dismiss on tap so the user
+                    // doesn't return from the Play Store to a still-open
+                    // advisory. The forced dialog must stay non-dismissible,
+                    // so this pop is intentionally scoped to !forced.
+                    unawaited(UpgradeDialog.launchStore());
+                    Navigator.of(context).pop();
+                  },
+            child: const Text('Update'),
           ),
         ],
       ),

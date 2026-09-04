@@ -442,32 +442,32 @@ class _HarvestPageState extends State<HarvestPage> {
 
                             setState(() => submitting = true);
 
-                            final bloc = context.read<HarvestBloc>();
-                            if (harvest == null) {
-                              final newHarvest = HarvestModel.create(
-                                seasonId: selectedSeasonId!,
-                                quantity: quantity,
-                                unit: unit,
-                                date: selectedDate,
-                                notes: notes,
-                              );
-                              bloc.add(AddHarvestEvent(newHarvest));
-                            } else {
-                              final updatedHarvest = HarvestModel(
-                                id: harvest.id,
-                                seasonId: selectedSeasonId!,
-                                quantity: quantity,
-                                unit: unit,
-                                date: selectedDate,
-                                notes: notes,
-                                revenueId: harvest.revenueId,
-                                createdAt: harvest.createdAt,
-                                updatedAt: DateTime.now(),
-                              );
-                              bloc.add(UpdateHarvestEvent(updatedHarvest));
-                            }
-
                             try {
+                              final bloc = context.read<HarvestBloc>();
+                              if (harvest == null) {
+                                final newHarvest = HarvestModel.create(
+                                  seasonId: selectedSeasonId!,
+                                  quantity: quantity,
+                                  unit: unit,
+                                  date: selectedDate,
+                                  notes: notes,
+                                );
+                                bloc.add(AddHarvestEvent(newHarvest));
+                              } else {
+                                final updatedHarvest = HarvestModel(
+                                  id: harvest.id,
+                                  seasonId: selectedSeasonId!,
+                                  quantity: quantity,
+                                  unit: unit,
+                                  date: selectedDate,
+                                  notes: notes,
+                                  revenueId: harvest.revenueId,
+                                  createdAt: harvest.createdAt,
+                                  updatedAt: DateTime.now(),
+                                );
+                                bloc.add(UpdateHarvestEvent(updatedHarvest));
+                              }
+
                               final s = await bloc.stream.firstWhere(
                                 (s) =>
                                     (s is HarvestLoaded &&

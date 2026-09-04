@@ -54,7 +54,6 @@ class _SplashPageState extends State<SplashPage> {
           // check pending; the connect/receive timeouts on the shared Dio also
           // apply. Either way this cannot block navigation.
           receiveTimeout: const Duration(seconds: 5),
-          sendTimeout: const Duration(seconds: 5),
         ),
       );
       final requirement = decideUpgrade(response.data, AppConfig.appVersion);
