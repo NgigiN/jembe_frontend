@@ -1,26 +1,26 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
-import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
+import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
-import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
-import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Opens the standard "Add Animal Type" form and resolves once it closes:
 /// the new animal type's id if the add succeeded, or null if the sheet was
@@ -58,14 +58,14 @@ Future<String?> showAddAnimalTypeDialog(BuildContext context) async {
     ),
     onSubmit: (sheetContext) async {
       final userId = await UserUtils.getCurrentUserId();
+      if (!sheetContext.mounted) return false;
       if (userId == null) {
         ScaffoldMessenger.of(sheetContext).showSnackBar(
           AppSnackBar.error(sheetContext, 'User not authenticated'),
         );
-        return;
+        return false;
       }
 
-      SuccessFeedback.saved();
       bloc.add(
         AddAnimalTypeEvent(
           sanitizeText(nameController.text),
@@ -73,7 +73,12 @@ Future<String?> showAddAnimalTypeDialog(BuildContext context) async {
           userId,
         ),
       );
-      Navigator.pop(sheetContext);
+      final s = await bloc.stream.firstWhere(
+        (s) =>
+            (s is AnimalTypeLoaded && s.successMessage != null) ||
+            s is AnimalTypeError,
+      );
+      return s is AnimalTypeLoaded;
     },
   );
 
@@ -92,7 +97,10 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
   @override
   void initState() {
     super.initState();
-    context.read<AnimalTypeBloc>().add(GetAnimalTypesEvent());
+    final bloc = context.read<AnimalTypeBloc>();
+    if (bloc.state is! AnimalTypeLoaded) {
+      bloc.add(GetAnimalTypesEvent());
+    }
   }
 
   @override
@@ -106,7 +114,15 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocConsumer<AnimalTypeBloc, AnimalTypeState>(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final bloc = context.read<AnimalTypeBloc>()
+            ..add(GetAnimalTypesEvent());
+          await bloc.stream.firstWhere(
+            (s) => s is AnimalTypeLoaded || s is AnimalTypeError,
+          );
+        },
+        child: BlocConsumer<AnimalTypeBloc, AnimalTypeState>(
         listener: (context, state) {
           if (state is AnimalTypeLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -124,23 +140,28 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
           }
 
           if (state is AnimalTypeError && state.animalTypes.isEmpty) {
-            return EntityErrorView(
-              message: state.message,
-              onRetry: () =>
-                  context.read<AnimalTypeBloc>().add(GetAnimalTypesEvent()),
+            return _scrollableEmptyState(
+              EntityErrorView(
+                message: state.message,
+                onRetry: () =>
+                    context.read<AnimalTypeBloc>().add(GetAnimalTypesEvent()),
+              ),
             );
           }
 
           final animalTypes = state.animalTypes;
           if (animalTypes.isEmpty) {
-            return EntityEmptyView(
-              icon: Icons.category,
-              title: 'No animal types added yet',
-              subtitle: 'Tap the + button to add your first animal type',
+            return _scrollableEmptyState(
+              const EntityEmptyView(
+                icon: Icons.category,
+                title: 'No animal types added yet',
+                subtitle: 'Tap the + button to add your first animal type',
+              ),
             );
           }
 
           return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: context.scrollListPadding(forFab: true),
             itemCount: animalTypes.length,
             itemBuilder: (context, index) {
@@ -149,7 +170,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
                   icon: Icons.category,
                   iconColor: AppColors.animalCategory,
                   title: animalType.name,
-                  subtitle: animalType.notes?.isNotEmpty == true
+                  subtitle: animalType.notes?.isNotEmpty ?? false
                       ? animalType.notes!
                       : 'Added ${_formatDate(animalType.createdAt)}',
                   onTap: () => _showAnimalTypeDetails(animalType),
@@ -157,10 +178,11 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
               },
             );
         },
+        ),
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
-          onPressed: () => _showAddAnimalTypeDialog(),
+          onPressed: _showAddAnimalTypeDialog,
           child: const Icon(Icons.add),
         ),
       ),
@@ -171,6 +193,21 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
     return '${date.day}/${date.month}/${date.year}';
   }
 
+  /// Makes a non-scrollable empty/error state (a centered icon+text column)
+  /// pullable: [RefreshIndicator] needs a scrollable descendant to detect
+  /// the pull gesture, even when there's nothing to scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
+        ),
+      ),
+    );
+  }
+
   void _showAnimalTypeDetails(AnimalType animalType) {
     EntityDetailsSheet.show(
       context: context,
@@ -178,7 +215,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
       details: [
         EntityDetailRow(
           'Notes',
-          animalType.notes?.isNotEmpty == true ? animalType.notes! : '—',
+          animalType.notes?.isNotEmpty ?? false ? animalType.notes! : '—',
         ),
         EntityDetailRow('Created', _formatDate(animalType.createdAt)),
       ],
@@ -206,16 +243,21 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
         nameController: nameController,
         notesController: notesController,
       ),
-      onSubmit: (sheetContext) {
-        SuccessFeedback.saved();
-        context.read<AnimalTypeBloc>().add(
-          UpdateAnimalTypeEvent(
-            animalType.id,
-            sanitizeText(nameController.text),
-            sanitizeOptionalText(notesController.text),
-          ),
+      onSubmit: (sheetContext) async {
+        final bloc = context.read<AnimalTypeBloc>()
+          ..add(
+            UpdateAnimalTypeEvent(
+              animalType.id,
+              sanitizeText(nameController.text),
+              sanitizeOptionalText(notesController.text),
+            ),
+          );
+        final s = await bloc.stream.firstWhere(
+          (s) =>
+              (s is AnimalTypeLoaded && s.successMessage != null) ||
+              s is AnimalTypeError,
         );
-        Navigator.pop(sheetContext);
+        return s is AnimalTypeLoaded;
       },
     );
   }
@@ -241,14 +283,15 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
     ];
   }
 
-  void _showDeleteConfirmation(AnimalType animalType) async {
+  Future<void> _showDeleteConfirmation(AnimalType animalType) async {
     final confirmed = await EntityDeleteDialog.show(
       context: context,
       title: 'Delete Animal Type',
       message:
           'Are you sure you want to delete "${animalType.name}"? This action cannot be undone.',
     );
-    if (confirmed == true) {
+    if (!mounted) return;
+    if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<AnimalTypeBloc>().add(
         DeleteAnimalTypeEvent(animalType.id),

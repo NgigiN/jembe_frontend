@@ -1,20 +1,20 @@
+import 'package:farm_tracker/features/farm/presentation/widgets/enterprise_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:farm_tracker/features/farm/presentation/widgets/enterprise_picker.dart';
 
 void main() {
   final activeSeason = Enterprise(
     id: 'season-1',
     kind: EnterpriseKind.season,
     name: 'Long Rains 2026',
-    startDate: DateTime(2026, 3, 1),
+    startDate: DateTime(2026, 3),
   );
   final closedHerd = Enterprise(
     id: 'herd-1',
     kind: EnterpriseKind.herd,
     name: 'Broiler Batch 1',
-    startDate: DateTime(2026, 1, 1),
-    endDate: DateTime(2026, 2, 1),
+    startDate: DateTime(2026),
+    endDate: DateTime(2026, 2),
   );
 
   Widget wrap(Widget child) => MaterialApp(home: Scaffold(body: child));

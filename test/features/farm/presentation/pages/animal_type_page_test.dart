@@ -1,15 +1,15 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animal_type_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 class MockAnimalTypeBloc extends MockBloc<AnimalTypeEvent, AnimalTypeState>
     implements AnimalTypeBloc {}
@@ -72,6 +72,13 @@ void main() {
           'Cow',
         );
 
+        // The sheet now awaits the bloc's terminal state before it confirms
+        // and closes (P3-06), so the confirming state must be emitted after
+        // the submit is tapped, not before.
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Add Animal Type'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
         final now = DateTime.now();
         stateController.add(
           AnimalTypeLoaded(
@@ -87,8 +94,6 @@ void main() {
             successMessage: 'Animal type added',
           ),
         );
-
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Add Animal Type'));
         await tester.pumpAndSettle();
 
         final result = await tester.runAsync(() => resultFuture);

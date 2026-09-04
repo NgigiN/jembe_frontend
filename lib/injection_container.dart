@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
+import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/audio/sound_service.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/network/dio_client.dart';
+import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
 import 'package:farm_tracker/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:farm_tracker/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:farm_tracker/features/auth/domain/repositories/auth_repository.dart';
@@ -141,7 +143,12 @@ Future<void> init() async {
 
   // Bloc
   sl
-    ..registerFactory(() => AuthBloc(googleSignInUseCase: sl()))
+    // AuthBloc is a singleton (not a factory like the other blocs): it must
+    // be the exact same instance the SessionExpiryNotifier listener in
+    // main.dart dispatches LogoutEvent onto and the one BlocProvider hands
+    // to the widget tree, or a forced logout would land on an orphan bloc
+    // the UI never sees.
+    ..registerLazySingleton(() => AuthBloc(googleSignInUseCase: sl()))
     // Feature-specific blocs (preferred)
     ..registerFactory(
       () => LandBloc(
@@ -418,13 +425,22 @@ Future<void> init() async {
       () => ProfileRemoteDataSourceImpl(dio: sl()),
     )
     ..registerLazySingleton<ContentLocalDataSource>(
-      () => ContentLocalDataSourceImpl(),
+      ContentLocalDataSourceImpl.new,
     )
     ..registerLazySingleton<QuestionRemoteDataSource>(
       () => QuestionRemoteDataSourceImpl(dio: sl()),
     )
     ..registerLazySingleton(() => AnalyticsService(dio: sl()))
-    ..registerLazySingleton(() => SoundService())
+    ..registerLazySingleton(SoundService.new)
+    // Network resilience (must be registered before Dio - the factory
+    // closure below pulls them from sl()).
+    ..registerLazySingleton(SessionExpiryNotifier.new)
+    ..registerLazySingleton<CacheStore>(MemCacheStore.new)
     // External - Dio client (preferred for new code)
-    ..registerLazySingleton<Dio>(DioClientFactory.create);
+    ..registerLazySingleton<Dio>(
+      () => DioClientFactory.create(
+        cacheStore: sl(),
+        sessionExpiry: sl(),
+      ),
+    );
 }

@@ -1,10 +1,6 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
@@ -14,6 +10,10 @@ import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 class MockHerdBloc extends MockBloc<HerdEvent, HerdState> implements HerdBloc {}
 
@@ -49,7 +49,7 @@ void main() {
       );
       whenListen(
         animalTypeBloc,
-        Stream<AnimalTypeState>.empty(),
+        const Stream<AnimalTypeState>.empty(),
         initialState: AnimalTypeLoaded([
           AnimalType(
             id: 'type-1',
@@ -115,6 +115,13 @@ void main() {
         await tester.tap(find.text('OK'));
         await tester.pumpAndSettle();
 
+        // The sheet now awaits the bloc's terminal state before it confirms
+        // and closes (P3-06), so the confirming state must be emitted after
+        // the submit is tapped, not before.
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Register Herd'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
         stateController.add(
           HerdLoaded(
             [
@@ -134,8 +141,6 @@ void main() {
             successMessage: 'Herd created',
           ),
         );
-
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Register Herd'));
         await tester.pumpAndSettle();
 
         final result = await tester.runAsync(() => resultFuture);

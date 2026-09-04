@@ -2,7 +2,7 @@ import 'package:farm_tracker/features/farm/data/models/animal_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  final birthDate = DateTime(2024, 1, 1);
+  final birthDate = DateTime(2024);
 
   group('AnimalModel.create', () {
     test('carries optional sex and acquisitionSource through', () {

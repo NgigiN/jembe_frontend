@@ -1,6 +1,14 @@
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 
 class AnimalTypeModel extends AnimalType {
+  const AnimalTypeModel({
+    required super.id,
+    required super.userId,
+    required super.name,
+    required super.createdAt,
+    required super.updatedAt,
+    super.notes,
+  });
   factory AnimalTypeModel.create({
     required String userId,
     required String name,
@@ -16,14 +24,6 @@ class AnimalTypeModel extends AnimalType {
       updatedAt: now,
     );
   }
-  const AnimalTypeModel({
-    required super.id,
-    required super.userId,
-    required super.name,
-    required super.createdAt,
-    required super.updatedAt,
-    super.notes,
-  });
 
   factory AnimalTypeModel.fromJson(Map<String, dynamic> json) {
     final notesValue = json['notes'] ?? json['Notes'];

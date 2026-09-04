@@ -1,10 +1,10 @@
 import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
-import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/repositories/animal_type_repository.dart';
 import 'package:farm_tracker/features/farm/data/datasources/animal_type_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/animal_type_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/animal_type_repository.dart';
 
 class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
   AnimalTypeRepositoryImpl({required this.remoteDataSource});
@@ -16,11 +16,11 @@ class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
       final animalTypes = await remoteDataSource.getAnimalTypes();
       return Right(animalTypes);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e}'));
+      return Left(ServerFailure('Unexpected error: $e'));
     }
   }
 
@@ -30,11 +30,11 @@ class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
       final animalType = await remoteDataSource.getAnimalType(id);
       return Right(animalType);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e}'));
+      return Left(ServerFailure('Unexpected error: $e'));
     }
   }
 
@@ -53,11 +53,11 @@ class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
       final result = await remoteDataSource.addAnimalType(animalTypeModel);
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e}'));
+      return Left(ServerFailure('Unexpected error: $e'));
     }
   }
 
@@ -80,11 +80,11 @@ class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
       final result = await remoteDataSource.updateAnimalType(updatedModel);
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e}'));
+      return Left(ServerFailure('Unexpected error: $e'));
     }
   }
 
@@ -94,11 +94,11 @@ class AnimalTypeRepositoryImpl implements AnimalTypeRepository {
       await remoteDataSource.deleteAnimalType(id);
       return const Right(null);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Unexpected error: ${e}'));
+      return Left(ServerFailure('Unexpected error: $e'));
     }
   }
 }

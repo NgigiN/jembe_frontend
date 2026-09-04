@@ -218,9 +218,9 @@ class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
       appBar: AppBar(title: const Text('Unified Farm Costs')),
       body: BlocBuilder<AnalysisBloc, AnalysisState>(
         builder: (context, state) {
-          if (state is AnalysisLoading) {
+          if (state.isLoading) {
             return const Center(child: CircularProgressIndicator());
-          } else if (state is AnalysisError) {
+          } else if (state.error != null) {
             return RefreshIndicator(
               onRefresh: () async {
                 context.read<AnalysisBloc>().add(LoadTotalCostsBySeason());
@@ -239,7 +239,7 @@ class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          state.message,
+                          state.error!,
                           style: Theme.of(context).textTheme.bodyLarge,
                           textAlign: TextAlign.center,
                         ),
@@ -258,8 +258,8 @@ class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
                 ],
               ),
             );
-          } else if (state is TotalCostsBySeasonLoaded) {
-            final data = state.detailedCosts;
+          } else if (state.detailedCosts != null) {
+            final data = state.detailedCosts!;
             if (data.details.isEmpty) {
               return const Center(child: Text('No cost data available'));
             }
@@ -474,9 +474,9 @@ class _CostBreakdownPageState extends State<CostBreakdownPage> {
       appBar: AppBar(title: const Text('Cost Breakdown by Input Type')),
       body: BlocBuilder<AnalysisBloc, AnalysisState>(
         builder: (context, state) {
-          if (state is AnalysisLoading) {
+          if (state.isLoading) {
             return const Center(child: CircularProgressIndicator());
-          } else if (state is AnalysisError) {
+          } else if (state.error != null) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -488,19 +488,20 @@ class _CostBreakdownPageState extends State<CostBreakdownPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    state.message,
+                    state.error!,
                     style: const TextStyle(fontSize: 16),
                     textAlign: TextAlign.center,
                   ),
                 ],
               ),
             );
-          } else if (state is CostBreakdownLoaded) {
-            if (state.breakdowns.isEmpty) {
+          } else if (state.breakdowns != null) {
+            final breakdowns = state.breakdowns!;
+            if (breakdowns.isEmpty) {
               return const Center(child: Text('No data available'));
             }
 
-            final visible = state.breakdowns
+            final visible = breakdowns
                 .where((row) => _matchesSelected(row, enterprises))
                 .toList();
 
@@ -617,9 +618,9 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
 
           return BlocBuilder<AnalysisBloc, AnalysisState>(
             builder: (context, state) {
-              if (state is AnalysisLoading) {
+              if (state.isLoading) {
                 return const Center(child: CircularProgressIndicator());
-              } else if (state is AnalysisError) {
+              } else if (state.error != null) {
                 // Keep the year switcher live even on error - the request
                 // that failed is scoped to farmYear, so the user can still
                 // page to a different year instead of getting stuck on a
@@ -659,7 +660,7 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              state.message,
+                              state.error!,
                               style: Theme.of(context).textTheme.bodyLarge,
                               textAlign: TextAlign.center,
                             ),
@@ -681,10 +682,10 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
                     ],
                   ),
                 );
-              } else if (state is AnnualCostSummaryLoaded) {
+              } else if (state.summaries != null) {
                 // Sort summaries by month string (e.g. "2026-01")
                 final sortedSummaries =
-                    List<MonthlySummary>.from(state.summaries)
+                    List<MonthlySummary>.from(state.summaries!)
                       ..sort((a, b) => a.month.compareTo(b.month));
 
                 return RefreshIndicator(

@@ -1,27 +1,28 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
-import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
 import 'package:farm_tracker/features/farm/domain/entities/infrastructure.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_state.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class InfrastructurePage extends StatefulWidget {
   const InfrastructurePage({super.key});
@@ -43,7 +44,10 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
   @override
   void initState() {
     super.initState();
-    context.read<InfrastructureBloc>().add(GetInfrastructuresEvent());
+    final bloc = context.read<InfrastructureBloc>();
+    if (bloc.state is! InfrastructureLoaded) {
+      bloc.add(GetInfrastructuresEvent());
+    }
   }
 
   @override
@@ -57,7 +61,15 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocConsumer<InfrastructureBloc, InfrastructureState>(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final bloc = context.read<InfrastructureBloc>()
+            ..add(GetInfrastructuresEvent());
+          await bloc.stream.firstWhere(
+            (s) => s is InfrastructureLoaded || s is InfrastructureError,
+          );
+        },
+        child: BlocConsumer<InfrastructureBloc, InfrastructureState>(
         listener: (context, state) {
           if (state is InfrastructureLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -75,24 +87,29 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
           }
 
           if (state is InfrastructureError && state.infrastructures.isEmpty) {
-            return EntityErrorView(
-              message: state.message,
-              onRetry: () => context
-                  .read<InfrastructureBloc>()
-                  .add(GetInfrastructuresEvent()),
+            return _scrollableEmptyState(
+              EntityErrorView(
+                message: state.message,
+                onRetry: () => context
+                    .read<InfrastructureBloc>()
+                    .add(GetInfrastructuresEvent()),
+              ),
             );
           }
 
           final infrastructures = state.infrastructures;
           if (infrastructures.isEmpty) {
-            return const EntityEmptyView(
-              icon: Icons.foundation,
-              title: 'No infrastructure registered yet',
-              subtitle: 'Tap the + button to add your first infrastructure item',
+            return _scrollableEmptyState(
+              const EntityEmptyView(
+                icon: Icons.foundation,
+                title: 'No infrastructure registered yet',
+                subtitle: 'Tap the + button to add your first infrastructure item',
+              ),
             );
           }
 
           return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: context.scrollListPadding(forFab: true),
             itemCount: infrastructures.length,
             itemBuilder: (context, index) {
@@ -117,11 +134,27 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
             },
           );
         },
+        ),
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
-          onPressed: () => _showAddOrEditDialog(),
+          onPressed: _showAddOrEditDialog,
           child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+
+  /// Makes a non-scrollable empty/error state (a centered icon+text column)
+  /// pullable: [RefreshIndicator] needs a scrollable descendant to detect
+  /// the pull gesture, even when there's nothing to scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
         ),
       ),
     );
@@ -184,6 +217,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
         ? item.type
         : _infrastructureTypes.first;
     var selectedDate = item?.date ?? DateTime.now();
+    var submitting = false;
 
     showModalBottomSheet<void>(
       context: context,
@@ -212,7 +246,9 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
-                      onPressed: () => Navigator.pop(sheetContext),
+                      onPressed: submitting
+                          ? null
+                          : () => Navigator.pop(sheetContext),
                       icon: const Icon(Icons.close),
                     ),
                   ],
@@ -226,7 +262,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                       child: Column(
                         children: [
                           DropdownButtonFormField<String>(
-                            value: selectedType,
+                            initialValue: selectedType,
                             isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'Infrastructure Type *',
@@ -250,15 +286,14 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                             controller: nameController,
                             labelText: 'Infrastructure Name *',
                             hintText: 'e.g., Main Barn, North Fence',
-                            validator: (value) =>
-                                requiredName(value, fieldLabel: 'Name'),
+                            validator: requiredName,
                           ),
                           const SizedBox(height: 16),
                           ValidatedLocationField(
                             controller: locationController,
                             labelText: 'Location *',
                             hintText: 'e.g., North Field',
-                            validator: (value) => requiredLocation(value),
+                            validator: requiredLocation,
                           ),
                           const SizedBox(height: 16),
                           ValidatedDecimalField(
@@ -325,32 +360,61 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (!(formKey.currentState?.validate() ?? false)) {
-                        return;
-                      }
-                      _submitInfrastructure(
-                        sheetContext,
-                        isEditing: isEditing,
-                        item: item,
-                        selectedType: selectedType,
-                        selectedDate: selectedDate,
-                        nameController: nameController,
-                        locationController: locationController,
-                        costController: costController,
-                        notesController: notesController,
-                      );
-                    },
+                    onPressed: submitting
+                        ? null
+                        : () async {
+                            if (!(formKey.currentState?.validate() ??
+                                false)) {
+                              return;
+                            }
+                            setSheetState(() => submitting = true);
+                            try {
+                              final ok = await _submitInfrastructure(
+                                sheetContext,
+                                isEditing: isEditing,
+                                item: item,
+                                selectedType: selectedType,
+                                selectedDate: selectedDate,
+                                nameController: nameController,
+                                locationController: locationController,
+                                costController: costController,
+                                notesController: notesController,
+                              );
+                              if (!sheetContext.mounted) return;
+                              if (ok) {
+                                SuccessFeedback.saved();
+                                Navigator.pop(sheetContext);
+                              } else {
+                                setSheetState(() => submitting = false);
+                              }
+                            } catch (e, st) {
+                              if (!sheetContext.mounted) return;
+                              setSheetState(() => submitting = false);
+                              appLogger.logError(
+                                'InfrastructurePage._submitInfrastructure',
+                                e,
+                                st,
+                              );
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: Text(
-                      isEditing ? 'Update Infrastructure' : 'Add Infrastructure',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: submitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            isEditing
+                                ? 'Update Infrastructure'
+                                : 'Add Infrastructure',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -361,23 +425,17 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
     );
   }
 
-  Future<void> _submitInfrastructure(
+  Future<bool> _submitInfrastructure(
     BuildContext sheetContext, {
     required bool isEditing,
-    Infrastructure? item,
-    required String selectedType,
-    required DateTime selectedDate,
-    required TextEditingController nameController,
-    required TextEditingController locationController,
-    required TextEditingController costController,
-    required TextEditingController notesController,
+    required String selectedType, required DateTime selectedDate, required TextEditingController nameController, required TextEditingController locationController, required TextEditingController costController, required TextEditingController notesController, Infrastructure? item,
   }) async {
     final cost = parseNonNegativeDecimal(costController.text);
     final notes = sanitizeOptionalText(notesController.text);
+    final bloc = context.read<InfrastructureBloc>();
 
     if (isEditing && item != null) {
-      SuccessFeedback.saved();
-      context.read<InfrastructureBloc>().add(
+      bloc.add(
         UpdateInfrastructureEvent(
           id: item.id,
           type: selectedType,
@@ -388,18 +446,22 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
           notes: notes,
         ),
       );
-      Navigator.pop(sheetContext);
-      return;
+      final s = await bloc.stream.firstWhere(
+        (s) =>
+            (s is InfrastructureLoaded && s.successMessage != null) ||
+            s is InfrastructureError,
+      );
+      return s is InfrastructureLoaded;
     }
 
     final userId = await UserUtils.getCurrentUserId();
+    if (!sheetContext.mounted) return false;
     if (userId == null) {
       _showSheetError(sheetContext, 'User not authenticated');
-      return;
+      return false;
     }
 
-    SuccessFeedback.saved();
-    context.read<InfrastructureBloc>().add(
+    bloc.add(
       AddInfrastructureEvent(
         type: selectedType,
         name: sanitizeText(nameController.text),
@@ -410,7 +472,12 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
         notes: notes,
       ),
     );
-    Navigator.pop(sheetContext);
+    final s = await bloc.stream.firstWhere(
+      (s) =>
+          (s is InfrastructureLoaded && s.successMessage != null) ||
+          s is InfrastructureError,
+    );
+    return s is InfrastructureLoaded;
   }
 
   void _showSheetError(BuildContext sheetContext, String message) {
@@ -426,7 +493,8 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
       message:
           'Are you sure you want to delete "${item.name}"? This action cannot be undone.',
     );
-    if (confirmed == true) {
+    if (!mounted) return;
+    if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<InfrastructureBloc>().add(
         DeleteInfrastructureEvent(item.id),

@@ -16,10 +16,7 @@ class CostDetail extends Equatable {
     required this.category,
     required this.location,
     required this.startDate,
-    this.endDate,
-    required this.inputCost,
-    required this.activityCost,
-    required this.totalCost,
+    required this.inputCost, required this.activityCost, required this.totalCost, this.endDate,
   });
   final String type; // 'plant' or 'animal'
   final int id;

@@ -7,8 +7,7 @@ class HerdActivity extends Equatable {
     required this.activityType,
     required this.count,
     required this.date,
-    this.notes,
-    required this.createdAt,
+    required this.createdAt, this.notes,
   });
   final String id;
   final String herdId;

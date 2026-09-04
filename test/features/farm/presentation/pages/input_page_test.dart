@@ -1,10 +1,7 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
+import 'package:farm_tracker/core/widgets/crud/cost_category_type_selector.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event.dart';
@@ -22,7 +19,10 @@ import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/input_page.dart';
-import 'package:farm_tracker/core/widgets/crud/cost_category_type_selector.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
 class MockInputBloc extends MockBloc<InputEvent, InputState> implements InputBloc {}
 
@@ -41,6 +41,7 @@ void main() {
   late MockSeasonBloc seasonBloc;
   late MockLandBloc landBloc;
   late MockCostCategoryBloc costCategoryBloc;
+  late StreamController<InputState> inputStateController;
   final now = DateTime.now();
 
   setUpAll(() {
@@ -53,9 +54,10 @@ void main() {
     seasonBloc = MockSeasonBloc();
     landBloc = MockLandBloc();
     costCategoryBloc = MockCostCategoryBloc();
+    inputStateController = StreamController<InputState>.broadcast();
     whenListen(
       inputBloc,
-      const Stream<InputState>.empty(),
+      inputStateController.stream,
       initialState: const InputLoaded(inputs: []),
     );
     whenListen(
@@ -107,6 +109,8 @@ void main() {
       initialState: const CostCategoryLoaded([]),
     );
   });
+
+  tearDown(() => inputStateController.close());
 
   // MultiBlocProvider wraps MaterialApp itself (matching main.dart's real
   // wiring), not just its `home:` content: showModalBottomSheet pushes a
@@ -177,7 +181,15 @@ void main() {
         '500',
       );
 
+      // The sheet now awaits the bloc's terminal state before it confirms
+      // and closes (P3-06), so the confirming state must be emitted after
+      // the submit is tapped, not before.
       await tester.tap(find.text('Add Input'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      inputStateController.add(
+        const InputLoaded(inputs: [], successMessage: 'Input added'),
+      );
       await tester.pumpAndSettle();
 
       final captured = verify(() => inputBloc.add(captureAny())).captured;
@@ -221,7 +233,15 @@ void main() {
         '15000',
       );
 
+      // The sheet now awaits the bloc's terminal state before it confirms
+      // and closes (P3-06), so the confirming state must be emitted after
+      // the submit is tapped, not before.
       await tester.tap(find.text('Add Input'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      inputStateController.add(
+        const InputLoaded(inputs: [], successMessage: 'Input added'),
+      );
       await tester.pumpAndSettle();
 
       final captured = verify(() => inputBloc.add(captureAny())).captured;

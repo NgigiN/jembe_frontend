@@ -1,45 +1,45 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/status_colors.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
-import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/cost_category_type_selector.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
-import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/input_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/input_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/input_state.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
+import 'package:farm_tracker/features/farm/data/models/input_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/entities/input.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
+import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
-import 'package:farm_tracker/features/farm/domain/entities/input.dart';
-import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
-import 'package:farm_tracker/features/farm/domain/entities/land.dart';
-import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/input_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/input_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/input_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
-import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event.dart';
-
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
-import 'package:farm_tracker/features/farm/data/models/input_model.dart';
+import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Opens the standard "Add Input" form. When [lockedHerdId] is set, the
 /// Herd picker is skipped and the input is pre-scoped to that herd (and
@@ -59,7 +59,8 @@ Future<void> showAddInputDialog(
   final selectedSourceType = sourceType ?? 'plant';
   final isPlant = selectedSourceType == 'plant';
   String? selectedSeasonId;
-  String? selectedHerdId = lockedHerdId;
+  var selectedHerdId = lockedHerdId;
+  var submitting = false;
 
   final seasonState = context.read<SeasonBloc>().state;
   final seasons = seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
@@ -89,7 +90,7 @@ Future<void> showAddInputDialog(
     return;
   }
 
-  showModalBottomSheet(
+  showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -114,7 +115,8 @@ Future<void> showAddInputDialog(
                         ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   IconButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed:
+                        submitting ? null : () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
                   ),
                 ],
@@ -238,40 +240,73 @@ Future<void> showAddInputDialog(
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    if (!(formKey.currentState?.validate() ?? false)) {
-                      return;
-                    }
+                  onPressed: submitting
+                      ? null
+                      : () async {
+                          if (!(formKey.currentState?.validate() ?? false)) {
+                            return;
+                          }
 
-                    final sourceId =
-                        isPlant ? selectedSeasonId! : selectedHerdId!;
+                          final sourceId =
+                              isPlant ? selectedSeasonId! : selectedHerdId!;
 
-                    final input = InputModel.create(
-                      sourceType: selectedSourceType,
-                      sourceId: sourceId,
-                      animalId: isPlant ? null : lockedAnimalId,
-                      type: sanitizeText(typeController.text),
-                      quantity: parseOptionalNonNegativeDecimal(
-                        quantityController.text,
-                      ),
-                      cost: parsePositiveDecimal(costController.text)!,
-                      date: selectedDate!,
-                      notes: sanitizeOptionalText(notesController.text),
-                    );
-                    SuccessFeedback.saved();
-                    context.read<InputBloc>().add(AddInputEvent(input));
-                    Navigator.pop(context);
-                  },
+                          final input = InputModel.create(
+                            sourceType: selectedSourceType,
+                            sourceId: sourceId,
+                            animalId: isPlant ? null : lockedAnimalId,
+                            type: sanitizeText(typeController.text),
+                            quantity: parseOptionalNonNegativeDecimal(
+                              quantityController.text,
+                            ),
+                            cost: parsePositiveDecimal(costController.text)!,
+                            date: selectedDate!,
+                            notes: sanitizeOptionalText(notesController.text),
+                          );
+
+                          setState(() => submitting = true);
+
+                          try {
+                            final bloc = context.read<InputBloc>()
+                              ..add(AddInputEvent(input));
+                            final s = await bloc.stream.firstWhere(
+                              (s) =>
+                                  (s is InputLoaded &&
+                                      s.successMessage != null) ||
+                                  s is InputError,
+                            );
+                            if (!context.mounted) return;
+                            if (s is InputLoaded) {
+                              SuccessFeedback.saved();
+                              Navigator.pop(context);
+                            } else {
+                              setState(() => submitting = false);
+                            }
+                          } catch (e, st) {
+                            if (!context.mounted) return;
+                            setState(() => submitting = false);
+                            appLogger.logError(
+                              'InputPage.showAddInputDialog',
+                              e,
+                              st,
+                            );
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  child: const Text(
-                    'Add Input',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  child: submitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text(
+                          'Add Input',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -294,10 +329,27 @@ class _InputPageState extends State<InputPage> {
   @override
   void initState() {
     super.initState();
+    // InputBloc and CostCategoryBloc are shared, app-wide singletons whose
+    // Get*Event is parameterized (sourceType / category) but whose Loaded
+    // state doesn't record which parameter produced it. Guarding these on
+    // "is! XLoaded" would risk skipping the fetch and showing data fetched
+    // for a *different* sourceType/category (e.g. animal inputs left on
+    // screen after navigating here for 'plant'), so they're always
+    // re-fetched. HerdBloc/SeasonBloc/LandBloc are unparameterized and
+    // safe to guard.
     context.read<InputBloc>().add(GetInputsEvent(sourceType: widget.sourceType));
-    context.read<HerdBloc>().add(GetHerdsEvent());
-    context.read<SeasonBloc>().add(GetSeasonsEvent());
-    context.read<LandBloc>().add(GetLandsEvent());
+    final herdBloc = context.read<HerdBloc>();
+    if (herdBloc.state is! HerdLoaded) {
+      herdBloc.add(GetHerdsEvent());
+    }
+    final seasonBloc = context.read<SeasonBloc>();
+    if (seasonBloc.state is! SeasonLoaded) {
+      seasonBloc.add(GetSeasonsEvent());
+    }
+    final landBloc = context.read<LandBloc>();
+    if (landBloc.state is! LandLoaded) {
+      landBloc.add(GetLandsEvent());
+    }
     context.read<CostCategoryBloc>().add(
           const GetCostCategoriesEvent(category: 'input'),
         );
@@ -322,7 +374,21 @@ class _InputPageState extends State<InputPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocConsumer<InputBloc, InputState>(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final inputBloc = context.read<InputBloc>()
+            ..add(GetInputsEvent(sourceType: widget.sourceType));
+          context.read<HerdBloc>().add(GetHerdsEvent());
+          context.read<SeasonBloc>().add(GetSeasonsEvent());
+          context.read<LandBloc>().add(GetLandsEvent());
+          context.read<CostCategoryBloc>().add(
+                const GetCostCategoriesEvent(category: 'input'),
+              );
+          await inputBloc.stream.firstWhere(
+            (s) => s is InputLoaded || s is InputError,
+          );
+        },
+        child: BlocConsumer<InputBloc, InputState>(
         listener: (context, state) {
           if (state is InputLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -340,23 +406,28 @@ class _InputPageState extends State<InputPage> {
           }
 
           if (state is InputError && state.inputs.isEmpty) {
-            return EntityErrorView(
-              message: state.message,
-              onRetry: () =>
-                  context.read<InputBloc>().add(GetInputsEvent(sourceType: widget.sourceType)),
+            return _scrollableEmptyState(
+              EntityErrorView(
+                message: state.message,
+                onRetry: () =>
+                    context.read<InputBloc>().add(GetInputsEvent(sourceType: widget.sourceType)),
+              ),
             );
           }
 
           final inputs = state.inputs;
           if (inputs.isEmpty) {
-            return EntityEmptyView(
-              icon: Icons.input,
-              title: 'No inputs registered yet',
-              subtitle: 'Tap the + button to add your first input',
+            return _scrollableEmptyState(
+              const EntityEmptyView(
+                icon: Icons.input,
+                title: 'No inputs registered yet',
+                subtitle: 'Tap the + button to add your first input',
+              ),
             );
           }
 
           return ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: context.scrollListPadding(forFab: true),
               itemCount: inputs.length,
               itemBuilder: (context, index) {
@@ -392,11 +463,27 @@ class _InputPageState extends State<InputPage> {
               },
             );
         },
+        ),
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
           onPressed: () => showAddInputDialog(context, sourceType: widget.sourceType),
           child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+
+  /// Makes a non-scrollable empty/error state (a centered icon+text column)
+  /// pullable: [RefreshIndicator] needs a scrollable descendant to detect
+  /// the pull gesture, even when there's nothing to scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
         ),
       ),
     );
@@ -458,6 +545,7 @@ class _InputPageState extends State<InputPage> {
     final isPlant = selectedSourceType == 'plant';
     var selectedSeasonId = isPlant ? input.sourceId : null;
     var selectedHerdId = isPlant ? null : input.sourceId;
+    var submitting = false;
 
     final seasonState = context.read<SeasonBloc>().state;
     final seasons =
@@ -479,7 +567,7 @@ class _InputPageState extends State<InputPage> {
       return;
     }
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -504,7 +592,8 @@ class _InputPageState extends State<InputPage> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed:
+                          submitting ? null : () => Navigator.pop(context),
                       icon: const Icon(Icons.close),
                     ),
                   ],
@@ -634,36 +723,63 @@ class _InputPageState extends State<InputPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () async {
-                      if (!(formKey.currentState?.validate() ?? false)) {
-                        return;
-                      }
+                    onPressed: submitting
+                        ? null
+                        : () async {
+                            if (!(formKey.currentState?.validate() ??
+                                false)) {
+                              return;
+                            }
 
-                      final sourceId =
-                          isPlant ? selectedSeasonId! : selectedHerdId!;
+                            final sourceId =
+                                isPlant ? selectedSeasonId! : selectedHerdId!;
 
-                      final updatedInput = InputModel(
-                        id: input.id,
-                        sourceType: selectedSourceType,
-                        sourceId: sourceId,
-                        animalId: isPlant ? null : 0,
-                        type: sanitizeText(typeController.text),
-                        quantity: parseOptionalNonNegativeDecimal(
-                          quantityController.text,
-                        ),
-                        cost: parsePositiveDecimal(costController.text)!,
-                        date: selectedDate!,
-                        notes: sanitizeOptionalText(notesController.text),
-                        createdAt: input.createdAt,
-                        updatedAt: DateTime.now(),
-                      );
+                            final updatedInput = InputModel(
+                              id: input.id,
+                              sourceType: selectedSourceType,
+                              sourceId: sourceId,
+                              animalId: isPlant ? null : 0,
+                              type: sanitizeText(typeController.text),
+                              quantity: parseOptionalNonNegativeDecimal(
+                                quantityController.text,
+                              ),
+                              cost:
+                                  parsePositiveDecimal(costController.text)!,
+                              date: selectedDate!,
+                              notes:
+                                  sanitizeOptionalText(notesController.text),
+                              createdAt: input.createdAt,
+                              updatedAt: DateTime.now(),
+                            );
 
-                      SuccessFeedback.saved();
-                      context
-                          .read<InputBloc>()
-                          .add(UpdateInputEvent(updatedInput));
-                      Navigator.pop(context);
-                    },
+                            setState(() => submitting = true);
+
+                            try {
+                              final bloc = context.read<InputBloc>()
+                                ..add(UpdateInputEvent(updatedInput));
+                              final s = await bloc.stream.firstWhere(
+                                (s) =>
+                                    (s is InputLoaded &&
+                                        s.successMessage != null) ||
+                                    s is InputError,
+                              );
+                              if (!context.mounted) return;
+                              if (s is InputLoaded) {
+                                SuccessFeedback.saved();
+                                Navigator.pop(context);
+                              } else {
+                                setState(() => submitting = false);
+                              }
+                            } catch (e, st) {
+                              if (!context.mounted) return;
+                              setState(() => submitting = false);
+                              appLogger.logError(
+                                'InputPage._showEditInputDialog',
+                                e,
+                                st,
+                              );
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
                           Theme.of(context).colorScheme.primary,
@@ -671,13 +787,19 @@ class _InputPageState extends State<InputPage> {
                           Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: const Text(
-                      'Update Input',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: submitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(
+                            'Update Input',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -688,14 +810,15 @@ class _InputPageState extends State<InputPage> {
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, Input input) async {
+  Future<void> _showDeleteConfirmation(BuildContext context, Input input) async {
     final confirmed = await EntityDeleteDialog.show(
       context: context,
       title: 'Delete Input',
       message:
           'Are you sure you want to delete this ${input.type.toLowerCase()} input? This action cannot be undone.',
     );
-    if (confirmed == true) {
+    if (!context.mounted) return;
+    if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<InputBloc>().add(DeleteInputEvent(input.id));
     }

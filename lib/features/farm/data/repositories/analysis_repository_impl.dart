@@ -1,11 +1,11 @@
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
-import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
+import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/features/farm/data/datasources/analysis_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
+import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
 import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/analysis_repository.dart';
-import 'package:farm_tracker/features/farm/data/datasources/analysis_remote_data_source.dart';
 
 class AnalysisRepositoryImpl implements AnalysisRepository {
 
@@ -18,7 +18,7 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
       final model = await remoteDataSource.getTotalCostsBySeason();
       return Right(model);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -44,7 +44,7 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
               .toList();
       return Right(breakdowns);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -62,7 +62,7 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
       );
       return Right(summaryModels);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

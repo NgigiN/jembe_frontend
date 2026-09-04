@@ -49,7 +49,7 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
       rethrow;
     } catch (e) {
       appLogger.logError('getTotalCostsBySeason', e);
-      throw const ServerException(null);
+      throw const ServerException();
     }
   }
 
@@ -89,7 +89,7 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
       rethrow;
     } catch (e) {
       appLogger.logError('getCostBreakdownByInputType', e);
-      throw const ServerException(null);
+      throw const ServerException();
     }
   }
 
@@ -141,7 +141,7 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
       rethrow;
     } catch (e) {
       appLogger.logError('getAnnualCostSummary', e);
-      throw const ServerException(null);
+      throw const ServerException();
     }
   }
 }

@@ -1,30 +1,30 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/field_limits.dart';
 import 'package:farm_tracker/core/validation/input_formatters.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
-import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
+import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/data/models/land_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
-import 'package:farm_tracker/features/farm/domain/entities/land.dart';
-import 'package:farm_tracker/features/farm/data/models/land_model.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
-import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Opens the standard "Add Land" form and resolves once it closes: the new
 /// land's id if the add succeeded, or null if the sheet was dismissed
@@ -67,11 +67,12 @@ Future<String?> showAddLandDialog(BuildContext context) async {
     ),
     onSubmit: (sheetContext) async {
       final userId = await UserUtils.getCurrentUserId();
+      if (!sheetContext.mounted) return false;
       if (userId == null) {
         ScaffoldMessenger.of(sheetContext).showSnackBar(
           AppSnackBar.error(sheetContext, 'User not authenticated'),
         );
-        return;
+        return false;
       }
       final land = LandModel.create(
         userId: userId,
@@ -81,9 +82,11 @@ Future<String?> showAddLandDialog(BuildContext context) async {
         soilType: sanitizeOptionalText(soilTypeController.text),
         tenureType: selectedTenureType,
       );
-      SuccessFeedback.saved();
       bloc.add(AddLandEvent(land));
-      Navigator.pop(sheetContext);
+      final s = await bloc.stream.firstWhere(
+        (s) => (s is LandLoaded && s.successMessage != null) || s is LandError,
+      );
+      return s is LandLoaded;
     },
   );
 
@@ -102,7 +105,10 @@ class _LandPageState extends State<LandPage> {
   @override
   void initState() {
     super.initState();
-    context.read<LandBloc>().add(GetLandsEvent());
+    final bloc = context.read<LandBloc>();
+    if (bloc.state is! LandLoaded) {
+      bloc.add(GetLandsEvent());
+    }
   }
 
   @override
@@ -116,59 +122,88 @@ class _LandPageState extends State<LandPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocConsumer<LandBloc, LandState>(
-        listener: (context, state) {
-          if (state is LandLoaded && state.successMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.success(context, state.successMessage!),
-            );
-          } else if (state is LandError && state.lands.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.error(context, state.message),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is LandLoading && state.lands.isEmpty) {
-            return const SkeletonEntityList(icon: Icons.landscape);
-          }
-
-          if (state is LandError && state.lands.isEmpty) {
-            return EntityErrorView(
-              message: state.message,
-              onRetry: () => context.read<LandBloc>().add(GetLandsEvent()),
-            );
-          }
-
-          final lands = state.lands;
-          if (lands.isEmpty) {
-            return EntityEmptyView(
-              icon: Icons.landscape,
-              title: 'No lands registered yet',
-              subtitle: 'Tap the + button to add your first land',
-            );
-          }
-
-          return ListView.builder(
-            padding: context.scrollListPadding(forFab: true),
-            itemCount: lands.length,
-            itemBuilder: (context, index) {
-              final land = lands[index];
-              return EntityCard(
-                icon: Icons.landscape,
-                iconColor: AppColors.plantCategory,
-                title: land.name,
-                subtitle: _landSubtitle(land),
-                onTap: () => _showLandDetails(land),
-              );
-            },
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final bloc = context.read<LandBloc>()..add(GetLandsEvent());
+          await bloc.stream.firstWhere(
+            (s) => s is LandLoaded || s is LandError,
           );
         },
+        child: BlocConsumer<LandBloc, LandState>(
+          listener: (context, state) {
+            if (state is LandLoaded && state.successMessage != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                AppSnackBar.success(context, state.successMessage!),
+              );
+            } else if (state is LandError && state.lands.isNotEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                AppSnackBar.error(context, state.message),
+              );
+            }
+          },
+          builder: (context, state) {
+            if (state is LandLoading && state.lands.isEmpty) {
+              return const SkeletonEntityList(icon: Icons.landscape);
+            }
+
+            if (state is LandError && state.lands.isEmpty) {
+              return _scrollableEmptyState(
+                EntityErrorView(
+                  message: state.message,
+                  onRetry: () =>
+                      context.read<LandBloc>().add(GetLandsEvent()),
+                ),
+              );
+            }
+
+            final lands = state.lands;
+            if (lands.isEmpty) {
+              return _scrollableEmptyState(
+                const EntityEmptyView(
+                  icon: Icons.landscape,
+                  title: 'No lands registered yet',
+                  subtitle: 'Tap the + button to add your first land',
+                ),
+              );
+            }
+
+            return ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: context.scrollListPadding(forFab: true),
+              itemCount: lands.length,
+              itemBuilder: (context, index) {
+                final land = lands[index];
+                return EntityCard(
+                  icon: Icons.landscape,
+                  iconColor: AppColors.plantCategory,
+                  title: land.name,
+                  subtitle: _landSubtitle(land),
+                  onTap: () => _showLandDetails(land),
+                );
+              },
+            );
+          },
+        ),
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
-          onPressed: () => _showAddLandDialog(),
+          onPressed: _showAddLandDialog,
           child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+
+  /// Makes a non-scrollable empty/error state (a centered icon+text column)
+  /// pullable: [RefreshIndicator] needs a scrollable descendant to detect
+  /// the pull gesture, even when there's nothing to scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
         ),
       ),
     );
@@ -192,15 +227,15 @@ class _LandPageState extends State<LandPage> {
           EntityDetailRow('Size', '${land.size} acres'),
         EntityDetailRow(
           'Location',
-          land.location?.isNotEmpty == true ? land.location! : '—',
+          land.location?.isNotEmpty ?? false ? land.location! : '—',
         ),
         EntityDetailRow(
           'Soil Type',
-          land.soilType?.isNotEmpty == true ? land.soilType! : '—',
+          land.soilType?.isNotEmpty ?? false ? land.soilType! : '—',
         ),
         EntityDetailRow(
           'Tenure',
-          land.tenureType?.isNotEmpty == true
+          land.tenureType?.isNotEmpty ?? false
               ? land.tenureType![0].toUpperCase() + land.tenureType!.substring(1)
               : '—',
         ),
@@ -222,7 +257,7 @@ class _LandPageState extends State<LandPage> {
     );
     final locationController = TextEditingController(text: land.location ?? '');
     final soilTypeController = TextEditingController(text: land.soilType ?? '');
-    String? selectedTenureType = land.tenureType;
+    var selectedTenureType = land.tenureType;
 
     EntityFormSheet.show(
       context: context,
@@ -253,9 +288,12 @@ class _LandPageState extends State<LandPage> {
           createdAt: land.createdAt,
           updatedAt: DateTime.now(),
         );
-        SuccessFeedback.saved();
-        context.read<LandBloc>().add(UpdateLandEvent(updatedLand));
-        Navigator.pop(sheetContext);
+        final bloc = context.read<LandBloc>()
+          ..add(UpdateLandEvent(updatedLand));
+        final s = await bloc.stream.firstWhere(
+          (s) => (s is LandLoaded && s.successMessage != null) || s is LandError,
+        );
+        return s is LandLoaded;
       },
     );
   }
@@ -290,7 +328,7 @@ class _LandPageState extends State<LandPage> {
         controller: locationController,
         labelText: 'Location',
         hintText: locationHint,
-        validator: (value) => optionalLocation(value),
+        validator: optionalLocation,
       ),
       const SizedBox(height: 16),
       TextFormField(
@@ -300,7 +338,7 @@ class _LandPageState extends State<LandPage> {
           hintText: soilTypeHint,
         ),
         validator: optionalSoilType,
-        inputFormatters: shortLabelFormatters(maxLength: FieldLimits.soilTypeMax),
+        inputFormatters: shortLabelFormatters(),
         maxLength: FieldLimits.soilTypeMax,
         buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
             null,
@@ -321,14 +359,15 @@ class _LandPageState extends State<LandPage> {
     ];
   }
 
-  void _showDeleteConfirmation(Land land) async {
+  Future<void> _showDeleteConfirmation(Land land) async {
     final confirmed = await EntityDeleteDialog.show(
       context: context,
       title: 'Delete Land',
       message:
           'Are you sure you want to delete "${land.name}"${land.location != null ? ' (${land.location})' : ''}? This action cannot be undone.',
     );
-    if (confirmed == true) {
+    if (!mounted) return;
+    if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<LandBloc>().add(DeleteLandEvent(land.id));
     }

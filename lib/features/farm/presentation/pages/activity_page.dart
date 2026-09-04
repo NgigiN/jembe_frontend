@@ -1,30 +1,28 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/status_colors.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/widgets/crud/cost_category_type_selector.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
-import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_state.dart';
@@ -33,12 +31,15 @@ import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
+import 'package:farm_tracker/features/farm/presentation/utils/source_context_resolver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 
 class ActivityPage extends StatefulWidget {
   const ActivityPage({super.key, this.sourceType});
@@ -52,12 +53,29 @@ class _ActivityPageState extends State<ActivityPage> {
   @override
   void initState() {
     super.initState();
+    // ActivityBloc and CostCategoryBloc are shared, app-wide singletons
+    // whose Get*Event is parameterized (sourceType / category) but whose
+    // Loaded state doesn't record which parameter produced it. Guarding
+    // these on "is! XLoaded" would risk skipping the fetch and showing
+    // data fetched for a *different* sourceType/category (e.g. animal
+    // activities left on screen after navigating here for 'plant'), so
+    // they're always re-fetched. HerdBloc/SeasonBloc/LandBloc are
+    // unparameterized and safe to guard.
     context.read<ActivityBloc>().add(
       GetActivitiesEvent(sourceType: widget.sourceType),
     );
-    context.read<HerdBloc>().add(GetHerdsEvent());
-    context.read<SeasonBloc>().add(GetSeasonsEvent());
-    context.read<LandBloc>().add(GetLandsEvent());
+    final herdBloc = context.read<HerdBloc>();
+    if (herdBloc.state is! HerdLoaded) {
+      herdBloc.add(GetHerdsEvent());
+    }
+    final seasonBloc = context.read<SeasonBloc>();
+    if (seasonBloc.state is! SeasonLoaded) {
+      seasonBloc.add(GetSeasonsEvent());
+    }
+    final landBloc = context.read<LandBloc>();
+    if (landBloc.state is! LandLoaded) {
+      landBloc.add(GetLandsEvent());
+    }
     context.read<CostCategoryBloc>().add(
       const GetCostCategoriesEvent(category: 'activity'),
     );
@@ -82,7 +100,21 @@ class _ActivityPageState extends State<ActivityPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocConsumer<ActivityBloc, ActivityState>(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final activityBloc = context.read<ActivityBloc>()
+            ..add(GetActivitiesEvent(sourceType: widget.sourceType));
+          context.read<HerdBloc>().add(GetHerdsEvent());
+          context.read<SeasonBloc>().add(GetSeasonsEvent());
+          context.read<LandBloc>().add(GetLandsEvent());
+          context.read<CostCategoryBloc>().add(
+            const GetCostCategoriesEvent(category: 'activity'),
+          );
+          await activityBloc.stream.firstWhere(
+            (s) => s is ActivityLoaded || s is ActivityError,
+          );
+        },
+        child: BlocConsumer<ActivityBloc, ActivityState>(
         listener: (context, state) {
           if (state is ActivityLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -100,24 +132,29 @@ class _ActivityPageState extends State<ActivityPage> {
           }
 
           if (state is ActivityError && state.activities.isEmpty) {
-            return EntityErrorView(
-              message: state.message,
-              onRetry: () => context.read<ActivityBloc>().add(
-                GetActivitiesEvent(sourceType: widget.sourceType),
+            return _scrollableEmptyState(
+              EntityErrorView(
+                message: state.message,
+                onRetry: () => context.read<ActivityBloc>().add(
+                  GetActivitiesEvent(sourceType: widget.sourceType),
+                ),
               ),
             );
           }
 
           final activities = state.activities;
           if (activities.isEmpty) {
-            return const EntityEmptyView(
-              icon: Icons.work,
-              title: 'No activities registered yet',
-              subtitle: 'Tap the + button to add your first activity',
+            return _scrollableEmptyState(
+              const EntityEmptyView(
+                icon: Icons.work,
+                title: 'No activities registered yet',
+                subtitle: 'Tap the + button to add your first activity',
+              ),
             );
           }
 
           return ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: context.scrollListPadding(forFab: true),
               itemCount: activities.length,
               itemBuilder: (context, index) {
@@ -153,11 +190,27 @@ class _ActivityPageState extends State<ActivityPage> {
               },
             );
         },
+        ),
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
           onPressed: () => _showAddActivityDialog(context),
           child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+
+  /// Makes a non-scrollable empty/error state (a centered icon+text column)
+  /// pullable: [RefreshIndicator] needs a scrollable descendant to detect
+  /// the pull gesture, even when there's nothing to scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
         ),
       ),
     );
@@ -227,6 +280,7 @@ class _ActivityPageState extends State<ActivityPage> {
     String? selectedSeasonId;
     String? selectedHerdId;
     DateTime? selectedDate = DateTime.now();
+    var submitting = false;
 
     if (isPlant && seasons.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -247,7 +301,7 @@ class _ActivityPageState extends State<ActivityPage> {
       return;
     }
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -272,7 +326,8 @@ class _ActivityPageState extends State<ActivityPage> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed:
+                          submitting ? null : () => Navigator.pop(context),
                       icon: const Icon(Icons.close),
                     ),
                   ],
@@ -402,42 +457,78 @@ class _ActivityPageState extends State<ActivityPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (!(formKey.currentState?.validate() ?? false)) {
-                        return;
-                      }
+                    onPressed: submitting
+                        ? null
+                        : () async {
+                            if (!(formKey.currentState?.validate() ??
+                                false)) {
+                              return;
+                            }
 
-                      final sourceId =
-                          isPlant ? selectedSeasonId! : selectedHerdId!;
+                            final sourceId =
+                                isPlant ? selectedSeasonId! : selectedHerdId!;
 
-                      final details = sanitizeOptionalText(detailsController.text);
+                            final details = sanitizeOptionalText(
+                              detailsController.text,
+                            );
 
-                      final activity = ActivityModel.create(
-                        sourceType: selectedSourceType,
-                        sourceId: sourceId,
-                        animalId: isPlant ? null : 0,
-                        type: sanitizeText(typeController.text),
-                        details: details,
-                        cost: parseNonNegativeDecimal(costController.text),
-                        date: selectedDate!,
-                        notes: details,
-                      );
-                      SuccessFeedback.saved();
-                      context.read<ActivityBloc>().add(
-                        AddActivityEvent(activity),
-                      );
-                      Navigator.pop(context);
-                    },
+                            final activity = ActivityModel.create(
+                              sourceType: selectedSourceType,
+                              sourceId: sourceId,
+                              animalId: isPlant ? null : 0,
+                              type: sanitizeText(typeController.text),
+                              details: details,
+                              cost: parseNonNegativeDecimal(
+                                costController.text,
+                              ),
+                              date: selectedDate!,
+                              notes: details,
+                            );
+
+                            setState(() => submitting = true);
+
+                            try {
+                              final bloc = context.read<ActivityBloc>()
+                                ..add(AddActivityEvent(activity));
+                              final s = await bloc.stream.firstWhere(
+                                (s) =>
+                                    (s is ActivityLoaded &&
+                                        s.successMessage != null) ||
+                                    s is ActivityError,
+                              );
+                              if (!context.mounted) return;
+                              if (s is ActivityLoaded) {
+                                SuccessFeedback.saved();
+                                Navigator.pop(context);
+                              } else {
+                                setState(() => submitting = false);
+                              }
+                            } catch (e, st) {
+                              if (!context.mounted) return;
+                              setState(() => submitting = false);
+                              appLogger.logError(
+                                'ActivityPage._showAddActivityDialog',
+                                e,
+                                st,
+                              );
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: const Text(
-                      'Add Activity',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: submitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(
+                            'Add Activity',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -476,6 +567,7 @@ class _ActivityPageState extends State<ActivityPage> {
     var selectedHerdId = isPlant ? null : activity.sourceId;
     String? selectedType = activity.type;
     DateTime? selectedDate = activity.date;
+    var submitting = false;
 
     if ((isPlant && seasons.isEmpty) || (!isPlant && herds.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -487,7 +579,7 @@ class _ActivityPageState extends State<ActivityPage> {
       return;
     }
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -512,7 +604,8 @@ class _ActivityPageState extends State<ActivityPage> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed:
+                          submitting ? null : () => Navigator.pop(context),
                       icon: const Icon(Icons.close),
                     ),
                   ],
@@ -642,34 +735,63 @@ class _ActivityPageState extends State<ActivityPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () async {
-                      if (!(formKey.currentState?.validate() ?? false)) {
-                        return;
-                      }
+                    onPressed: submitting
+                        ? null
+                        : () async {
+                            if (!(formKey.currentState?.validate() ??
+                                false)) {
+                              return;
+                            }
 
-                      final sourceId =
-                          isPlant ? selectedSeasonId! : selectedHerdId!;
+                            final sourceId =
+                                isPlant ? selectedSeasonId! : selectedHerdId!;
 
-                      final updatedActivity = ActivityModel(
-                        id: activity.id,
-                        sourceType: selectedSourceType,
-                        sourceId: sourceId,
-                        animalId: isPlant ? null : 0,
-                        type: sanitizeText(selectedType!),
-                        details: sanitizeOptionalText(descriptionController.text),
-                        cost: parseNonNegativeDecimal(costController.text),
-                        date: selectedDate!,
-                        notes: activity.notes,
-                        createdAt: activity.createdAt,
-                        updatedAt: DateTime.now(),
-                      );
+                            final updatedActivity = ActivityModel(
+                              id: activity.id,
+                              sourceType: selectedSourceType,
+                              sourceId: sourceId,
+                              animalId: isPlant ? null : 0,
+                              type: sanitizeText(selectedType),
+                              details: sanitizeOptionalText(
+                                descriptionController.text,
+                              ),
+                              cost: parseNonNegativeDecimal(
+                                costController.text,
+                              ),
+                              date: selectedDate!,
+                              notes: activity.notes,
+                              createdAt: activity.createdAt,
+                              updatedAt: DateTime.now(),
+                            );
 
-                      SuccessFeedback.saved();
-                      context.read<ActivityBloc>().add(
-                        UpdateActivityEvent(updatedActivity),
-                      );
-                      Navigator.pop(context);
-                    },
+                            setState(() => submitting = true);
+
+                            try {
+                              final bloc = context.read<ActivityBloc>()
+                                ..add(UpdateActivityEvent(updatedActivity));
+                              final s = await bloc.stream.firstWhere(
+                                (s) =>
+                                    (s is ActivityLoaded &&
+                                        s.successMessage != null) ||
+                                    s is ActivityError,
+                              );
+                              if (!context.mounted) return;
+                              if (s is ActivityLoaded) {
+                                SuccessFeedback.saved();
+                                Navigator.pop(context);
+                              } else {
+                                setState(() => submitting = false);
+                              }
+                            } catch (e, st) {
+                              if (!context.mounted) return;
+                              setState(() => submitting = false);
+                              appLogger.logError(
+                                'ActivityPage._showEditActivityDialog',
+                                e,
+                                st,
+                              );
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
                           Theme.of(context).colorScheme.primary,
@@ -677,13 +799,19 @@ class _ActivityPageState extends State<ActivityPage> {
                           Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: const Text(
-                      'Update Activity',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: submitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(
+                            'Update Activity',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -702,6 +830,7 @@ class _ActivityPageState extends State<ActivityPage> {
       message:
           'Are you sure you want to delete this ${activity.type.toLowerCase()} activity? This action cannot be undone.',
     );
+    if (!context.mounted) return;
     if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<ActivityBloc>().add(

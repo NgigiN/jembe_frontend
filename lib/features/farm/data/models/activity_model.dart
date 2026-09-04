@@ -1,14 +1,24 @@
 import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
 
 class ActivityModel extends Activity {
+  const ActivityModel({
+    required super.id,
+    required super.sourceType,
+    required super.sourceId,
+    required super.type,
+    required super.cost,
+    required super.date,
+    required super.createdAt,
+    required super.updatedAt,
+    super.animalId,
+    super.details,
+    super.notes,
+  });
   factory ActivityModel.create({
     required String sourceType,
     required String sourceId,
-    int? animalId,
-    required String type,
+    required String type, required double cost, required DateTime date, int? animalId,
     String? details,
-    required double cost,
-    required DateTime date,
     String? notes,
   }) {
     final now = DateTime.now();
@@ -26,19 +36,6 @@ class ActivityModel extends Activity {
       updatedAt: now,
     );
   }
-  const ActivityModel({
-    required super.id,
-    required super.sourceType,
-    required super.sourceId,
-    required super.type,
-    required super.cost,
-    required super.date,
-    required super.createdAt,
-    required super.updatedAt,
-    super.animalId,
-    super.details,
-    super.notes,
-  });
 
   factory ActivityModel.fromJson(Map<String, dynamic> json) {
     final animalIdValue = json['AnimalID'] ?? json['animal_id'];

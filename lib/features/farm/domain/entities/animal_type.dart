@@ -5,9 +5,7 @@ class AnimalType extends Equatable {
     required this.id,
     required this.userId,
     required this.name,
-    this.notes,
-    required this.createdAt,
-    required this.updatedAt,
+    required this.createdAt, required this.updatedAt, this.notes,
   });
   final String id;
   final String userId;

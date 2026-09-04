@@ -56,6 +56,28 @@ class UserStorageModel {
   final DateTime loginTime;
   final String pictureUrl;
 
+  UserStorageModel copyWith({
+    String? email,
+    String? farmName,
+    String? id,
+    String? location,
+    String? name,
+    String? token,
+    DateTime? loginTime,
+    String? pictureUrl,
+  }) {
+    return UserStorageModel(
+      email: email ?? this.email,
+      farmName: farmName ?? this.farmName,
+      id: id ?? this.id,
+      location: location ?? this.location,
+      name: name ?? this.name,
+      token: token ?? this.token,
+      loginTime: loginTime ?? this.loginTime,
+      pictureUrl: pictureUrl ?? this.pictureUrl,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'email': email,

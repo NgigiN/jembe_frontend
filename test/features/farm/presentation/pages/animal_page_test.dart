@@ -1,12 +1,6 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
@@ -33,6 +27,12 @@ import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animal_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class MockAnimalBloc extends MockBloc<AnimalEvent, AnimalState>
     implements AnimalBloc {}
@@ -391,6 +391,13 @@ void main() {
       acquisitionDropdown.onChanged!('bredOnFarm');
       await tester.pumpAndSettle();
 
+      // The sheet now awaits the bloc's terminal state before it confirms
+      // and closes (P3-06), so the confirming state must be emitted after
+      // the submit is tapped, not before.
+      await tester.tap(find.text('Add Animal'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
       stateController.add(
         AnimalLoaded(
           animals: [
@@ -410,8 +417,6 @@ void main() {
           successMessage: 'Animal added',
         ),
       );
-
-      await tester.tap(find.text('Add Animal'));
       await tester.pumpAndSettle();
       await tester.runAsync(() => resultFuture);
 
@@ -534,6 +539,13 @@ void main() {
           .onChanged!('bought');
       await tester.pumpAndSettle();
 
+      // The sheet now awaits the bloc's terminal state before it confirms
+      // and closes (P3-06), so the confirming state must be emitted after
+      // the submit is tapped, not before.
+      await tester.tap(find.text('Add Animal'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
       stateController.add(
         AnimalLoaded(
           animals: [
@@ -552,8 +564,6 @@ void main() {
           successMessage: 'Animal added',
         ),
       );
-
-      await tester.tap(find.text('Add Animal'));
       await tester.pumpAndSettle();
       await tester.runAsync(() => resultFuture);
 
@@ -575,6 +585,7 @@ void main() {
     late MockLandBloc landBloc;
     late MockCostCategoryBloc costCategoryBloc;
     late Animal existingAnimal;
+    late StreamController<AnimalState> stateController;
 
     setUpAll(() {
       registerFallbackValue(GetAnimalsEvent());
@@ -620,9 +631,10 @@ void main() {
         const Stream<CostCategoryState>.empty(),
         initialState: const CostCategoryLoaded([]),
       );
+      stateController = StreamController<AnimalState>.broadcast();
       whenListen(
         animalBloc,
-        Stream<AnimalState>.value(AnimalLoaded(animals: [existingAnimal])),
+        stateController.stream,
         initialState: AnimalLoaded(animals: [existingAnimal]),
       );
       whenListen(
@@ -658,6 +670,8 @@ void main() {
       );
     });
 
+    tearDown(() => stateController.close());
+
     testWidgets('shows details, edits sex, and dispatches UpdateAnimalEvent', (
       tester,
     ) async {
@@ -688,7 +702,18 @@ void main() {
       sexDropdown.onChanged!('male');
       await tester.pumpAndSettle();
 
+      // The sheet now awaits the bloc's terminal state before it confirms
+      // and closes (P3-06), so the confirming state must be emitted after
+      // the submit is tapped, not before.
       await tester.tap(find.text('Update Animal'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      stateController.add(
+        AnimalLoaded(
+          animals: [existingAnimal],
+          successMessage: 'Animal updated',
+        ),
+      );
       await tester.pumpAndSettle();
 
       final captured = verify(() => animalBloc.add(captureAny())).captured;
@@ -767,7 +792,18 @@ void main() {
           .onChanged!('bought');
       await tester.pumpAndSettle();
 
+      // The sheet now awaits the bloc's terminal state before it confirms
+      // and closes (P3-06), so the confirming state must be emitted after
+      // the submit is tapped, not before.
       await tester.tap(find.text('Update Animal'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      stateController.add(
+        AnimalLoaded(
+          animals: [existingAnimal],
+          successMessage: 'Animal updated',
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Add New Animal Input'), findsOneWidget);
@@ -790,7 +826,7 @@ void main() {
       );
       whenListen(
         animalBloc,
-        Stream<AnimalState>.value(AnimalLoaded(animals: [existingAnimal])),
+        stateController.stream,
         initialState: AnimalLoaded(animals: [existingAnimal]),
       );
 
@@ -812,7 +848,18 @@ void main() {
       await tester.tap(find.text('Edit'));
       await tester.pumpAndSettle();
 
+      // The sheet now awaits the bloc's terminal state before it confirms
+      // and closes (P3-06), so the confirming state must be emitted after
+      // the submit is tapped, not before.
       await tester.tap(find.text('Update Animal'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      stateController.add(
+        AnimalLoaded(
+          animals: [existingAnimal],
+          successMessage: 'Animal updated',
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Add New Animal Input'), findsNothing);

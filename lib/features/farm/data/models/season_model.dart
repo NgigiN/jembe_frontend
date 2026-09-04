@@ -1,6 +1,17 @@
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 
 class SeasonModel extends Season {
+  const SeasonModel({
+    required super.id,
+    required super.userId,
+    required super.name,
+    required super.plantId,
+    required super.landId,
+    required super.startDate,
+    required super.createdAt,
+    required super.updatedAt,
+    super.endDate,
+  });
   factory SeasonModel.create({
     required String userId,
     required String name,
@@ -22,17 +33,6 @@ class SeasonModel extends Season {
       updatedAt: now,
     );
   }
-  const SeasonModel({
-    required super.id,
-    required super.userId,
-    required super.name,
-    required super.plantId,
-    required super.landId,
-    required super.startDate,
-    required super.createdAt,
-    required super.updatedAt,
-    super.endDate,
-  });
 
   factory SeasonModel.fromJson(Map<String, dynamic> json) {
     final endDateValue = json['EndDate'] ?? json['end_date'];

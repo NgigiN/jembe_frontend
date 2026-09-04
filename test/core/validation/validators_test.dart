@@ -44,10 +44,10 @@ void main() {
   group('positiveIntMax', () {
     test('enforces maximum', () {
       expect(
-        positiveIntMax('10', max: 5, fieldLabel: 'Count'),
+        positiveIntMax('10', max: 5),
         contains('cannot exceed'),
       );
-      expect(positiveIntMax('3', max: 5, fieldLabel: 'Count'), isNull);
+      expect(positiveIntMax('3', max: 5), isNull);
     });
   });
 }

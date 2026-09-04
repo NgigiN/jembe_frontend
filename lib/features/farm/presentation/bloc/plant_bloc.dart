@@ -1,13 +1,13 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_plants.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_plant.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_plant.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_plants.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/update_plant.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class PlantBloc extends Bloc<PlantEvent, PlantState> {
 
@@ -19,7 +19,7 @@ class PlantBloc extends Bloc<PlantEvent, PlantState> {
   })
     : super(PlantInitial()) {
     on<GetPlantsEvent>((event, emit) async {
-      emit(PlantLoading());
+      emit(const PlantLoading());
       final result = await getPlants(NoParams());
       result.fold(
         (failure) => emit(PlantError(resolveFailureMessage(failure, 'Failed to load crops'))),

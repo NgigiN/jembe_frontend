@@ -1,10 +1,10 @@
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
-import 'package:farm_tracker/features/farm/domain/entities/season.dart';
-import 'package:farm_tracker/features/farm/domain/repositories/season_repository.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/features/farm/data/datasources/season_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/season_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/season_repository.dart';
 
 class SeasonRepositoryImpl implements SeasonRepository {
   SeasonRepositoryImpl({required this.remoteDataSource});
@@ -16,7 +16,7 @@ class SeasonRepositoryImpl implements SeasonRepository {
       final seasons = await remoteDataSource.getSeasons();
       return Right(seasons);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -41,7 +41,7 @@ class SeasonRepositoryImpl implements SeasonRepository {
       final result = await remoteDataSource.addSeason(seasonModel);
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -53,7 +53,7 @@ class SeasonRepositoryImpl implements SeasonRepository {
       await remoteDataSource.deleteSeason(id);
       return const Right(null);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -76,7 +76,7 @@ class SeasonRepositoryImpl implements SeasonRepository {
       final result = await remoteDataSource.updateSeason(seasonModel);
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

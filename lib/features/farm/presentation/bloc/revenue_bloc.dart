@@ -1,14 +1,14 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/add_revenue.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/delete_revenue.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/get_revenue_by_id.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_revenues.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_revenues_params.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_revenue_by_id.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_revenue.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_revenue.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_revenue.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 

@@ -1,10 +1,10 @@
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
-import 'package:farm_tracker/features/farm/domain/entities/input.dart';
-import 'package:farm_tracker/features/farm/domain/repositories/input_repository.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/features/farm/data/datasources/input_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/input_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/input.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/input_repository.dart';
 
 class InputRepositoryImpl implements InputRepository {
   InputRepositoryImpl({required this.remoteDataSource});
@@ -16,7 +16,7 @@ class InputRepositoryImpl implements InputRepository {
       final inputs = await remoteDataSource.getInputs(sourceType: sourceType);
       return Right(inputs);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -42,7 +42,7 @@ class InputRepositoryImpl implements InputRepository {
       final result = await remoteDataSource.addInput(inputModel);
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -68,7 +68,7 @@ class InputRepositoryImpl implements InputRepository {
       final result = await remoteDataSource.updateInput(inputModel);
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -80,7 +80,7 @@ class InputRepositoryImpl implements InputRepository {
       await remoteDataSource.deleteInput(id);
       return const Right(null);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

@@ -18,7 +18,7 @@ void main() {
       source: 'KALRO',
       animalTypeTags: const ['dairy cattle'],
       cropTags: const [],
-      publishedAt: DateTime(2026, 8, 1),
+      publishedAt: DateTime(2026, 8),
     );
 
     await tester.pumpWidget(

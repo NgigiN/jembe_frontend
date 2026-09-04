@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class GoogleLoginPage extends StatelessWidget {
   const GoogleLoginPage({super.key});
@@ -33,7 +33,7 @@ class GoogleLoginPage extends StatelessWidget {
         builder: (context, state) {
           return Center(
             child: Padding(
-              padding: const EdgeInsets.all(32.0),
+              padding: const EdgeInsets.all(32),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

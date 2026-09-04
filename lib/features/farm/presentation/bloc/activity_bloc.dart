@@ -1,14 +1,14 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/add_activity.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/delete_activity.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_activities.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_activities_params.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_activity.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_activity.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_activity.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
   ActivityBloc({
@@ -19,7 +19,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
   }) : super(ActivityInitial()) {
     on<GetActivitiesEvent>((event, emit) async {
       appLogger.debug(LogCategory.farm, 'GetActivitiesEvent triggered');
-      emit(ActivityLoading());
+      emit(const ActivityLoading());
 
       final result = await getActivities(
         GetActivitiesParams(sourceType: event.sourceType),

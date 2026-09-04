@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 class StepConnector extends StatelessWidget {
-  final bool isActive;
 
   const StepConnector({super.key, this.isActive = true});
+  final bool isActive;
 
   @override
   Widget build(BuildContext context) {
