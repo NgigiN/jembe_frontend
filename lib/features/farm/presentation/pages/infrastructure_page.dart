@@ -43,7 +43,10 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
   @override
   void initState() {
     super.initState();
-    context.read<InfrastructureBloc>().add(GetInfrastructuresEvent());
+    final bloc = context.read<InfrastructureBloc>();
+    if (bloc.state is! InfrastructureLoaded) {
+      bloc.add(GetInfrastructuresEvent());
+    }
   }
 
   @override
@@ -57,7 +60,15 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocConsumer<InfrastructureBloc, InfrastructureState>(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final bloc = context.read<InfrastructureBloc>()
+            ..add(GetInfrastructuresEvent());
+          await bloc.stream.firstWhere(
+            (s) => s is InfrastructureLoaded || s is InfrastructureError,
+          );
+        },
+        child: BlocConsumer<InfrastructureBloc, InfrastructureState>(
         listener: (context, state) {
           if (state is InfrastructureLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -75,24 +86,29 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
           }
 
           if (state is InfrastructureError && state.infrastructures.isEmpty) {
-            return EntityErrorView(
-              message: state.message,
-              onRetry: () => context
-                  .read<InfrastructureBloc>()
-                  .add(GetInfrastructuresEvent()),
+            return _scrollableEmptyState(
+              EntityErrorView(
+                message: state.message,
+                onRetry: () => context
+                    .read<InfrastructureBloc>()
+                    .add(GetInfrastructuresEvent()),
+              ),
             );
           }
 
           final infrastructures = state.infrastructures;
           if (infrastructures.isEmpty) {
-            return const EntityEmptyView(
-              icon: Icons.foundation,
-              title: 'No infrastructure registered yet',
-              subtitle: 'Tap the + button to add your first infrastructure item',
+            return _scrollableEmptyState(
+              const EntityEmptyView(
+                icon: Icons.foundation,
+                title: 'No infrastructure registered yet',
+                subtitle: 'Tap the + button to add your first infrastructure item',
+              ),
             );
           }
 
           return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: context.scrollListPadding(forFab: true),
             itemCount: infrastructures.length,
             itemBuilder: (context, index) {
@@ -117,11 +133,27 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
             },
           );
         },
+        ),
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
           onPressed: _showAddOrEditDialog,
           child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+
+  /// Makes a non-scrollable empty/error state (a centered icon+text column)
+  /// pullable: [RefreshIndicator] needs a scrollable descendant to detect
+  /// the pull gesture, even when there's nothing to scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
         ),
       ),
     );

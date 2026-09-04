@@ -92,7 +92,10 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
   @override
   void initState() {
     super.initState();
-    context.read<AnimalTypeBloc>().add(GetAnimalTypesEvent());
+    final bloc = context.read<AnimalTypeBloc>();
+    if (bloc.state is! AnimalTypeLoaded) {
+      bloc.add(GetAnimalTypesEvent());
+    }
   }
 
   @override
@@ -106,7 +109,15 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocConsumer<AnimalTypeBloc, AnimalTypeState>(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final bloc = context.read<AnimalTypeBloc>()
+            ..add(GetAnimalTypesEvent());
+          await bloc.stream.firstWhere(
+            (s) => s is AnimalTypeLoaded || s is AnimalTypeError,
+          );
+        },
+        child: BlocConsumer<AnimalTypeBloc, AnimalTypeState>(
         listener: (context, state) {
           if (state is AnimalTypeLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -124,23 +135,28 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
           }
 
           if (state is AnimalTypeError && state.animalTypes.isEmpty) {
-            return EntityErrorView(
-              message: state.message,
-              onRetry: () =>
-                  context.read<AnimalTypeBloc>().add(GetAnimalTypesEvent()),
+            return _scrollableEmptyState(
+              EntityErrorView(
+                message: state.message,
+                onRetry: () =>
+                    context.read<AnimalTypeBloc>().add(GetAnimalTypesEvent()),
+              ),
             );
           }
 
           final animalTypes = state.animalTypes;
           if (animalTypes.isEmpty) {
-            return const EntityEmptyView(
-              icon: Icons.category,
-              title: 'No animal types added yet',
-              subtitle: 'Tap the + button to add your first animal type',
+            return _scrollableEmptyState(
+              const EntityEmptyView(
+                icon: Icons.category,
+                title: 'No animal types added yet',
+                subtitle: 'Tap the + button to add your first animal type',
+              ),
             );
           }
 
           return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: context.scrollListPadding(forFab: true),
             itemCount: animalTypes.length,
             itemBuilder: (context, index) {
@@ -157,6 +173,7 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
               },
             );
         },
+        ),
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
@@ -169,6 +186,21 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  /// Makes a non-scrollable empty/error state (a centered icon+text column)
+  /// pullable: [RefreshIndicator] needs a scrollable descendant to detect
+  /// the pull gesture, even when there's nothing to scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
+        ),
+      ),
+    );
   }
 
   void _showAnimalTypeDetails(AnimalType animalType) {

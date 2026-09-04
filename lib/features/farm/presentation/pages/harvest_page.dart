@@ -44,8 +44,14 @@ class _HarvestPageState extends State<HarvestPage> {
   @override
   void initState() {
     super.initState();
-    context.read<HarvestBloc>().add(GetHarvestsEvent(seasonId: widget.seasonId));
-    context.read<SeasonBloc>().add(GetSeasonsEvent());
+    final harvestBloc = context.read<HarvestBloc>();
+    if (harvestBloc.state is! HarvestLoaded) {
+      harvestBloc.add(GetHarvestsEvent(seasonId: widget.seasonId));
+    }
+    final seasonBloc = context.read<SeasonBloc>();
+    if (seasonBloc.state is! SeasonLoaded) {
+      seasonBloc.add(GetSeasonsEvent());
+    }
   }
 
   @override
@@ -62,7 +68,16 @@ class _HarvestPageState extends State<HarvestPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocConsumer<HarvestBloc, HarvestState>(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final harvestBloc = context.read<HarvestBloc>()
+            ..add(GetHarvestsEvent(seasonId: widget.seasonId));
+          context.read<SeasonBloc>().add(GetSeasonsEvent());
+          await harvestBloc.stream.firstWhere(
+            (s) => s is HarvestLoaded || s is HarvestError,
+          );
+        },
+        child: BlocConsumer<HarvestBloc, HarvestState>(
         listener: (context, state) {
           if (state is HarvestLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -80,25 +95,30 @@ class _HarvestPageState extends State<HarvestPage> {
           }
 
           if (state is HarvestError && state.harvests.isEmpty) {
-            return EntityErrorView(
-              message: state.message,
-              onRetry: () => context.read<HarvestBloc>().add(
-                    GetHarvestsEvent(seasonId: widget.seasonId),
-                  ),
+            return _scrollableEmptyState(
+              EntityErrorView(
+                message: state.message,
+                onRetry: () => context.read<HarvestBloc>().add(
+                      GetHarvestsEvent(seasonId: widget.seasonId),
+                    ),
+              ),
             );
           }
 
           if (state is HarvestLoaded || state is HarvestLoading) {
             final harvests = state.harvests;
             if (harvests.isEmpty) {
-              return const EntityEmptyView(
-                icon: Icons.agriculture,
-                title: 'No harvests recorded yet',
-                subtitle: 'Tap + to record your first harvest',
+              return _scrollableEmptyState(
+                const EntityEmptyView(
+                  icon: Icons.agriculture,
+                  title: 'No harvests recorded yet',
+                  subtitle: 'Tap + to record your first harvest',
+                ),
               );
             }
 
             return ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: context.scrollListPadding(forFab: true),
               itemCount: harvests.length,
               itemBuilder: (context, index) {
@@ -122,13 +142,29 @@ class _HarvestPageState extends State<HarvestPage> {
             );
           }
 
-          return const SizedBox.shrink();
+          return _scrollableEmptyState(const SizedBox.shrink());
         },
+        ),
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
           onPressed: () => _showHarvestForm(context),
           child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+
+  /// Makes a non-scrollable empty/error state (a centered icon+text column)
+  /// pullable: [RefreshIndicator] needs a scrollable descendant to detect
+  /// the pull gesture, even when there's nothing to scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
         ),
       ),
     );

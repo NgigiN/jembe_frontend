@@ -102,7 +102,10 @@ class _LandPageState extends State<LandPage> {
   @override
   void initState() {
     super.initState();
-    context.read<LandBloc>().add(GetLandsEvent());
+    final bloc = context.read<LandBloc>();
+    if (bloc.state is! LandLoaded) {
+      bloc.add(GetLandsEvent());
+    }
   }
 
   @override
@@ -116,59 +119,88 @@ class _LandPageState extends State<LandPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocConsumer<LandBloc, LandState>(
-        listener: (context, state) {
-          if (state is LandLoaded && state.successMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.success(context, state.successMessage!),
-            );
-          } else if (state is LandError && state.lands.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.error(context, state.message),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is LandLoading && state.lands.isEmpty) {
-            return const SkeletonEntityList(icon: Icons.landscape);
-          }
-
-          if (state is LandError && state.lands.isEmpty) {
-            return EntityErrorView(
-              message: state.message,
-              onRetry: () => context.read<LandBloc>().add(GetLandsEvent()),
-            );
-          }
-
-          final lands = state.lands;
-          if (lands.isEmpty) {
-            return const EntityEmptyView(
-              icon: Icons.landscape,
-              title: 'No lands registered yet',
-              subtitle: 'Tap the + button to add your first land',
-            );
-          }
-
-          return ListView.builder(
-            padding: context.scrollListPadding(forFab: true),
-            itemCount: lands.length,
-            itemBuilder: (context, index) {
-              final land = lands[index];
-              return EntityCard(
-                icon: Icons.landscape,
-                iconColor: AppColors.plantCategory,
-                title: land.name,
-                subtitle: _landSubtitle(land),
-                onTap: () => _showLandDetails(land),
-              );
-            },
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final bloc = context.read<LandBloc>()..add(GetLandsEvent());
+          await bloc.stream.firstWhere(
+            (s) => s is LandLoaded || s is LandError,
           );
         },
+        child: BlocConsumer<LandBloc, LandState>(
+          listener: (context, state) {
+            if (state is LandLoaded && state.successMessage != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                AppSnackBar.success(context, state.successMessage!),
+              );
+            } else if (state is LandError && state.lands.isNotEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                AppSnackBar.error(context, state.message),
+              );
+            }
+          },
+          builder: (context, state) {
+            if (state is LandLoading && state.lands.isEmpty) {
+              return const SkeletonEntityList(icon: Icons.landscape);
+            }
+
+            if (state is LandError && state.lands.isEmpty) {
+              return _scrollableEmptyState(
+                EntityErrorView(
+                  message: state.message,
+                  onRetry: () =>
+                      context.read<LandBloc>().add(GetLandsEvent()),
+                ),
+              );
+            }
+
+            final lands = state.lands;
+            if (lands.isEmpty) {
+              return _scrollableEmptyState(
+                const EntityEmptyView(
+                  icon: Icons.landscape,
+                  title: 'No lands registered yet',
+                  subtitle: 'Tap the + button to add your first land',
+                ),
+              );
+            }
+
+            return ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: context.scrollListPadding(forFab: true),
+              itemCount: lands.length,
+              itemBuilder: (context, index) {
+                final land = lands[index];
+                return EntityCard(
+                  icon: Icons.landscape,
+                  iconColor: AppColors.plantCategory,
+                  title: land.name,
+                  subtitle: _landSubtitle(land),
+                  onTap: () => _showLandDetails(land),
+                );
+              },
+            );
+          },
+        ),
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
           onPressed: _showAddLandDialog,
           child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+
+  /// Makes a non-scrollable empty/error state (a centered icon+text column)
+  /// pullable: [RefreshIndicator] needs a scrollable descendant to detect
+  /// the pull gesture, even when there's nothing to scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
         ),
       ),
     );

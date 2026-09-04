@@ -293,10 +293,27 @@ class _InputPageState extends State<InputPage> {
   @override
   void initState() {
     super.initState();
+    // InputBloc and CostCategoryBloc are shared, app-wide singletons whose
+    // Get*Event is parameterized (sourceType / category) but whose Loaded
+    // state doesn't record which parameter produced it. Guarding these on
+    // "is! XLoaded" would risk skipping the fetch and showing data fetched
+    // for a *different* sourceType/category (e.g. animal inputs left on
+    // screen after navigating here for 'plant'), so they're always
+    // re-fetched. HerdBloc/SeasonBloc/LandBloc are unparameterized and
+    // safe to guard.
     context.read<InputBloc>().add(GetInputsEvent(sourceType: widget.sourceType));
-    context.read<HerdBloc>().add(GetHerdsEvent());
-    context.read<SeasonBloc>().add(GetSeasonsEvent());
-    context.read<LandBloc>().add(GetLandsEvent());
+    final herdBloc = context.read<HerdBloc>();
+    if (herdBloc.state is! HerdLoaded) {
+      herdBloc.add(GetHerdsEvent());
+    }
+    final seasonBloc = context.read<SeasonBloc>();
+    if (seasonBloc.state is! SeasonLoaded) {
+      seasonBloc.add(GetSeasonsEvent());
+    }
+    final landBloc = context.read<LandBloc>();
+    if (landBloc.state is! LandLoaded) {
+      landBloc.add(GetLandsEvent());
+    }
     context.read<CostCategoryBloc>().add(
           const GetCostCategoriesEvent(category: 'input'),
         );
@@ -321,7 +338,21 @@ class _InputPageState extends State<InputPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocConsumer<InputBloc, InputState>(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final inputBloc = context.read<InputBloc>()
+            ..add(GetInputsEvent(sourceType: widget.sourceType));
+          context.read<HerdBloc>().add(GetHerdsEvent());
+          context.read<SeasonBloc>().add(GetSeasonsEvent());
+          context.read<LandBloc>().add(GetLandsEvent());
+          context.read<CostCategoryBloc>().add(
+                const GetCostCategoriesEvent(category: 'input'),
+              );
+          await inputBloc.stream.firstWhere(
+            (s) => s is InputLoaded || s is InputError,
+          );
+        },
+        child: BlocConsumer<InputBloc, InputState>(
         listener: (context, state) {
           if (state is InputLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -339,23 +370,28 @@ class _InputPageState extends State<InputPage> {
           }
 
           if (state is InputError && state.inputs.isEmpty) {
-            return EntityErrorView(
-              message: state.message,
-              onRetry: () =>
-                  context.read<InputBloc>().add(GetInputsEvent(sourceType: widget.sourceType)),
+            return _scrollableEmptyState(
+              EntityErrorView(
+                message: state.message,
+                onRetry: () =>
+                    context.read<InputBloc>().add(GetInputsEvent(sourceType: widget.sourceType)),
+              ),
             );
           }
 
           final inputs = state.inputs;
           if (inputs.isEmpty) {
-            return const EntityEmptyView(
-              icon: Icons.input,
-              title: 'No inputs registered yet',
-              subtitle: 'Tap the + button to add your first input',
+            return _scrollableEmptyState(
+              const EntityEmptyView(
+                icon: Icons.input,
+                title: 'No inputs registered yet',
+                subtitle: 'Tap the + button to add your first input',
+              ),
             );
           }
 
           return ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: context.scrollListPadding(forFab: true),
               itemCount: inputs.length,
               itemBuilder: (context, index) {
@@ -391,11 +427,27 @@ class _InputPageState extends State<InputPage> {
               },
             );
         },
+        ),
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
           onPressed: () => showAddInputDialog(context, sourceType: widget.sourceType),
           child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+
+  /// Makes a non-scrollable empty/error state (a centered icon+text column)
+  /// pullable: [RefreshIndicator] needs a scrollable descendant to detect
+  /// the pull gesture, even when there's nothing to scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
         ),
       ),
     );

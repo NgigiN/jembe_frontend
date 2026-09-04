@@ -223,9 +223,18 @@ class _SeasonPageState extends State<SeasonPage> {
   @override
   void initState() {
     super.initState();
-    context.read<SeasonBloc>().add(GetSeasonsEvent());
-    context.read<LandBloc>().add(GetLandsEvent());
-    context.read<PlantBloc>().add(GetPlantsEvent());
+    final seasonBloc = context.read<SeasonBloc>();
+    if (seasonBloc.state is! SeasonLoaded) {
+      seasonBloc.add(GetSeasonsEvent());
+    }
+    final landBloc = context.read<LandBloc>();
+    if (landBloc.state is! LandLoaded) {
+      landBloc.add(GetLandsEvent());
+    }
+    final plantBloc = context.read<PlantBloc>();
+    if (plantBloc.state is! PlantLoaded) {
+      plantBloc.add(GetPlantsEvent());
+    }
   }
 
   @override
@@ -244,7 +253,17 @@ class _SeasonPageState extends State<SeasonPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocConsumer<SeasonBloc, SeasonState>(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final seasonBloc = context.read<SeasonBloc>()
+            ..add(GetSeasonsEvent());
+          context.read<LandBloc>().add(GetLandsEvent());
+          context.read<PlantBloc>().add(GetPlantsEvent());
+          await seasonBloc.stream.firstWhere(
+            (s) => s is SeasonLoaded || s is SeasonError,
+          );
+        },
+        child: BlocConsumer<SeasonBloc, SeasonState>(
         listener: (context, state) {
           if (state is SeasonLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -262,22 +281,27 @@ class _SeasonPageState extends State<SeasonPage> {
           }
 
           if (state is SeasonError && state.seasons.isEmpty) {
-            return EntityErrorView(
-              message: state.message,
-              onRetry: () => context.read<SeasonBloc>().add(GetSeasonsEvent()),
+            return _scrollableEmptyState(
+              EntityErrorView(
+                message: state.message,
+                onRetry: () => context.read<SeasonBloc>().add(GetSeasonsEvent()),
+              ),
             );
           }
 
           final seasons = state.seasons;
           if (seasons.isEmpty) {
-            return const EntityEmptyView(
-              icon: Icons.calendar_today,
-              title: 'No seasons registered yet',
-              subtitle: 'Tap the + button to add your first season',
+            return _scrollableEmptyState(
+              const EntityEmptyView(
+                icon: Icons.calendar_today,
+                title: 'No seasons registered yet',
+                subtitle: 'Tap the + button to add your first season',
+              ),
             );
           }
 
           return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: context.scrollListPadding(forFab: true),
             itemCount: seasons.length,
             itemBuilder: (context, index) {
@@ -297,11 +321,27 @@ class _SeasonPageState extends State<SeasonPage> {
             },
           );
         },
+        ),
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
           onPressed: _showAddSeasonDialog,
           child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+
+  /// Makes a non-scrollable empty/error state (a centered icon+text column)
+  /// pullable: [RefreshIndicator] needs a scrollable descendant to detect
+  /// the pull gesture, even when there's nothing to scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
         ),
       ),
     );

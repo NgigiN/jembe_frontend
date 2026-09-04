@@ -40,6 +40,13 @@ class _RevenuePageState extends State<RevenuePage> {
   @override
   void initState() {
     super.initState();
+    // RevenueBloc is a shared, app-wide singleton and LoadRevenues is
+    // parameterized by _selectedSource, which isn't recorded on
+    // RevenueLoaded. A fresh mount of this page always starts with
+    // _selectedSource == null (the "All" filter, matching the chip UI
+    // below), so guarding on "is! RevenueLoaded" could skip the fetch and
+    // leave a stale, differently-filtered list from a previous visit on
+    // screen while the filter chips show "All" selected. Always re-fetch.
     _loadRevenues();
   }
 
@@ -62,7 +69,15 @@ class _RevenuePageState extends State<RevenuePage> {
           children: [
             _buildFilters(),
             Expanded(
-              child: BlocConsumer<RevenueBloc, RevenueState>(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  final bloc = context.read<RevenueBloc>();
+                  _loadRevenues();
+                  await bloc.stream.firstWhere(
+                    (s) => s is RevenueLoaded || s is RevenueError,
+                  );
+                },
+                child: BlocConsumer<RevenueBloc, RevenueState>(
                 listener: (context, state) {
                   if (state is RevenueDeleted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -72,17 +87,20 @@ class _RevenuePageState extends State<RevenuePage> {
                 },
                 builder: (context, state) {
                   if (state is RevenueLoading && state.revenues.isEmpty) {
-                    return const Center(child: CircularProgressIndicator());
+                    return _scrollableEmptyState(
+                      const Center(child: CircularProgressIndicator()),
+                    );
                   } else if (state is RevenueError && state.revenues.isEmpty) {
-                    return _buildErrorView(state.message);
+                    return _scrollableEmptyState(_buildErrorView(state.message));
                   }
 
                   final revenues = state.revenues;
                   if (revenues.isEmpty) {
-                    return _buildEmptyView();
+                    return _scrollableEmptyState(_buildEmptyView());
                   }
 
                   return ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     padding: context
                         .scrollListPadding(forFab: true)
                         .copyWith(
@@ -96,6 +114,7 @@ class _RevenuePageState extends State<RevenuePage> {
                     },
                   );
                 },
+                ),
               ),
             ),
           ],
@@ -226,6 +245,22 @@ class _RevenuePageState extends State<RevenuePage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Makes a non-scrollable empty/error/loading state (a centered
+  /// icon+text column or spinner) pullable: [RefreshIndicator] needs a
+  /// scrollable descendant to detect the pull gesture, even when there's
+  /// nothing to scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
         ),
       ),
     );

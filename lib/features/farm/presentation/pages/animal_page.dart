@@ -27,8 +27,10 @@ import 'package:farm_tracker/features/farm/presentation/bloc/animal_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animal_type_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/input_page.dart';
@@ -258,9 +260,18 @@ class _AnimalPageState extends State<AnimalPage> {
   @override
   void initState() {
     super.initState();
-    context.read<AnimalBloc>().add(GetAnimalsEvent());
-    context.read<AnimalTypeBloc>().add(GetAnimalTypesEvent());
-    context.read<HerdBloc>().add(GetHerdsEvent());
+    final animalBloc = context.read<AnimalBloc>();
+    if (animalBloc.state is! AnimalLoaded) {
+      animalBloc.add(GetAnimalsEvent());
+    }
+    final animalTypeBloc = context.read<AnimalTypeBloc>();
+    if (animalTypeBloc.state is! AnimalTypeLoaded) {
+      animalTypeBloc.add(GetAnimalTypesEvent());
+    }
+    final herdBloc = context.read<HerdBloc>();
+    if (herdBloc.state is! HerdLoaded) {
+      herdBloc.add(GetHerdsEvent());
+    }
   }
 
   @override
@@ -279,7 +290,17 @@ class _AnimalPageState extends State<AnimalPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocConsumer<AnimalBloc, AnimalState>(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final animalBloc = context.read<AnimalBloc>()
+            ..add(GetAnimalsEvent());
+          context.read<AnimalTypeBloc>().add(GetAnimalTypesEvent());
+          context.read<HerdBloc>().add(GetHerdsEvent());
+          await animalBloc.stream.firstWhere(
+            (s) => s is AnimalLoaded || s is AnimalError,
+          );
+        },
+        child: BlocConsumer<AnimalBloc, AnimalState>(
         listener: (context, state) {
           if (state is AnimalLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -297,22 +318,27 @@ class _AnimalPageState extends State<AnimalPage> {
           }
 
           if (state is AnimalError && state.animals.isEmpty) {
-            return EntityErrorView(
-              message: state.message,
-              onRetry: () => context.read<AnimalBloc>().add(GetAnimalsEvent()),
+            return _scrollableEmptyState(
+              EntityErrorView(
+                message: state.message,
+                onRetry: () => context.read<AnimalBloc>().add(GetAnimalsEvent()),
+              ),
             );
           }
 
           final animals = state.animals;
           if (animals.isEmpty) {
-            return const EntityEmptyView(
-              icon: Icons.pets,
-              title: 'No animals registered yet',
-              subtitle: 'Tap the + button to add your first animal',
+            return _scrollableEmptyState(
+              const EntityEmptyView(
+                icon: Icons.pets,
+                title: 'No animals registered yet',
+                subtitle: 'Tap the + button to add your first animal',
+              ),
             );
           }
 
           return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: context.scrollListPadding(forFab: true),
             itemCount: animals.length,
             itemBuilder: (context, index) {
@@ -327,6 +353,7 @@ class _AnimalPageState extends State<AnimalPage> {
             },
           );
         },
+        ),
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
@@ -339,6 +366,21 @@ class _AnimalPageState extends State<AnimalPage> {
 
   String _animalSubtitle(Animal animal, List<AnimalType> animalTypes, List<Herd> herds) {
     return '${animalTypeName(animalTypes, animal.animalTypeId)} · ${herdName(herds, animal.herdId)}';
+  }
+
+  /// Makes a non-scrollable empty/error state (a centered icon+text column)
+  /// pullable: [RefreshIndicator] needs a scrollable descendant to detect
+  /// the pull gesture, even when there's nothing to scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
+        ),
+      ),
+    );
   }
 
   void _showAnimalDetails(

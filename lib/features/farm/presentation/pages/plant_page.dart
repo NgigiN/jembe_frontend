@@ -93,7 +93,10 @@ class _PlantPageState extends State<PlantPage> {
   @override
   void initState() {
     super.initState();
-    context.read<PlantBloc>().add(GetPlantsEvent());
+    final bloc = context.read<PlantBloc>();
+    if (bloc.state is! PlantLoaded) {
+      bloc.add(GetPlantsEvent());
+    }
   }
 
   @override
@@ -107,7 +110,14 @@ class _PlantPageState extends State<PlantPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocConsumer<PlantBloc, PlantState>(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final bloc = context.read<PlantBloc>()..add(GetPlantsEvent());
+          await bloc.stream.firstWhere(
+            (s) => s is PlantLoaded || s is PlantError,
+          );
+        },
+        child: BlocConsumer<PlantBloc, PlantState>(
         listener: (context, state) {
           if (state is PlantLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -121,26 +131,33 @@ class _PlantPageState extends State<PlantPage> {
         },
         builder: (context, state) {
           if (state is PlantLoading && state.plants.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return _scrollableEmptyState(
+              const Center(child: CircularProgressIndicator()),
+            );
           }
 
           if (state is PlantError && state.plants.isEmpty) {
-            return EntityErrorView(
-              message: state.message,
-              onRetry: () => context.read<PlantBloc>().add(GetPlantsEvent()),
+            return _scrollableEmptyState(
+              EntityErrorView(
+                message: state.message,
+                onRetry: () => context.read<PlantBloc>().add(GetPlantsEvent()),
+              ),
             );
           }
 
           final plants = state.plants;
           if (plants.isEmpty) {
-            return const EntityEmptyView(
-              icon: Icons.eco,
-              title: 'No plants registered yet',
-              subtitle: 'Tap the + button to add your first plant',
+            return _scrollableEmptyState(
+              const EntityEmptyView(
+                icon: Icons.eco,
+                title: 'No plants registered yet',
+                subtitle: 'Tap the + button to add your first plant',
+              ),
             );
           }
 
           return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: context.scrollListPadding(forFab: true),
             itemCount: plants.length,
             itemBuilder: (context, index) {
@@ -157,11 +174,28 @@ class _PlantPageState extends State<PlantPage> {
               },
             );
         },
+        ),
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
           onPressed: _showAddPlantDialog,
           child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+
+  /// Makes a non-scrollable empty/error/loading state (a centered
+  /// icon+text column or spinner) pullable: [RefreshIndicator] needs a
+  /// scrollable descendant to detect the pull gesture, even when there's
+  /// nothing to scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
         ),
       ),
     );

@@ -42,7 +42,10 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    context.read<ProfileBloc>().add(FetchProfileEvent());
+    final profileBloc = context.read<ProfileBloc>();
+    if (profileBloc.state is! ProfileLoaded) {
+      profileBloc.add(FetchProfileEvent());
+    }
     _loadSoundEffectsPreference();
   }
 
@@ -155,7 +158,16 @@ class _SettingsPageState extends State<SettingsPage> {
             builder: (context, themeState) {
               return ColoredBox(
                 color: Theme.of(context).colorScheme.surface,
-                child: ListView(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    final profileBloc = context.read<ProfileBloc>()
+                      ..add(FetchProfileEvent());
+                    await profileBloc.stream.firstWhere(
+                      (s) => s is ProfileLoaded || s is ProfileError,
+                    );
+                  },
+                  child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
                   children: [
                     if (_pictureUrl.isNotEmpty) ...[
@@ -440,6 +452,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                   ],
+                  ),
                 ),
               );
             },

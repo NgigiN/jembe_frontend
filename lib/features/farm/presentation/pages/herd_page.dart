@@ -228,8 +228,14 @@ class _HerdPageState extends State<HerdPage> {
   @override
   void initState() {
     super.initState();
-    context.read<HerdBloc>().add(GetHerdsEvent());
-    context.read<AnimalTypeBloc>().add(GetAnimalTypesEvent());
+    final herdBloc = context.read<HerdBloc>();
+    if (herdBloc.state is! HerdLoaded) {
+      herdBloc.add(GetHerdsEvent());
+    }
+    final animalTypeBloc = context.read<AnimalTypeBloc>();
+    if (animalTypeBloc.state is! AnimalTypeLoaded) {
+      animalTypeBloc.add(GetAnimalTypesEvent());
+    }
   }
 
   @override
@@ -243,7 +249,15 @@ class _HerdPageState extends State<HerdPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocConsumer<HerdBloc, HerdState>(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final herdBloc = context.read<HerdBloc>()..add(GetHerdsEvent());
+          context.read<AnimalTypeBloc>().add(GetAnimalTypesEvent());
+          await herdBloc.stream.firstWhere(
+            (s) => s is HerdLoaded || s is HerdError,
+          );
+        },
+        child: BlocConsumer<HerdBloc, HerdState>(
         listener: (context, state) {
           if (state is HerdLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -261,18 +275,22 @@ class _HerdPageState extends State<HerdPage> {
           }
 
           if (state is HerdError && state.herds.isEmpty) {
-            return EntityErrorView(
-              message: state.message,
-              onRetry: () => context.read<HerdBloc>().add(GetHerdsEvent()),
+            return _scrollableEmptyState(
+              EntityErrorView(
+                message: state.message,
+                onRetry: () => context.read<HerdBloc>().add(GetHerdsEvent()),
+              ),
             );
           }
 
           final herds = state.herds;
           if (herds.isEmpty) {
-            return const EntityEmptyView(
-              icon: Icons.pets,
-              title: 'No herds registered yet',
-              subtitle: 'Tap the + button to register your first herd',
+            return _scrollableEmptyState(
+              const EntityEmptyView(
+                icon: Icons.pets,
+                title: 'No herds registered yet',
+                subtitle: 'Tap the + button to register your first herd',
+              ),
             );
           }
 
@@ -286,6 +304,7 @@ class _HerdPageState extends State<HerdPage> {
                 }
 
                 return ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: context.scrollListPadding(forFab: true),
                   itemCount: herds.length,
                   itemBuilder: (context, index) {
@@ -316,11 +335,27 @@ class _HerdPageState extends State<HerdPage> {
               },
             );
         },
+        ),
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
           onPressed: _showAddHerdDialog,
           child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+
+  /// Makes a non-scrollable empty/error state (a centered icon+text column)
+  /// pullable: [RefreshIndicator] needs a scrollable descendant to detect
+  /// the pull gesture, even when there's nothing to scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
         ),
       ),
     );
