@@ -95,7 +95,7 @@ Future<String?> showAddAnimalDialog(BuildContext context) async {
         ScaffoldMessenger.of(sheetContext).showSnackBar(
           AppSnackBar.error(sheetContext, 'User not authenticated'),
         );
-        return;
+        return false;
       }
       committedHerdId = herdIdNotifier.value;
       committedAcquisitionSource = selectedAcquisitionSource;
@@ -108,9 +108,11 @@ Future<String?> showAddAnimalDialog(BuildContext context) async {
         sex: selectedSex,
         acquisitionSource: selectedAcquisitionSource,
       );
-      SuccessFeedback.saved();
       bloc.add(AddAnimalEvent(animal));
-      Navigator.pop(sheetContext);
+      final s = await bloc.stream.firstWhere(
+        (s) => (s is AnimalLoaded && s.successMessage != null) || s is AnimalError,
+      );
+      return s is AnimalLoaded;
     },
   );
 
@@ -415,11 +417,11 @@ class _AnimalPageState extends State<AnimalPage> {
     );
   }
 
-  void _showEditAnimalDialog(
+  Future<void> _showEditAnimalDialog(
     Animal animal,
     List<AnimalType> animalTypes,
     List<Herd> herds,
-  ) {
+  ) async {
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: animal.name);
     final animalTypeIdNotifier = ValueNotifier<String?>(animal.animalTypeId);
@@ -428,8 +430,10 @@ class _AnimalPageState extends State<AnimalPage> {
     var selectedSex = animal.sex;
     var selectedAcquisitionSource = animal.acquisitionSource;
     final wasBought = animal.acquisitionSource == 'bought';
+    var committedNowBought = false;
+    String? committedHerdId;
 
-    EntityFormSheet.show(
+    await EntityFormSheet.show(
       context: context,
       title: 'Edit Animal',
       heightFactor: 0.7,
@@ -463,21 +467,29 @@ class _AnimalPageState extends State<AnimalPage> {
           createdAt: animal.createdAt,
           updatedAt: DateTime.now(),
         );
-        SuccessFeedback.saved();
-        context.read<AnimalBloc>().add(UpdateAnimalEvent(updatedAnimal));
-        Navigator.pop(sheetContext);
-        if (!wasBought && nowBought && context.mounted) {
-          unawaited(
-            showAddInputDialog(
-              context,
-              sourceType: 'animal',
-              lockedHerdId: herdId,
-              lockedAnimalId: int.tryParse(animal.id),
-            ),
-          );
+        final bloc = context.read<AnimalBloc>()
+          ..add(UpdateAnimalEvent(updatedAnimal));
+        final s = await bloc.stream.firstWhere(
+          (s) => (s is AnimalLoaded && s.successMessage != null) || s is AnimalError,
+        );
+        if (s is AnimalLoaded) {
+          committedNowBought = nowBought;
+          committedHerdId = herdId;
         }
+        return s is AnimalLoaded;
       },
     );
+
+    if (!wasBought && committedNowBought && context.mounted) {
+      unawaited(
+        showAddInputDialog(
+          context,
+          sourceType: 'animal',
+          lockedHerdId: committedHerdId,
+          lockedAnimalId: int.tryParse(animal.id),
+        ),
+      );
+    }
   }
 
   Future<void> _showDeleteConfirmation(Animal animal) async {

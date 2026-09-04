@@ -33,7 +33,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 /// (not inlined in the button's onPressed) because `selectedStartDate` is a
 /// captured, mutable closure variable — Dart won't promote its nullability
 /// after a null check inline, but it will for a plain parameter here.
-Future<void> _submitAddHerd({
+/// Returns true once the bloc confirms the herd was added; the caller plays
+/// the success feedback and pops the sheet only then.
+Future<bool> _submitAddHerd({
   required HerdBloc herdBloc,
   required BuildContext sheetContext,
   required TextEditingController nameController,
@@ -44,16 +46,15 @@ Future<void> _submitAddHerd({
   required DateTime? selectedEndDate,
 }) async {
   final headCount = parsePositiveInt(headCountController.text);
-  if (headCount == null) return;
-  if (selectedStartDate == null) return;
+  if (headCount == null) return false;
+  if (selectedStartDate == null) return false;
 
   final userId = await UserUtils.getCurrentUserId();
   if (userId == null) {
     _HerdPageState._showSheetError(sheetContext, 'User not authenticated');
-    return;
+    return false;
   }
 
-  SuccessFeedback.saved();
   herdBloc.add(
     AddHerdEvent(
       sanitizeText(nameController.text),
@@ -65,7 +66,10 @@ Future<void> _submitAddHerd({
       endDate: selectedEndDate,
     ),
   );
-  Navigator.pop(sheetContext);
+  final s = await herdBloc.stream.firstWhere(
+    (s) => (s is HerdLoaded && s.successMessage != null) || s is HerdError,
+  );
+  return s is HerdLoaded;
 }
 
 /// Opens the standard "Register New Herd" form and resolves once it closes:
@@ -95,6 +99,7 @@ Future<String?> showAddHerdDialog(BuildContext context) async {
   String? selectedAnimalTypeId;
   DateTime? selectedStartDate;
   DateTime? selectedEndDate;
+  var submitting = false;
 
   await showModalBottomSheet<void>(
     context: context,
@@ -129,7 +134,9 @@ Future<String?> showAddHerdDialog(BuildContext context) async {
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       IconButton(
-                        onPressed: () => Navigator.pop(sheetContext),
+                        onPressed: submitting
+                            ? null
+                            : () => Navigator.pop(sheetContext),
                         icon: const Icon(Icons.close),
                       ),
                     ],
@@ -174,14 +181,15 @@ Future<String?> showAddHerdDialog(BuildContext context) async {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: animalTypes.isEmpty
+                      onPressed: (animalTypes.isEmpty || submitting)
                           ? null
-                          : () {
+                          : () async {
                               if (!(formKey.currentState?.validate() ??
                                   false)) {
                                 return;
                               }
-                              _submitAddHerd(
+                              setSheetState(() => submitting = true);
+                              final ok = await _submitAddHerd(
                                 herdBloc: herdBloc,
                                 sheetContext: sheetContext,
                                 nameController: nameController,
@@ -191,17 +199,31 @@ Future<String?> showAddHerdDialog(BuildContext context) async {
                                 selectedStartDate: selectedStartDate,
                                 selectedEndDate: selectedEndDate,
                               );
+                              if (!sheetContext.mounted) return;
+                              if (ok) {
+                                SuccessFeedback.saved();
+                                Navigator.pop(sheetContext);
+                              } else {
+                                setSheetState(() => submitting = false);
+                              }
                             },
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: const Text(
-                        'Register Herd',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: submitting
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child:
+                                  CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text(
+                              'Register Herd',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -399,6 +421,7 @@ class _HerdPageState extends State<HerdPage> {
     String? selectedAnimalTypeId = herd.animalTypeId;
     DateTime? selectedStartDate = herd.startDate;
     var selectedEndDate = herd.endDate;
+    var submitting = false;
 
     showModalBottomSheet<void>(
       context: context,
@@ -432,7 +455,9 @@ class _HerdPageState extends State<HerdPage> {
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         IconButton(
-                          onPressed: () => Navigator.pop(sheetContext),
+                          onPressed: submitting
+                              ? null
+                              : () => Navigator.pop(sheetContext),
                           icon: const Icon(Icons.close),
                         ),
                       ],
@@ -478,21 +503,32 @@ class _HerdPageState extends State<HerdPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                          if (!(formKey.currentState?.validate() ?? false)) {
-                            return;
-                          }
-                          _submitEditHerd(
-                            sheetContext,
-                            herd,
-                            nameController,
-                            locationController,
-                            headCountController,
-                            selectedAnimalTypeId,
-                            selectedStartDate,
-                            selectedEndDate,
-                          );
-                        },
+                        onPressed: submitting
+                            ? null
+                            : () async {
+                                if (!(formKey.currentState?.validate() ??
+                                    false)) {
+                                  return;
+                                }
+                                setSheetState(() => submitting = true);
+                                final ok = await _submitEditHerd(
+                                  sheetContext,
+                                  herd,
+                                  nameController,
+                                  locationController,
+                                  headCountController,
+                                  selectedAnimalTypeId,
+                                  selectedStartDate,
+                                  selectedEndDate,
+                                );
+                                if (!sheetContext.mounted) return;
+                                if (ok) {
+                                  SuccessFeedback.saved();
+                                  Navigator.pop(sheetContext);
+                                } else {
+                                  setSheetState(() => submitting = false);
+                                }
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               Theme.of(sheetContext).colorScheme.primary,
@@ -500,13 +536,21 @@ class _HerdPageState extends State<HerdPage> {
                               Theme.of(sheetContext).colorScheme.onPrimary,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        child: const Text(
-                          'Update Herd',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        child: submitting
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Update Herd',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
                   ],
@@ -519,7 +563,7 @@ class _HerdPageState extends State<HerdPage> {
     );
   }
 
-  void _submitEditHerd(
+  Future<bool> _submitEditHerd(
     BuildContext sheetContext,
     Herd herd,
     TextEditingController nameController,
@@ -528,24 +572,27 @@ class _HerdPageState extends State<HerdPage> {
     String? selectedAnimalTypeId,
     DateTime? selectedStartDate,
     DateTime? selectedEndDate,
-  ) {
+  ) async {
     final headCount = parsePositiveInt(headCountController.text);
-    if (headCount == null) return;
-    if (selectedStartDate == null) return;
+    if (headCount == null) return false;
+    if (selectedStartDate == null) return false;
 
-    SuccessFeedback.saved();
-    context.read<HerdBloc>().add(
-      UpdateHerdEvent(
-        herd.id,
-        sanitizeText(nameController.text),
-        selectedAnimalTypeId!,
-        sanitizeText(locationController.text),
-        headCount,
-        startDate: selectedStartDate,
-        endDate: selectedEndDate,
-      ),
+    final bloc = context.read<HerdBloc>()
+      ..add(
+        UpdateHerdEvent(
+          herd.id,
+          sanitizeText(nameController.text),
+          selectedAnimalTypeId!,
+          sanitizeText(locationController.text),
+          headCount,
+          startDate: selectedStartDate,
+          endDate: selectedEndDate,
+        ),
+      );
+    final s = await bloc.stream.firstWhere(
+      (s) => (s is HerdLoaded && s.successMessage != null) || s is HerdError,
     );
-    Navigator.pop(sheetContext);
+    return s is HerdLoaded;
   }
 
   static List<Widget> _herdFormFields({

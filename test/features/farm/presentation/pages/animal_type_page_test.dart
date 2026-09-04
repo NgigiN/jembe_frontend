@@ -72,6 +72,13 @@ void main() {
           'Cow',
         );
 
+        // The sheet now awaits the bloc's terminal state before it confirms
+        // and closes (P3-06), so the confirming state must be emitted after
+        // the submit is tapped, not before.
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Add Animal Type'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
         final now = DateTime.now();
         stateController.add(
           AnimalTypeLoaded(
@@ -87,8 +94,6 @@ void main() {
             successMessage: 'Animal type added',
           ),
         );
-
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Add Animal Type'));
         await tester.pumpAndSettle();
 
         final result = await tester.runAsync(() => resultFuture);

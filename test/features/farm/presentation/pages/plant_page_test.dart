@@ -100,6 +100,13 @@ void main() {
           'Maize',
         );
 
+        // The sheet now awaits the bloc's terminal state before it confirms
+        // and closes (P3-06), so the confirming state must be emitted after
+        // the submit is tapped, not before.
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Add Plant'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
         final now = DateTime.now();
         stateController.add(
           PlantLoaded(
@@ -115,8 +122,6 @@ void main() {
             successMessage: 'Crop added',
           ),
         );
-
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Add Plant'));
         await tester.pumpAndSettle();
 
         final result = await tester.runAsync(() => resultFuture);

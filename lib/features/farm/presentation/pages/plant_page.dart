@@ -64,7 +64,7 @@ Future<String?> showAddPlantDialog(BuildContext context) async {
         ScaffoldMessenger.of(sheetContext).showSnackBar(
           AppSnackBar.error(sheetContext, 'User not authenticated'),
         );
-        return;
+        return false;
       }
 
       final plant = PlantModel.create(
@@ -72,9 +72,11 @@ Future<String?> showAddPlantDialog(BuildContext context) async {
         name: sanitizeText(nameController.text),
         variety: sanitizeOptionalText(varietyController.text),
       );
-      SuccessFeedback.saved();
       bloc.add(AddPlantEvent(plant));
-      Navigator.pop(sheetContext);
+      final s = await bloc.stream.firstWhere(
+        (s) => (s is PlantLoaded && s.successMessage != null) || s is PlantError,
+      );
+      return s is PlantLoaded;
     },
   );
 
@@ -249,9 +251,12 @@ class _PlantPageState extends State<PlantPage> {
           createdAt: plant.createdAt,
           updatedAt: DateTime.now(),
         );
-        SuccessFeedback.saved();
-        context.read<PlantBloc>().add(UpdatePlantEvent(updatedPlant));
-        Navigator.pop(sheetContext);
+        final bloc = context.read<PlantBloc>()
+          ..add(UpdatePlantEvent(updatedPlant));
+        final s = await bloc.stream.firstWhere(
+          (s) => (s is PlantLoaded && s.successMessage != null) || s is PlantError,
+        );
+        return s is PlantLoaded;
       },
     );
   }

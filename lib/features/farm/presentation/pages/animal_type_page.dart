@@ -62,10 +62,9 @@ Future<String?> showAddAnimalTypeDialog(BuildContext context) async {
         ScaffoldMessenger.of(sheetContext).showSnackBar(
           AppSnackBar.error(sheetContext, 'User not authenticated'),
         );
-        return;
+        return false;
       }
 
-      SuccessFeedback.saved();
       bloc.add(
         AddAnimalTypeEvent(
           sanitizeText(nameController.text),
@@ -73,7 +72,12 @@ Future<String?> showAddAnimalTypeDialog(BuildContext context) async {
           userId,
         ),
       );
-      Navigator.pop(sheetContext);
+      final s = await bloc.stream.firstWhere(
+        (s) =>
+            (s is AnimalTypeLoaded && s.successMessage != null) ||
+            s is AnimalTypeError,
+      );
+      return s is AnimalTypeLoaded;
     },
   );
 
@@ -238,16 +242,21 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
         nameController: nameController,
         notesController: notesController,
       ),
-      onSubmit: (sheetContext) {
-        SuccessFeedback.saved();
-        context.read<AnimalTypeBloc>().add(
-          UpdateAnimalTypeEvent(
-            animalType.id,
-            sanitizeText(nameController.text),
-            sanitizeOptionalText(notesController.text),
-          ),
+      onSubmit: (sheetContext) async {
+        final bloc = context.read<AnimalTypeBloc>()
+          ..add(
+            UpdateAnimalTypeEvent(
+              animalType.id,
+              sanitizeText(nameController.text),
+              sanitizeOptionalText(notesController.text),
+            ),
+          );
+        final s = await bloc.stream.firstWhere(
+          (s) =>
+              (s is AnimalTypeLoaded && s.successMessage != null) ||
+              s is AnimalTypeError,
         );
-        Navigator.pop(sheetContext);
+        return s is AnimalTypeLoaded;
       },
     );
   }

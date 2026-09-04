@@ -216,6 +216,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
         ? item.type
         : _infrastructureTypes.first;
     var selectedDate = item?.date ?? DateTime.now();
+    var submitting = false;
 
     showModalBottomSheet<void>(
       context: context,
@@ -244,7 +245,9 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
-                      onPressed: () => Navigator.pop(sheetContext),
+                      onPressed: submitting
+                          ? null
+                          : () => Navigator.pop(sheetContext),
                       icon: const Icon(Icons.close),
                     ),
                   ],
@@ -356,32 +359,51 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (!(formKey.currentState?.validate() ?? false)) {
-                        return;
-                      }
-                      _submitInfrastructure(
-                        sheetContext,
-                        isEditing: isEditing,
-                        item: item,
-                        selectedType: selectedType,
-                        selectedDate: selectedDate,
-                        nameController: nameController,
-                        locationController: locationController,
-                        costController: costController,
-                        notesController: notesController,
-                      );
-                    },
+                    onPressed: submitting
+                        ? null
+                        : () async {
+                            if (!(formKey.currentState?.validate() ??
+                                false)) {
+                              return;
+                            }
+                            setSheetState(() => submitting = true);
+                            final ok = await _submitInfrastructure(
+                              sheetContext,
+                              isEditing: isEditing,
+                              item: item,
+                              selectedType: selectedType,
+                              selectedDate: selectedDate,
+                              nameController: nameController,
+                              locationController: locationController,
+                              costController: costController,
+                              notesController: notesController,
+                            );
+                            if (!sheetContext.mounted) return;
+                            if (ok) {
+                              SuccessFeedback.saved();
+                              Navigator.pop(sheetContext);
+                            } else {
+                              setSheetState(() => submitting = false);
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: Text(
-                      isEditing ? 'Update Infrastructure' : 'Add Infrastructure',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: submitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            isEditing
+                                ? 'Update Infrastructure'
+                                : 'Add Infrastructure',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -392,17 +414,17 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
     );
   }
 
-  Future<void> _submitInfrastructure(
+  Future<bool> _submitInfrastructure(
     BuildContext sheetContext, {
     required bool isEditing,
     required String selectedType, required DateTime selectedDate, required TextEditingController nameController, required TextEditingController locationController, required TextEditingController costController, required TextEditingController notesController, Infrastructure? item,
   }) async {
     final cost = parseNonNegativeDecimal(costController.text);
     final notes = sanitizeOptionalText(notesController.text);
+    final bloc = context.read<InfrastructureBloc>();
 
     if (isEditing && item != null) {
-      SuccessFeedback.saved();
-      context.read<InfrastructureBloc>().add(
+      bloc.add(
         UpdateInfrastructureEvent(
           id: item.id,
           type: selectedType,
@@ -413,18 +435,21 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
           notes: notes,
         ),
       );
-      Navigator.pop(sheetContext);
-      return;
+      final s = await bloc.stream.firstWhere(
+        (s) =>
+            (s is InfrastructureLoaded && s.successMessage != null) ||
+            s is InfrastructureError,
+      );
+      return s is InfrastructureLoaded;
     }
 
     final userId = await UserUtils.getCurrentUserId();
     if (userId == null) {
       _showSheetError(sheetContext, 'User not authenticated');
-      return;
+      return false;
     }
 
-    SuccessFeedback.saved();
-    context.read<InfrastructureBloc>().add(
+    bloc.add(
       AddInfrastructureEvent(
         type: selectedType,
         name: sanitizeText(nameController.text),
@@ -435,7 +460,12 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
         notes: notes,
       ),
     );
-    Navigator.pop(sheetContext);
+    final s = await bloc.stream.firstWhere(
+      (s) =>
+          (s is InfrastructureLoaded && s.successMessage != null) ||
+          s is InfrastructureError,
+    );
+    return s is InfrastructureLoaded;
   }
 
   void _showSheetError(BuildContext sheetContext, String message) {

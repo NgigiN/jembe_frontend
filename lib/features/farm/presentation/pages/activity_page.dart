@@ -279,6 +279,7 @@ class _ActivityPageState extends State<ActivityPage> {
     String? selectedSeasonId;
     String? selectedHerdId;
     DateTime? selectedDate = DateTime.now();
+    var submitting = false;
 
     if (isPlant && seasons.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -324,7 +325,8 @@ class _ActivityPageState extends State<ActivityPage> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed:
+                          submitting ? null : () => Navigator.pop(context),
                       icon: const Icon(Icons.close),
                     ),
                   ],
@@ -454,42 +456,68 @@ class _ActivityPageState extends State<ActivityPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (!(formKey.currentState?.validate() ?? false)) {
-                        return;
-                      }
+                    onPressed: submitting
+                        ? null
+                        : () async {
+                            if (!(formKey.currentState?.validate() ??
+                                false)) {
+                              return;
+                            }
 
-                      final sourceId =
-                          isPlant ? selectedSeasonId! : selectedHerdId!;
+                            final sourceId =
+                                isPlant ? selectedSeasonId! : selectedHerdId!;
 
-                      final details = sanitizeOptionalText(detailsController.text);
+                            final details = sanitizeOptionalText(
+                              detailsController.text,
+                            );
 
-                      final activity = ActivityModel.create(
-                        sourceType: selectedSourceType,
-                        sourceId: sourceId,
-                        animalId: isPlant ? null : 0,
-                        type: sanitizeText(typeController.text),
-                        details: details,
-                        cost: parseNonNegativeDecimal(costController.text),
-                        date: selectedDate!,
-                        notes: details,
-                      );
-                      SuccessFeedback.saved();
-                      context.read<ActivityBloc>().add(
-                        AddActivityEvent(activity),
-                      );
-                      Navigator.pop(context);
-                    },
+                            final activity = ActivityModel.create(
+                              sourceType: selectedSourceType,
+                              sourceId: sourceId,
+                              animalId: isPlant ? null : 0,
+                              type: sanitizeText(typeController.text),
+                              details: details,
+                              cost: parseNonNegativeDecimal(
+                                costController.text,
+                              ),
+                              date: selectedDate!,
+                              notes: details,
+                            );
+
+                            setState(() => submitting = true);
+
+                            final bloc = context.read<ActivityBloc>()
+                              ..add(AddActivityEvent(activity));
+                            final s = await bloc.stream.firstWhere(
+                              (s) =>
+                                  (s is ActivityLoaded &&
+                                      s.successMessage != null) ||
+                                  s is ActivityError,
+                            );
+                            if (!context.mounted) return;
+                            if (s is ActivityLoaded) {
+                              SuccessFeedback.saved();
+                              Navigator.pop(context);
+                            } else {
+                              setState(() => submitting = false);
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: const Text(
-                      'Add Activity',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: submitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(
+                            'Add Activity',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -528,6 +556,7 @@ class _ActivityPageState extends State<ActivityPage> {
     var selectedHerdId = isPlant ? null : activity.sourceId;
     String? selectedType = activity.type;
     DateTime? selectedDate = activity.date;
+    var submitting = false;
 
     if ((isPlant && seasons.isEmpty) || (!isPlant && herds.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -564,7 +593,8 @@ class _ActivityPageState extends State<ActivityPage> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed:
+                          submitting ? null : () => Navigator.pop(context),
                       icon: const Icon(Icons.close),
                     ),
                   ],
@@ -694,34 +724,53 @@ class _ActivityPageState extends State<ActivityPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () async {
-                      if (!(formKey.currentState?.validate() ?? false)) {
-                        return;
-                      }
+                    onPressed: submitting
+                        ? null
+                        : () async {
+                            if (!(formKey.currentState?.validate() ??
+                                false)) {
+                              return;
+                            }
 
-                      final sourceId =
-                          isPlant ? selectedSeasonId! : selectedHerdId!;
+                            final sourceId =
+                                isPlant ? selectedSeasonId! : selectedHerdId!;
 
-                      final updatedActivity = ActivityModel(
-                        id: activity.id,
-                        sourceType: selectedSourceType,
-                        sourceId: sourceId,
-                        animalId: isPlant ? null : 0,
-                        type: sanitizeText(selectedType),
-                        details: sanitizeOptionalText(descriptionController.text),
-                        cost: parseNonNegativeDecimal(costController.text),
-                        date: selectedDate!,
-                        notes: activity.notes,
-                        createdAt: activity.createdAt,
-                        updatedAt: DateTime.now(),
-                      );
+                            final updatedActivity = ActivityModel(
+                              id: activity.id,
+                              sourceType: selectedSourceType,
+                              sourceId: sourceId,
+                              animalId: isPlant ? null : 0,
+                              type: sanitizeText(selectedType),
+                              details: sanitizeOptionalText(
+                                descriptionController.text,
+                              ),
+                              cost: parseNonNegativeDecimal(
+                                costController.text,
+                              ),
+                              date: selectedDate!,
+                              notes: activity.notes,
+                              createdAt: activity.createdAt,
+                              updatedAt: DateTime.now(),
+                            );
 
-                      SuccessFeedback.saved();
-                      context.read<ActivityBloc>().add(
-                        UpdateActivityEvent(updatedActivity),
-                      );
-                      Navigator.pop(context);
-                    },
+                            setState(() => submitting = true);
+
+                            final bloc = context.read<ActivityBloc>()
+                              ..add(UpdateActivityEvent(updatedActivity));
+                            final s = await bloc.stream.firstWhere(
+                              (s) =>
+                                  (s is ActivityLoaded &&
+                                      s.successMessage != null) ||
+                                  s is ActivityError,
+                            );
+                            if (!context.mounted) return;
+                            if (s is ActivityLoaded) {
+                              SuccessFeedback.saved();
+                              Navigator.pop(context);
+                            } else {
+                              setState(() => submitting = false);
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
                           Theme.of(context).colorScheme.primary,
@@ -729,13 +778,19 @@ class _ActivityPageState extends State<ActivityPage> {
                           Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: const Text(
-                      'Update Activity',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: submitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(
+                            'Update Activity',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ],

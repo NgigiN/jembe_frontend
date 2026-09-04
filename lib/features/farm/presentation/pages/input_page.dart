@@ -59,6 +59,7 @@ Future<void> showAddInputDialog(
   final isPlant = selectedSourceType == 'plant';
   String? selectedSeasonId;
   var selectedHerdId = lockedHerdId;
+  var submitting = false;
 
   final seasonState = context.read<SeasonBloc>().state;
   final seasons = seasonState is SeasonLoaded ? seasonState.seasons : <Season>[];
@@ -113,7 +114,8 @@ Future<void> showAddInputDialog(
                         ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   IconButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed:
+                        submitting ? null : () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
                   ),
                 ],
@@ -237,40 +239,63 @@ Future<void> showAddInputDialog(
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    if (!(formKey.currentState?.validate() ?? false)) {
-                      return;
-                    }
+                  onPressed: submitting
+                      ? null
+                      : () async {
+                          if (!(formKey.currentState?.validate() ?? false)) {
+                            return;
+                          }
 
-                    final sourceId =
-                        isPlant ? selectedSeasonId! : selectedHerdId!;
+                          final sourceId =
+                              isPlant ? selectedSeasonId! : selectedHerdId!;
 
-                    final input = InputModel.create(
-                      sourceType: selectedSourceType,
-                      sourceId: sourceId,
-                      animalId: isPlant ? null : lockedAnimalId,
-                      type: sanitizeText(typeController.text),
-                      quantity: parseOptionalNonNegativeDecimal(
-                        quantityController.text,
-                      ),
-                      cost: parsePositiveDecimal(costController.text)!,
-                      date: selectedDate!,
-                      notes: sanitizeOptionalText(notesController.text),
-                    );
-                    SuccessFeedback.saved();
-                    context.read<InputBloc>().add(AddInputEvent(input));
-                    Navigator.pop(context);
-                  },
+                          final input = InputModel.create(
+                            sourceType: selectedSourceType,
+                            sourceId: sourceId,
+                            animalId: isPlant ? null : lockedAnimalId,
+                            type: sanitizeText(typeController.text),
+                            quantity: parseOptionalNonNegativeDecimal(
+                              quantityController.text,
+                            ),
+                            cost: parsePositiveDecimal(costController.text)!,
+                            date: selectedDate!,
+                            notes: sanitizeOptionalText(notesController.text),
+                          );
+
+                          setState(() => submitting = true);
+
+                          final bloc = context.read<InputBloc>()
+                            ..add(AddInputEvent(input));
+                          final s = await bloc.stream.firstWhere(
+                            (s) =>
+                                (s is InputLoaded &&
+                                    s.successMessage != null) ||
+                                s is InputError,
+                          );
+                          if (!context.mounted) return;
+                          if (s is InputLoaded) {
+                            SuccessFeedback.saved();
+                            Navigator.pop(context);
+                          } else {
+                            setState(() => submitting = false);
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  child: const Text(
-                    'Add Input',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  child: submitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text(
+                          'Add Input',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -509,6 +534,7 @@ class _InputPageState extends State<InputPage> {
     final isPlant = selectedSourceType == 'plant';
     var selectedSeasonId = isPlant ? input.sourceId : null;
     var selectedHerdId = isPlant ? null : input.sourceId;
+    var submitting = false;
 
     final seasonState = context.read<SeasonBloc>().state;
     final seasons =
@@ -555,7 +581,8 @@ class _InputPageState extends State<InputPage> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed:
+                          submitting ? null : () => Navigator.pop(context),
                       icon: const Icon(Icons.close),
                     ),
                   ],
@@ -685,36 +712,53 @@ class _InputPageState extends State<InputPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () async {
-                      if (!(formKey.currentState?.validate() ?? false)) {
-                        return;
-                      }
+                    onPressed: submitting
+                        ? null
+                        : () async {
+                            if (!(formKey.currentState?.validate() ??
+                                false)) {
+                              return;
+                            }
 
-                      final sourceId =
-                          isPlant ? selectedSeasonId! : selectedHerdId!;
+                            final sourceId =
+                                isPlant ? selectedSeasonId! : selectedHerdId!;
 
-                      final updatedInput = InputModel(
-                        id: input.id,
-                        sourceType: selectedSourceType,
-                        sourceId: sourceId,
-                        animalId: isPlant ? null : 0,
-                        type: sanitizeText(typeController.text),
-                        quantity: parseOptionalNonNegativeDecimal(
-                          quantityController.text,
-                        ),
-                        cost: parsePositiveDecimal(costController.text)!,
-                        date: selectedDate!,
-                        notes: sanitizeOptionalText(notesController.text),
-                        createdAt: input.createdAt,
-                        updatedAt: DateTime.now(),
-                      );
+                            final updatedInput = InputModel(
+                              id: input.id,
+                              sourceType: selectedSourceType,
+                              sourceId: sourceId,
+                              animalId: isPlant ? null : 0,
+                              type: sanitizeText(typeController.text),
+                              quantity: parseOptionalNonNegativeDecimal(
+                                quantityController.text,
+                              ),
+                              cost:
+                                  parsePositiveDecimal(costController.text)!,
+                              date: selectedDate!,
+                              notes:
+                                  sanitizeOptionalText(notesController.text),
+                              createdAt: input.createdAt,
+                              updatedAt: DateTime.now(),
+                            );
 
-                      SuccessFeedback.saved();
-                      context
-                          .read<InputBloc>()
-                          .add(UpdateInputEvent(updatedInput));
-                      Navigator.pop(context);
-                    },
+                            setState(() => submitting = true);
+
+                            final bloc = context.read<InputBloc>()
+                              ..add(UpdateInputEvent(updatedInput));
+                            final s = await bloc.stream.firstWhere(
+                              (s) =>
+                                  (s is InputLoaded &&
+                                      s.successMessage != null) ||
+                                  s is InputError,
+                            );
+                            if (!context.mounted) return;
+                            if (s is InputLoaded) {
+                              SuccessFeedback.saved();
+                              Navigator.pop(context);
+                            } else {
+                              setState(() => submitting = false);
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
                           Theme.of(context).colorScheme.primary,
@@ -722,13 +766,19 @@ class _InputPageState extends State<InputPage> {
                           Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: const Text(
-                      'Update Input',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: submitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(
+                            'Update Input',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ],

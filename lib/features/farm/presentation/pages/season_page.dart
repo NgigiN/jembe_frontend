@@ -65,6 +65,7 @@ Future<String?> showAddSeasonDialog(BuildContext context) async {
   DateTime? selectedEndDate;
   String? selectedPlantId;
   String? selectedLandId;
+  var submitting = false;
 
   await showModalBottomSheet<void>(
     context: context,
@@ -99,7 +100,9 @@ Future<String?> showAddSeasonDialog(BuildContext context) async {
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           IconButton(
-                            onPressed: () => Navigator.pop(sheetContext),
+                            onPressed: submitting
+                                ? null
+                                : () => Navigator.pop(sheetContext),
                             icon: const Icon(Icons.close),
                           ),
                         ],
@@ -135,30 +138,49 @@ Future<String?> showAddSeasonDialog(BuildContext context) async {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {
-                            if (!(formKey.currentState?.validate() ?? false)) {
-                              return;
-                            }
-                            _submitAddSeason(
-                              seasonBloc: seasonBloc,
-                              sheetContext: sheetContext,
-                              nameController: nameController,
-                              selectedPlantId: selectedPlantId,
-                              selectedLandId: selectedLandId,
-                              selectedStartDate: selectedStartDate,
-                              selectedEndDate: selectedEndDate,
-                            );
-                          },
+                          onPressed: submitting
+                              ? null
+                              : () async {
+                                  if (!(formKey.currentState?.validate() ??
+                                      false)) {
+                                    return;
+                                  }
+                                  setSheetState(() => submitting = true);
+                                  final ok = await _submitAddSeason(
+                                    seasonBloc: seasonBloc,
+                                    sheetContext: sheetContext,
+                                    nameController: nameController,
+                                    selectedPlantId: selectedPlantId,
+                                    selectedLandId: selectedLandId,
+                                    selectedStartDate: selectedStartDate,
+                                    selectedEndDate: selectedEndDate,
+                                  );
+                                  if (!sheetContext.mounted) return;
+                                  if (ok) {
+                                    SuccessFeedback.saved();
+                                    Navigator.pop(sheetContext);
+                                  } else {
+                                    setSheetState(() => submitting = false);
+                                  }
+                                },
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
-                          child: const Text(
-                            'Add Season',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                          child: submitting
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  'Add Season',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                         ),
                       ),
                     ],
@@ -181,8 +203,10 @@ Future<String?> showAddSeasonDialog(BuildContext context) async {
 /// `_submitAddHerd` in herd_page.dart: the selected-date variables are
 /// captured, mutable closure state, so Dart won't promote their
 /// nullability after a null check inline — passing them as plain
-/// parameters here lets it.
-Future<void> _submitAddSeason({
+/// parameters here lets it. Returns true once the bloc confirms the season
+/// was added; the caller plays the success feedback and pops the sheet
+/// only then.
+Future<bool> _submitAddSeason({
   required SeasonBloc seasonBloc,
   required BuildContext sheetContext,
   required TextEditingController nameController,
@@ -196,7 +220,7 @@ Future<void> _submitAddSeason({
     ScaffoldMessenger.of(sheetContext).showSnackBar(
       AppSnackBar.error(sheetContext, 'User not authenticated'),
     );
-    return;
+    return false;
   }
 
   final season = SeasonModel.create(
@@ -207,9 +231,11 @@ Future<void> _submitAddSeason({
     startDate: selectedStartDate!,
     endDate: selectedEndDate,
   );
-  SuccessFeedback.saved();
   seasonBloc.add(AddSeasonEvent(season));
-  Navigator.pop(sheetContext);
+  final s = await seasonBloc.stream.firstWhere(
+    (s) => (s is SeasonLoaded && s.successMessage != null) || s is SeasonError,
+  );
+  return s is SeasonLoaded;
 }
 
 class SeasonPage extends StatefulWidget {
@@ -386,6 +412,7 @@ class _SeasonPageState extends State<SeasonPage> {
         : null;
     String? selectedPlantId = season.plantId;
     String? selectedLandId = season.landId;
+    var submitting = false;
 
     final landState = context.read<LandBloc>().state;
     final lands = landState is LandLoaded ? landState.lands : <Land>[];
@@ -427,7 +454,8 @@ class _SeasonPageState extends State<SeasonPage> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
-                      onPressed: () => Navigator.pop(sheetContext),
+                      onPressed:
+                          submitting ? null : () => Navigator.pop(sheetContext),
                       icon: const Icon(Icons.close),
                     ),
                   ],
@@ -464,28 +492,44 @@ class _SeasonPageState extends State<SeasonPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () async {
-                      if (!(formKey.currentState?.validate() ?? false)) {
-                        return;
-                      }
+                    onPressed: submitting
+                        ? null
+                        : () async {
+                            if (!(formKey.currentState?.validate() ??
+                                false)) {
+                              return;
+                            }
 
-                      final updatedSeason = SeasonModel(
-                        id: season.id,
-                        userId: season.userId,
-                        name: sanitizeText(nameController.text),
-                        plantId: selectedPlantId!,
-                        landId: selectedLandId!,
-                        startDate: selectedStartDate!,
-                        endDate: selectedEndDate,
-                        createdAt: season.createdAt,
-                        updatedAt: DateTime.now(),
-                      );
-                      SuccessFeedback.saved();
-                      context.read<SeasonBloc>().add(
-                        UpdateSeasonEvent(updatedSeason),
-                      );
-                      Navigator.pop(sheetContext);
-                    },
+                            final updatedSeason = SeasonModel(
+                              id: season.id,
+                              userId: season.userId,
+                              name: sanitizeText(nameController.text),
+                              plantId: selectedPlantId!,
+                              landId: selectedLandId!,
+                              startDate: selectedStartDate!,
+                              endDate: selectedEndDate,
+                              createdAt: season.createdAt,
+                              updatedAt: DateTime.now(),
+                            );
+
+                            setSheetState(() => submitting = true);
+
+                            final bloc = context.read<SeasonBloc>()
+                              ..add(UpdateSeasonEvent(updatedSeason));
+                            final s = await bloc.stream.firstWhere(
+                              (s) =>
+                                  (s is SeasonLoaded &&
+                                      s.successMessage != null) ||
+                                  s is SeasonError,
+                            );
+                            if (!sheetContext.mounted) return;
+                            if (s is SeasonLoaded) {
+                              SuccessFeedback.saved();
+                              Navigator.pop(sheetContext);
+                            } else {
+                              setSheetState(() => submitting = false);
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
                           Theme.of(sheetContext).colorScheme.primary,
@@ -493,7 +537,13 @@ class _SeasonPageState extends State<SeasonPage> {
                           Theme.of(sheetContext).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: const Text(
+                    child: submitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(
                       'Update Season',
                       style: TextStyle(
                         fontSize: 16,

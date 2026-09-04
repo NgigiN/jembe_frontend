@@ -254,6 +254,13 @@ void main() {
         await tester.tap(find.text('OK'));
         await tester.pumpAndSettle();
 
+        // The submit button now awaits the bloc's terminal state before it
+        // confirms and closes (P3-06), so the confirming state must be
+        // emitted after the submit is tapped, not before.
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Add Season'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
         stateController.add(
           SeasonLoaded(
             seasons: [
@@ -271,8 +278,6 @@ void main() {
             successMessage: 'Season created',
           ),
         );
-
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Add Season'));
         await tester.pumpAndSettle();
 
         final result = await tester.runAsync(() => resultFuture);

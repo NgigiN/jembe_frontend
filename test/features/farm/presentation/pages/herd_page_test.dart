@@ -115,6 +115,13 @@ void main() {
         await tester.tap(find.text('OK'));
         await tester.pumpAndSettle();
 
+        // The sheet now awaits the bloc's terminal state before it confirms
+        // and closes (P3-06), so the confirming state must be emitted after
+        // the submit is tapped, not before.
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Register Herd'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
         stateController.add(
           HerdLoaded(
             [
@@ -134,8 +141,6 @@ void main() {
             successMessage: 'Herd created',
           ),
         );
-
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Register Herd'));
         await tester.pumpAndSettle();
 
         final result = await tester.runAsync(() => resultFuture);

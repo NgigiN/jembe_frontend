@@ -249,6 +249,7 @@ class _HarvestPageState extends State<HarvestPage> {
       selectedUnit = harvestUnitOther;
     }
     var selectedDate = harvest?.date ?? DateTime.now();
+    var submitting = false;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -275,7 +276,8 @@ class _HarvestPageState extends State<HarvestPage> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed:
+                          submitting ? null : () => Navigator.pop(context),
                       icon: const Icon(Icons.close),
                     ),
                   ],
@@ -420,64 +422,85 @@ class _HarvestPageState extends State<HarvestPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (!(formKey.currentState?.validate() ?? false)) {
-                        return;
-                      }
+                    onPressed: submitting
+                        ? null
+                        : () async {
+                            if (!(formKey.currentState?.validate() ??
+                                false)) {
+                              return;
+                            }
 
-                      final quantity =
-                          parsePositiveDecimal(quantityController.text)!;
-                      final unit = selectedUnit == harvestUnitOther
-                          ? sanitizeText(customUnitController.text)
-                          : selectedUnit;
-                      final notes =
-                          sanitizeOptionalText(notesController.text);
+                            final quantity = parsePositiveDecimal(
+                              quantityController.text,
+                            )!;
+                            final unit = selectedUnit == harvestUnitOther
+                                ? sanitizeText(customUnitController.text)
+                                : selectedUnit;
+                            final notes =
+                                sanitizeOptionalText(notesController.text);
 
-                      if (harvest == null) {
-                        final newHarvest = HarvestModel.create(
-                          seasonId: selectedSeasonId!,
-                          quantity: quantity,
-                          unit: unit,
-                          date: selectedDate,
-                          notes: notes,
-                        );
-                        SuccessFeedback.saved();
-                        context
-                            .read<HarvestBloc>()
-                            .add(AddHarvestEvent(newHarvest));
-                      } else {
-                        final updatedHarvest = HarvestModel(
-                          id: harvest.id,
-                          seasonId: selectedSeasonId!,
-                          quantity: quantity,
-                          unit: unit,
-                          date: selectedDate,
-                          notes: notes,
-                          revenueId: harvest.revenueId,
-                          createdAt: harvest.createdAt,
-                          updatedAt: DateTime.now(),
-                        );
-                        SuccessFeedback.saved();
-                        context
-                            .read<HarvestBloc>()
-                            .add(UpdateHarvestEvent(updatedHarvest));
-                      }
+                            setState(() => submitting = true);
 
-                      Navigator.pop(context);
-                    },
+                            final bloc = context.read<HarvestBloc>();
+                            if (harvest == null) {
+                              final newHarvest = HarvestModel.create(
+                                seasonId: selectedSeasonId!,
+                                quantity: quantity,
+                                unit: unit,
+                                date: selectedDate,
+                                notes: notes,
+                              );
+                              bloc.add(AddHarvestEvent(newHarvest));
+                            } else {
+                              final updatedHarvest = HarvestModel(
+                                id: harvest.id,
+                                seasonId: selectedSeasonId!,
+                                quantity: quantity,
+                                unit: unit,
+                                date: selectedDate,
+                                notes: notes,
+                                revenueId: harvest.revenueId,
+                                createdAt: harvest.createdAt,
+                                updatedAt: DateTime.now(),
+                              );
+                              bloc.add(UpdateHarvestEvent(updatedHarvest));
+                            }
+
+                            final s = await bloc.stream.firstWhere(
+                              (s) =>
+                                  (s is HarvestLoaded &&
+                                      s.successMessage != null) ||
+                                  s is HarvestError,
+                            );
+                            if (!context.mounted) return;
+                            if (s is HarvestLoaded) {
+                              SuccessFeedback.saved();
+                              Navigator.pop(context);
+                            } else {
+                              setState(() => submitting = false);
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor:
                           Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: Text(
-                      harvest == null ? 'Record Harvest' : 'Update Harvest',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: submitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            harvest == null
+                                ? 'Record Harvest'
+                                : 'Update Harvest',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ],
