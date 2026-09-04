@@ -830,6 +830,7 @@ class _ActivityPageState extends State<ActivityPage> {
       message:
           'Are you sure you want to delete this ${activity.type.toLowerCase()} activity? This action cannot be undone.',
     );
+    if (!context.mounted) return;
     if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<ActivityBloc>().add(

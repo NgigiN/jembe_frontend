@@ -91,6 +91,7 @@ Future<String?> showAddAnimalDialog(BuildContext context) async {
     ),
     onSubmit: (sheetContext) async {
       final userId = await UserUtils.getCurrentUserId();
+      if (!sheetContext.mounted) return false;
       if (userId == null) {
         ScaffoldMessenger.of(sheetContext).showSnackBar(
           AppSnackBar.error(sheetContext, 'User not authenticated'),
@@ -480,7 +481,7 @@ class _AnimalPageState extends State<AnimalPage> {
       },
     );
 
-    if (!wasBought && committedNowBought && context.mounted) {
+    if (!wasBought && committedNowBought && mounted) {
       unawaited(
         showAddInputDialog(
           context,
@@ -499,6 +500,7 @@ class _AnimalPageState extends State<AnimalPage> {
       message:
           'Are you sure you want to delete "${animal.name}"? This action cannot be undone.',
     );
+    if (!mounted) return;
     if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<AnimalBloc>().add(DeleteAnimalEvent(animal.id));

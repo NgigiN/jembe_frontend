@@ -227,6 +227,7 @@ Future<bool> _submitAddSeason({
   required DateTime? selectedEndDate,
 }) async {
   final userId = await UserUtils.getCurrentUserId();
+  if (!sheetContext.mounted) return false;
   if (userId == null) {
     ScaffoldMessenger.of(sheetContext).showSnackBar(
       AppSnackBar.error(sheetContext, 'User not authenticated'),
@@ -762,6 +763,7 @@ class _SeasonPageState extends State<SeasonPage> {
       message:
           'Are you sure you want to delete "${season.name}"? This action cannot be undone.',
     );
+    if (!mounted) return;
     if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<SeasonBloc>().add(DeleteSeasonEvent(season.id));

@@ -67,6 +67,7 @@ Future<String?> showAddLandDialog(BuildContext context) async {
     ),
     onSubmit: (sheetContext) async {
       final userId = await UserUtils.getCurrentUserId();
+      if (!sheetContext.mounted) return false;
       if (userId == null) {
         ScaffoldMessenger.of(sheetContext).showSnackBar(
           AppSnackBar.error(sheetContext, 'User not authenticated'),
@@ -365,6 +366,7 @@ class _LandPageState extends State<LandPage> {
       message:
           'Are you sure you want to delete "${land.name}"${land.location != null ? ' (${land.location})' : ''}? This action cannot be undone.',
     );
+    if (!mounted) return;
     if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<LandBloc>().add(DeleteLandEvent(land.id));

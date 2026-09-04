@@ -51,6 +51,7 @@ Future<bool> _submitAddHerd({
   if (selectedStartDate == null) return false;
 
   final userId = await UserUtils.getCurrentUserId();
+  if (!sheetContext.mounted) return false;
   if (userId == null) {
     _HerdPageState._showSheetError(sheetContext, 'User not authenticated');
     return false;
@@ -789,6 +790,7 @@ class _HerdPageState extends State<HerdPage> {
       message:
           'Are you sure you want to delete "${herd.name}"? This action cannot be undone.',
     );
+    if (!mounted) return;
     if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<HerdBloc>().add(DeleteHerdEvent(herd.id));

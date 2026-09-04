@@ -817,6 +817,7 @@ class _InputPageState extends State<InputPage> {
       message:
           'Are you sure you want to delete this ${input.type.toLowerCase()} input? This action cannot be undone.',
     );
+    if (!context.mounted) return;
     if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<InputBloc>().add(DeleteInputEvent(input.id));

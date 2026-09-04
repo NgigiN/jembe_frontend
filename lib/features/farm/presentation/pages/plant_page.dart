@@ -60,6 +60,7 @@ Future<String?> showAddPlantDialog(BuildContext context) async {
     ),
     onSubmit: (sheetContext) async {
       final userId = await UserUtils.getCurrentUserId();
+      if (!sheetContext.mounted) return false;
       if (userId == null) {
         ScaffoldMessenger.of(sheetContext).showSnackBar(
           AppSnackBar.error(sheetContext, 'User not authenticated'),
@@ -293,6 +294,7 @@ class _PlantPageState extends State<PlantPage> {
       message:
           'Are you sure you want to delete "${plant.name}"${plant.variety != null ? ' (${plant.variety})' : ''}? This action cannot be undone.',
     );
+    if (!mounted) return;
     if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<PlantBloc>().add(DeletePlantEvent(plant.id));

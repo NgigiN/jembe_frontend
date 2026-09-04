@@ -455,6 +455,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
     }
 
     final userId = await UserUtils.getCurrentUserId();
+    if (!sheetContext.mounted) return false;
     if (userId == null) {
       _showSheetError(sheetContext, 'User not authenticated');
       return false;
@@ -492,6 +493,7 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
       message:
           'Are you sure you want to delete "${item.name}"? This action cannot be undone.',
     );
+    if (!mounted) return;
     if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<InfrastructureBloc>().add(
