@@ -30,12 +30,27 @@ import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dar
 import 'package:farm_tracker/injection_container.dart' as di;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize environment configuration
   AppConfig.initialize();
+
+  // Read the real app version BEFORE di.init() (which registers Dio) so the
+  // X-App-Version header and the /meta launch check never see the stale
+  // "0.0.0" default. PackageInfo only needs WidgetsFlutterBinding (already
+  // initialized above) and does NOT depend on the DI container. Wrapped so a
+  // PackageInfo failure can never block startup - we simply keep the default.
+  try {
+    final info = await PackageInfo.fromPlatform();
+    if (info.version.isNotEmpty) {
+      AppConfig.appVersion = info.version;
+    }
+  } catch (_) {
+    // Keep the "0.0.0" default; startup must never fail on version lookup.
+  }
 
   await di.init();
 

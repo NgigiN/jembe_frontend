@@ -4,6 +4,12 @@ import 'package:flutter/foundation.dart';
 class AppConfig {
   static late Environment _currentEnvironment;
 
+  // The running app's semantic version (e.g. "1.0.0"). Populated in main()
+  // from PackageInfo before di.init(), and read at request send-time by the
+  // Dio interceptor (X-App-Version) and by the /meta launch check. Defaults
+  // to "0.0.0" so any code path that runs before it is set degrades safely.
+  static String appVersion = '0.0.0';
+
   static const String _defaultRemoteBaseUrl = 'https://farmtracker.samtama.lol';
   // Android emulator host loopback; override via --dart-define=LOCAL_API_HOST for devices
   static const String _defaultLocalApiHost = '10.0.2.2';

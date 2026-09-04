@@ -112,6 +112,13 @@ class _AuthInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
+    // Stamp the app version at SEND time (not at Dio construction time). Dio
+    // is a lazy DI singleton whose BaseOptions.headers map is frozen when it
+    // is first built; reading AppConfig.appVersion here instead guarantees the
+    // real version (set in main() before di.init()) always goes on the wire,
+    // never the stale "0.0.0" default, regardless of construction ordering.
+    options.headers['X-App-Version'] = AppConfig.appVersion;
+
     final token = await UserStorageService.getToken();
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
