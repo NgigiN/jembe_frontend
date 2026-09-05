@@ -117,7 +117,9 @@ void main() {
   group("flag OFF (today's live-HTTP behavior, unchanged)", () {
     test(
       'addInput carries fields from the Input entity into the model sent '
-      'to the data source',
+      'to the data source, but drops notes (matches the ORIGINAL pre-P3 '
+      'wire behavior — never fixed in this offline task, see '
+      "InputRepositoryImpl's _toModel doc comment)",
       () async {
         final dataSource = FakeInputRemoteDataSource();
         final repository = InputRepositoryImpl(remoteDataSource: dataSource);
@@ -139,13 +141,20 @@ void main() {
         );
 
         expect(dataSource.lastAdded?.cost, 100);
-        expect(dataSource.lastAdded?.notes, 'Top dressing');
+        expect(
+          dataSource.lastAdded?.notes,
+          isNull,
+          reason:
+              'byte-for-byte flag-off contract: the pre-P3 addInput never '
+              'set notes on the wire model, regardless of Input.notes',
+        );
       },
     );
 
     test(
       'updateInput carries fields from the Input entity into the model '
-      'sent to the data source',
+      'sent to the data source, but drops notes (matches the ORIGINAL '
+      'pre-P3 wire behavior)',
       () async {
         final dataSource = FakeInputRemoteDataSource();
         final repository = InputRepositoryImpl(remoteDataSource: dataSource);
@@ -159,12 +168,21 @@ void main() {
             type: 'Fertilizer',
             cost: 200,
             date: now,
+            notes: 'Should never reach the wire',
             createdAt: now,
             updatedAt: now,
           ),
         );
 
         expect(dataSource.lastUpdated?.cost, 200);
+        expect(
+          dataSource.lastUpdated?.notes,
+          isNull,
+          reason:
+              'byte-for-byte flag-off contract: the pre-P3 updateInput '
+              'never set notes on the wire model, regardless of '
+              'Input.notes',
+        );
       },
     );
 

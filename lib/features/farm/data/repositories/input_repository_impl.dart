@@ -72,6 +72,16 @@ class InputRepositoryImpl
   @override
   SyncEngine? get syncEngine => sync;
 
+  // NOTE: deliberately does NOT pass `notes:` — the original flag-off
+  // `addInput`/`updateInput` construction (pre-P3, see
+  // `git show 4ec8dd7:.../input_repository_impl.dart`) never set `notes` on
+  // the `InputModel` it sent to the remote data source, so the wire always
+  // carried a null `notes` regardless of what the caller's `Input.notes`
+  // held. `_toModel` is used ONLY by the flag-off remote path (below); the
+  // flag-ON local-first path builds its own model via `InputModel.create`,
+  // which DOES carry `notes:` into the local mirror — offline note-taking is
+  // correct dark behavior, only the flag-off wire must stay byte-for-byte
+  // identical to before (rule zero for this rollout).
   InputModel _toModel(Input input) {
     return InputModel(
       id: input.id,
@@ -82,7 +92,6 @@ class InputRepositoryImpl
       quantity: input.quantity,
       cost: input.cost,
       date: input.date,
-      notes: input.notes,
       createdAt: input.createdAt,
       updatedAt: input.updatedAt,
     );
