@@ -45,6 +45,16 @@ class CostCategorySyncer implements EntitySyncer {
   @override
   String get entity => 'cost_category';
 
+  // No timestamps means no delta cursor is ever returned by [pull] (always
+  // `null` — see its docs). Cursorless: excluded from the engine's
+  // deletions-replay cursor computation (`SyncEngine._pullPhase`) so this
+  // entity's perpetual-null cursor doesn't force a full `/sync/deletions`
+  // replay on every pass for every OTHER entity too — this entity's own
+  // deletions are already handled by [pull]'s full re-fetch (a row gone
+  // from `getCostCategories()` is deleted locally by `replaceAllFromServer`).
+  @override
+  bool get hasCursor => false;
+
   @override
   Future<void> push(OutboxRow entry) async {
     if (entry.op == 'create') {

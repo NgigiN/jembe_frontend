@@ -25,6 +25,12 @@ abstract class EntitySyncer {
   /// upserts them into the local mirror, and returns the greatest
   /// `updatedAt` observed (the new cursor), or null if nothing changed.
   Future<DateTime?> pull(DateTime? since);
+
+  /// `true` = this syncer advances a per-entity pull cursor (delta sync).
+  /// `false` = it never returns a cursor (full re-fetch / no-op pull), so
+  /// the engine must NOT let its perpetual-null cursor force a full
+  /// deletions replay (see `SyncEngine._pullPhase`).
+  bool get hasCursor => true;
 }
 
 /// Applies server-side hard deletions (tombstones) to the local mirror.

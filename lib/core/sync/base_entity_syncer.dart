@@ -34,6 +34,12 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
   @override
   final String entity;
 
+  // BaseEntitySyncer entities are cursor-bearing: `pull` returns the max
+  // `updatedAt` it observed, which the engine persists as this entity's
+  // delta-sync cursor.
+  @override
+  bool get hasCursor => true;
+
   @override
   Future<void> push(OutboxRow entry) async {
     if (entry.op == 'create') {

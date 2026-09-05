@@ -206,6 +206,77 @@ void main() {
     expect(syncer.pullSinceArgs.single!.isAtSameMomentAs(since), isTrue);
   });
 
+  group('deletions cursor excludes cursorless syncers', () {
+    // A cursorless syncer (`hasCursor = false`, e.g. `CostCategorySyncer` —
+    // no timestamps, `pull` always returns `null`) has a PERMANENTLY null
+    // entry in `preCursors`. Before this fix, `_oldestCursor` would treat
+    // that the same as a genuinely-unsynced entity and force
+    // `applyDeletions(null)` (a full replay) on every single pass, forever.
+    late _FakeSyncer landSyncer;
+    late _FakeSyncer costCategorySyncer;
+    late _FakeCursors localCursors;
+    late _FakeDeletions localDeletions;
+    late _FakeConnectivity localConnectivity;
+    late SyncEngine localEngine;
+
+    void buildTwoSyncerEngine() {
+      landSyncer = _FakeSyncer('land', events);
+      costCategorySyncer = _FakeSyncer('cost_category', events)
+        ..hasCursor = false;
+      localCursors = _FakeCursors();
+      localDeletions = _FakeDeletions(events);
+      localConnectivity = _FakeConnectivity();
+      localEngine = SyncEngine(
+        outbox: _FakeOutbox(const []),
+        syncers: [landSyncer, costCategorySyncer],
+        cursors: localCursors,
+        connectivity: localConnectivity,
+        deletions: localDeletions,
+      );
+    }
+
+    tearDown(() {
+      localEngine.dispose();
+      localConnectivity.dispose();
+    });
+
+    test(
+      'a cursor-bearing entity with an already-set cursor calls '
+      'applyDeletions with THAT cursor, not null — the cursorless '
+      "syncer's perpetual-null cursor no longer forces a full replay",
+      () async {
+        buildTwoSyncerEngine();
+        final since = DateTime.utc(2026, 4);
+        localCursors.storage['land'] = since;
+        // cost_category never gets an entry in `storage` — its cursor is
+        // permanently null; it must not drag the computation down to null.
+
+        await localEngine.syncNow();
+
+        expect(localDeletions.sinceArgs, hasLength(1));
+        expect(localDeletions.sinceArgs.single, isNotNull);
+        expect(
+          localDeletions.sinceArgs.single!.isAtSameMomentAs(since),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'a genuinely-unsynced cursor-bearing entity (null cursor) still '
+      'forces applyDeletions(null), even alongside a cursorless syncer',
+      () async {
+        buildTwoSyncerEngine();
+        // Neither `land` nor `cost_category` has a stored cursor. `land` IS
+        // cursor-bearing, so its null cursor must still force a full replay.
+
+        await localEngine.syncNow();
+
+        expect(localDeletions.sinceArgs, [null]);
+      },
+    );
+  });
+
   test('transient (NetworkException) push: entry not acked, status error, '
       'backoff retry fires and succeeds once the syncer recovers', () {
     fakeAsync((async) {
@@ -416,6 +487,13 @@ class _FakeSyncer implements EntitySyncer {
   @override
   final String entity;
   final List<String> _events;
+
+  /// Settable so a test can build a "cost_category-like" cursorless syncer
+  /// (`hasCursor = false`) alongside a normal cursor-bearing one — defaults
+  /// to `true` (every existing test's fake syncer is cursor-bearing, like
+  /// `land`).
+  @override
+  bool hasCursor = true;
 
   int pushCount = 0;
   int pullCount = 0;

@@ -282,7 +282,22 @@ class SyncEngine {
       // per-entity cursor: any newer cursor could skip deletions that
       // happened between the oldest and newest entity. Deletions are
       // idempotent, so re-seeing already-applied ones is harmless.
-      await deletions.applyDeletions(_oldestCursor(preCursors.values));
+      //
+      // Only CURSOR-BEARING syncers (`hasCursor == true`) count towards
+      // that oldest-cursor computation. A cursorless syncer (e.g.
+      // `CostCategorySyncer` — no timestamps, so `pull` always returns
+      // `null`) never advances a cursor at all, so its entry in `preCursors`
+      // is PERMANENTLY null. Feeding that into `_oldestCursor` would force
+      // an unbounded full deletions replay on every single pass forever,
+      // for every entity — not just its own. A cursorless syncer already
+      // self-handles its own deletions via its full re-fetch (see
+      // `CostCategorySyncer.pull`'s docs), so it's excluded here; a
+      // genuinely-unsynced cursor-bearing entity's null cursor still forces
+      // a full replay, unchanged.
+      final cursorBearingCursors = _syncers.values
+          .where((syncer) => syncer.hasCursor)
+          .map((syncer) => preCursors[syncer.entity]);
+      await deletions.applyDeletions(_oldestCursor(cursorBearingCursors));
     }
   }
 
