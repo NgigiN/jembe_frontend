@@ -223,6 +223,69 @@ void main() {
     });
   });
 
+  test('transient (NetworkException) pull: status error + backoff retry that '
+      'fires and succeeds once pull recovers; state stays consistent', () {
+    fakeAsync((async) {
+      engine = build(rows: [_row(1)]);
+      final recovered = DateTime.utc(2026, 7);
+      syncer.pullThrows = NetworkException();
+
+      unawaited(engine.syncNow());
+      async.flushMicrotasks();
+
+      // Push succeeded and acked BEFORE pull failed; pull left the cursor be.
+      expect(outbox.acked, [1]);
+      expect(engine.status.phase, SyncPhase.error);
+      expect(cursors.storage.containsKey('land'), isFalse);
+
+      // Recover pull; let the backoff timer fire (cap 60s).
+      syncer
+        ..pullThrows = null
+        ..pullResult = recovered;
+      async.elapse(const Duration(seconds: 61));
+
+      expect(engine.status.phase, SyncPhase.idle);
+      expect(cursors.storage['land']!.isAtSameMomentAs(recovered), isTrue);
+
+      engine.dispose();
+    });
+  });
+
+  test('generic pull error: status ends error, pass does not wedge, syncNow '
+      'completes without an unhandled error, a later syncNow still runs',
+      () async {
+    engine = build(rows: [_row(1)]);
+    syncer.pullThrows = Exception('boom');
+
+    // Must complete normally — no unhandled async error escapes the pass.
+    await engine.syncNow();
+
+    expect(engine.status.phase, SyncPhase.error);
+    expect(outbox.acked, [1]); // push still succeeded
+
+    // No auto-retry for a non-transient fault, but a fresh trigger works.
+    syncer.pullThrows = null;
+    await engine.syncNow();
+
+    expect(engine.status.phase, SyncPhase.idle);
+  });
+
+  test('generic applyDeletions error: pass ends error without wedging; a '
+      'later syncNow still reaches idle', () async {
+    engine = build(rows: [_row(1)]);
+    deletions.applyThrows = Exception('deletions down');
+
+    await engine.syncNow();
+
+    expect(engine.status.phase, SyncPhase.error);
+    expect(outbox.acked, [1]); // push + pull ok; only deletions failed
+
+    deletions.applyThrows = null;
+    await engine.syncNow();
+
+    expect(engine.status.phase, SyncPhase.idle);
+  });
+
   test('start(): regaining connectivity triggers a sync', () async {
     engine = build(rows: [_row(1)])..start();
 
@@ -284,6 +347,10 @@ class _FakeSyncer implements EntitySyncer {
   /// New cursor returned by `pull`.
   DateTime? pullResult;
 
+  /// When set, `pull` throws this (e.g. a NetworkException or a generic
+  /// Exception). Clear it to simulate recovery.
+  Object? pullThrows;
+
   /// When set, `push` awaits this before completing (to force overlap).
   Completer<void>? pushGate;
 
@@ -308,6 +375,10 @@ class _FakeSyncer implements EntitySyncer {
     pullCount++;
     pullSinceArgs.add(since);
     _events.add('pull:$entity');
+    final error = pullThrows;
+    // Rethrow whatever the test injected (Network/Server/generic).
+    // ignore: only_throw_errors
+    if (error != null) throw error;
     return pullResult;
   }
 }
@@ -364,10 +435,17 @@ class _FakeDeletions implements DeletionsApplier {
   int applyCount = 0;
   final List<DateTime?> sinceArgs = <DateTime?>[];
 
+  /// When set, `applyDeletions` throws this. Clear it to simulate recovery.
+  Object? applyThrows;
+
   @override
   Future<void> applyDeletions(DateTime? since) async {
     applyCount++;
     sinceArgs.add(since);
     _events.add('deletions');
+    final error = applyThrows;
+    // Rethrow whatever the test injected (Network/generic).
+    // ignore: only_throw_errors
+    if (error != null) throw error;
   }
 }

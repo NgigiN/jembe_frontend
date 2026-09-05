@@ -80,16 +80,35 @@ class SyncEngine {
   SyncStatus get status => _status;
 
   /// Runs a sync pass, coalescing concurrent callers (see class docs).
+  ///
+  /// The returned future always completes normally (never with an error): a
+  /// pass is fully guarded, so triggers that call `unawaited(syncNow())` can
+  /// never surface an unhandled async error.
   Future<void> syncNow() {
     final existing = _inFlight;
     if (existing != null) {
       _runAgain = true;
       return existing;
     }
-    final future = _runLoop();
-    _inFlight = future;
-    return future;
+    final completer = Completer<void>();
+    // Publish the in-flight marker BEFORE any async work starts, so the
+    // completion handler that clears it can never run first and wedge the
+    // engine — even in the (currently impossible) case of a synchronously
+    // completing loop.
+    _inFlight = completer.future;
+    unawaited(
+      _runLoop().catchError(_swallowLoopError).whenComplete(() {
+        _inFlight = null;
+        completer.complete();
+      }),
+    );
+    return completer.future;
   }
+
+  // _runLoop is designed never to throw (every pass is fully guarded); this is
+  // belt-and-suspenders so a stray error can never wedge single-flight or
+  // surface as an unhandled async error.
+  void _swallowLoopError(Object error, StackTrace stackTrace) {}
 
   /// Wires triggers: re-syncs whenever connectivity is (re)gained.
   ///
@@ -114,38 +133,69 @@ class SyncEngine {
     unawaited(_statusController.close());
   }
 
+  // _inFlight lifecycle is owned by syncNow (assigned before the loop starts,
+  // cleared in whenComplete), so the loop itself is a plain coalescing driver.
   Future<void> _runLoop() async {
-    try {
-      do {
-        _runAgain = false;
-        await _runOnePass();
-      } while (_runAgain);
-    } finally {
-      _inFlight = null;
-    }
+    do {
+      _runAgain = false;
+      await _runOnePass();
+    } while (_runAgain);
   }
 
+  /// Runs exactly one online/offline pass. NEVER throws: every failure — from
+  /// the push infra, the pull phase, or deletions — is mapped to a terminal
+  /// status so the pass can't leave the engine stuck on `syncing`.
   Future<void> _runOnePass() async {
-    final online = await _connectivity.isOnline();
-    if (!online) {
-      // Offline: no-op this pass. Don't touch any syncer.
-      await _emit(SyncPhase.idle);
-      return;
+    var phase = SyncPhase.idle;
+    DateTime? lastSyncedAt;
+    var scheduleRetry = false;
+
+    try {
+      final online = await _connectivity.isOnline();
+      if (!online) {
+        // Offline: no-op this pass. Don't touch any syncer.
+        await _emit(SyncPhase.idle);
+        return;
+      }
+
+      await _emit(SyncPhase.syncing);
+
+      final transientStop = await _pushPhase();
+      if (!transientStop) {
+        await _pullPhase();
+      }
+
+      if (transientStop) {
+        phase = SyncPhase.error;
+        scheduleRetry = true;
+      } else {
+        _resetBackoff();
+        phase = SyncPhase.idle;
+        lastSyncedAt = _now();
+      }
+    } on NetworkException {
+      // A transient failure escaping the pull phase / deletions (or the push
+      // infra) is handled exactly like a push transient stop: error + backoff.
+      // A real LandSyncer.pull is a network call and WILL throw this offline.
+      phase = SyncPhase.error;
+      scheduleRetry = true;
+    } on Object {
+      // Any OTHER failure (a ServerException from the pull phase, a DAO error,
+      // a syncer breaking the push contract): never crash the pass or surface
+      // an unhandled async error. End in `error`, but do NOT auto-retry — a
+      // persistent non-transient fault must not hot-loop; the next trigger
+      // (connectivity regain / manual syncNow) retries. No logger is wired at
+      // this layer yet (Task 10); the `error` status is the signal.
+      phase = SyncPhase.error;
     }
 
-    await _emit(SyncPhase.syncing);
-
-    final transientStop = await _pushPhase();
-    if (!transientStop) {
-      await _pullPhase();
-    }
-
-    if (transientStop) {
+    if (phase == SyncPhase.error) {
       await _emit(SyncPhase.error);
-      _scheduleRetry();
+      if (scheduleRetry) {
+        _scheduleRetry();
+      }
     } else {
-      _resetBackoff();
-      await _emit(SyncPhase.idle, lastSyncedAt: _now());
+      await _emit(SyncPhase.idle, lastSyncedAt: lastSyncedAt);
     }
   }
 
@@ -235,7 +285,13 @@ class SyncEngine {
   }
 
   Future<void> _emit(SyncPhase phase, {DateTime? lastSyncedAt}) async {
-    final pending = await _outbox.pendingCount();
+    var pending = _status.pendingCount;
+    try {
+      pending = await _outbox.pendingCount();
+    } on Object {
+      // A broken local pending-count read must never wedge a status
+      // transition; fall back to the last known count.
+    }
     final next = SyncStatus(
       phase: phase,
       lastSyncedAt: lastSyncedAt ?? _status.lastSyncedAt,
