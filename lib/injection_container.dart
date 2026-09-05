@@ -489,7 +489,8 @@ Future<void> init({AppDatabase? database}) async {
     ..registerLazySingleton(ConnectivityService.new)
     ..registerLazySingleton(() => LandSyncer(remote: sl(), local: sl()))
     ..registerLazySingleton(
-      () => DeletionsDataSource(dio: sl(), landLocal: sl()),
+      // start with land; each entity rollout task appends its key here.
+      () => DeletionsDataSource(dio: sl(), stores: {'land': sl<LandLocalDataSource>()}),
     )
     ..registerLazySingleton(
       () => SyncEngine(

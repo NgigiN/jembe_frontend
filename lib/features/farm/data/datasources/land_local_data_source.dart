@@ -15,8 +15,8 @@ import 'package:farm_tracker/features/farm/data/models/land_model.dart';
 ///
 /// Satisfies [LocalSyncStore] so `BaseEntitySyncer<LandModel>` can drive the
 /// local mirror through the generic contract; the extra reactive-read
-/// ([watchLands]), [markDeleted] and [clear] methods are land-specific and sit
-/// outside that interface.
+/// ([watchLands]) and [clear] methods are land-specific and sit outside that
+/// interface.
 class LandLocalDataSource implements LocalSyncStore<LandModel> {
   LandLocalDataSource(this._db);
 
@@ -48,6 +48,7 @@ class LandLocalDataSource implements LocalSyncStore<LandModel> {
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:
   /// `deletedLocally = true`, `pending = true`. The row is not removed —
   /// call [hardDelete] once the delete has synced with the server.
+  @override
   Future<void> markDeleted(String clientUuid) {
     return (_db.update(
       _db.lands,

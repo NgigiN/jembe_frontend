@@ -91,4 +91,9 @@ abstract class LocalSyncStore<M> {
   /// Reconciles the row for [clientUuid] after a create/update syncs: sets
   /// [serverId] and [updatedAt], and clears `pending`.
   Future<void> setServerId(String clientUuid, String serverId, DateTime updatedAt);
+
+  /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:
+  /// sets `deletedLocally = true, pending = true`. The row is not removed —
+  /// call [hardDelete] once the delete has synced with the server.
+  Future<void> markDeleted(String clientUuid);
 }

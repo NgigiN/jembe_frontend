@@ -146,6 +146,23 @@ class _FakeLocal implements LocalSyncStore<_FakeModel> {
       name: existing.name,
     );
   }
+
+  // Not exercised by these base-syncer tests (the syncer never calls it) —
+  // added only so this fake keeps satisfying `LocalSyncStore` now that it
+  // carries `markDeleted` (R1).
+  @override
+  Future<void> markDeleted(String clientUuid) async {
+    final existing = byClientUuid[clientUuid];
+    if (existing == null) return;
+    byClientUuid[clientUuid] = _FakeModel(
+      clientUuid: clientUuid,
+      serverId: existing.serverId,
+      updatedAt: existing.updatedAt,
+      pending: true,
+      deletedLocally: true,
+      name: existing.name,
+    );
+  }
 }
 
 OutboxRow _entry({required String op, required String clientUuid}) {
