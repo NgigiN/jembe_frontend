@@ -1,5 +1,6 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
@@ -264,7 +265,11 @@ class _HerdPageState extends State<HerdPage> {
     super.initState();
     final herdBloc = context.read<HerdBloc>();
     if (herdBloc.state is! HerdLoaded) {
-      herdBloc.add(GetHerdsEvent());
+      if (OfflineConfig.enabled) {
+        herdBloc.add(WatchHerdsEvent());
+      } else {
+        herdBloc.add(GetHerdsEvent());
+      }
     }
     final animalTypeBloc = context.read<AnimalTypeBloc>();
     if (animalTypeBloc.state is! AnimalTypeLoaded) {
