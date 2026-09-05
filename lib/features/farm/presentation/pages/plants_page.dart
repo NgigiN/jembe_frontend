@@ -1,4 +1,5 @@
 import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_event.dart';
@@ -39,11 +40,19 @@ class _PlantsPageState extends State<PlantsPage> {
     }
     final plantBloc = context.read<PlantBloc>();
     if (plantBloc.state is! PlantLoaded) {
-      plantBloc.add(GetPlantsEvent());
+      if (OfflineConfig.enabled) {
+        plantBloc.add(WatchPlantsEvent());
+      } else {
+        plantBloc.add(GetPlantsEvent());
+      }
     }
     final seasonBloc = context.read<SeasonBloc>();
     if (seasonBloc.state is! SeasonLoaded) {
-      seasonBloc.add(GetSeasonsEvent());
+      if (OfflineConfig.enabled) {
+        seasonBloc.add(WatchSeasonsEvent());
+      } else {
+        seasonBloc.add(GetSeasonsEvent());
+      }
     }
     final harvestBloc = context.read<HarvestBloc>();
     if (harvestBloc.state is! HarvestLoaded) {

@@ -1,4 +1,5 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/field_limits.dart';
@@ -98,7 +99,11 @@ class _PlantPageState extends State<PlantPage> {
     super.initState();
     final bloc = context.read<PlantBloc>();
     if (bloc.state is! PlantLoaded) {
-      bloc.add(GetPlantsEvent());
+      if (OfflineConfig.enabled) {
+        bloc.add(WatchPlantsEvent());
+      } else {
+        bloc.add(GetPlantsEvent());
+      }
     }
   }
 
