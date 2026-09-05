@@ -1,0 +1,8 @@
+# Config for `dependency_validator` (run in CI as the "Verify dependencies" step).
+# ignore: packages that are genuinely used but not via a Dart `import`, so the
+# validator cannot see the usage and would otherwise flag them as unused.
+#
+# - sqlite3_flutter_libs: ships the native SQLite libraries that `drift` links at
+#   runtime (a platform plugin, no Dart import). Required for the offline drift DB.
+ignore:
+  - sqlite3_flutter_libs

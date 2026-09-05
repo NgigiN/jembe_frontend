@@ -5,7 +5,11 @@ import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/farm/data/models/land_model.dart';
 
 abstract class LandRemoteDataSource {
-  Future<List<LandModel>> getLands();
+  /// Fetches all lands, or — when [updatedSince] is given — only those the
+  /// server has changed strictly after that instant (used by the sync
+  /// pull phase). Existing no-arg callers (the flag-off repo path) are
+  /// unaffected.
+  Future<List<LandModel>> getLands({DateTime? updatedSince});
   Future<LandModel> addLand(LandModel land);
   Future<LandModel> updateLand(LandModel land);
   Future<void> deleteLand(String id);
@@ -16,9 +20,16 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
   final Dio dio;
 
   @override
-  Future<List<LandModel>> getLands() async {
+  Future<List<LandModel>> getLands({DateTime? updatedSince}) async {
     try {
-      final response = await dio.get<dynamic>('/api/v1/lands');
+      final queryParams = updatedSince != null
+          ? {'updated_since': updatedSince.toUtc().toIso8601String()}
+          : null;
+
+      final response = await dio.get<dynamic>(
+        '/api/v1/lands',
+        queryParameters: queryParams,
+      );
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -49,6 +60,13 @@ class LandRemoteDataSourceImpl implements LandRemoteDataSource {
           'location': land.location,
           'soil_type': land.soilType,
           'tenure_type': land.tenureType,
+          // Required for the offline sync path: P1's create endpoint keys
+          // its idempotency check on (user_id, client_uuid) — a retried
+          // push (same clientUuid) returns the ALREADY-created row instead
+          // of duplicating it. Harmless for the flag-off legacy path too:
+          // `LandModel.create` always mints a fresh clientUuid there, so
+          // this is just an unused-but-valid extra field server-side.
+          'client_uuid': land.clientUuid,
         },
       );
 

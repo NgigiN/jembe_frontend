@@ -16,11 +16,23 @@ class LandLoading extends LandState {
 }
 
 class LandLoaded extends LandState {
-  const LandLoaded({required super.lands, this.successMessage});
+  const LandLoaded({
+    required super.lands,
+    this.successMessage,
+    this.addedLandId,
+  });
   final String? successMessage;
 
+  /// The id of the land just created by an `AddLandEvent` that produced
+  /// this state (`successMessage == 'Land added'`), threaded through
+  /// explicitly rather than inferred from list position — flag-ON's
+  /// `lands` here is the pre-write snapshot (the reactive stream updates
+  /// it separately/asynchronously), so `lands.last` is not reliable.
+  /// Null for every other state (including other success messages).
+  final String? addedLandId;
+
   @override
-  List<Object?> get props => [lands, successMessage];
+  List<Object?> get props => [lands, successMessage, addedLandId];
 }
 
 class LandError extends LandState {
