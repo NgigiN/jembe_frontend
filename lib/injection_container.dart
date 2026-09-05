@@ -633,7 +633,8 @@ Future<void> init({AppDatabase? database}) async {
       () => HerdActivitySyncer(remote: sl(), local: sl()),
     )
     ..registerLazySingleton(
-      // start with land; each entity rollout task appends its key here.
+      // All 13 offline-mirrored entities: applies inbound /sync/deletions
+      // tombstones per entity.
       () => DeletionsDataSource(
         dio: sl(),
         stores: {

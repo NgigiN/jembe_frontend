@@ -77,8 +77,8 @@ void main() {
         count: 3,
         date: DateTime.utc(2026, 9, 2),
         notes: 'drought',
-        createdAt: DateTime.utc(2026, 9, 1),
-        updatedAt: DateTime.utc(2026, 9, 1),
+        createdAt: DateTime.utc(2026, 9),
+        updatedAt: DateTime.utc(2026, 9),
         pending: true,
         deletedLocally: false,
       );

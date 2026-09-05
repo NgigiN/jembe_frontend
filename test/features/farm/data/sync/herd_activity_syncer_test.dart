@@ -106,7 +106,7 @@ void main() {
       'herdId, then reconciles the server id via setServerId',
       () async {
         await local.upsert(
-          _activity(clientUuid: 'cu-1', herdId: 'herd-42', activityType: 'birth', count: 4),
+          _activity(clientUuid: 'cu-1', herdId: 'herd-42', count: 4),
           pending: true,
         );
         remote.responseBuilder = (herdId, model) => HerdActivityModel(
@@ -208,7 +208,7 @@ void main() {
     });
 
     test('returns null even when given a prior cursor', () async {
-      final cursor = await syncer.pull(DateTime.utc(2026, 1));
+      final cursor = await syncer.pull(DateTime.utc(2026));
 
       expect(cursor, isNull);
     });
