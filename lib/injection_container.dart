@@ -187,9 +187,15 @@ final sl = GetIt.instance;
 /// as a plain, already-ready singleton) instead of opening the real file —
 /// `AppDatabase.open()` needs `path_provider`, which isn't available off a
 /// real device/platform channel in unit tests. `main.dart`'s no-arg
-/// `await di.init()` call is unaffected: it still opens the real file via
-/// the async-singleton branch below, and `await sl.allReady()` at the end
-/// of this function guarantees that file is open before `runApp`.
+/// `await di.init()` call is unaffected: it still registers the real
+/// `AppDatabase` via the async-singleton branch below. That database wraps a
+/// `LazyDatabase`, so constructing it opens NO file — the SQLite file is
+/// opened lazily on the first query, which (flag-off) never happens. So
+/// `await sl.allReady()` guarantees the singleton is CONSTRUCTED before
+/// `runApp`, not that any file I/O has occurred — a deliberate part of the
+/// dark-ship: init adds no startup file I/O and no new failure mode.
+/// (Do NOT "fix" this to open the file eagerly — that would reintroduce
+/// flag-off startup I/O.)
 Future<void> init({AppDatabase? database}) async {
   // Initialize logging
   appLogger.initialize();
@@ -691,9 +697,11 @@ Future<void> init({AppDatabase? database}) async {
       ),
     );
 
-  // Blocks until the async `AppDatabase` singleton (real file open, when
-  // `database` wasn't supplied) has completed - callers of `await di.init()`
-  // are guaranteed a fully-open DB before proceeding (e.g. `main()` before
-  // `runApp`).
+  // Blocks until the async `AppDatabase` singleton is CONSTRUCTED (when
+  // `database` wasn't supplied) - callers of `await di.init()` are guaranteed
+  // the DB object exists before proceeding (e.g. `main()` before `runApp`).
+  // Its `LazyDatabase` opens the SQLite file lazily on the first query, so
+  // this does NOT force a file open at startup (flag-off, no query ever runs)
+  // - keeping init free of startup file I/O for the dark ship.
   await sl.allReady();
 }
