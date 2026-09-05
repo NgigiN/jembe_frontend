@@ -5,7 +5,11 @@ import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/farm/data/models/plant_model.dart';
 
 abstract class PlantRemoteDataSource {
-  Future<List<PlantModel>> getPlants();
+  /// Fetches all plants, or — when [updatedSince] is given — only those the
+  /// server has changed strictly after that instant (used by the sync
+  /// pull phase). Existing no-arg callers (the flag-off repo path) are
+  /// unaffected.
+  Future<List<PlantModel>> getPlants({DateTime? updatedSince});
   Future<PlantModel> addPlant(PlantModel plant);
   Future<PlantModel> updatePlant(PlantModel plant);
   Future<void> deletePlant(String id);
@@ -16,9 +20,16 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
   final Dio dio;
 
   @override
-  Future<List<PlantModel>> getPlants() async {
+  Future<List<PlantModel>> getPlants({DateTime? updatedSince}) async {
     try {
-      final response = await dio.get<dynamic>('/api/v1/plants');
+      final queryParams = updatedSince != null
+          ? {'updated_since': updatedSince.toUtc().toIso8601String()}
+          : null;
+
+      final response = await dio.get<dynamic>(
+        '/api/v1/plants',
+        queryParameters: queryParams,
+      );
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -43,7 +54,17 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
     try {
       final response = await dio.post<dynamic>(
         '/api/v1/plants',
-        data: {'name': plant.name, 'variety': plant.variety},
+        data: {
+          'name': plant.name,
+          'variety': plant.variety,
+          // Required for the offline sync path: P1's create endpoint keys
+          // its idempotency check on (user_id, client_uuid) — a retried
+          // push (same clientUuid) returns the ALREADY-created row instead
+          // of duplicating it. Harmless for the flag-off legacy path too:
+          // `PlantModel.create` always mints a fresh clientUuid there, so
+          // this is just an unused-but-valid extra field server-side.
+          'client_uuid': plant.clientUuid,
+        },
       );
 
       if (response.statusCode == 201) {

@@ -37,8 +37,10 @@ import 'package:farm_tracker/features/farm/data/datasources/infrastructure_remot
 import 'package:farm_tracker/features/farm/data/datasources/input_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/land_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/land_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/plant_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/plant_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/season_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/season_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/repositories/activity_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/analysis_repository_impl.dart';
@@ -55,6 +57,8 @@ import 'package:farm_tracker/features/farm/data/repositories/plant_repository_im
 import 'package:farm_tracker/features/farm/data/repositories/revenue_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/season_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/sync/land_syncer.dart';
+import 'package:farm_tracker/features/farm/data/sync/plant_syncer.dart';
+import 'package:farm_tracker/features/farm/data/sync/season_syncer.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/activity_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/analysis_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/animal_repository.dart';
@@ -122,6 +126,8 @@ import 'package:farm_tracker/features/farm/domain/usecases/update_plant.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_revenue.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_season.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/watch_lands.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/watch_plants.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/watch_seasons.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_bloc.dart';
@@ -191,6 +197,7 @@ Future<void> init({AppDatabase? database}) async {
         addPlant: sl(),
         updatePlant: sl(),
         deletePlant: sl(),
+        watchPlants: sl(),
       ),
     )
     ..registerFactory(
@@ -199,6 +206,7 @@ Future<void> init({AppDatabase? database}) async {
         addSeason: sl(),
         updateSeason: sl(),
         deleteSeason: sl(),
+        watchSeasons: sl(),
       ),
     )
     ..registerFactory(
@@ -301,10 +309,12 @@ Future<void> init({AppDatabase? database}) async {
     ..registerLazySingleton(() => AddPlant(sl()))
     ..registerLazySingleton(() => UpdatePlant(sl()))
     ..registerLazySingleton(() => DeletePlant(sl()))
+    ..registerLazySingleton(() => WatchPlants(sl()))
     ..registerLazySingleton(() => GetSeasons(sl()))
     ..registerLazySingleton(() => AddSeason(sl()))
     ..registerLazySingleton(() => UpdateSeason(sl()))
     ..registerLazySingleton(() => DeleteSeason(sl()))
+    ..registerLazySingleton(() => WatchSeasons(sl()))
     ..registerLazySingleton(() => GetActivities(sl()))
     ..registerLazySingleton(() => AddActivity(sl()))
     ..registerLazySingleton(() => UpdateActivity(sl()))
@@ -365,10 +375,20 @@ Future<void> init({AppDatabase? database}) async {
       ),
     )
     ..registerLazySingleton<PlantRepository>(
-      () => PlantRepositoryImpl(remoteDataSource: sl()),
+      () => PlantRepositoryImpl(
+        remoteDataSource: sl(),
+        local: sl(),
+        outbox: sl(),
+        sync: sl(),
+      ),
     )
     ..registerLazySingleton<SeasonRepository>(
-      () => SeasonRepositoryImpl(remoteDataSource: sl()),
+      () => SeasonRepositoryImpl(
+        remoteDataSource: sl(),
+        local: sl(),
+        outbox: sl(),
+        sync: sl(),
+      ),
     )
     ..registerLazySingleton<ActivityRepository>(
       () => ActivityRepositoryImpl(remoteDataSource: sl()),
@@ -486,16 +506,27 @@ Future<void> init({AppDatabase? database}) async {
     ..registerLazySingleton(() => OutboxDao(sl()))
     ..registerLazySingleton(() => SyncCursorDao(sl()))
     ..registerLazySingleton(() => LandLocalDataSource(sl()))
+    ..registerLazySingleton(() => PlantLocalDataSource(sl()))
+    ..registerLazySingleton(() => SeasonLocalDataSource(sl()))
     ..registerLazySingleton(ConnectivityService.new)
     ..registerLazySingleton(() => LandSyncer(remote: sl(), local: sl()))
+    ..registerLazySingleton(() => PlantSyncer(remote: sl(), local: sl()))
+    ..registerLazySingleton(() => SeasonSyncer(remote: sl(), local: sl()))
     ..registerLazySingleton(
       // start with land; each entity rollout task appends its key here.
-      () => DeletionsDataSource(dio: sl(), stores: {'land': sl<LandLocalDataSource>()}),
+      () => DeletionsDataSource(
+        dio: sl(),
+        stores: {
+          'land': sl<LandLocalDataSource>(),
+          'plant': sl<PlantLocalDataSource>(),
+          'season': sl<SeasonLocalDataSource>(),
+        },
+      ),
     )
     ..registerLazySingleton(
       () => SyncEngine(
         outbox: sl(),
-        syncers: [sl<LandSyncer>()],
+        syncers: [sl<LandSyncer>(), sl<PlantSyncer>(), sl<SeasonSyncer>()],
         cursors: sl(),
         connectivity: sl(),
         deletions: sl<DeletionsDataSource>(),
