@@ -502,8 +502,10 @@ Future<void> init({AppDatabase? database}) async {
         // session so a pre-login launch/resume/connectivity-regain trigger
         // never hits a protected endpoint, gets a 401, and forces an
         // unwarranted logout (see `SyncEngine`'s "Authenticated gate" doc).
-        isAuthenticated: () async =>
-            (await UserStorageService.getToken()) != null,
+        // isLoggedIn() (not a bare token-presence check) is expiry-aware: a
+        // token stored >24h ago is treated as unauthenticated, not just an
+        // absent one, so a stale session can't slip a pass through either.
+        isAuthenticated: () => UserStorageService.isLoggedIn(),
       ),
     );
 
