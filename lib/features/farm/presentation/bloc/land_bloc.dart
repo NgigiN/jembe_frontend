@@ -46,8 +46,14 @@ class LandBloc extends Bloc<LandEvent, LandState> {
       );
     });
 
-    on<WatchLandsEvent>((event, emit) async {
-      await _landsSubscription?.cancel();
+    on<WatchLandsEvent>((event, emit) {
+      // Synchronous handler, no `await` before the guard: dispatching
+      // WatchLandsEvent twice in quick succession (e.g. initState +
+      // pull-to-refresh) must never race and orphan a live subscription —
+      // the guard makes the second (and every subsequent) dispatch a
+      // pure no-op instead.
+      if (_watchStarted) return;
+      _watchStarted = true;
       _landsSubscription = watchLands().listen(
         (lands) => add(_LandsUpdated(lands)),
       );
@@ -67,8 +73,12 @@ class LandBloc extends Bloc<LandEvent, LandState> {
               lands: state.lands,
             ),
           ),
-          (_) => emit(
-            LandLoaded(lands: state.lands, successMessage: 'Land added'),
+          (addedLand) => emit(
+            LandLoaded(
+              lands: state.lands,
+              successMessage: 'Land added',
+              addedLandId: addedLand.id,
+            ),
           ),
         );
         return;
@@ -87,7 +97,13 @@ class LandBloc extends Bloc<LandEvent, LandState> {
         ),
         (land) {
           final updatedLands = List<Land>.from(currentLands)..add(land);
-          emit(LandLoaded(lands: updatedLands, successMessage: 'Land added'));
+          emit(
+            LandLoaded(
+              lands: updatedLands,
+              successMessage: 'Land added',
+              addedLandId: land.id,
+            ),
+          );
         },
       );
     });
@@ -173,6 +189,7 @@ class LandBloc extends Bloc<LandEvent, LandState> {
   final WatchLands watchLands;
 
   StreamSubscription<List<Land>>? _landsSubscription;
+  bool _watchStarted = false;
 
   @override
   Future<void> close() async {

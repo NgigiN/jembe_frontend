@@ -75,12 +75,13 @@ Future<String?> showAddLandDialog(BuildContext context) async {
       final s = await bloc.stream.firstWhere(
         (s) => (s is LandLoaded && s.successMessage != null) || s is LandError,
       );
-      // The newly added land is always the most recent by `createdAt`: the
-      // flag-off path appends it to the end of the list, and the flag-on
-      // path's stream orders by `createdAt` ascending — so the last element
-      // is the new land either way. No id-diffing needed.
-      if (s is LandLoaded && s.lands.isNotEmpty) {
-        newId = s.lands.last.id;
+      // `addedLandId` is threaded through the state by the bloc itself
+      // (see `LandLoaded.addedLandId`) rather than inferred from list
+      // position: under the offline flag, `s.lands` here is the pre-write
+      // snapshot (the reactive stream updates it separately), so the list
+      // can't be trusted to reveal which entry is new.
+      if (s is LandLoaded) {
+        newId = s.addedLandId;
       }
       return s is LandLoaded;
     },
@@ -127,14 +128,12 @@ class _LandPageState extends State<LandPage> {
             // TODO(ngigiN): SyncEngine isn't wired into DI yet (Task 10).
             // Once it is, replace this with a call to
             // `syncEngine.syncNow()` so pull-to-refresh actually re-drains
-            // the outbox and pulls server deltas. For now, `WatchLandsEvent`
-            // re-asserts the (already live) local stream — a harmless no-op
-            // that still satisfies the RefreshIndicator gesture and works
-            // offline.
-            final bloc = context.read<LandBloc>()..add(WatchLandsEvent());
-            await bloc.stream.firstWhere(
-              (s) => s is LandLoaded || s is LandError,
-            );
+            // the outbox and pulls server deltas. For now this is a
+            // genuine no-op: `WatchLandsEvent` (dispatched once in
+            // initState) already keeps a live subscription to the local
+            // stream — re-dispatching it is a guarded no-op on the bloc
+            // side (see `LandBloc`'s `_watchStarted` guard) that never
+            // emits, so awaiting a new state here would hang forever.
             return;
           }
           final bloc = context.read<LandBloc>()..add(GetLandsEvent());

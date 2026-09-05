@@ -127,6 +127,7 @@ void main() {
               ),
             ],
             successMessage: 'Land added',
+            addedLandId: 'land-42',
           ),
         );
         await tester.pumpAndSettle();

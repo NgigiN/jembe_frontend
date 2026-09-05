@@ -85,8 +85,8 @@ void main() {
     );
 
     blocTest<LandBloc, LandState>(
-      'AddLandEvent success appends the returned land and sets '
-      "successMessage 'Land added'",
+      'AddLandEvent success appends the returned land, sets successMessage '
+      "'Land added', and surfaces its (server) id via addedLandId",
       build: () {
         when(
           () => mockAddLand(any()),
@@ -103,6 +103,7 @@ void main() {
             land(id: 'land-2'),
           ],
           successMessage: 'Land added',
+          addedLandId: 'land-2',
         ),
       ],
     );
@@ -141,8 +142,30 @@ void main() {
     );
 
     blocTest<LandBloc, LandState>(
+      'dispatching WatchLandsEvent twice in a row opens only one '
+      'subscription (idempotent guard, no race/leak)',
+      setUp: () => OfflineConfig.enabled = true,
+      build: () {
+        when(() => mockWatchLands()).thenAnswer((_) => Stream.value([land()]));
+        return buildBloc();
+      },
+      act: (bloc) {
+        bloc
+          ..add(WatchLandsEvent())
+          ..add(WatchLandsEvent());
+      },
+      wait: const Duration(milliseconds: 50),
+      verify: (_) {
+        // If the guard didn't prevent a second subscribe, watchLands()
+        // (the repository stream factory) would have been invoked twice.
+        verify(() => mockWatchLands()).called(1);
+      },
+    );
+
+    blocTest<LandBloc, LandState>(
       "AddLandEvent success emits successMessage 'Land added' using the "
-      'stream-driven list — NOT a manual append',
+      'stream-driven list — NOT a manual append — while still threading '
+      'the created clientUuid through addedLandId',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         // The use case "succeeds" with a different land than what's already
@@ -157,8 +180,38 @@ void main() {
       seed: () => LandLoaded(lands: [land()]),
       act: (bloc) => bloc.add(AddLandEvent(land(id: 'land-2'))),
       expect: () => [
-        LandLoaded(lands: [land()], successMessage: 'Land added'),
+        LandLoaded(
+          lands: [land()],
+          successMessage: 'Land added',
+          addedLandId: 'land-2',
+        ),
       ],
+    );
+
+    blocTest<LandBloc, LandState>(
+      "AddLandEvent success carries the repo's returned clientUuid via "
+      'addedLandId, not the (stale, pre-write) lands list or its last '
+      'element — the regression this guards against: showAddLandDialog '
+      'used to read `s.lands.last.id`, which is null/wrong here because '
+      "the list in this state is the OLD snapshot ('land-1' only)",
+      setUp: () => OfflineConfig.enabled = true,
+      build: () {
+        when(
+          () => mockAddLand(any()),
+        ).thenAnswer((_) async => Right(land(id: 'clientUuid-999')));
+        return buildBloc();
+      },
+      seed: () => LandLoaded(lands: [land()]),
+      act: (bloc) => bloc.add(AddLandEvent(land(id: 'clientUuid-999'))),
+      verify: (bloc) {
+        final state = bloc.state;
+        expect(state, isA<LandLoaded>());
+        expect((state as LandLoaded).successMessage, 'Land added');
+        expect(state.addedLandId, 'clientUuid-999');
+        // The list itself is untouched — proving addedLandId (not list
+        // position) is what showAddLandDialog must read.
+        expect(state.lands.map((l) => l.id), ['land-1']);
+      },
     );
 
     blocTest<LandBloc, LandState>(
