@@ -50,6 +50,7 @@ void main() {
   SyncEngine build({
     List<OutboxRow> rows = const [],
     Future<bool> Function()? isAuthenticated,
+    void Function(Object error, StackTrace stackTrace)? onError,
   }) {
     events = <String>[];
     connectivity = _FakeConnectivity();
@@ -64,6 +65,7 @@ void main() {
       connectivity: connectivity,
       deletions: deletions,
       isAuthenticated: isAuthenticated,
+      onError: onError,
     );
   }
 
@@ -312,6 +314,58 @@ void main() {
     await engine.syncNow();
 
     expect(engine.status.phase, SyncPhase.idle);
+  });
+
+  test('generic (non-network) error: the injected onError hook is called '
+      'with the error + stack trace, and status ends error', () async {
+    final logged = <Object>[];
+    final loggedStackTraces = <StackTrace>[];
+    engine = build(
+      rows: [_row(1)],
+      onError: (error, stackTrace) {
+        logged.add(error);
+        loggedStackTraces.add(stackTrace);
+      },
+    );
+    final thrown = Exception('boom');
+    syncer.pullThrows = thrown;
+
+    await engine.syncNow();
+
+    expect(logged, [thrown]);
+    expect(loggedStackTraces, hasLength(1));
+    expect(engine.status.phase, SyncPhase.error);
+  });
+
+  test('transient (NetworkException) error: the injected onError hook is '
+      'NOT called (backoff retry is the signal for an expected/offline '
+      'failure, not a log line)', () {
+    fakeAsync((async) {
+      var calls = 0;
+      engine = build(
+        rows: [_row(1)],
+        onError: (error, stackTrace) => calls++,
+      );
+      syncer.onPush = (row) => NetworkException();
+
+      unawaited(engine.syncNow());
+      async.flushMicrotasks();
+
+      expect(engine.status.phase, SyncPhase.error);
+      expect(calls, 0);
+
+      engine.dispose();
+    });
+  });
+
+  test('no onError hook supplied: a generic error still ends status error '
+      'without throwing (default no-op)', () async {
+    engine = build(rows: [_row(1)]);
+    syncer.pullThrows = Exception('boom');
+
+    await engine.syncNow();
+
+    expect(engine.status.phase, SyncPhase.error);
   });
 
   test('start(): regaining connectivity triggers a sync', () async {

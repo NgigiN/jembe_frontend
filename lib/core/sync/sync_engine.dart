@@ -37,6 +37,15 @@ import 'package:farm_tracker/core/sync/sync_status.dart';
 /// a pre-login pass from hitting protected endpoints, getting a 401, and
 /// forcing an unwarranted logout. Defaults to always-true for back-compat
 /// with callers that don't care about auth (and existing tests).
+///
+/// ## Error logging
+/// An unexpected (non-`NetworkException`) failure that ends a pass in
+/// `SyncPhase.error` is reported to the optional `onError` hook (wired to
+/// `appLogger` in DI) before the terminal status is emitted — the `error`
+/// status alone doesn't say why. A transient `NetworkException` is expected
+/// while offline and is NOT routed through the hook; the backoff retry is
+/// the signal for that case. Defaults to a no-op, so callers/tests that
+/// don't care about logging are unaffected.
 class SyncEngine {
   SyncEngine({
     required OutboxDao outbox,
@@ -49,6 +58,7 @@ class SyncEngine {
     Duration baseBackoff = const Duration(seconds: 1),
     Duration maxBackoff = const Duration(seconds: 60),
     Future<bool> Function()? isAuthenticated,
+    void Function(Object error, StackTrace stackTrace)? onError,
   }) : _outbox = outbox,
        _cursors = cursors,
        _connectivity = connectivity,
@@ -58,9 +68,12 @@ class SyncEngine {
        _baseBackoff = baseBackoff,
        _maxBackoff = maxBackoff,
        _isAuthenticated = isAuthenticated ?? _defaultIsAuthenticated,
+       _onError = onError ?? _noopOnError,
        _syncers = {for (final syncer in syncers) syncer.entity: syncer};
 
   static Future<bool> _defaultIsAuthenticated() async => true;
+
+  static void _noopOnError(Object error, StackTrace stackTrace) {}
 
   final OutboxDao _outbox;
   final Map<String, EntitySyncer> _syncers;
@@ -72,6 +85,7 @@ class SyncEngine {
   final Duration _baseBackoff;
   final Duration _maxBackoff;
   final Future<bool> Function() _isAuthenticated;
+  final void Function(Object error, StackTrace stackTrace) _onError;
 
   final StreamController<SyncStatus> _statusController =
       StreamController<SyncStatus>.broadcast();
@@ -200,15 +214,21 @@ class SyncEngine {
       // A transient failure escaping the pull phase / deletions (or the push
       // infra) is handled exactly like a push transient stop: error + backoff.
       // A real LandSyncer.pull is a network call and WILL throw this offline.
+      // Expected/frequent while offline, so this is not routed through
+      // `_onError` (which is wired to error-level logging in DI) — the
+      // backoff retry is the signal, not a log line.
       phase = SyncPhase.error;
       scheduleRetry = true;
-    } on Object {
+    } on Object catch (error, stackTrace) {
       // Any OTHER failure (a ServerException from the pull phase, a DAO error,
       // a syncer breaking the push contract): never crash the pass or surface
       // an unhandled async error. End in `error`, but do NOT auto-retry — a
       // persistent non-transient fault must not hot-loop; the next trigger
-      // (connectivity regain / manual syncNow) retries. No logger is wired at
-      // this layer yet (Task 10); the `error` status is the signal.
+      // (connectivity regain / manual syncNow) retries. Unlike the transient
+      // case above, this is unexpected, so it's reported via `_onError`
+      // (wired to `appLogger` in DI) — the `error` status alone doesn't say
+      // why.
+      _onError(error, stackTrace);
       phase = SyncPhase.error;
     }
 

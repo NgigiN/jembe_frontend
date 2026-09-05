@@ -506,6 +506,11 @@ Future<void> init({AppDatabase? database}) async {
         // token stored >24h ago is treated as unauthenticated, not just an
         // absent one, so a stale session can't slip a pass through either.
         isAuthenticated: () => UserStorageService.isLoggedIn(),
+        // Pre-flip hardening: surface an otherwise-swallowed non-transient
+        // pass failure (see SyncEngine's "Error logging" doc) via the app
+        // logger instead of silently ending the pass in `SyncPhase.error`.
+        onError: (error, stackTrace) =>
+            appLogger.logError('SyncEngine', error, stackTrace),
       ),
     );
 
