@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
+import 'package:farm_tracker/core/offline/widgets/offline_banner.dart';
+import 'package:farm_tracker/core/offline/widgets/sync_status_indicator.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
@@ -125,80 +127,103 @@ class _LandPageState extends State<LandPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
+        // Self-hides (SizedBox.shrink()) when OfflineConfig.enabled is
+        // false, so the app bar is byte-for-byte identical to today
+        // flag-off.
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: SyncStatusIndicator(),
+          ),
+        ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          if (OfflineConfig.enabled) {
-            // `WatchLandsEvent` (dispatched once in initState) already
-            // keeps a live subscription to the local stream, so the pull
-            // gesture only needs to kick a real sync pass — any pulled
-            // server deltas / drained outbox entries flow back through
-            // that stream on their own. Fire-and-forget: `syncNow()` never
-            // emits a `LandState`, so awaiting it here (or awaiting a bloc
-            // state transition, as the flag-off branch below does) would
-            // hang forever.
-            unawaited(di.sl<SyncEngine>().syncNow());
-            return;
-          }
-          final bloc = context.read<LandBloc>()..add(GetLandsEvent());
-          await bloc.stream.firstWhere(
-            (s) => s is LandLoaded || s is LandError,
-          );
-        },
-        child: BlocConsumer<LandBloc, LandState>(
-          listener: (context, state) {
-            if (state is LandLoaded && state.successMessage != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                AppSnackBar.success(context, state.successMessage!),
-              );
-            } else if (state is LandError && state.lands.isNotEmpty) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(AppSnackBar.error(context, state.message));
-            }
-          },
-          builder: (context, state) {
-            if (state is LandLoading && state.lands.isEmpty) {
-              return const SkeletonEntityList(icon: Icons.landscape);
-            }
-
-            if (state is LandError && state.lands.isEmpty) {
-              return _scrollableEmptyState(
-                EntityErrorView(
-                  message: state.message,
-                  onRetry: () => context.read<LandBloc>().add(GetLandsEvent()),
-                ),
-              );
-            }
-
-            final lands = state.lands;
-            if (lands.isEmpty) {
-              return _scrollableEmptyState(
-                const EntityEmptyView(
-                  icon: Icons.landscape,
-                  title: 'No lands registered yet',
-                  subtitle: 'Tap the + button to add your first land',
-                ),
-              );
-            }
-
-            return ListView.builder(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: context.scrollListPadding(forFab: true),
-              itemCount: lands.length,
-              itemBuilder: (context, index) {
-                final land = lands[index];
-                return EntityCard(
-                  icon: Icons.landscape,
-                  iconColor: AppColors.plantCategory,
-                  title: land.name,
-                  subtitle: _landSubtitle(land),
-                  onTap: () => _showLandDetails(land),
+      body: Column(
+        children: [
+          // Self-hides (SizedBox.shrink()) when OfflineConfig.enabled is
+          // false, so the body is byte-for-byte identical to today
+          // flag-off. Placed above the pull-to-refresh area rather than
+          // inside it, so it never interferes with that gesture's
+          // scrollable-descendant requirement.
+          const OfflineBanner(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                if (OfflineConfig.enabled) {
+                  // `WatchLandsEvent` (dispatched once in initState)
+                  // already keeps a live subscription to the local stream,
+                  // so the pull gesture only needs to kick a real sync
+                  // pass — any pulled server deltas / drained outbox
+                  // entries flow back through that stream on their own.
+                  // Fire-and-forget: `syncNow()` never emits a
+                  // `LandState`, so awaiting it here (or awaiting a bloc
+                  // state transition, as the flag-off branch below does)
+                  // would hang forever.
+                  unawaited(di.sl<SyncEngine>().syncNow());
+                  return;
+                }
+                final bloc = context.read<LandBloc>()..add(GetLandsEvent());
+                await bloc.stream.firstWhere(
+                  (s) => s is LandLoaded || s is LandError,
                 );
               },
-            );
-          },
-        ),
+              child: BlocConsumer<LandBloc, LandState>(
+                listener: (context, state) {
+                  if (state is LandLoaded && state.successMessage != null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      AppSnackBar.success(context, state.successMessage!),
+                    );
+                  } else if (state is LandError && state.lands.isNotEmpty) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(AppSnackBar.error(context, state.message));
+                  }
+                },
+                builder: (context, state) {
+                  if (state is LandLoading && state.lands.isEmpty) {
+                    return const SkeletonEntityList(icon: Icons.landscape);
+                  }
+
+                  if (state is LandError && state.lands.isEmpty) {
+                    return _scrollableEmptyState(
+                      EntityErrorView(
+                        message: state.message,
+                        onRetry: () =>
+                            context.read<LandBloc>().add(GetLandsEvent()),
+                      ),
+                    );
+                  }
+
+                  final lands = state.lands;
+                  if (lands.isEmpty) {
+                    return _scrollableEmptyState(
+                      const EntityEmptyView(
+                        icon: Icons.landscape,
+                        title: 'No lands registered yet',
+                        subtitle: 'Tap the + button to add your first land',
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: context.scrollListPadding(forFab: true),
+                    itemCount: lands.length,
+                    itemBuilder: (context, index) {
+                      final land = lands[index];
+                      return EntityCard(
+                        icon: Icons.landscape,
+                        iconColor: AppColors.plantCategory,
+                        title: land.name,
+                        subtitle: _landSubtitle(land),
+                        onTap: () => _showLandDetails(land),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
