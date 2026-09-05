@@ -9,7 +9,7 @@ class FakeLandRemoteDataSource implements LandRemoteDataSource {
   LandModel? lastUpdated;
 
   @override
-  Future<List<LandModel>> getLands() async => [];
+  Future<List<LandModel>> getLands({DateTime? updatedSince}) async => [];
 
   @override
   Future<LandModel> addLand(LandModel land) async {

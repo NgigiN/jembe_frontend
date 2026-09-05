@@ -11,6 +11,8 @@ class LandModel extends Land {
     required super.createdAt,
     required super.updatedAt,
     this.clientUuid = '',
+    this.pending = false,
+    this.deletedLocally = false,
     super.size,
     super.location,
     super.soilType,
@@ -66,6 +68,11 @@ class LandModel extends Land {
   /// Rehydrates a model from a local drift row. The row's nullable
   /// `serverId` becomes the model's `id` when present, else `''`
   /// (mirroring the server-unknown placeholder used by `.create()`).
+  ///
+  /// Also carries over the row's local sync-state flags ([pending],
+  /// [deletedLocally]) — the sync pipeline (`LandSyncer`) needs them to
+  /// decide LWW / delete-wins outcomes on pull, since they otherwise only
+  /// live on the drift row, not on a bare [LandModel].
   factory LandModel.fromDrift(LandRow row) {
     return LandModel(
       id: row.serverId ?? '',
@@ -78,6 +85,8 @@ class LandModel extends Land {
       tenureType: row.tenureType,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      pending: row.pending,
+      deletedLocally: row.deletedLocally,
     );
   }
 
@@ -86,6 +95,19 @@ class LandModel extends Land {
   /// [Land.id]. Lives on the data model only — the domain `Land` entity
   /// stays unaware of sync plumbing.
   final String clientUuid;
+
+  /// Mirrors the drift row's `pending` column: true while this row has a
+  /// local mutation not yet acknowledged by the server. Always `false` on a
+  /// model built from a server response (`fromJson`) or `create` — those
+  /// have no local sync state to report. Excluded from [Land.props]
+  /// (equality), like [clientUuid] and [deletedLocally].
+  final bool pending;
+
+  /// Mirrors the drift row's `deletedLocally` column: true while this row
+  /// is a tombstone awaiting delete-sync (see
+  /// `LandLocalDataSource.markDeleted`). Always `false` on a model built
+  /// from a server response (`fromJson`) or `create`.
+  final bool deletedLocally;
 
   static DateTime _parseDate(dynamic dateValue) {
     if (dateValue == null) return DateTime.now();
