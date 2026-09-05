@@ -13,6 +13,7 @@ import 'package:farm_tracker/core/sync/sync_cursor_dao.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:farm_tracker/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:farm_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
@@ -497,6 +498,12 @@ Future<void> init({AppDatabase? database}) async {
         cursors: sl(),
         connectivity: sl(),
         deletions: sl<DeletionsDataSource>(),
+        // Pre-flip hardening: gate every sync pass on an authenticated
+        // session so a pre-login launch/resume/connectivity-regain trigger
+        // never hits a protected endpoint, gets a 401, and forces an
+        // unwarranted logout (see `SyncEngine`'s "Authenticated gate" doc).
+        isAuthenticated: () async =>
+            (await UserStorageService.getToken()) != null,
       ),
     );
 

@@ -47,7 +47,10 @@ void main() {
   late List<String> events;
   late SyncEngine engine;
 
-  SyncEngine build({List<OutboxRow> rows = const []}) {
+  SyncEngine build({
+    List<OutboxRow> rows = const [],
+    Future<bool> Function()? isAuthenticated,
+  }) {
     events = <String>[];
     connectivity = _FakeConnectivity();
     outbox = _FakeOutbox(List.of(rows));
@@ -60,6 +63,7 @@ void main() {
       cursors: cursors,
       connectivity: connectivity,
       deletions: deletions,
+      isAuthenticated: isAuthenticated,
     );
   }
 
@@ -83,6 +87,30 @@ void main() {
     expect(outbox.acked, isEmpty);
     expect(engine.status.phase, SyncPhase.idle);
     expect(engine.status.pendingCount, 1);
+  });
+
+  test('unauthenticated: syncNow calls no push or pull (no-op) even when '
+      'online', () async {
+    engine = build(rows: [_row(1)], isAuthenticated: () async => false);
+
+    await engine.syncNow();
+
+    expect(syncer.pushCount, 0);
+    expect(syncer.pullCount, 0);
+    expect(outbox.acked, isEmpty);
+    expect(engine.status.phase, SyncPhase.idle);
+    expect(engine.status.pendingCount, 1);
+  });
+
+  test('authenticated + online: the pass runs as before', () async {
+    engine = build(rows: [_row(1)], isAuthenticated: () async => true);
+
+    await engine.syncNow();
+
+    expect(syncer.pushCount, 1);
+    expect(syncer.pullCount, 1);
+    expect(outbox.acked, [1]);
+    expect(engine.status.phase, SyncPhase.idle);
   });
 
   test('push runs before pull, deletions runs last', () async {

@@ -29,6 +29,14 @@ import 'package:farm_tracker/core/sync/sync_status.dart';
 /// A transient failure schedules a [Timer] with exponential delay + jitter,
 /// capped at `maxBackoff`; a clean pass resets it. The timer is created in the
 /// ambient zone, so `fake_async` can drive it in tests.
+///
+/// ## Authenticated gate
+/// A pass also no-ops (idle, no syncer touched) when `isAuthenticated`
+/// resolves false — every trigger (launch, resume, connectivity-regained,
+/// post-write) funnels through [syncNow], so gating it here is enough to stop
+/// a pre-login pass from hitting protected endpoints, getting a 401, and
+/// forcing an unwarranted logout. Defaults to always-true for back-compat
+/// with callers that don't care about auth (and existing tests).
 class SyncEngine {
   SyncEngine({
     required OutboxDao outbox,
@@ -40,6 +48,7 @@ class SyncEngine {
     math.Random? random,
     Duration baseBackoff = const Duration(seconds: 1),
     Duration maxBackoff = const Duration(seconds: 60),
+    Future<bool> Function()? isAuthenticated,
   }) : _outbox = outbox,
        _cursors = cursors,
        _connectivity = connectivity,
@@ -48,7 +57,10 @@ class SyncEngine {
        _random = random ?? math.Random(),
        _baseBackoff = baseBackoff,
        _maxBackoff = maxBackoff,
+       _isAuthenticated = isAuthenticated ?? _defaultIsAuthenticated,
        _syncers = {for (final syncer in syncers) syncer.entity: syncer};
+
+  static Future<bool> _defaultIsAuthenticated() async => true;
 
   final OutboxDao _outbox;
   final Map<String, EntitySyncer> _syncers;
@@ -59,6 +71,7 @@ class SyncEngine {
   final math.Random _random;
   final Duration _baseBackoff;
   final Duration _maxBackoff;
+  final Future<bool> Function() _isAuthenticated;
 
   final StreamController<SyncStatus> _statusController =
       StreamController<SyncStatus>.broadcast();
@@ -154,6 +167,16 @@ class SyncEngine {
       final online = await _connectivity.isOnline();
       if (!online) {
         // Offline: no-op this pass. Don't touch any syncer.
+        await _emit(SyncPhase.idle);
+        return;
+      }
+
+      final authenticated = await _isAuthenticated();
+      if (!authenticated) {
+        // No session yet (pre-login launch/resume/connectivity-regain): a
+        // sync pass would hit protected endpoints, 401, and force a logout
+        // that was never actually warranted. No-op this pass, same as
+        // offline — don't touch any syncer.
         await _emit(SyncPhase.idle);
         return;
       }
