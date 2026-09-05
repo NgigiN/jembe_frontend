@@ -1,28 +1,28 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/field_limits.dart';
 import 'package:farm_tracker/core/validation/input_formatters.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
-import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_card.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_detail_row.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
-import 'package:farm_tracker/core/widgets/crud/entity_delete_dialog.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
+import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
+import 'package:farm_tracker/features/farm/data/models/plant_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_state.dart';
-import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
-import 'package:farm_tracker/features/farm/data/models/plant_model.dart';
-import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Opens the standard "Add New Plant" form and resolves once it closes: the
 /// new plant's id if the add succeeded, or null if the sheet was dismissed
@@ -60,11 +60,12 @@ Future<String?> showAddPlantDialog(BuildContext context) async {
     ),
     onSubmit: (sheetContext) async {
       final userId = await UserUtils.getCurrentUserId();
+      if (!sheetContext.mounted) return false;
       if (userId == null) {
         ScaffoldMessenger.of(sheetContext).showSnackBar(
           AppSnackBar.error(sheetContext, 'User not authenticated'),
         );
-        return;
+        return false;
       }
 
       final plant = PlantModel.create(
@@ -72,9 +73,11 @@ Future<String?> showAddPlantDialog(BuildContext context) async {
         name: sanitizeText(nameController.text),
         variety: sanitizeOptionalText(varietyController.text),
       );
-      SuccessFeedback.saved();
       bloc.add(AddPlantEvent(plant));
-      Navigator.pop(sheetContext);
+      final s = await bloc.stream.firstWhere(
+        (s) => (s is PlantLoaded && s.successMessage != null) || s is PlantError,
+      );
+      return s is PlantLoaded;
     },
   );
 
@@ -93,7 +96,10 @@ class _PlantPageState extends State<PlantPage> {
   @override
   void initState() {
     super.initState();
-    context.read<PlantBloc>().add(GetPlantsEvent());
+    final bloc = context.read<PlantBloc>();
+    if (bloc.state is! PlantLoaded) {
+      bloc.add(GetPlantsEvent());
+    }
   }
 
   @override
@@ -107,7 +113,14 @@ class _PlantPageState extends State<PlantPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocConsumer<PlantBloc, PlantState>(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final bloc = context.read<PlantBloc>()..add(GetPlantsEvent());
+          await bloc.stream.firstWhere(
+            (s) => s is PlantLoaded || s is PlantError,
+          );
+        },
+        child: BlocConsumer<PlantBloc, PlantState>(
         listener: (context, state) {
           if (state is PlantLoaded && state.successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -121,26 +134,33 @@ class _PlantPageState extends State<PlantPage> {
         },
         builder: (context, state) {
           if (state is PlantLoading && state.plants.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return _scrollableEmptyState(
+              const Center(child: CircularProgressIndicator()),
+            );
           }
 
           if (state is PlantError && state.plants.isEmpty) {
-            return EntityErrorView(
-              message: state.message,
-              onRetry: () => context.read<PlantBloc>().add(GetPlantsEvent()),
+            return _scrollableEmptyState(
+              EntityErrorView(
+                message: state.message,
+                onRetry: () => context.read<PlantBloc>().add(GetPlantsEvent()),
+              ),
             );
           }
 
           final plants = state.plants;
           if (plants.isEmpty) {
-            return EntityEmptyView(
-              icon: Icons.eco,
-              title: 'No plants registered yet',
-              subtitle: 'Tap the + button to add your first plant',
+            return _scrollableEmptyState(
+              const EntityEmptyView(
+                icon: Icons.eco,
+                title: 'No plants registered yet',
+                subtitle: 'Tap the + button to add your first plant',
+              ),
             );
           }
 
           return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: context.scrollListPadding(forFab: true),
             itemCount: plants.length,
             itemBuilder: (context, index) {
@@ -149,7 +169,7 @@ class _PlantPageState extends State<PlantPage> {
                   icon: Icons.eco,
                   iconColor: AppColors.plantCategory,
                   title: plant.name,
-                  subtitle: plant.variety?.isNotEmpty == true
+                  subtitle: plant.variety?.isNotEmpty ?? false
                       ? plant.variety!
                       : 'Added ${_formatDate(plant.createdAt)}',
                   onTap: () => _showPlantDetails(plant),
@@ -157,11 +177,28 @@ class _PlantPageState extends State<PlantPage> {
               },
             );
         },
+        ),
       ),
       floatingActionButton: SafeFloatingActionButton(
         child: FloatingActionButton(
-          onPressed: () => _showAddPlantDialog(),
+          onPressed: _showAddPlantDialog,
           child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+
+  /// Makes a non-scrollable empty/error/loading state (a centered
+  /// icon+text column or spinner) pullable: [RefreshIndicator] needs a
+  /// scrollable descendant to detect the pull gesture, even when there's
+  /// nothing to scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
         ),
       ),
     );
@@ -178,7 +215,7 @@ class _PlantPageState extends State<PlantPage> {
       details: [
         EntityDetailRow(
           'Variety',
-          plant.variety?.isNotEmpty == true ? plant.variety! : '—',
+          plant.variety?.isNotEmpty ?? false ? plant.variety! : '—',
         ),
         EntityDetailRow('Created', _formatDate(plant.createdAt)),
       ],
@@ -215,9 +252,12 @@ class _PlantPageState extends State<PlantPage> {
           createdAt: plant.createdAt,
           updatedAt: DateTime.now(),
         );
-        SuccessFeedback.saved();
-        context.read<PlantBloc>().add(UpdatePlantEvent(updatedPlant));
-        Navigator.pop(sheetContext);
+        final bloc = context.read<PlantBloc>()
+          ..add(UpdatePlantEvent(updatedPlant));
+        final s = await bloc.stream.firstWhere(
+          (s) => (s is PlantLoaded && s.successMessage != null) || s is PlantError,
+        );
+        return s is PlantLoaded;
       },
     );
   }
@@ -247,14 +287,15 @@ class _PlantPageState extends State<PlantPage> {
     ];
   }
 
-  void _showDeleteConfirmation(Plant plant) async {
+  Future<void> _showDeleteConfirmation(Plant plant) async {
     final confirmed = await EntityDeleteDialog.show(
       context: context,
       title: 'Delete Plant',
       message:
           'Are you sure you want to delete "${plant.name}"${plant.variety != null ? ' (${plant.variety})' : ''}? This action cannot be undone.',
     );
-    if (confirmed == true) {
+    if (!mounted) return;
+    if (confirmed ?? false) {
       SuccessFeedback.deleted();
       context.read<PlantBloc>().add(DeletePlantEvent(plant.id));
     }

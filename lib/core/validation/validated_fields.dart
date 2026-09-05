@@ -1,13 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:farm_tracker/core/validation/field_limits.dart';
 import 'package:farm_tracker/core/validation/input_formatters.dart';
+import 'package:flutter/material.dart';
 
 class ValidatedNameField extends StatelessWidget {
   const ValidatedNameField({
-    super.key,
-    required this.controller,
-    required this.labelText,
+    required this.controller, required this.labelText, super.key,
     this.hintText,
     this.validator,
     this.prefixIcon,
@@ -42,9 +39,7 @@ class ValidatedNameField extends StatelessWidget {
 
 class ValidatedLocationField extends StatelessWidget {
   const ValidatedLocationField({
-    super.key,
-    required this.controller,
-    required this.labelText,
+    required this.controller, required this.labelText, super.key,
     this.hintText,
     this.validator,
     this.prefixIcon,
@@ -77,9 +72,7 @@ class ValidatedLocationField extends StatelessWidget {
 
 class ValidatedDecimalField extends StatelessWidget {
   const ValidatedDecimalField({
-    super.key,
-    required this.controller,
-    required this.labelText,
+    required this.controller, required this.labelText, super.key,
     this.hintText,
     this.validator,
     this.prefixIcon,
@@ -111,9 +104,7 @@ class ValidatedDecimalField extends StatelessWidget {
 
 class ValidatedIntegerField extends StatelessWidget {
   const ValidatedIntegerField({
-    super.key,
-    required this.controller,
-    required this.labelText,
+    required this.controller, required this.labelText, super.key,
     this.hintText,
     this.validator,
     this.prefixIcon,
@@ -143,9 +134,7 @@ class ValidatedIntegerField extends StatelessWidget {
 
 class ValidatedNotesField extends StatelessWidget {
   const ValidatedNotesField({
-    super.key,
-    required this.controller,
-    required this.labelText,
+    required this.controller, required this.labelText, super.key,
     this.validator,
     this.maxLines = 3,
   });

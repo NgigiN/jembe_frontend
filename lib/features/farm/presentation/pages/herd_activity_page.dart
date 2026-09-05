@@ -1,22 +1,22 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
-import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
-import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class HerdActivityPage extends StatefulWidget {
   const HerdActivityPage({super.key});
@@ -36,7 +36,10 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
   @override
   void initState() {
     super.initState();
-    context.read<HerdBloc>().add(GetHerdsEvent());
+    final herdBloc = context.read<HerdBloc>();
+    if (herdBloc.state is! HerdLoaded) {
+      herdBloc.add(GetHerdsEvent());
+    }
   }
 
   @override
@@ -86,7 +89,14 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocConsumer<HerdActivityBloc, HerdActivityState>(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final herdBloc = context.read<HerdBloc>()..add(GetHerdsEvent());
+          await herdBloc.stream.firstWhere(
+            (s) => s is HerdLoaded || s is HerdError,
+          );
+        },
+        child: BlocConsumer<HerdActivityBloc, HerdActivityState>(
           listener: (context, state) {
             if (state is HerdActivitySuccess) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -106,15 +116,19 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
             return BlocBuilder<HerdBloc, HerdState>(
               builder: (context, herdState) {
                 if (herdState is HerdLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return _scrollableEmptyState(
+                    const Center(child: CircularProgressIndicator()),
+                  );
                 }
 
                 if (herdState is! HerdLoaded || herdState.herds.isEmpty) {
-                  return const EntityEmptyView(
-                    icon: Icons.pets,
-                    title: 'No herds registered yet',
-                    subtitle:
-                        'Register a herd first, then return here to log births or fatalities',
+                  return _scrollableEmptyState(
+                    const EntityEmptyView(
+                      icon: Icons.pets,
+                      title: 'No herds registered yet',
+                      subtitle:
+                          'Register a herd first, then return here to log births or fatalities',
+                    ),
                   );
                 }
 
@@ -127,6 +141,7 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                 );
 
                 return SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
                   child: Card(
                     elevation: 0,
@@ -283,10 +298,9 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
                                   return positiveIntMax(
                                     value,
                                     max: selectedHerd.currentHeadCount,
-                                    fieldLabel: 'Count',
                                   );
                                 }
-                                return positiveInt(value, fieldLabel: 'Count');
+                                return positiveInt(value);
                               },
                             ),
                             const SizedBox(height: 20),
@@ -358,6 +372,23 @@ class _HerdActivityPageState extends State<HerdActivityPage> {
             );
           },
         ),
+        ),
+    );
+  }
+
+  /// Makes a non-scrollable empty/error state (a centered icon+text
+  /// column or spinner) pullable: [RefreshIndicator] needs a scrollable
+  /// descendant to detect the pull gesture, even when there's nothing to
+  /// scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
+        ),
+      ),
     );
   }
 }

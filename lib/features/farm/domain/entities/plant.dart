@@ -5,9 +5,7 @@ class Plant extends Equatable {
     required this.id,
     required this.userId,
     required this.name,
-    this.variety,
-    required this.createdAt,
-    required this.updatedAt,
+    required this.createdAt, required this.updatedAt, this.variety,
   });
   final String id;
   final String userId;

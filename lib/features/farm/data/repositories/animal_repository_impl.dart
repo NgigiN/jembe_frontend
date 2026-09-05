@@ -1,10 +1,10 @@
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
-import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
-import 'package:farm_tracker/features/farm/domain/repositories/animal_repository.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/features/farm/data/datasources/animal_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/animal_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/animal_repository.dart';
 
 class AnimalRepositoryImpl implements AnimalRepository {
   AnimalRepositoryImpl({required this.remoteDataSource});
@@ -16,7 +16,7 @@ class AnimalRepositoryImpl implements AnimalRepository {
       final animals = await remoteDataSource.getAnimals();
       return Right(animals);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -38,7 +38,7 @@ class AnimalRepositoryImpl implements AnimalRepository {
       final result = await remoteDataSource.addAnimal(animalModel);
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -62,7 +62,7 @@ class AnimalRepositoryImpl implements AnimalRepository {
       final result = await remoteDataSource.updateAnimal(animalModel);
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -74,7 +74,7 @@ class AnimalRepositoryImpl implements AnimalRepository {
       await remoteDataSource.deleteAnimal(id);
       return const Right(null);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

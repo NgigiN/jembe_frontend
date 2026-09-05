@@ -1,8 +1,4 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:farm_tracker/features/auth/domain/entities/user.dart';
 import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
@@ -10,6 +6,10 @@ import 'package:farm_tracker/features/farm/presentation/pages/analysis_page.dart
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_event.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_state.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
 class MockAnalysisBloc extends MockBloc<AnalysisEvent, AnalysisState>
     implements AnalysisBloc {}
@@ -61,8 +61,10 @@ void main() {
       final decSummary = _summary('2025-12', 300, 100);
       whenListen(
         analysisBloc,
-        Stream<AnalysisState>.value(AnnualCostSummaryLoaded([decSummary])),
-        initialState: AnnualCostSummaryLoaded([decSummary]),
+        Stream<AnalysisState>.value(
+          AnalysisState(summaries: [decSummary]),
+        ),
+        initialState: AnalysisState(summaries: [decSummary]),
       );
 
       await tester.pumpWidget(
@@ -117,7 +119,6 @@ void main() {
         farmName: 'Green Acres',
         location: 'Nakuru',
         pictureUrl: '',
-        fiscalYearStartMonth: 1,
       );
 
       whenListen(
@@ -129,10 +130,12 @@ void main() {
       whenListen(
         analysisBloc,
         Stream<AnalysisState>.value(
-          const AnalysisError('Something went wrong. Please try again.'),
+          const AnalysisState(
+            error: 'Something went wrong. Please try again.',
+          ),
         ),
-        initialState: const AnalysisError(
-          'Something went wrong. Please try again.',
+        initialState: const AnalysisState(
+          error: 'Something went wrong. Please try again.',
         ),
       );
 

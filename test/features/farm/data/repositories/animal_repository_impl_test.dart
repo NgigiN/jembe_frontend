@@ -1,8 +1,8 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:farm_tracker/features/farm/data/datasources/animal_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/animal_model.dart';
 import 'package:farm_tracker/features/farm/data/repositories/animal_repository_impl.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 class FakeAnimalRemoteDataSource implements AnimalRemoteDataSource {
   AnimalModel? lastAdded;
@@ -28,7 +28,7 @@ class FakeAnimalRemoteDataSource implements AnimalRemoteDataSource {
 }
 
 void main() {
-  final birthDate = DateTime(2024, 1, 1);
+  final birthDate = DateTime(2024);
 
   test(
     'addAnimal carries sex and acquisitionSource from the Animal entity into the model sent to the data source',

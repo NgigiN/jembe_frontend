@@ -1,25 +1,25 @@
+import 'package:farm_tracker/core/audio/sound_service.dart';
+import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
+import 'package:farm_tracker/core/theme/bloc/theme_event.dart';
+import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
+import 'package:farm_tracker/core/theme/status_colors.dart';
+import 'package:farm_tracker/core/validation/sanitize.dart';
+import 'package:farm_tracker/core/validation/validated_fields.dart';
+import 'package:farm_tracker/core/validation/validators.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
+import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:farm_tracker/features/profile/presentation/bloc/profile_event.dart';
+import 'package:farm_tracker/features/profile/presentation/bloc/profile_state.dart';
+import 'package:farm_tracker/features/profile/presentation/widgets/typed_delete_account_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:farm_tracker/core/audio/sound_service.dart';
-import 'package:farm_tracker/core/feedback/success_feedback.dart';
-import 'package:farm_tracker/core/navigation/app_router.dart';
-import 'package:farm_tracker/core/theme/status_colors.dart';
-import 'package:farm_tracker/core/validation/sanitize.dart';
-import 'package:farm_tracker/features/profile/presentation/widgets/typed_delete_account_dialog.dart';
-import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
-import 'package:farm_tracker/core/validation/validated_fields.dart';
-import 'package:farm_tracker/core/validation/validators.dart';
-import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
-import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
-import 'package:farm_tracker/core/theme/bloc/theme_event.dart';
-import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
-import 'package:farm_tracker/features/profile/presentation/bloc/profile_event.dart';
-import 'package:farm_tracker/features/profile/presentation/bloc/profile_state.dart';
-import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -42,7 +42,10 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    context.read<ProfileBloc>().add(FetchProfileEvent());
+    final profileBloc = context.read<ProfileBloc>();
+    if (profileBloc.state is! ProfileLoaded) {
+      profileBloc.add(FetchProfileEvent());
+    }
     _loadSoundEffectsPreference();
   }
 
@@ -155,7 +158,16 @@ class _SettingsPageState extends State<SettingsPage> {
             builder: (context, themeState) {
               return ColoredBox(
                 color: Theme.of(context).colorScheme.surface,
-                child: ListView(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    final profileBloc = context.read<ProfileBloc>()
+                      ..add(FetchProfileEvent());
+                    await profileBloc.stream.firstWhere(
+                      (s) => s is ProfileLoaded || s is ProfileError,
+                    );
+                  },
+                  child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
                   children: [
                     if (_pictureUrl.isNotEmpty) ...[
@@ -323,7 +335,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               ValidatedLocationField(
                                 controller: _locationController,
                                 labelText: 'Location',
-                                validator: (value) => requiredLocation(value),
+                                validator: requiredLocation,
                               ),
                               const SizedBox(height: 24),
                               ElevatedButton.icon(
@@ -440,6 +452,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                   ],
+                  ),
                 ),
               );
             },

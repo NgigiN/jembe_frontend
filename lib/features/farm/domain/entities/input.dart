@@ -5,14 +5,9 @@ class Input extends Equatable {
     required this.id,
     required this.sourceType,
     required this.sourceId,
-    this.animalId,
-    required this.type,
+    required this.type, required this.cost, required this.date, required this.createdAt, required this.updatedAt, this.animalId,
     this.quantity,
-    required this.cost,
-    required this.date,
     this.notes,
-    required this.createdAt,
-    required this.updatedAt,
   });
   final String id;
   final String sourceType;

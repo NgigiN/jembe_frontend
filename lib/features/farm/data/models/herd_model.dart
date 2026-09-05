@@ -1,6 +1,17 @@
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 
 class HerdModel extends Herd {
+  const HerdModel({
+    required super.id,
+    required super.userId,
+    required super.name,
+    required super.animalTypeId,
+    required super.location,
+    required super.initialHeadCount,
+    required super.currentHeadCount,
+    required super.startDate,
+    required super.createdAt, required super.updatedAt, super.endDate,
+  });
   factory HerdModel.create({
     required String userId,
     required String name,
@@ -25,19 +36,6 @@ class HerdModel extends Herd {
       updatedAt: now,
     );
   }
-  const HerdModel({
-    required super.id,
-    required super.userId,
-    required super.name,
-    required super.animalTypeId,
-    required super.location,
-    required super.initialHeadCount,
-    required super.currentHeadCount,
-    required super.startDate,
-    super.endDate,
-    required super.createdAt,
-    required super.updatedAt,
-  });
 
   factory HerdModel.fromJson(Map<String, dynamic> json) {
     final endDateValue = json['end_date'] ?? json['EndDate'];

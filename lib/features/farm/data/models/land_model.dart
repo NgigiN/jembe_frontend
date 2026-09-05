@@ -1,6 +1,17 @@
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 
 class LandModel extends Land {
+  const LandModel({
+    required super.id,
+    required super.userId,
+    required super.name,
+    required super.createdAt,
+    required super.updatedAt,
+    super.size,
+    super.location,
+    super.soilType,
+    super.tenureType,
+  });
   factory LandModel.create({
     required String userId,
     required String name,
@@ -22,17 +33,6 @@ class LandModel extends Land {
       updatedAt: now,
     );
   }
-  const LandModel({
-    required super.id,
-    required super.userId,
-    required super.name,
-    required super.createdAt,
-    required super.updatedAt,
-    super.size,
-    super.location,
-    super.soilType,
-    super.tenureType,
-  });
 
   factory LandModel.fromJson(Map<String, dynamic> json) {
     final sizeValue = json['Size'] ?? json['size'];

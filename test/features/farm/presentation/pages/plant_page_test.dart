@@ -1,10 +1,6 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:farm_tracker/core/audio/sound_service.dart';
 import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
@@ -12,6 +8,10 @@ import 'package:farm_tracker/features/farm/presentation/bloc/plant_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/plant_page.dart';
 import 'package:farm_tracker/injection_container.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MockPlantBloc extends MockBloc<PlantEvent, PlantState>
@@ -100,6 +100,13 @@ void main() {
           'Maize',
         );
 
+        // The sheet now awaits the bloc's terminal state before it confirms
+        // and closes (P3-06), so the confirming state must be emitted after
+        // the submit is tapped, not before.
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Add Plant'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
         final now = DateTime.now();
         stateController.add(
           PlantLoaded(
@@ -115,8 +122,6 @@ void main() {
             successMessage: 'Crop added',
           ),
         );
-
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Add Plant'));
         await tester.pumpAndSettle();
 
         final result = await tester.runAsync(() => resultFuture);

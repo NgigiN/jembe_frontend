@@ -1,10 +1,4 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:farm_tracker/core/audio/sound_service.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_event.dart';
@@ -17,6 +11,12 @@ import 'package:farm_tracker/features/farm/presentation/pages/settings_page.dart
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_event.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_state.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MockProfileBloc extends MockBloc<ProfileEvent, ProfileState>
     implements ProfileBloc {}
@@ -48,7 +48,6 @@ void main() {
         farmName: 'Green Acres',
         location: 'Nakuru',
         pictureUrl: '',
-        fiscalYearStartMonth: 1,
       );
 
       whenListen(
@@ -114,7 +113,6 @@ void main() {
         farmName: 'Green Acres',
         location: 'Nakuru',
         pictureUrl: '',
-        fiscalYearStartMonth: 1,
       );
 
       whenListen(

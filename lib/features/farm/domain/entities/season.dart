@@ -8,9 +8,7 @@ class Season extends Equatable {
     required this.plantId,
     required this.landId,
     required this.startDate,
-    this.endDate,
-    required this.createdAt,
-    required this.updatedAt,
+    required this.createdAt, required this.updatedAt, this.endDate,
   });
   final String id;
   final String userId;

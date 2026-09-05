@@ -9,7 +9,7 @@ class _TestItem {
 }
 
 void main() {
-  final items = const [
+  const items = [
     _TestItem('1', 'Maize'),
     _TestItem('2', 'Beans'),
   ];

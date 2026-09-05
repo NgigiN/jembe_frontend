@@ -1,7 +1,4 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
@@ -12,6 +9,9 @@ import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/analysis_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 class MockAnalysisBloc extends MockBloc<AnalysisEvent, AnalysisState>
     implements AnalysisBloc {}
@@ -35,9 +35,9 @@ void main() {
         name: 'Long Rains 2026',
         plantId: 'p1',
         landId: 'l1',
-        startDate: DateTime(2026, 3, 1),
-        createdAt: DateTime(2026, 3, 1),
-        updatedAt: DateTime(2026, 3, 1),
+        startDate: DateTime(2026, 3),
+        createdAt: DateTime(2026, 3),
+        updatedAt: DateTime(2026, 3),
       );
 
       const seasonRow = CostBreakdown(
@@ -60,9 +60,11 @@ void main() {
       whenListen(
         analysisBloc,
         Stream<AnalysisState>.value(
-          const CostBreakdownLoaded([seasonRow, farmWideRow]),
+          const AnalysisState(breakdowns: [seasonRow, farmWideRow]),
         ),
-        initialState: const CostBreakdownLoaded([seasonRow, farmWideRow]),
+        initialState: const AnalysisState(
+          breakdowns: [seasonRow, farmWideRow],
+        ),
       );
       whenListen(
         seasonBloc,

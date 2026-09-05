@@ -17,7 +17,7 @@ class MonthlySummaryModel extends MonthlySummary {
       profit: ((json['profit'] as num?) ?? 0).toDouble(),
       breakdown: MonthlySummaryBreakdownModel.fromJson(
         (json['breakdown'] as Map<String, dynamic>?) ??
-            {'costs': {}, 'revenue': {}},
+            {'costs': <String, dynamic>{}, 'revenue': <String, dynamic>{}},
       ),
     );
   }

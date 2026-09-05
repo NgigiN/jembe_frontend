@@ -3,11 +3,13 @@ import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/app_theme.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/question_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
@@ -28,6 +30,7 @@ import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dar
 import 'package:farm_tracker/injection_container.dart' as di;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,7 +38,31 @@ void main() async {
   // Initialize environment configuration
   AppConfig.initialize();
 
+  // Read the real app version BEFORE di.init() (which registers Dio) so the
+  // X-App-Version header and the /meta launch check never see the stale
+  // "0.0.0" default. PackageInfo only needs WidgetsFlutterBinding (already
+  // initialized above) and does NOT depend on the DI container. Wrapped so a
+  // PackageInfo failure can never block startup - we simply keep the default.
+  try {
+    final info = await PackageInfo.fromPlatform();
+    if (info.version.isNotEmpty) {
+      AppConfig.appVersion = info.version;
+    }
+  } catch (_) {
+    // Keep the "0.0.0" default; startup must never fail on version lookup.
+  }
+
   await di.init();
+
+  // A hard 401 on a protected resource (see session_expiry_notifier.dart)
+  // forces logout regardless of which screen is active. AuthBloc is a DI
+  // singleton (see injection_container.dart), so this reaches the exact
+  // instance BlocProvider hands to the widget tree below - logout when
+  // already logged out is a harmless no-op (UserStorageService.clearUserData
+  // and GoogleSignIn.signOut are both idempotent).
+  di.sl<SessionExpiryNotifier>().addListener(() {
+    di.sl<AuthBloc>().add(LogoutEvent());
+  });
 
   // Log app startup
   appLogger.info(LogCategory.general, 'Shamba+ App Starting');
@@ -51,6 +78,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  final AppRouter _appRouter = AppRouter();
+
   @override
   void initState() {
     super.initState();
@@ -75,8 +104,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final appRouter = AppRouter();
-
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(create: (_) => di.sl<AuthBloc>()),
@@ -118,7 +145,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   darkDynamic ?? AppColors.darkColorScheme,
                 ),
                 themeMode: themeState.themeMode,
-                routerConfig: appRouter.router,
+                routerConfig: _appRouter.router,
                 debugShowCheckedModeBanner: false,
               );
             },

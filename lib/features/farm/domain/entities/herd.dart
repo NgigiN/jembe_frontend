@@ -10,9 +10,7 @@ class Herd extends Equatable {
     required this.initialHeadCount,
     required this.currentHeadCount,
     required this.startDate,
-    this.endDate,
-    required this.createdAt,
-    required this.updatedAt,
+    required this.createdAt, required this.updatedAt, this.endDate,
   });
   final String id;
   final String userId;

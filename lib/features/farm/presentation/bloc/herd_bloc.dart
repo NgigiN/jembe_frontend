@@ -1,4 +1,3 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
@@ -8,6 +7,7 @@ import 'package:farm_tracker/features/farm/domain/usecases/get_herds.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_herd.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class HerdBloc extends Bloc<HerdEvent, HerdState> {
 

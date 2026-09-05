@@ -15,7 +15,7 @@ class QuestionRepositoryImpl implements QuestionRepository {
       final result = await remoteDataSource.submitQuestion(questionText);
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -27,7 +27,7 @@ class QuestionRepositoryImpl implements QuestionRepository {
       final result = await remoteDataSource.getQuestions();
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

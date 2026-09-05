@@ -1,4 +1,3 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
@@ -8,6 +7,7 @@ import 'package:farm_tracker/features/farm/domain/usecases/get_animal_types.dart
 import 'package:farm_tracker/features/farm/domain/usecases/update_animal_type.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
 

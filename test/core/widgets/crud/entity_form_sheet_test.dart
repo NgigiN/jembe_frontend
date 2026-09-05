@@ -1,8 +1,86 @@
+import 'dart:async';
+
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  /// Opens an [EntityFormSheet] with a single text field and a 'Save' submit
+  /// button, wired to [onSubmit]. Leaves the sheet fully settled and open.
+  Future<void> showSheet(
+    WidgetTester tester, {
+    required Future<bool> Function(BuildContext sheetContext) onSubmit,
+  }) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () => EntityFormSheet.show(
+                context: context,
+                title: 'Test Form',
+                submitLabel: 'Save',
+                fields: const [TextField()],
+                onSubmit: onSubmit,
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets(
+    'stays open and re-enables when onSubmit returns false',
+    (tester) async {
+      final completer = Completer<bool>();
+      await showSheet(tester, onSubmit: (_) => completer.future);
+
+      await tester.tap(find.text('Save'));
+      await tester.pump(); // spinner shown while awaiting
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      completer.complete(false);
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsWidgets); // sheet still open
+      // Button re-enabled: spinner gone, label back.
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('Save'), findsOneWidget);
+    },
+  );
+
+  testWidgets('pops when onSubmit returns true', (tester) async {
+    await showSheet(tester, onSubmit: (_) async => true);
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(find.text('Save'), findsNothing); // sheet closed
+  });
+
+  testWidgets(
+    'stays open and re-enables when onSubmit throws',
+    (tester) async {
+      final completer = Completer<bool>();
+      await showSheet(tester, onSubmit: (_) => completer.future);
+
+      await tester.tap(find.text('Save'));
+      await tester.pump(); // spinner shown while awaiting
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      // A throw from onSubmit must not trap the user with a stuck spinner
+      // and a disabled close button.
+      completer.completeError(StateError('bloc closed mid-flight'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsWidgets); // sheet still open
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('Save'), findsOneWidget); // button re-enabled
+    },
+  );
+
   Future<void> pumpContainer(
     WidgetTester tester, {
     required Size size,
@@ -70,7 +148,6 @@ void main() {
         tester,
         size: const Size(400, 800),
         viewInsets: const EdgeInsets.only(bottom: 300),
-        heightFactor: 0.8,
       );
 
       final height = tester.getSize(find.byType(AnimatedContainer)).height;

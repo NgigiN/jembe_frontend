@@ -1,25 +1,26 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
-import 'package:farm_tracker/features/farm/presentation/widgets/setup_step_card.dart';
-import 'package:farm_tracker/features/farm/presentation/widgets/step_connector.dart';
+import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
+import 'package:farm_tracker/features/content/presentation/bloc/content_event.dart';
+import 'package:farm_tracker/features/content/presentation/bloc/content_state.dart';
+import 'package:farm_tracker/features/content/presentation/widgets/related_content_section.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/harvest_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_state.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/harvest_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/harvest_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
-import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
-import 'package:farm_tracker/features/content/presentation/bloc/content_event.dart';
-import 'package:farm_tracker/features/content/presentation/widgets/related_content_section.dart';
+import 'package:farm_tracker/features/farm/presentation/widgets/setup_step_card.dart';
+import 'package:farm_tracker/features/farm/presentation/widgets/step_connector.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class PlantsPage extends StatefulWidget {
   const PlantsPage({super.key});
@@ -32,11 +33,26 @@ class _PlantsPageState extends State<PlantsPage> {
   @override
   void initState() {
     super.initState();
-    context.read<LandBloc>().add(GetLandsEvent());
-    context.read<PlantBloc>().add(GetPlantsEvent());
-    context.read<SeasonBloc>().add(GetSeasonsEvent());
-    context.read<HarvestBloc>().add(GetHarvestsEvent());
-    context.read<ContentBloc>().add(GetAllContentEvent());
+    final landBloc = context.read<LandBloc>();
+    if (landBloc.state is! LandLoaded) {
+      landBloc.add(GetLandsEvent());
+    }
+    final plantBloc = context.read<PlantBloc>();
+    if (plantBloc.state is! PlantLoaded) {
+      plantBloc.add(GetPlantsEvent());
+    }
+    final seasonBloc = context.read<SeasonBloc>();
+    if (seasonBloc.state is! SeasonLoaded) {
+      seasonBloc.add(GetSeasonsEvent());
+    }
+    final harvestBloc = context.read<HarvestBloc>();
+    if (harvestBloc.state is! HarvestLoaded) {
+      harvestBloc.add(GetHarvestsEvent());
+    }
+    final contentBloc = context.read<ContentBloc>();
+    if (contentBloc.state is! ContentLoaded) {
+      contentBloc.add(GetAllContentEvent());
+    }
   }
 
   @override
@@ -45,7 +61,18 @@ class _PlantsPageState extends State<PlantsPage> {
       appBar: AppBar(title: const Text('Plants')),
       body: ColoredBox(
         color: Theme.of(context).colorScheme.surface,
-        child:
+        child: RefreshIndicator(
+          onRefresh: () async {
+            final landBloc = context.read<LandBloc>()..add(GetLandsEvent());
+            context.read<PlantBloc>().add(GetPlantsEvent());
+            context.read<SeasonBloc>().add(GetSeasonsEvent());
+            context.read<HarvestBloc>().add(GetHarvestsEvent());
+            context.read<ContentBloc>().add(GetAllContentEvent());
+            await landBloc.stream.firstWhere(
+              (s) => s is LandLoaded || s is LandError,
+            );
+          },
+          child:
             BlocSelector<
               LandBloc,
               LandState,
@@ -61,14 +88,18 @@ class _PlantsPageState extends State<PlantsPage> {
                 final (hasLand, landCount, landLoading, landError) = landInfo;
 
                 if (!hasLand && landLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return _scrollableEmptyState(
+                    const Center(child: CircularProgressIndicator()),
+                  );
                 }
 
                 if (landError) {
-                  return EntityEmptyView(
-                    icon: Icons.error_outline,
-                    title: 'Could not load data',
-                    subtitle: 'Pull down to retry',
+                  return _scrollableEmptyState(
+                    const EntityEmptyView(
+                      icon: Icons.error_outline,
+                      title: 'Could not load data',
+                      subtitle: 'Pull down to retry',
+                    ),
                   );
                 }
 
@@ -111,21 +142,8 @@ class _PlantsPageState extends State<PlantsPage> {
                           builder: (context, harvestInfo) {
                             final (hasHarvest, harvestCount) = harvestInfo;
 
-                            return RefreshIndicator(
-                              onRefresh: () async {
-                                context.read<LandBloc>().add(GetLandsEvent());
-                                context.read<PlantBloc>().add(GetPlantsEvent());
-                                context.read<SeasonBloc>().add(
-                                  GetSeasonsEvent(),
-                                );
-                                context.read<HarvestBloc>().add(
-                                  GetHarvestsEvent(),
-                                );
-                                context.read<ContentBloc>().add(
-                                  GetAllContentEvent(),
-                                );
-                              },
-                              child: ListView(
+                            return ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
                                 padding: const EdgeInsets.all(16),
                                 children: [
                                   Text(
@@ -206,7 +224,7 @@ class _PlantsPageState extends State<PlantsPage> {
                                       AppRoutePath.inputsFor('plant'),
                                     ),
                                   ),
-                                  StepConnector(isActive: false),
+                                  const StepConnector(isActive: false),
                                   SetupStepCard(
                                     stepNumber: 5,
                                     title: 'Log Activities',
@@ -241,8 +259,7 @@ class _PlantsPageState extends State<PlantsPage> {
                                     kind: ContentMatchKind.crop,
                                   ),
                                 ],
-                              ),
-                            );
+                              );
                           },
                         );
                       },
@@ -251,6 +268,23 @@ class _PlantsPageState extends State<PlantsPage> {
                 );
               },
             ),
+        ),
+      ),
+    );
+  }
+
+  /// Makes a non-scrollable empty/error state (a centered icon+text
+  /// column or spinner) pullable: [RefreshIndicator] needs a scrollable
+  /// descendant to detect the pull gesture, even when there's nothing to
+  /// scroll.
+  Widget _scrollableEmptyState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
+        ),
       ),
     );
   }

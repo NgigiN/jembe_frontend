@@ -1,10 +1,10 @@
 import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
-import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
-import 'package:farm_tracker/features/farm/domain/repositories/herd_repository.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/herd_repository.dart';
 
 class HerdRepositoryImpl implements HerdRepository {
   HerdRepositoryImpl({required this.remoteDataSource});
@@ -16,7 +16,7 @@ class HerdRepositoryImpl implements HerdRepository {
       final herds = await remoteDataSource.getHerds();
       return Right(herds);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -47,7 +47,7 @@ class HerdRepositoryImpl implements HerdRepository {
       final result = await remoteDataSource.addHerd(herdModel);
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -84,7 +84,7 @@ class HerdRepositoryImpl implements HerdRepository {
       final result = await remoteDataSource.updateHerd(updatedModel);
       return Right(result);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -98,7 +98,7 @@ class HerdRepositoryImpl implements HerdRepository {
       await remoteDataSource.deleteHerd(id);
       return const Right(null);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {

@@ -1,10 +1,10 @@
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
-import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
-import 'package:farm_tracker/features/farm/domain/repositories/revenue_repository.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/revenue_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/revenue_repository.dart';
 
 class RevenueRepositoryImpl implements RevenueRepository {
   RevenueRepositoryImpl({required this.remoteDataSource});
@@ -24,7 +24,7 @@ class RevenueRepositoryImpl implements RevenueRepository {
       );
       return Right(revenues);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -36,7 +36,7 @@ class RevenueRepositoryImpl implements RevenueRepository {
       final revenue = await remoteDataSource.getRevenueById(id);
       return Right(revenue);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -67,7 +67,7 @@ class RevenueRepositoryImpl implements RevenueRepository {
       final revenue = await remoteDataSource.addRevenue(revenueModel);
       return Right(revenue);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -103,7 +103,7 @@ class RevenueRepositoryImpl implements RevenueRepository {
       final revenue = await remoteDataSource.updateRevenue(revenueModel);
       return Right(revenue);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -115,7 +115,7 @@ class RevenueRepositoryImpl implements RevenueRepository {
       await remoteDataSource.deleteRevenue(id);
       return const Right(null);
     } on NetworkException catch (_) {
-      return Left(const NetworkFailure());
+      return const Left(NetworkFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
