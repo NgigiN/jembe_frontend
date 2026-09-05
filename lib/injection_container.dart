@@ -36,6 +36,7 @@ import 'package:farm_tracker/features/farm/data/datasources/cost_category_local_
 import 'package:farm_tracker/features/farm/data/datasources/cost_category_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/harvest_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/harvest_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/herd_activity_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_remote_data_source.dart';
@@ -70,6 +71,7 @@ import 'package:farm_tracker/features/farm/data/sync/animal_syncer.dart';
 import 'package:farm_tracker/features/farm/data/sync/animal_type_syncer.dart';
 import 'package:farm_tracker/features/farm/data/sync/cost_category_syncer.dart';
 import 'package:farm_tracker/features/farm/data/sync/harvest_syncer.dart';
+import 'package:farm_tracker/features/farm/data/sync/herd_activity_syncer.dart';
 import 'package:farm_tracker/features/farm/data/sync/herd_syncer.dart';
 import 'package:farm_tracker/features/farm/data/sync/infrastructure_syncer.dart';
 import 'package:farm_tracker/features/farm/data/sync/input_syncer.dart';
@@ -481,7 +483,12 @@ Future<void> init({AppDatabase? database}) async {
       ),
     )
     ..registerLazySingleton<HerdActivityRepository>(
-      () => HerdActivityRepositoryImpl(remoteDataSource: sl()),
+      () => HerdActivityRepositoryImpl(
+        remoteDataSource: sl(),
+        local: sl(),
+        outbox: sl(),
+        sync: sl(),
+      ),
     )
     ..registerLazySingleton<InfrastructureRepository>(
       () => InfrastructureRepositoryImpl(
@@ -604,6 +611,7 @@ Future<void> init({AppDatabase? database}) async {
     ..registerLazySingleton(() => InfrastructureLocalDataSource(sl()))
     ..registerLazySingleton(() => RevenueLocalDataSource(sl()))
     ..registerLazySingleton(() => CostCategoryLocalDataSource(sl()))
+    ..registerLazySingleton(() => HerdActivityLocalDataSource(sl()))
     ..registerLazySingleton(ConnectivityService.new)
     ..registerLazySingleton(() => LandSyncer(remote: sl(), local: sl()))
     ..registerLazySingleton(() => PlantSyncer(remote: sl(), local: sl()))
@@ -622,6 +630,9 @@ Future<void> init({AppDatabase? database}) async {
       () => CostCategorySyncer(remote: sl(), local: sl()),
     )
     ..registerLazySingleton(
+      () => HerdActivitySyncer(remote: sl(), local: sl()),
+    )
+    ..registerLazySingleton(
       // start with land; each entity rollout task appends its key here.
       () => DeletionsDataSource(
         dio: sl(),
@@ -638,6 +649,7 @@ Future<void> init({AppDatabase? database}) async {
           'infrastructure': sl<InfrastructureLocalDataSource>(),
           'revenue': sl<RevenueLocalDataSource>(),
           'cost_category': sl<CostCategoryLocalDataSource>(),
+          'herd_activity': sl<HerdActivityLocalDataSource>(),
         },
       ),
     )
@@ -657,6 +669,7 @@ Future<void> init({AppDatabase? database}) async {
           sl<InfrastructureSyncer>(),
           sl<RevenueSyncer>(),
           sl<CostCategorySyncer>(),
+          sl<HerdActivitySyncer>(),
         ],
         cursors: sl(),
         connectivity: sl(),
