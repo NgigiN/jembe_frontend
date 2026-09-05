@@ -56,7 +56,11 @@ class _PlantsPageState extends State<PlantsPage> {
     }
     final harvestBloc = context.read<HarvestBloc>();
     if (harvestBloc.state is! HarvestLoaded) {
-      harvestBloc.add(GetHarvestsEvent());
+      if (OfflineConfig.enabled) {
+        harvestBloc.add(WatchHarvestsEvent());
+      } else {
+        harvestBloc.add(GetHarvestsEvent());
+      }
     }
     final contentBloc = context.read<ContentBloc>();
     if (contentBloc.state is! ContentLoaded) {

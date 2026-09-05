@@ -5,7 +5,11 @@ import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/farm/data/models/animal_model.dart';
 
 abstract class AnimalRemoteDataSource {
-  Future<List<AnimalModel>> getAnimals();
+  /// Fetches all animals, or — when [updatedSince] is given — only those the
+  /// server has changed strictly after that instant (used by the sync
+  /// pull phase). Existing no-arg callers (the flag-off repo path) are
+  /// unaffected.
+  Future<List<AnimalModel>> getAnimals({DateTime? updatedSince});
   Future<AnimalModel> addAnimal(AnimalModel animal);
   Future<AnimalModel> updateAnimal(AnimalModel animal);
   Future<void> deleteAnimal(String id);
@@ -16,9 +20,16 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
   final Dio dio;
 
   @override
-  Future<List<AnimalModel>> getAnimals() async {
+  Future<List<AnimalModel>> getAnimals({DateTime? updatedSince}) async {
     try {
-      final response = await dio.get<dynamic>('/api/v1/animals');
+      final queryParams = updatedSince != null
+          ? {'updated_since': updatedSince.toUtc().toIso8601String()}
+          : null;
+
+      final response = await dio.get<dynamic>(
+        '/api/v1/animals',
+        queryParameters: queryParams,
+      );
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -43,7 +54,16 @@ class AnimalRemoteDataSourceImpl implements AnimalRemoteDataSource {
     try {
       final response = await dio.post<dynamic>(
         '/api/v1/animals',
-        data: animal.toJson(),
+        data: {
+          ...animal.toJson(),
+          // Required for the offline sync path: P1's create endpoint keys
+          // its idempotency check on (user_id, client_uuid) — a retried
+          // push (same clientUuid) returns the ALREADY-created row instead
+          // of duplicating it. Harmless for the flag-off legacy path too:
+          // `AnimalModel.create` always mints a fresh clientUuid there, so
+          // this is just an unused-but-valid extra field server-side.
+          'client_uuid': animal.clientUuid,
+        },
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {

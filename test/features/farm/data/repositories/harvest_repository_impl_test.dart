@@ -7,35 +7,42 @@ import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/sync/sync_status.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
-import 'package:farm_tracker/features/farm/data/datasources/animal_local_data_source.dart';
-import 'package:farm_tracker/features/farm/data/datasources/animal_remote_data_source.dart';
-import 'package:farm_tracker/features/farm/data/models/animal_model.dart';
-import 'package:farm_tracker/features/farm/data/repositories/animal_repository_impl.dart';
-import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
+import 'package:farm_tracker/features/farm/data/datasources/harvest_local_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/harvest_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
+import 'package:farm_tracker/features/farm/data/repositories/harvest_repository_impl.dart';
+import 'package:farm_tracker/features/farm/domain/entities/harvest.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class FakeAnimalRemoteDataSource implements AnimalRemoteDataSource {
-  AnimalModel? lastAdded;
-  AnimalModel? lastUpdated;
+class FakeHarvestRemoteDataSource implements HarvestRemoteDataSource {
+  HarvestModel? lastAdded;
+  HarvestModel? lastUpdated;
+  String? lastGetSeasonId;
   final List<String> deleteCalls = [];
 
   @override
-  Future<List<AnimalModel>> getAnimals({DateTime? updatedSince}) async => [];
-
-  @override
-  Future<AnimalModel> addAnimal(AnimalModel animal) async {
-    lastAdded = animal;
-    return animal;
+  Future<List<HarvestModel>> getHarvests({
+    String? seasonId,
+    DateTime? updatedSince,
+  }) async {
+    lastGetSeasonId = seasonId;
+    return [];
   }
 
   @override
-  Future<AnimalModel> updateAnimal(AnimalModel animal) async {
-    lastUpdated = animal;
-    return animal;
+  Future<HarvestModel> addHarvest(HarvestModel harvest) async {
+    lastAdded = harvest;
+    return harvest;
   }
 
   @override
-  Future<void> deleteAnimal(String id) async {
+  Future<HarvestModel> updateHarvest(HarvestModel harvest) async {
+    lastUpdated = harvest;
+    return harvest;
+  }
+
+  @override
+  Future<void> deleteHarvest(String id) async {
     deleteCalls.add(id);
   }
 }
@@ -72,24 +79,24 @@ class _FakeSyncEngine implements SyncEngine {
   void dispose() {}
 }
 
-final birthDate = DateTime(2024);
-
-AnimalModel _animal({
+HarvestModel _harvest({
   required String clientUuid,
   String id = '',
-  String name = 'Bessie',
+  String seasonId = 'season-1',
+  double quantity = 10,
+  String unit = 'kg',
+  DateTime? date,
   DateTime? createdAt,
   DateTime? updatedAt,
 }) {
   final at = createdAt ?? DateTime.utc(2026);
-  return AnimalModel(
+  return HarvestModel(
     id: id,
     clientUuid: clientUuid,
-    userId: 'user-1',
-    name: name,
-    animalTypeId: 'type-1',
-    herdId: 'herd-1',
-    birthDate: birthDate,
+    seasonId: seasonId,
+    quantity: quantity,
+    unit: unit,
+    date: date ?? at,
     createdAt: at,
     updatedAt: updatedAt ?? at,
   );
@@ -103,66 +110,77 @@ void main() {
 
   group("flag OFF (today's live-HTTP behavior, unchanged)", () {
     test(
-      'addAnimal carries sex and acquisitionSource from the Animal entity into the model sent to the data source',
+      'addHarvest carries fields from the Harvest entity into the model '
+      'sent to the data source',
       () async {
-        final dataSource = FakeAnimalRemoteDataSource();
-        final repository = AnimalRepositoryImpl(remoteDataSource: dataSource);
+        final dataSource = FakeHarvestRemoteDataSource();
+        final repository = HarvestRepositoryImpl(remoteDataSource: dataSource);
         final now = DateTime.now();
 
-        await repository.addAnimal(
-          Animal(
+        await repository.addHarvest(
+          Harvest(
             id: '',
-            userId: 'user-1',
-            name: 'Bessie',
-            animalTypeId: 'type-1',
-            herdId: 'herd-1',
-            birthDate: birthDate,
-            sex: 'female',
-            acquisitionSource: 'bought',
+            seasonId: 'season-1',
+            quantity: 12.5,
+            unit: 'kg',
+            date: now,
+            notes: 'Good yield',
             createdAt: now,
             updatedAt: now,
           ),
         );
 
-        expect(dataSource.lastAdded?.sex, 'female');
-        expect(dataSource.lastAdded?.acquisitionSource, 'bought');
+        expect(dataSource.lastAdded?.quantity, 12.5);
+        expect(dataSource.lastAdded?.notes, 'Good yield');
       },
     );
 
     test(
-      'updateAnimal carries sex and acquisitionSource from the Animal entity into the model sent to the data source',
+      'updateHarvest carries fields from the Harvest entity into the model '
+      'sent to the data source',
       () async {
-        final dataSource = FakeAnimalRemoteDataSource();
-        final repository = AnimalRepositoryImpl(remoteDataSource: dataSource);
+        final dataSource = FakeHarvestRemoteDataSource();
+        final repository = HarvestRepositoryImpl(remoteDataSource: dataSource);
         final now = DateTime.now();
 
-        await repository.updateAnimal(
-          Animal(
-            id: 'animal-1',
-            userId: 'user-1',
-            name: 'Bessie',
-            animalTypeId: 'type-1',
-            herdId: 'herd-1',
-            birthDate: birthDate,
-            sex: 'male',
-            acquisitionSource: 'gift',
+        await repository.updateHarvest(
+          Harvest(
+            id: 'harvest-1',
+            seasonId: 'season-1',
+            quantity: 20,
+            unit: 'sacks',
+            date: now,
             createdAt: now,
             updatedAt: now,
           ),
         );
 
-        expect(dataSource.lastUpdated?.sex, 'male');
-        expect(dataSource.lastUpdated?.acquisitionSource, 'gift');
+        expect(dataSource.lastUpdated?.quantity, 20);
+        expect(dataSource.lastUpdated?.unit, 'sacks');
       },
     );
 
     test(
-      'watchAnimals does not crash and mirrors a single getAnimals snapshot',
+      'getHarvests passes the seasonId filter straight through to the data '
+      'source',
       () async {
-        final dataSource = FakeAnimalRemoteDataSource();
-        final repository = AnimalRepositoryImpl(remoteDataSource: dataSource);
+        final dataSource = FakeHarvestRemoteDataSource();
+        final repository = HarvestRepositoryImpl(remoteDataSource: dataSource);
 
-        final emission = await repository.watchAnimals().first;
+        await repository.getHarvests(seasonId: 'season-9');
+
+        expect(dataSource.lastGetSeasonId, 'season-9');
+      },
+    );
+
+    test(
+      'watchHarvests does not crash and mirrors a single getHarvests '
+      'snapshot',
+      () async {
+        final dataSource = FakeHarvestRemoteDataSource();
+        final repository = HarvestRepositoryImpl(remoteDataSource: dataSource);
+
+        final emission = await repository.watchHarvests().first;
 
         expect(emission, isEmpty);
       },
@@ -171,18 +189,18 @@ void main() {
 
   group('flag ON (local-first + outbox)', () {
     late AppDatabase db;
-    late AnimalLocalDataSource local;
+    late HarvestLocalDataSource local;
     late OutboxDao outbox;
     late _FakeSyncEngine sync;
-    late FakeAnimalRemoteDataSource remote;
+    late FakeHarvestRemoteDataSource remote;
 
     setUp(() {
       OfflineConfig.enabled = true;
       db = AppDatabase.forTesting(NativeDatabase.memory());
-      local = AnimalLocalDataSource(db);
+      local = HarvestLocalDataSource(db);
       outbox = OutboxDao(db);
       sync = _FakeSyncEngine();
-      remote = FakeAnimalRemoteDataSource();
+      remote = FakeHarvestRemoteDataSource();
     });
 
     tearDown(() async {
@@ -190,10 +208,10 @@ void main() {
     });
 
     test(
-      'addAnimal upserts a local pending row with a minted clientUuid, '
+      'addHarvest upserts a local pending row with a minted clientUuid, '
       'enqueues a create intent, and never calls remote',
       () async {
-        final repository = AnimalRepositoryImpl(
+        final repository = HarvestRepositoryImpl(
           remoteDataSource: remote,
           local: local,
           outbox: outbox,
@@ -202,16 +220,14 @@ void main() {
         );
         final now = DateTime.now();
 
-        final result = await repository.addAnimal(
-          Animal(
+        final result = await repository.addHarvest(
+          Harvest(
             id: '',
-            userId: 'user-1',
-            name: 'Bessie',
-            animalTypeId: 'type-1',
-            herdId: 'herd-1',
-            birthDate: birthDate,
-            sex: 'female',
-            acquisitionSource: 'bought',
+            seasonId: 'season-1',
+            quantity: 12.5,
+            unit: 'kg',
+            date: now,
+            notes: 'Good yield',
             createdAt: now,
             updatedAt: now,
           ),
@@ -224,22 +240,21 @@ void main() {
         expect(result.isRight(), isTrue);
         result.fold(
           (failure) => fail('expected Right, got $failure'),
-          (animal) => expect(animal.id, 'cu-new-1'),
+          (harvest) => expect(harvest.id, 'cu-new-1'),
         );
 
         // Local row was written, pending sync.
         final row = await local.getByClientUuid('cu-new-1');
         expect(row, isNotNull);
         expect(row!.pending, isTrue);
-        expect(row.name, 'Bessie');
-        expect(row.sex, 'female');
-        expect(row.acquisitionSource, 'bought');
+        expect(row.quantity, 12.5);
+        expect(row.notes, 'Good yield');
 
         // A single create intent was enqueued.
         final rows = await outbox.peekAll();
         expect(rows, hasLength(1));
         expect(rows.single.op, 'create');
-        expect(rows.single.entity, 'animal');
+        expect(rows.single.entity, 'harvest');
         expect(rows.single.clientUuid, 'cu-new-1');
 
         // Sync was fired (fire-and-forget).
@@ -248,31 +263,29 @@ void main() {
     );
 
     test(
-      'updateAnimal upserts (pending) and enqueues an update, preserving the '
-      'existing serverId',
+      'updateHarvest upserts (pending) and enqueues an update, preserving '
+      'the existing serverId',
       () async {
         // Seed a row that already synced once (has a serverId), not pending.
         await local.upsert(
-          _animal(clientUuid: 'cu-existing', id: 'server-42', name: 'Old Name'),
+          _harvest(clientUuid: 'cu-existing', id: 'server-42', quantity: 5),
           pending: false,
         );
 
-        final repository = AnimalRepositoryImpl(
+        final repository = HarvestRepositoryImpl(
           remoteDataSource: remote,
           local: local,
           outbox: outbox,
           sync: sync,
         );
 
-        final result = await repository.updateAnimal(
-          Animal(
+        final result = await repository.updateHarvest(
+          Harvest(
             id: 'cu-existing', // presentation id == clientUuid
-            userId: 'user-1',
-            name: 'New Name',
-            animalTypeId: 'type-1',
-            herdId: 'herd-1',
-            birthDate: birthDate,
-            sex: 'male',
+            seasonId: 'season-1',
+            quantity: 99,
+            unit: 'kg',
+            date: DateTime.utc(2026),
             createdAt: DateTime.utc(2026),
             updatedAt: DateTime.utc(2026),
           ),
@@ -288,8 +301,7 @@ void main() {
           'server-42',
           reason: 'the existing serverId must be preserved',
         );
-        expect(row.name, 'New Name');
-        expect(row.sex, 'male');
+        expect(row.quantity, 99);
         expect(row.pending, isTrue);
 
         final rows = await outbox.peekAll();
@@ -298,25 +310,26 @@ void main() {
         expect(rows.single.clientUuid, 'cu-existing');
         final payload =
             jsonDecode(rows.single.payload!) as Map<String, dynamic>;
-        expect(payload['name'], 'New Name');
+        expect(payload['quantity'], 99);
 
         expect(sync.syncNowCalls, 1);
       },
     );
 
     test(
-      'deleteAnimal marks the local row deleted and enqueues a delete intent',
+      'deleteHarvest marks the local row deleted and enqueues a delete '
+      'intent',
       () async {
-        await local.upsert(_animal(clientUuid: 'cu-doomed'), pending: false);
+        await local.upsert(_harvest(clientUuid: 'cu-doomed'), pending: false);
 
-        final repository = AnimalRepositoryImpl(
+        final repository = HarvestRepositoryImpl(
           remoteDataSource: remote,
           local: local,
           outbox: outbox,
           sync: sync,
         );
 
-        final result = await repository.deleteAnimal('cu-doomed');
+        final result = await repository.deleteHarvest('cu-doomed');
 
         expect(remote.deleteCalls, isEmpty);
         expect(result.isRight(), isTrue);
@@ -335,49 +348,77 @@ void main() {
     );
 
     test(
-      'watchAnimals emits domain Animals whose id equals the row clientUuid',
+      'watchHarvests emits domain Harvests whose id equals the row '
+      'clientUuid',
       () async {
         await local.upsert(
-          _animal(clientUuid: 'cu-watch-1', name: 'Watched Animal'),
+          _harvest(clientUuid: 'cu-watch-1', quantity: 7),
           pending: false,
         );
 
-        final repository = AnimalRepositoryImpl(
+        final repository = HarvestRepositoryImpl(
           remoteDataSource: remote,
           local: local,
           outbox: outbox,
           sync: sync,
         );
 
-        final emission = await repository.watchAnimals().first;
+        final emission = await repository.watchHarvests().first;
 
         expect(emission, hasLength(1));
         expect(emission.single.id, 'cu-watch-1');
-        expect(emission.single.name, 'Watched Animal');
+        expect(emission.single.quantity, 7);
       },
     );
 
     test(
-      'getAnimals (one-shot) returns local rows presented with clientUuid as '
-      'id',
+      'watchHarvests(seasonId:) filters the local mirror to that season only',
       () async {
-        await local.upsert(_animal(clientUuid: 'cu-get-1'), pending: false);
+        await local.upsert(
+          _harvest(clientUuid: 'cu-season-a', seasonId: 'season-a'),
+          pending: false,
+        );
+        await local.upsert(
+          _harvest(clientUuid: 'cu-season-b', seasonId: 'season-b'),
+          pending: false,
+        );
 
-        final repository = AnimalRepositoryImpl(
+        final repository = HarvestRepositoryImpl(
           remoteDataSource: remote,
           local: local,
           outbox: outbox,
           sync: sync,
         );
 
-        final result = await repository.getAnimals();
+        final emission =
+            await repository.watchHarvests(seasonId: 'season-a').first;
+
+        expect(emission, hasLength(1));
+        expect(emission.single.id, 'cu-season-a');
+      },
+    );
+
+    test(
+      'getHarvests (one-shot) returns local rows presented with clientUuid '
+      'as id',
+      () async {
+        await local.upsert(_harvest(clientUuid: 'cu-get-1'), pending: false);
+
+        final repository = HarvestRepositoryImpl(
+          remoteDataSource: remote,
+          local: local,
+          outbox: outbox,
+          sync: sync,
+        );
+
+        final result = await repository.getHarvests();
 
         expect(result.isRight(), isTrue);
         result.fold((failure) => fail('expected Right, got $failure'), (
-          animals,
+          harvests,
         ) {
-          expect(animals, hasLength(1));
-          expect(animals.single.id, 'cu-get-1');
+          expect(harvests, hasLength(1));
+          expect(harvests.single.id, 'cu-get-1');
         });
       },
     );

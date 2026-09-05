@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
@@ -265,7 +266,11 @@ class _AnimalPageState extends State<AnimalPage> {
     super.initState();
     final animalBloc = context.read<AnimalBloc>();
     if (animalBloc.state is! AnimalLoaded) {
-      animalBloc.add(GetAnimalsEvent());
+      if (OfflineConfig.enabled) {
+        animalBloc.add(WatchAnimalsEvent());
+      } else {
+        animalBloc.add(GetAnimalsEvent());
+      }
     }
     final animalTypeBloc = context.read<AnimalTypeBloc>();
     if (animalTypeBloc.state is! AnimalTypeLoaded) {
