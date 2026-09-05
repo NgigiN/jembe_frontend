@@ -62,6 +62,19 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   int get schemaVersion => 1;
+
+  /// Wipes every offline-first table — the local `Lands` mirror, the
+  /// outbox, and the sync cursors. Used to guarantee no other user's data
+  /// (or in-flight mutations) survives a logout on a shared device. Runs
+  /// inside a transaction so a crash mid-wipe can't leave a partial wipe
+  /// (e.g. cursors cleared but stale land rows left behind).
+  Future<void> wipeAll() {
+    return transaction(() async {
+      await delete(lands).go();
+      await delete(outbox).go();
+      await delete(syncCursor).go();
+    });
+  }
 }
 
 LazyDatabase _openConnection() => LazyDatabase(() async {

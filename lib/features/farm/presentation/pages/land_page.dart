@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
+import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/field_limits.dart';
@@ -24,6 +27,7 @@ import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
+import 'package:farm_tracker/injection_container.dart' as di;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -125,15 +129,15 @@ class _LandPageState extends State<LandPage> {
       body: RefreshIndicator(
         onRefresh: () async {
           if (OfflineConfig.enabled) {
-            // TODO(ngigiN): SyncEngine isn't wired into DI yet (Task 10).
-            // Once it is, replace this with a call to
-            // `syncEngine.syncNow()` so pull-to-refresh actually re-drains
-            // the outbox and pulls server deltas. For now this is a
-            // genuine no-op: `WatchLandsEvent` (dispatched once in
-            // initState) already keeps a live subscription to the local
-            // stream — re-dispatching it is a guarded no-op on the bloc
-            // side (see `LandBloc`'s `_watchStarted` guard) that never
-            // emits, so awaiting a new state here would hang forever.
+            // `WatchLandsEvent` (dispatched once in initState) already
+            // keeps a live subscription to the local stream, so the pull
+            // gesture only needs to kick a real sync pass — any pulled
+            // server deltas / drained outbox entries flow back through
+            // that stream on their own. Fire-and-forget: `syncNow()` never
+            // emits a `LandState`, so awaiting it here (or awaiting a bloc
+            // state transition, as the flag-off branch below does) would
+            // hang forever.
+            unawaited(di.sl<SyncEngine>().syncNow());
             return;
           }
           final bloc = context.read<LandBloc>()..add(GetLandsEvent());

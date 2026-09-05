@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
+import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/app_theme.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
@@ -64,6 +68,18 @@ void main() async {
     di.sl<AuthBloc>().add(LogoutEvent());
   });
 
+  // Offline-first sync triggers (Task 10) — dark-shipped behind the flag:
+  // while `OfflineConfig.enabled` is false (the default) this block never
+  // runs, so `SyncEngine` never starts and no background sync/connectivity
+  // subscription exists. `start()` wires the connectivity-regained trigger
+  // (see `SyncEngine.start`); the `syncNow()` call kicks an initial pass on
+  // launch so a pending outbox drains without waiting for a connectivity
+  // change or the resume trigger below.
+  if (OfflineConfig.enabled) {
+    di.sl<SyncEngine>().start();
+    unawaited(di.sl<SyncEngine>().syncNow());
+  }
+
   // Log app startup
   appLogger.info(LogCategory.general, 'Shamba+ App Starting');
 
@@ -99,6 +115,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       // a backgrounded Timer is not reliable, so this is the last
       // guaranteed chance to send whatever is buffered.
       di.sl<AnalyticsService>().flush();
+    } else if (state == AppLifecycleState.resumed) {
+      // Offline-first resume trigger (Task 10) — flag-guarded like the
+      // launch trigger in `main()`; a no-op while `OfflineConfig.enabled`
+      // is false.
+      if (OfflineConfig.enabled) {
+        unawaited(di.sl<SyncEngine>().syncNow());
+      }
     }
   }
 

@@ -2,9 +2,15 @@ import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/audio/sound_service.dart';
+import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/network/connectivity_service.dart';
 import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
+import 'package:farm_tracker/core/sync/deletions_data_source.dart';
+import 'package:farm_tracker/core/sync/outbox.dart';
+import 'package:farm_tracker/core/sync/sync_cursor_dao.dart';
+import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:farm_tracker/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:farm_tracker/features/auth/domain/repositories/auth_repository.dart';
@@ -28,6 +34,7 @@ import 'package:farm_tracker/features/farm/data/datasources/herd_activity_remote
 import 'package:farm_tracker/features/farm/data/datasources/herd_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/infrastructure_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/input_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/land_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/land_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/plant_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_source.dart';
@@ -46,6 +53,7 @@ import 'package:farm_tracker/features/farm/data/repositories/land_repository_imp
 import 'package:farm_tracker/features/farm/data/repositories/plant_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/revenue_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/season_repository_impl.dart';
+import 'package:farm_tracker/features/farm/data/sync/land_syncer.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/activity_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/analysis_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/animal_repository.dart';
@@ -138,9 +146,25 @@ import 'package:get_it/get_it.dart';
 
 final sl = GetIt.instance;
 
-Future<void> init() async {
+/// Wires the DI container.
+///
+/// [database] lets tests substitute an in-memory [AppDatabase] (registered
+/// as a plain, already-ready singleton) instead of opening the real file —
+/// `AppDatabase.open()` needs `path_provider`, which isn't available off a
+/// real device/platform channel in unit tests. `main.dart`'s no-arg
+/// `await di.init()` call is unaffected: it still opens the real file via
+/// the async-singleton branch below, and `await sl.allReady()` at the end
+/// of this function guarantees that file is open before `runApp`.
+Future<void> init({AppDatabase? database}) async {
   // Initialize logging
   appLogger.initialize();
+
+  // Offline-first local database (Task 10) — see the [database] doc above.
+  if (database != null) {
+    sl.registerSingleton<AppDatabase>(database);
+  } else {
+    sl.registerSingletonAsync<AppDatabase>(() async => AppDatabase.open());
+  }
 
   // Bloc
   sl
@@ -327,8 +351,17 @@ Future<void> init() async {
     ..registerLazySingleton<AuthRepository>(
       () => AuthRepositoryImpl(remoteDataSource: sl()),
     )
+    // Injecting the offline collaborators here is dark-safe: `OfflineConfig
+    // .enabled` defaults false, so `LandRepositoryImpl._offlineFirst` is
+    // false and every method still takes its old remote-only path — see
+    // `land_repository_impl.dart`'s class docs (rule zero for this rollout).
     ..registerLazySingleton<LandRepository>(
-      () => LandRepositoryImpl(remoteDataSource: sl()),
+      () => LandRepositoryImpl(
+        remoteDataSource: sl(),
+        local: sl(),
+        outbox: sl(),
+        sync: sl(),
+      ),
     )
     ..registerLazySingleton<PlantRepository>(
       () => PlantRepositoryImpl(remoteDataSource: sl()),
@@ -442,5 +475,34 @@ Future<void> init() async {
     // External - Dio client (preferred for new code)
     ..registerLazySingleton<Dio>(
       () => DioClientFactory.create(cacheStore: sl(), sessionExpiry: sl()),
+    )
+    // Offline-first sync infra (Task 10) - built here but dark-shipped: with
+    // `OfflineConfig.enabled == false` (the default) nothing in `main.dart`
+    // ever calls `SyncEngine.start()`/`syncNow()`, and `LandRepositoryImpl`
+    // never touches these collaborators either. Depends on `AppDatabase`
+    // (registered above) and `Dio` (registered just above, for
+    // `DeletionsDataSource`).
+    ..registerLazySingleton(() => OutboxDao(sl()))
+    ..registerLazySingleton(() => SyncCursorDao(sl()))
+    ..registerLazySingleton(() => LandLocalDataSource(sl()))
+    ..registerLazySingleton(ConnectivityService.new)
+    ..registerLazySingleton(() => LandSyncer(remote: sl(), local: sl()))
+    ..registerLazySingleton(
+      () => DeletionsDataSource(dio: sl(), landLocal: sl()),
+    )
+    ..registerLazySingleton(
+      () => SyncEngine(
+        outbox: sl(),
+        syncers: [sl<LandSyncer>()],
+        cursors: sl(),
+        connectivity: sl(),
+        deletions: sl<DeletionsDataSource>(),
+      ),
     );
+
+  // Blocks until the async `AppDatabase` singleton (real file open, when
+  // `database` wasn't supplied) has completed - callers of `await di.init()`
+  // are guaranteed a fully-open DB before proceeding (e.g. `main()` before
+  // `runApp`).
+  await sl.allReady();
 }

@@ -1,6 +1,8 @@
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
+import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/auth/data/services/google_sign_in_service.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:farm_tracker/features/auth/data/utils/google_sign_in_errors.dart';
@@ -84,6 +86,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // can't leak the previous user's data to whoever logs in next.
       if (sl.isRegistered<CacheStore>()) {
         await sl<CacheStore>().clean();
+      }
+      // Offline-first wipe-on-logout (Task 10): flag-guarded, so this is a
+      // no-op while `OfflineConfig.enabled` is false (dark ship). When on,
+      // wipe the local Lands mirror + outbox + sync cursors so no other
+      // user's data (or queued mutation) survives on a shared device.
+      // `SyncEngine` is a DI singleton and is intentionally NOT disposed
+      // here — only its tables are cleared.
+      if (OfflineConfig.enabled && sl.isRegistered<AppDatabase>()) {
+        await sl<AppDatabase>().wipeAll();
       }
       await UserStorageService.clearUserData();
       final googleSignIn = auth_google.GoogleSignIn.instance;
