@@ -112,6 +112,7 @@ import 'package:farm_tracker/features/farm/domain/usecases/update_land.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_plant.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_revenue.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_season.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/watch_lands.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_bloc.dart';
@@ -156,6 +157,7 @@ Future<void> init() async {
         addLand: sl(),
         updateLand: sl(),
         deleteLand: sl(),
+        watchLands: sl(),
       ),
     )
     ..registerFactory(
@@ -269,6 +271,7 @@ Future<void> init() async {
     ..registerLazySingleton(() => AddLand(sl()))
     ..registerLazySingleton(() => UpdateLand(sl()))
     ..registerLazySingleton(() => DeleteLand(sl()))
+    ..registerLazySingleton(() => WatchLands(sl()))
     ..registerLazySingleton(() => GetPlants(sl()))
     ..registerLazySingleton(() => AddPlant(sl()))
     ..registerLazySingleton(() => UpdatePlant(sl()))
@@ -438,9 +441,6 @@ Future<void> init() async {
     ..registerLazySingleton<CacheStore>(MemCacheStore.new)
     // External - Dio client (preferred for new code)
     ..registerLazySingleton<Dio>(
-      () => DioClientFactory.create(
-        cacheStore: sl(),
-        sessionExpiry: sl(),
-      ),
+      () => DioClientFactory.create(cacheStore: sl(), sessionExpiry: sl()),
     );
 }

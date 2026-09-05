@@ -1,4 +1,5 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/field_limits.dart';
@@ -32,19 +33,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 /// reuse this exact flow instead of duplicating it.
 Future<String?> showAddLandDialog(BuildContext context) async {
   final bloc = context.read<LandBloc>();
-  final beforeIds = bloc.state.lands.map((land) => land.id).toSet();
   String? newId;
-
-  final subscription = bloc.stream.listen((state) {
-    if (state is LandLoaded && state.successMessage == 'Land added') {
-      for (final land in state.lands) {
-        if (!beforeIds.contains(land.id)) {
-          newId = land.id;
-          break;
-        }
-      }
-    }
-  });
 
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
@@ -86,11 +75,17 @@ Future<String?> showAddLandDialog(BuildContext context) async {
       final s = await bloc.stream.firstWhere(
         (s) => (s is LandLoaded && s.successMessage != null) || s is LandError,
       );
+      // The newly added land is always the most recent by `createdAt`: the
+      // flag-off path appends it to the end of the list, and the flag-on
+      // path's stream orders by `createdAt` ascending — so the last element
+      // is the new land either way. No id-diffing needed.
+      if (s is LandLoaded && s.lands.isNotEmpty) {
+        newId = s.lands.last.id;
+      }
       return s is LandLoaded;
     },
   );
 
-  await subscription.cancel();
   return newId;
 }
 
@@ -107,7 +102,11 @@ class _LandPageState extends State<LandPage> {
     super.initState();
     final bloc = context.read<LandBloc>();
     if (bloc.state is! LandLoaded) {
-      bloc.add(GetLandsEvent());
+      if (OfflineConfig.enabled) {
+        bloc.add(WatchLandsEvent());
+      } else {
+        bloc.add(GetLandsEvent());
+      }
     }
   }
 
@@ -124,6 +123,20 @@ class _LandPageState extends State<LandPage> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
+          if (OfflineConfig.enabled) {
+            // TODO(ngigiN): SyncEngine isn't wired into DI yet (Task 10).
+            // Once it is, replace this with a call to
+            // `syncEngine.syncNow()` so pull-to-refresh actually re-drains
+            // the outbox and pulls server deltas. For now, `WatchLandsEvent`
+            // re-asserts the (already live) local stream — a harmless no-op
+            // that still satisfies the RefreshIndicator gesture and works
+            // offline.
+            final bloc = context.read<LandBloc>()..add(WatchLandsEvent());
+            await bloc.stream.firstWhere(
+              (s) => s is LandLoaded || s is LandError,
+            );
+            return;
+          }
           final bloc = context.read<LandBloc>()..add(GetLandsEvent());
           await bloc.stream.firstWhere(
             (s) => s is LandLoaded || s is LandError,
@@ -136,9 +149,9 @@ class _LandPageState extends State<LandPage> {
                 AppSnackBar.success(context, state.successMessage!),
               );
             } else if (state is LandError && state.lands.isNotEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                AppSnackBar.error(context, state.message),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(AppSnackBar.error(context, state.message));
             }
           },
           builder: (context, state) {
@@ -150,8 +163,7 @@ class _LandPageState extends State<LandPage> {
               return _scrollableEmptyState(
                 EntityErrorView(
                   message: state.message,
-                  onRetry: () =>
-                      context.read<LandBloc>().add(GetLandsEvent()),
+                  onRetry: () => context.read<LandBloc>().add(GetLandsEvent()),
                 ),
               );
             }
@@ -223,8 +235,7 @@ class _LandPageState extends State<LandPage> {
       context: context,
       title: land.name,
       details: [
-        if (land.size != null)
-          EntityDetailRow('Size', '${land.size} acres'),
+        if (land.size != null) EntityDetailRow('Size', '${land.size} acres'),
         EntityDetailRow(
           'Location',
           land.location?.isNotEmpty ?? false ? land.location! : '—',
@@ -236,7 +247,8 @@ class _LandPageState extends State<LandPage> {
         EntityDetailRow(
           'Tenure',
           land.tenureType?.isNotEmpty ?? false
-              ? land.tenureType![0].toUpperCase() + land.tenureType!.substring(1)
+              ? land.tenureType![0].toUpperCase() +
+                    land.tenureType!.substring(1)
               : '—',
         ),
       ],
@@ -291,7 +303,8 @@ class _LandPageState extends State<LandPage> {
         final bloc = context.read<LandBloc>()
           ..add(UpdateLandEvent(updatedLand));
         final s = await bloc.stream.firstWhere(
-          (s) => (s is LandLoaded && s.successMessage != null) || s is LandError,
+          (s) =>
+              (s is LandLoaded && s.successMessage != null) || s is LandError,
         );
         return s is LandLoaded;
       },
@@ -340,16 +353,15 @@ class _LandPageState extends State<LandPage> {
         validator: optionalSoilType,
         inputFormatters: shortLabelFormatters(),
         maxLength: FieldLimits.soilTypeMax,
-        buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
-            null,
+        buildCounter:
+            (_, {required currentLength, required isFocused, maxLength}) =>
+                null,
       ),
       const SizedBox(height: 16),
       DropdownButtonFormField<String>(
         initialValue: selectedTenureType,
         isExpanded: true,
-        decoration: const InputDecoration(
-          labelText: 'Tenure (Optional)',
-        ),
+        decoration: const InputDecoration(labelText: 'Tenure (Optional)'),
         items: const [
           DropdownMenuItem(value: 'owned', child: Text('Owned')),
           DropdownMenuItem(value: 'rented', child: Text('Rented')),
