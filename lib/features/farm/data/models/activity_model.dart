@@ -1,6 +1,10 @@
+import 'package:drift/drift.dart' show Value;
+import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/sync/sync_contracts.dart';
+import 'package:farm_tracker/core/util/uuid_gen.dart';
 import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
 
-class ActivityModel extends Activity {
+class ActivityModel extends Activity implements SyncableModel {
   const ActivityModel({
     required super.id,
     required super.sourceType,
@@ -10,6 +14,9 @@ class ActivityModel extends Activity {
     required super.date,
     required super.createdAt,
     required super.updatedAt,
+    this.clientUuid = '',
+    this.pending = false,
+    this.deletedLocally = false,
     super.animalId,
     super.details,
     super.notes,
@@ -20,10 +27,16 @@ class ActivityModel extends Activity {
     required String type, required double cost, required DateTime date, int? animalId,
     String? details,
     String? notes,
+    String? clientUuid,
+    UuidGen uuid = const UuidGen(),
   }) {
     final now = DateTime.now();
     return ActivityModel(
       id: '',
+      clientUuid: clientUuid ?? uuid.v4(),
+      // TODO(P4): unsynced-parent FK — animalId serializes to 0 / sourceId is
+      // a clientUuid flag-on; translate + order parent-before-child before
+      // push. P3 = synced-parent-only.
       sourceType: sourceType,
       sourceId: sourceId,
       animalId: animalId,
@@ -42,9 +55,11 @@ class ActivityModel extends Activity {
     final detailsValue = json['Details'] ?? json['details'];
     final costValue = json['Cost'] ?? json['cost'];
     final notesValue = json['Notes'] ?? json['notes'];
+    final clientUuidValue = json['ClientUUID'] ?? json['client_uuid'];
 
     return ActivityModel(
       id: (json['ID'] ?? json['id'] ?? '').toString(),
+      clientUuid: (clientUuidValue ?? '').toString(),
       sourceType: (json['SourceType'] ?? json['source_type'] ?? 'plant')
           .toString(),
       sourceId: (json['SourceID'] ?? json['source_id'] ?? '').toString(),
@@ -63,6 +78,55 @@ class ActivityModel extends Activity {
     );
   }
 
+  /// Rehydrates a model from a local drift row. The row's nullable
+  /// `serverId` becomes the model's `id` when present, else `''`
+  /// (mirroring the server-unknown placeholder used by `.create()`).
+  ///
+  /// Also carries over the row's local sync-state flags ([pending],
+  /// [deletedLocally]) — the sync pipeline (`ActivitySyncer`) needs them to
+  /// decide LWW / delete-wins outcomes on pull, since they otherwise only
+  /// live on the drift row, not on a bare [ActivityModel].
+  factory ActivityModel.fromDrift(ActivityRow row) {
+    return ActivityModel(
+      id: row.serverId ?? '',
+      clientUuid: row.clientUuid,
+      sourceType: row.sourceType,
+      sourceId: row.sourceId,
+      animalId: row.animalId,
+      type: row.type,
+      details: row.details,
+      cost: row.cost,
+      date: row.date,
+      notes: row.notes,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      pending: row.pending,
+      deletedLocally: row.deletedLocally,
+    );
+  }
+
+  /// Local-only identity used by the offline outbox/pull pipeline to
+  /// track this activity before (and independently of) the server-assigned
+  /// [Activity.id]. Lives on the data model only — the domain `Activity`
+  /// entity stays unaware of sync plumbing.
+  final String clientUuid;
+
+  /// Mirrors the drift row's `pending` column: true while this row has a
+  /// local mutation not yet acknowledged by the server. Always `false` on a
+  /// model built from a server response (`fromJson`) or `create` — those
+  /// have no local sync state to report. Excluded from [Activity.props]
+  /// (equality), like [clientUuid] and [deletedLocally].
+  final bool pending;
+
+  /// Mirrors the drift row's `deletedLocally` column: true while this row
+  /// is a tombstone awaiting delete-sync (see
+  /// `ActivityLocalDataSource.markDeleted`). Always `false` on a model built
+  /// from a server response (`fromJson`) or `create`.
+  final bool deletedLocally;
+
+  // TODO(P4): unsynced-parent FK — animalId serializes to 0 / sourceId is a
+  // clientUuid flag-on; translate + order parent-before-child before push.
+  // P3 = synced-parent-only.
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -77,6 +141,75 @@ class ActivityModel extends Activity {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
+  }
+
+  /// Converts this model into a drift insert/update companion for the
+  /// `Activities` table. `serverId` is `null` while the server hasn't
+  /// assigned an `id` yet (i.e. `id` is empty).
+  ActivitiesCompanion toCompanion({
+    required bool pending,
+    bool deletedLocally = false,
+  }) {
+    return ActivitiesCompanion(
+      clientUuid: Value(clientUuid),
+      serverId: Value(id.isEmpty ? null : id),
+      sourceType: Value(sourceType),
+      sourceId: Value(sourceId),
+      animalId: Value(animalId),
+      type: Value(type),
+      details: Value(details),
+      cost: Value(cost),
+      date: Value(date),
+      notes: Value(notes),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      pending: Value(pending),
+      deletedLocally: Value(deletedLocally),
+    );
+  }
+
+  // --- SyncableModel: the read-only sync fields BaseEntitySyncer reads off
+  // this model, mapped onto ActivityModel's existing fields (the server id
+  // lives on `id`, blank until synced; the local flags on
+  // `pending`/`deletedLocally`).
+  @override
+  String get syncClientUuid => clientUuid;
+
+  @override
+  String get syncServerId => id;
+
+  @override
+  DateTime get syncUpdatedAt => updatedAt;
+
+  @override
+  bool get syncPending => pending;
+
+  @override
+  bool get syncDeletedLocally => deletedLocally;
+
+  /// Returns this model with [clientUuid] substituted, every other field
+  /// untouched — or `this` unchanged when it already carries [clientUuid]. Used
+  /// by the pull reconciler to re-key a server row under the local row's client
+  /// uuid before upserting. Mirrors `LandModel.withSyncClientUuid` verbatim:
+  /// the copy carries no local sync flags (they default `false`), which is
+  /// exactly how the pulled server row is always upserted.
+  @override
+  ActivityModel withSyncClientUuid(String clientUuid) {
+    if (this.clientUuid == clientUuid) return this;
+    return ActivityModel(
+      id: id,
+      clientUuid: clientUuid,
+      sourceType: sourceType,
+      sourceId: sourceId,
+      animalId: animalId,
+      type: type,
+      details: details,
+      cost: cost,
+      date: date,
+      notes: notes,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
   }
 
   static DateTime _parseDate(dynamic dateValue) {

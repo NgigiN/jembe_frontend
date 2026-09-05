@@ -1,5 +1,6 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
@@ -61,9 +62,12 @@ class _ActivityPageState extends State<ActivityPage> {
     // activities left on screen after navigating here for 'plant'), so
     // they're always re-fetched. HerdBloc/SeasonBloc/LandBloc are
     // unparameterized and safe to guard.
-    context.read<ActivityBloc>().add(
-      GetActivitiesEvent(sourceType: widget.sourceType),
-    );
+    final activityBloc = context.read<ActivityBloc>();
+    if (OfflineConfig.enabled) {
+      activityBloc.add(WatchActivitiesEvent(sourceType: widget.sourceType));
+    } else {
+      activityBloc.add(GetActivitiesEvent(sourceType: widget.sourceType));
+    }
     final herdBloc = context.read<HerdBloc>();
     if (herdBloc.state is! HerdLoaded) {
       herdBloc.add(GetHerdsEvent());
