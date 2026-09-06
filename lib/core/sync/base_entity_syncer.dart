@@ -13,9 +13,13 @@ import 'package:farm_tracker/core/sync/sync_contracts.dart';
 /// [SyncableModel] getters. The 10 CRUD entities in P3 inherit this one
 /// tested implementation instead of copying ~150 subtle lines each.
 ///
-/// Owns no retry/backoff/ordering logic — that's `SyncEngine`'s job; this class
-/// only ever does ONE thing per call: apply one outbox entry, or
-/// pull-and-reconcile one page of server changes.
+/// Owns no retry/backoff/ordering logic — that's `SyncEngine`'s job; this
+/// class only ever does ONE thing per call: apply one outbox entry, or
+/// pull-and-reconcile every page of server changes since the last cursor
+/// (the backend caps a single list response at 500 rows ordered
+/// `updated_at ASC, id ASC` whenever `updated_since` is present, so [pull]
+/// loops, re-querying from the last page's max `updatedAt`, until a pass
+/// makes no further forward progress — see [pull]'s doc comment).
 ///
 /// `NetworkException`/`ServerException` thrown by the remote adapter are
 /// deliberately left to propagate out of [push]/[pull] — the engine's
@@ -127,18 +131,72 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
     await _local.hardDelete(clientUuid);
   }
 
+  /// A belt-and-suspenders backstop on the drain loop below: no realistic
+  /// pull should ever take this many round trips (500 rows/page means this
+  /// bounds a single [pull] to ~5,000,000 rows), so hitting it means the
+  /// no-forward-progress check has a bug — stop rather than loop forever.
+  static const int _maxPullIterations = 10000;
+
+  /// The cursor a first-ever pull starts from: old enough that every real
+  /// row is strictly after it, so [getSince] always receives a non-null
+  /// instant (see below).
+  static final DateTime _epoch = DateTime.utc(1970);
+
   @override
   Future<DateTime?> pull(DateTime? since) async {
-    final rows = await _remote.getSince(since);
+    // The backend's list endpoints serve TWO different orders depending on
+    // whether `updated_since` is present: the display path (`id DESC`, used
+    // when the query param is absent — i.e. when [getSince] is called with
+    // `null`) and the sync/drain path (`updated_at ASC, id ASC`, capped at
+    // 500 rows, used whenever `updated_since` IS present). Only the drain
+    // path can be walked forward to completion by re-querying with the last
+    // page's max `updatedAt`. So [since] is never forwarded to [getSince]
+    // as-is: a first-ever sync (`since == null`) is substituted with an
+    // epoch instant instead, guaranteeing `updated_since` is ALWAYS sent and
+    // the drain path is ALWAYS the one hit — including on the very first
+    // pull.
+    //
+    // From there, loop: fetch a page, apply every row, and re-query from the
+    // page's max `updatedAt` — walking forward through however many
+    // 500-row pages the backend needs to hand back every changed row.
+    // Terminates when a page is empty OR its max `updatedAt` doesn't
+    // advance past the cursor just queried with (i.e. every remaining row
+    // shares the boundary instant — re-querying it would just return the
+    // same page forever). The `>=` boundary overlap this implies (the
+    // boundary row(s) get applied again next page) is harmless: applying a
+    // pulled row is idempotent — see [_applyPulledRow].
+    var cursor = since ?? _epoch;
+    DateTime? overallMax;
 
-    DateTime? maxUpdatedAt;
-    for (final server in rows) {
-      await _applyPulledRow(server);
-      if (maxUpdatedAt == null || server.syncUpdatedAt.isAfter(maxUpdatedAt)) {
-        maxUpdatedAt = server.syncUpdatedAt;
+    for (var i = 0; i < _maxPullIterations; i++) {
+      final rows = await _remote.getSince(cursor);
+
+      DateTime? pageMax;
+      for (final server in rows) {
+        await _applyPulledRow(server);
+        if (pageMax == null || server.syncUpdatedAt.isAfter(pageMax)) {
+          pageMax = server.syncUpdatedAt;
+        }
       }
+
+      if (pageMax != null &&
+          (overallMax == null || pageMax.isAfter(overallMax))) {
+        overallMax = pageMax;
+      }
+
+      if (pageMax == null || !pageMax.isAfter(cursor)) {
+        // Empty page, or no forward progress possible — stop.
+        break;
+      }
+      cursor = pageMax;
     }
-    return maxUpdatedAt;
+
+    // No row was ever observed across any page: nothing changed, so return
+    // the ORIGINAL [since] (which may itself be null) rather than the
+    // internal epoch substitution — the engine keeps whatever cursor it
+    // already had (or, on a genuinely-empty first sync, keeps advancing its
+    // own null-cursor fallback; see `SyncEngine._pullPhase`).
+    return overallMax ?? since;
   }
 
   /// Applies one server row to the local mirror, honouring delete-wins and

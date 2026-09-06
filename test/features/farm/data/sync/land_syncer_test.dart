@@ -312,7 +312,15 @@ void main() {
 
         final cursor = await syncer.pull(null);
 
-        expect(remote.getLandsCalls, [null]);
+        // The drain loop always sends a non-null `updatedSince` (epoch on a
+        // first sync), then re-queries from the page's max `updatedAt`; this
+        // fake ignores its argument and returns the same fixed row every
+        // time, so the second page's max doesn't advance past the cursor it
+        // was queried with and the loop stops there — two calls total.
+        expect(remote.getLandsCalls, [
+          DateTime.utc(1970),
+          DateTime.utc(2026, 5),
+        ]);
         expect(cursor, isNotNull);
         expect(cursor!.isAtSameMomentAs(DateTime.utc(2026, 5)), isTrue);
 
@@ -332,11 +340,18 @@ void main() {
     });
 
     test(
-      'returns null and touches nothing when the server has no changes',
+      'returns the original since (unchanged) when the server has no '
+      'changes',
       () async {
-        final cursor = await syncer.pull(DateTime.utc(2026));
+        // An empty first page stops the drain loop immediately with nothing
+        // ever observed, so [pull] hands back the ORIGINAL `since` (not the
+        // epoch it substitutes internally for a null `since`) — the
+        // caller's cursor is left untouched.
+        final since = DateTime.utc(2026);
+        final cursor = await syncer.pull(since);
 
-        expect(cursor, isNull);
+        expect(cursor, since);
+        expect(remote.getLandsCalls, [since]);
       },
     );
 
