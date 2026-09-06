@@ -79,11 +79,18 @@ class _SplashPageState extends State<SplashPage> {
   /// successful `/meta` response and applies it: updates the runtime
   /// [OfflineConfig.enabled], persists it via [OfflineFlagStore] so it
   /// survives to the next launch, and — only when the flag just flipped from
-  /// off to on — kicks an immediate [SyncEngine.syncNow] so a pending outbox
-  /// (or a fresh pull) doesn't wait for the next launch/resume/connectivity
-  /// trigger. A no-op when the parsed value matches the current flag. Callers
-  /// only reach this after a successful GET, so a `/meta` failure leaves the
-  /// flag at its persisted/default value untouched (fail to last-known).
+  /// off to on — wires up [SyncEngine] exactly like `main()` does at launch
+  /// (see [applyOfflineFlagSideEffects]). A no-op when the parsed value
+  /// matches the current flag. Callers only reach this after a successful
+  /// GET, so a `/meta` failure leaves the flag at its persisted/default value
+  /// untouched (fail to last-known).
+  ///
+  /// The persistence write is guarded by its own try/catch, decoupled from
+  /// the outer `_checkAppVersion` try/catch: a shared_preferences write
+  /// failure must self-heal on the next launch, not swallow this launch's
+  /// upgrade-dialog check too (the in-memory [OfflineConfig.enabled] is
+  /// already applied by the time the write is attempted, so this session
+  /// still behaves correctly even if persistence fails).
   Future<void> _applyOfflineFlag(dynamic metaData) async {
     final parsed = parseOfflineEnabled(metaData);
     final decision = decideOfflineFlagChange(
@@ -92,10 +99,14 @@ class _SplashPageState extends State<SplashPage> {
     );
     if (!decision.changed) return;
     OfflineConfig.enabled = parsed;
-    await const OfflineFlagStore().write(parsed);
-    if (decision.newlyEnabled) {
-      unawaited(sl<SyncEngine>().syncNow());
+    try {
+      await const OfflineFlagStore().write(value: parsed);
+    } catch (_) {
+      // Swallow: a failed persist self-heals on the next successful /meta
+      // (or the next launch, which re-reads the still-stale-but-safe
+      // persisted value) — it must never affect this launch's upgrade check.
     }
+    applyOfflineFlagSideEffects(decision, sl<SyncEngine>());
   }
 
   @override
@@ -207,4 +218,28 @@ OfflineFlagDecision decideOfflineFlagChange({
     return const OfflineFlagDecision(changed: false, newlyEnabled: false);
   }
   return OfflineFlagDecision(changed: true, newlyEnabled: parsedValue);
+}
+
+/// Applies the [SyncEngine] side effects of a [decision] (see
+/// [decideOfflineFlagChange]). Only an off-to-on transition
+/// ([OfflineFlagDecision.newlyEnabled]) does anything, and it mirrors
+/// `main()`'s launch sequence exactly: `start()` FIRST (wires the
+/// connectivity-regained trigger — idempotent, see `SyncEngine.start`'s
+/// `_connectivitySub ??=` guard) THEN `syncNow()` (drains any pending outbox
+/// / pulls immediately, without waiting for the next connectivity change or
+/// app resume). Without `start()` here, the very first session after the
+/// server flips the flag on would have no connectivity-regained trigger
+/// wired until the NEXT launch (when `main()` sees the persisted `true`).
+///
+/// Factored out as a free function (rather than inlined in
+/// `_SplashPageState`) so a test can drive it directly with a fake/spy
+/// [SyncEngine] and assert both calls happened, in order, without needing to
+/// pump a widget or fake the network.
+void applyOfflineFlagSideEffects(
+  OfflineFlagDecision decision,
+  SyncEngine engine,
+) {
+  if (!decision.newlyEnabled) return;
+  engine.start();
+  unawaited(engine.syncNow());
 }

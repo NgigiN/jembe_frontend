@@ -15,7 +15,7 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       const store = OfflineFlagStore();
 
-      await store.write(true);
+      await store.write(value: true);
 
       expect(await store.read(), isTrue);
     });
@@ -24,7 +24,7 @@ void main() {
       SharedPreferences.setMockInitialValues({'offline_enabled': true});
       const store = OfflineFlagStore();
 
-      await store.write(false);
+      await store.write(value: false);
 
       expect(await store.read(), isFalse);
     });

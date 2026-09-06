@@ -1,6 +1,12 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dio/dio.dart';
+import 'package:drift/native.dart';
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
+import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/network/connectivity_service.dart';
+import 'package:farm_tracker/core/sync/outbox.dart';
+import 'package:farm_tracker/core/sync/sync_cursor_dao.dart';
+import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
@@ -14,6 +20,39 @@ import 'package:mocktail/mocktail.dart';
 class MockAuthBloc extends MockBloc<AuthEvent, AuthState> implements AuthBloc {}
 
 class MockDio extends Mock implements Dio {}
+
+/// Always-online fake — never exercised here (both spied-on methods are
+/// overridden below before any real connectivity/outbox/cursor logic runs),
+/// just satisfies [SyncEngine]'s constructor.
+class _NoOpConnectivity implements ConnectivityService {
+  @override
+  Future<bool> isOnline() async => true;
+
+  @override
+  Stream<bool> get onlineChanges => const Stream.empty();
+}
+
+/// A real [SyncEngine] with its two side-effecting entry points overridden
+/// to record calls (in order) instead of running the real push/pull/backoff
+/// machinery — lets a test assert exactly what `applyOfflineFlagSideEffects`
+/// invoked, and in what order, without a fake Dio/server harness.
+class _SpySyncEngine extends SyncEngine {
+  _SpySyncEngine(AppDatabase db)
+    : super(
+        outbox: OutboxDao(db),
+        syncers: const [],
+        cursors: SyncCursorDao(db),
+        connectivity: _NoOpConnectivity(),
+      );
+
+  final List<String> calls = [];
+
+  @override
+  void start() => calls.add('start');
+
+  @override
+  Future<void> syncNow() async => calls.add('syncNow');
+}
 
 void main() {
   setUpAll(() => registerFallbackValue(CheckExistingLoginEvent()));
@@ -86,6 +125,60 @@ void main() {
       );
       expect(decision.changed, isTrue);
       expect(decision.newlyEnabled, isFalse);
+    });
+  });
+
+  group('applyOfflineFlagSideEffects', () {
+    late AppDatabase db;
+    late _SpySyncEngine engine;
+
+    setUp(() {
+      db = AppDatabase.forTesting(NativeDatabase.memory());
+      engine = _SpySyncEngine(db);
+    });
+
+    tearDown(() async {
+      engine.dispose();
+      await db.close();
+    });
+
+    test(
+      'a newly-enabled (off-to-on) decision calls start() THEN syncNow() '
+      '- mirroring the main() launch sequence, so the very first session '
+      'after the server flips the flag gets the connectivity-regained '
+      'trigger wired, not just an immediate one-shot sync',
+      () async {
+        applyOfflineFlagSideEffects(
+          const OfflineFlagDecision(changed: true, newlyEnabled: true),
+          engine,
+        );
+        await pumpEventQueue();
+
+        expect(engine.calls, ['start', 'syncNow']);
+      },
+    );
+
+    test(
+      'a rollback (on-to-off) decision calls neither start() nor syncNow()',
+      () async {
+        applyOfflineFlagSideEffects(
+          const OfflineFlagDecision(changed: true, newlyEnabled: false),
+          engine,
+        );
+        await pumpEventQueue();
+
+        expect(engine.calls, isEmpty);
+      },
+    );
+
+    test('an unchanged decision calls neither start() nor syncNow()', () async {
+      applyOfflineFlagSideEffects(
+        const OfflineFlagDecision(changed: false, newlyEnabled: false),
+        engine,
+      );
+      await pumpEventQueue();
+
+      expect(engine.calls, isEmpty);
     });
   });
 }

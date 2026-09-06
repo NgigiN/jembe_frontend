@@ -26,7 +26,7 @@ class OfflineFlagStore {
   }
 
   /// Persists [value] so the next launch's [read] picks it up.
-  Future<void> write(bool value) async {
+  Future<void> write({required bool value}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_key, value);
   }
