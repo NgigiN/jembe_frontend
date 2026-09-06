@@ -511,10 +511,16 @@ bool _canOpenWithKey(File dbFile, String key) {
       ..select('SELECT count(*) FROM sqlite_master;');
     return true;
   } catch (e) {
+    // Never pass the raw exception to the logger here: a SqliteException's
+    // toString() embeds `causingStatement` — the SQL text of whichever
+    // statement was executing — and the `PRAGMA key = '$key';` above runs
+    // inside this same try. Logging `e` (even just its message) risks
+    // logging the key itself in plaintext, and `appLogger.warning` emits
+    // unconditionally, in release builds too. Log only the exception's
+    // type, never the exception object.
     appLogger.warning(
       LogCategory.general,
-      'Preflight open of the local database failed',
-      e,
+      'Preflight open of the local database failed (${e.runtimeType})',
     );
     return false;
   } finally {

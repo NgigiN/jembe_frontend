@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -44,6 +45,13 @@ class DbKeyService {
   /// 256 bits.
   static const int _keyLengthBytes = 32;
 
+  /// Mirrors `UserStorageService._shouldUseSecureStorage`: the offline DB
+  /// isn't used on web anyway (this whole service is only ever reached from
+  /// the flag-gated native `AppDatabase.open()` path), but gating here too
+  /// keeps this service consistent with the rest of the codebase's secure
+  /// storage usage.
+  static bool get _shouldUseSecureStorage => !kIsWeb;
+
   final FlutterSecureStorage _secureStorage;
 
   /// Returns the stable 256-bit (32-byte, hex-encoded) key used to encrypt
@@ -68,14 +76,16 @@ class DbKeyService {
   /// anyway, so the key is discarded and a fresh one is generated for the
   /// fresh database that replaces it.
   Future<void> deleteKey() async {
-    try {
-      await _secureStorage.delete(key: _keyName);
-    } catch (e) {
-      appLogger.warning(
-        LogCategory.general,
-        'Secure storage delete failed for $_keyName',
-        e,
-      );
+    if (_shouldUseSecureStorage) {
+      try {
+        await _secureStorage.delete(key: _keyName);
+      } catch (e) {
+        appLogger.warning(
+          LogCategory.general,
+          'Secure storage delete failed for $_keyName',
+          e,
+        );
+      }
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyName);
@@ -91,25 +101,27 @@ class DbKeyService {
   }
 
   Future<void> _writeString(String key, String value) async {
-    try {
-      await _secureStorage.write(key: key, value: value);
-      return;
-    } catch (e) {
-      appLogger.warning(
-        LogCategory.general,
-        'Secure storage write failed for $key',
-        e,
-      );
-      // Deliberate degrade-don't-lock-out tradeoff (audit S4-C2), mirrored
-      // from UserStorageService: fall back to shared_preferences so the app
-      // still opens, but make the weaker posture visible.
+    if (_shouldUseSecureStorage) {
       try {
-        GetIt.instance<AnalyticsService>().track(
-          'secure_storage_fallback',
-          metadata: {'key': key},
+        await _secureStorage.write(key: key, value: value);
+        return;
+      } catch (e) {
+        appLogger.warning(
+          LogCategory.general,
+          'Secure storage write failed for $key',
+          e,
         );
-      } catch (_) {
-        // analytics unavailable (tests, early boot) — the log line stands
+        // Deliberate degrade-don't-lock-out tradeoff (audit S4-C2), mirrored
+        // from UserStorageService: fall back to shared_preferences so the
+        // app still opens, but make the weaker posture visible.
+        try {
+          GetIt.instance<AnalyticsService>().track(
+            'secure_storage_fallback',
+            metadata: {'key': key},
+          );
+        } catch (_) {
+          // analytics unavailable (tests, early boot) — the log line stands
+        }
       }
     }
     final prefs = await SharedPreferences.getInstance();
@@ -117,15 +129,17 @@ class DbKeyService {
   }
 
   Future<String?> _readString(String key) async {
-    try {
-      final secureValue = await _secureStorage.read(key: key);
-      if (secureValue != null) return secureValue;
-    } catch (e) {
-      appLogger.warning(
-        LogCategory.general,
-        'Secure storage read failed for $key',
-        e,
-      );
+    if (_shouldUseSecureStorage) {
+      try {
+        final secureValue = await _secureStorage.read(key: key);
+        if (secureValue != null) return secureValue;
+      } catch (e) {
+        appLogger.warning(
+          LogCategory.general,
+          'Secure storage read failed for $key',
+          e,
+        );
+      }
     }
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(key);
