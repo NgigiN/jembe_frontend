@@ -4,6 +4,7 @@ import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/datasources/season_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/season_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/season_model.dart';
+import 'package:farm_tracker/features/farm/data/sync/fk_translators.dart';
 
 /// Thin [RemoteSyncAdapter] over [SeasonRemoteDataSource], mapping the
 /// generic add/update/delete/getSince onto the season endpoints. Exceptions
@@ -38,10 +39,9 @@ class SeasonRemoteAdapter implements RemoteSyncAdapter<SeasonModel> {
 /// implements `LocalSyncStore<SeasonModel>`) into it and stamps the
 /// `'season'` entity tag.
 ///
-/// See `season_model.dart`'s `// TODO(P4)` note: `plantId`/`landId` FK
-/// reconciliation for an unsynced parent is out of scope for P3 — this
-/// syncer only ever pushes/pulls seasons whose parent plant/land is already
-/// synced.
+/// FK reconciliation for `plantId`/`landId` (an unsynced parent's
+/// client_uuid substituted with its server id before push) is implemented
+/// via [translateSeasonFks] — see `fk_translators.dart`.
 class SeasonSyncer extends BaseEntitySyncer<SeasonModel> {
   SeasonSyncer({
     required SeasonRemoteDataSource remote,
@@ -50,5 +50,6 @@ class SeasonSyncer extends BaseEntitySyncer<SeasonModel> {
          entity: 'season',
          remote: SeasonRemoteAdapter(remote),
          local: local,
+         resolveFks: translateSeasonFks,
        );
 }

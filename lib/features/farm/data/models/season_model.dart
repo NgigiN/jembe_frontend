@@ -203,4 +203,23 @@ class SeasonModel extends Season implements SyncableModel {
       updatedAt: updatedAt,
     );
   }
+
+  /// Returns a copy with the given FK fields overridden (each `null` arg keeps
+  /// the current value), every other field untouched. Used by the P4 sync FK
+  /// translator to substitute a parent's server id for its client_uuid before
+  /// push. Reconstruct via the SAME constructor `withSyncClientUuid` uses.
+  SeasonModel withResolvedFks({String? plantId, String? landId}) {
+    return SeasonModel(
+      id: id,
+      clientUuid: clientUuid,
+      userId: userId,
+      name: name,
+      plantId: plantId ?? this.plantId,
+      landId: landId ?? this.landId,
+      startDate: startDate,
+      endDate: endDate,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
 }
