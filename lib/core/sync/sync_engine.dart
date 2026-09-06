@@ -4,7 +4,9 @@ import 'dart:math' as math;
 import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/network/connectivity_service.dart';
 import 'package:farm_tracker/core/sync/entity_syncer.dart';
+import 'package:farm_tracker/core/sync/fk_resolver.dart';
 import 'package:farm_tracker/core/sync/outbox.dart';
+import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/core/sync/sync_cursor_dao.dart';
 import 'package:farm_tracker/core/sync/sync_status.dart';
 
@@ -59,6 +61,7 @@ class SyncEngine {
     Duration maxBackoff = const Duration(seconds: 60),
     Future<bool> Function()? isAuthenticated,
     void Function(Object error, StackTrace stackTrace)? onError,
+    Map<String, LocalSyncStore<SyncableModel>> fkStores = const {},
   }) : _outbox = outbox,
        _cursors = cursors,
        _connectivity = connectivity,
@@ -69,6 +72,7 @@ class SyncEngine {
        _maxBackoff = maxBackoff,
        _isAuthenticated = isAuthenticated ?? _defaultIsAuthenticated,
        _onError = onError ?? _noopOnError,
+       _fkStores = fkStores,
        _syncers = {for (final syncer in syncers) syncer.entity: syncer};
 
   static Future<bool> _defaultIsAuthenticated() async => true;
@@ -86,6 +90,13 @@ class SyncEngine {
   final Duration _maxBackoff;
   final Future<bool> Function() _isAuthenticated;
   final void Function(Object error, StackTrace stackTrace) _onError;
+  final Map<String, LocalSyncStore<SyncableModel>> _fkStores;
+
+  /// Bound on how many push-phase passes a child may be left `pending` while
+  /// waiting on an unsynced parent, before the engine gives up and parks it
+  /// as `failed` instead — so a child orphaned by a permanently-failed
+  /// parent doesn't park forever.
+  static const int _maxParkAttempts = 10;
 
   final StreamController<SyncStatus> _statusController =
       StreamController<SyncStatus>.broadcast();
@@ -246,13 +257,25 @@ class SyncEngine {
   /// phase early (remaining entries left queued for the backoff retry).
   Future<bool> _pushPhase() async {
     final rows = await _outbox.peekAll();
+    final resolver = FkResolver(_fkStores);
     for (final row in rows) {
       if (row.state != 'pending') continue;
       final syncer = _syncers[row.entity];
       if (syncer == null) continue; // no adapter registered → skip.
       try {
-        await syncer.push(row);
+        await syncer.push(row, resolver);
         await _outbox.ack(row.seq);
+      } on SyncDependencyException {
+        // Parent not synced yet — leave the entry `pending` and retry next
+        // pass (after the parent syncs). Not a failure, so no backoff and the
+        // phase keeps draining. Bounded: after too many parks, surface it as
+        // `failed` so a child orphaned by a permanently-failed parent doesn't
+        // park forever.
+        if (row.attempts + 1 >= _maxParkAttempts) {
+          await _outbox.markFailed(row.seq);
+        } else {
+          await _outbox.bumpAttempts(row.seq);
+        }
       } on NetworkException {
         return true; // transient → stop, keep this + remaining entries.
       } on ServerException {

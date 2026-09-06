@@ -8,6 +8,7 @@ import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/network/connectivity_service.dart';
 import 'package:farm_tracker/core/sync/entity_syncer.dart';
+import 'package:farm_tracker/core/sync/fk_resolver.dart';
 import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/sync_cursor_dao.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
@@ -20,6 +21,7 @@ OutboxRow _row(
   String op = 'create',
   String clientUuid = 'a',
   String state = 'pending',
+  int attempts = 0,
 }) {
   return OutboxRow(
     seq: seq,
@@ -27,7 +29,7 @@ OutboxRow _row(
     op: op,
     clientUuid: clientUuid,
     payload: '{}',
-    attempts: 0,
+    attempts: attempts,
     state: state,
     updatedAt: DateTime.utc(2026),
   );
@@ -158,9 +160,13 @@ void main() {
 
   test('permanent (ServerException) push: entry marked failed, engine '
       'continues to the next entry', () async {
-    engine = build(rows: [_row(1), _row(2, clientUuid: 'b')]);
-    syncer.onPush = (row) =>
-        row.seq == 1 ? const ServerException('4xx') : null;
+    engine = build(
+      rows: [
+        _row(1),
+        _row(2, clientUuid: 'b'),
+      ],
+    );
+    syncer.onPush = (row) => row.seq == 1 ? const ServerException('4xx') : null;
 
     await engine.syncNow();
 
@@ -172,16 +178,57 @@ void main() {
     expect(syncer.pullCount, 1);
   });
 
-  test('entry whose entity has no registered syncer is skipped, not crashed',
-      () async {
-    engine = build(rows: [_row(1, entity: 'ghost'), _row(2)]);
+  test('parks (keeps pending, no backoff) when a syncer reports a missing '
+      'parent', () async {
+    engine = build(rows: [_row(1)]);
+    syncer.onPush = (row) => SyncDependencyException();
 
     await engine.syncNow();
 
-    // ghost skipped, land pushed + acked.
-    expect(outbox.acked, [2]);
+    // Not acked (not synced) and not marked failed (not a real failure) —
+    // just left pending with the attempt count bumped.
+    expect(syncer.pushCount, 1);
+    expect(outbox.acked, isEmpty);
+    expect(outbox.failed, isEmpty);
+    expect(outbox.bumped, [1]);
+    expect(outbox.stateOf(1), 'pending');
+    expect(outbox.attemptsOf(1), 1);
+    // No backoff: the phase keeps draining and the pass ends idle, pull
+    // still runs — unlike a transient NetworkException stop.
+    expect(engine.status.phase, SyncPhase.idle);
+    expect(engine.status.pendingCount, 1);
+    expect(syncer.pullCount, 1);
+  });
+
+  test('bounded parking: once the max park attempts are reached, the entry '
+      'is marked failed instead of parked again', () async {
+    engine = build(rows: [_row(1, attempts: 9)]);
+    syncer.onPush = (row) => SyncDependencyException();
+
+    await engine.syncNow();
+
+    expect(outbox.bumped, isEmpty);
+    expect(outbox.failed, [1]);
     expect(engine.status.phase, SyncPhase.idle);
   });
+
+  test(
+    'entry whose entity has no registered syncer is skipped, not crashed',
+    () async {
+      engine = build(
+        rows: [
+          _row(1, entity: 'ghost'),
+          _row(2),
+        ],
+      );
+
+      await engine.syncNow();
+
+      // ghost skipped, land pushed + acked.
+      expect(outbox.acked, [2]);
+      expect(engine.status.phase, SyncPhase.idle);
+    },
+  );
 
   test('pull advances the cursor and applyDeletions is called', () async {
     final newCursor = DateTime.utc(2026, 5, 5, 12);
@@ -308,9 +355,13 @@ void main() {
 
   test('transient stop halts the push phase, leaving later entries queued', () {
     fakeAsync((async) {
-      engine = build(rows: [_row(1), _row(2, clientUuid: 'b')]);
-      syncer.onPush = (row) =>
-          row.seq == 1 ? NetworkException() : null;
+      engine = build(
+        rows: [
+          _row(1),
+          _row(2, clientUuid: 'b'),
+        ],
+      );
+      syncer.onPush = (row) => row.seq == 1 ? NetworkException() : null;
 
       unawaited(engine.syncNow());
       async.flushMicrotasks();
@@ -352,24 +403,26 @@ void main() {
     });
   });
 
-  test('generic pull error: status ends error, pass does not wedge, syncNow '
-      'completes without an unhandled error, a later syncNow still runs',
-      () async {
-    engine = build(rows: [_row(1)]);
-    syncer.pullThrows = Exception('boom');
+  test(
+    'generic pull error: status ends error, pass does not wedge, syncNow '
+    'completes without an unhandled error, a later syncNow still runs',
+    () async {
+      engine = build(rows: [_row(1)]);
+      syncer.pullThrows = Exception('boom');
 
-    // Must complete normally — no unhandled async error escapes the pass.
-    await engine.syncNow();
+      // Must complete normally — no unhandled async error escapes the pass.
+      await engine.syncNow();
 
-    expect(engine.status.phase, SyncPhase.error);
-    expect(outbox.acked, [1]); // push still succeeded
+      expect(engine.status.phase, SyncPhase.error);
+      expect(outbox.acked, [1]); // push still succeeded
 
-    // No auto-retry for a non-transient fault, but a fresh trigger works.
-    syncer.pullThrows = null;
-    await engine.syncNow();
+      // No auto-retry for a non-transient fault, but a fresh trigger works.
+      syncer.pullThrows = null;
+      await engine.syncNow();
 
-    expect(engine.status.phase, SyncPhase.idle);
-  });
+      expect(engine.status.phase, SyncPhase.idle);
+    },
+  );
 
   test('generic applyDeletions error: pass ends error without wedging; a '
       'later syncNow still reaches idle', () async {
@@ -413,10 +466,7 @@ void main() {
       'failure, not a log line)', () {
     fakeAsync((async) {
       var calls = 0;
-      engine = build(
-        rows: [_row(1)],
-        onError: (error, stackTrace) => calls++,
-      );
+      engine = build(rows: [_row(1)], onError: (error, stackTrace) => calls++);
       syncer.onPush = (row) => NetworkException();
 
       unawaited(engine.syncNow());
@@ -450,19 +500,21 @@ void main() {
     expect(outbox.acked, [1]);
   });
 
-  test('statusStream emits syncing then idle across a successful pass',
-      () async {
-    engine = build(rows: [_row(1)]);
-    final phases = <SyncPhase>[];
-    final sub = engine.statusStream.listen((s) => phases.add(s.phase));
+  test(
+    'statusStream emits syncing then idle across a successful pass',
+    () async {
+      engine = build(rows: [_row(1)]);
+      final phases = <SyncPhase>[];
+      final sub = engine.statusStream.listen((s) => phases.add(s.phase));
 
-    await engine.syncNow();
-    await Future<void>.delayed(const Duration(milliseconds: 20));
-    await sub.cancel();
+      await engine.syncNow();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await sub.cancel();
 
-    expect(phases.first, SyncPhase.syncing);
-    expect(phases.last, SyncPhase.idle);
-  });
+      expect(phases.first, SyncPhase.syncing);
+      expect(phases.last, SyncPhase.idle);
+    },
+  );
 }
 
 class _FakeConnectivity implements ConnectivityService {
@@ -515,7 +567,7 @@ class _FakeSyncer implements EntitySyncer {
   Completer<void>? pushGate;
 
   @override
-  Future<void> push(OutboxRow entry) async {
+  Future<void> push(OutboxRow entry, FkResolver resolver) async {
     _inPush++;
     maxConcurrentPush = max(maxConcurrentPush, _inPush);
     pushCount++;
@@ -564,6 +616,7 @@ class _FakeOutbox extends OutboxDao {
   final List<OutboxRow> _rows;
   final List<int> acked = <int>[];
   final List<int> failed = <int>[];
+  final List<int> bumped = <int>[];
 
   @override
   Future<List<OutboxRow>> peekAll() async => List.of(_rows);
@@ -581,6 +634,29 @@ class _FakeOutbox extends OutboxDao {
     if (index != -1) {
       _rows[index] = _rows[index].copyWith(state: 'failed');
     }
+  }
+
+  @override
+  Future<void> bumpAttempts(int seq) async {
+    bumped.add(seq);
+    final index = _rows.indexWhere((r) => r.seq == seq);
+    if (index != -1) {
+      _rows[index] = _rows[index].copyWith(attempts: _rows[index].attempts + 1);
+    }
+  }
+
+  /// The current `attempts` count for [seq] in this fake's row list, or
+  /// null if the row is gone (acked or otherwise removed).
+  int? attemptsOf(int seq) {
+    final index = _rows.indexWhere((r) => r.seq == seq);
+    return index == -1 ? null : _rows[index].attempts;
+  }
+
+  /// The current `state` for [seq] in this fake's row list, or null if the
+  /// row is gone (acked or otherwise removed).
+  String? stateOf(int seq) {
+    final index = _rows.indexWhere((r) => r.seq == seq);
+    return index == -1 ? null : _rows[index].state;
   }
 
   @override

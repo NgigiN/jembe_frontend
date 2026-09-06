@@ -1,5 +1,6 @@
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/entity_syncer.dart';
+import 'package:farm_tracker/core/sync/fk_resolver.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_activity_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_activity_remote_data_source.dart';
 
@@ -55,7 +56,9 @@ class HerdActivitySyncer implements EntitySyncer {
   bool get hasCursor => false;
 
   @override
-  Future<void> push(OutboxRow entry) async {
+  Future<void> push(OutboxRow entry, FkResolver resolver) async {
+    // `resolver` is unused for now — the real herd-id translation lands in
+    // P4 Task 5.
     if (entry.op != 'create') {
       // 'update'/'delete': never enqueued for this entity (create-only) —
       // nothing to do.

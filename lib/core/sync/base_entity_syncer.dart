@@ -1,5 +1,6 @@
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/entity_syncer.dart';
+import 'package:farm_tracker/core/sync/fk_resolver.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 
 /// Reusable [EntitySyncer] for any entity whose model is a [SyncableModel].
@@ -25,11 +26,14 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
     required this.entity,
     required RemoteSyncAdapter<M> remote,
     required LocalSyncStore<M> local,
+    Future<M> Function(M model, FkResolver resolver)? resolveFks,
   }) : _remote = remote,
-       _local = local;
+       _local = local,
+       _resolveFks = resolveFks;
 
   final RemoteSyncAdapter<M> _remote;
   final LocalSyncStore<M> _local;
+  final Future<M> Function(M model, FkResolver resolver)? _resolveFks;
 
   @override
   final String entity;
@@ -41,11 +45,11 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
   bool get hasCursor => true;
 
   @override
-  Future<void> push(OutboxRow entry) async {
+  Future<void> push(OutboxRow entry, FkResolver resolver) async {
     if (entry.op == 'create') {
-      await _pushCreate(entry.clientUuid);
+      await _pushCreate(entry.clientUuid, resolver);
     } else if (entry.op == 'update') {
-      await _pushUpdate(entry.clientUuid);
+      await _pushUpdate(entry.clientUuid, resolver);
     } else if (entry.op == 'delete') {
       await _pushDelete(entry.clientUuid);
     }
@@ -53,7 +57,7 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
     // (see `OutboxRow.op`) — nothing to do defensively.
   }
 
-  Future<void> _pushCreate(String clientUuid) async {
+  Future<void> _pushCreate(String clientUuid, FkResolver resolver) async {
     final model = await _local.getByClientUuid(clientUuid);
     if (model == null) {
       // Row is gone (e.g. created-then-deleted offline, annihilated out of
@@ -61,17 +65,29 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
       return;
     }
 
-    final created = await _remote.add(model);
+    final toSend = _resolveFks == null
+        ? model
+        : await _resolveFks(model, resolver);
+    final created = await _remote.add(toSend);
     // Reconcile: P1's create is idempotent on client_uuid, so a retried
     // push (this entry re-run after an ack was lost) returns the SAME
     // server row — writing it back here is a no-op the second time round,
     // never a duplicate (setServerId is an UPDATE keyed by clientUuid).
-    await _local.setServerId(clientUuid, created.syncServerId, created.syncUpdatedAt);
+    resolver.record(entity, clientUuid, created.syncServerId);
+    await _local.setServerId(
+      clientUuid,
+      created.syncServerId,
+      created.syncUpdatedAt,
+    );
   }
 
-  Future<void> _pushUpdate(String clientUuid) async {
+  Future<void> _pushUpdate(String clientUuid, FkResolver resolver) async {
     final model = await _local.getByClientUuid(clientUuid);
     if (model == null) return;
+
+    final toSend = _resolveFks == null
+        ? model
+        : await _resolveFks(model, resolver);
 
     if (model.syncServerId.isEmpty) {
       // Defensive: a standalone `update` entry should only ever exist for
@@ -79,13 +95,22 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
       // create+update into a single `create`. If the server id is somehow
       // still missing, fall back to creating it rather than PUTting an
       // empty id.
-      final created = await _remote.add(model);
-      await _local.setServerId(clientUuid, created.syncServerId, created.syncUpdatedAt);
+      final created = await _remote.add(toSend);
+      resolver.record(entity, clientUuid, created.syncServerId);
+      await _local.setServerId(
+        clientUuid,
+        created.syncServerId,
+        created.syncUpdatedAt,
+      );
       return;
     }
 
-    final updated = await _remote.update(model);
-    await _local.setServerId(clientUuid, updated.syncServerId, updated.syncUpdatedAt);
+    final updated = await _remote.update(toSend);
+    await _local.setServerId(
+      clientUuid,
+      updated.syncServerId,
+      updated.syncUpdatedAt,
+    );
   }
 
   Future<void> _pushDelete(String clientUuid) async {
@@ -153,7 +178,10 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
       // Pending local EDIT: last-writer-wins by `updatedAt`, instant-based
       // (never `==` — drift returns local-zone DateTimes on read).
       if (server.syncUpdatedAt.isAfter(local.syncUpdatedAt)) {
-        await _local.upsert(_withClientUuid(server, clientUuid), pending: false);
+        await _local.upsert(
+          _withClientUuid(server, clientUuid),
+          pending: false,
+        );
       }
       // Else: local is newer or equal — keep the local edit, skip.
       return;

@@ -92,6 +92,22 @@ class OutboxDao {
     );
   }
 
+  /// Increments the attempt count while leaving the row `pending` (unlike
+  /// [markFailed], which parks it as `failed`). Used when a create is parked
+  /// waiting on an unsynced parent — a retry, not a failure.
+  Future<void> bumpAttempts(int seq) async {
+    final row = await (_db.select(
+      _db.outbox,
+    )..where((r) => r.seq.equals(seq))).getSingle();
+
+    await (_db.update(_db.outbox)..where((r) => r.seq.equals(seq))).write(
+      OutboxCompanion(
+        attempts: Value(row.attempts + 1),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
   /// The number of rows still awaiting sync (`state == 'pending'`).
   Future<int> pendingCount() async {
     final query = _db.selectOnly(_db.outbox)
