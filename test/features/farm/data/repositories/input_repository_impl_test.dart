@@ -114,12 +114,12 @@ void main() {
     OfflineConfig.enabled = false;
   });
 
-  group("flag OFF (today's live-HTTP behavior, unchanged)", () {
+  group("flag OFF (today's live-HTTP behavior, except the notes wire fix)", () {
     test(
       'addInput carries fields from the Input entity into the model sent '
-      'to the data source, but drops notes (matches the ORIGINAL pre-P3 '
-      'wire behavior — never fixed in this offline task, see '
-      "InputRepositoryImpl's _toModel doc comment)",
+      'to the data source, including notes (fixes the pre-existing wire '
+      "drop — the backend has always stored notes, see InputRepositoryImpl's "
+      '_toModel doc comment)',
       () async {
         final dataSource = FakeInputRemoteDataSource();
         final repository = InputRepositoryImpl(remoteDataSource: dataSource);
@@ -143,18 +143,18 @@ void main() {
         expect(dataSource.lastAdded?.cost, 100);
         expect(
           dataSource.lastAdded?.notes,
-          isNull,
+          'Top dressing',
           reason:
-              'byte-for-byte flag-off contract: the pre-P3 addInput never '
-              'set notes on the wire model, regardless of Input.notes',
+              'the pre-existing notes drop is fixed: addInput now sends '
+              'Input.notes on the wire, and the backend accepts it',
         );
       },
     );
 
     test(
       'updateInput carries fields from the Input entity into the model '
-      'sent to the data source, but drops notes (matches the ORIGINAL '
-      'pre-P3 wire behavior)',
+      'sent to the data source, including notes (fixes the pre-existing '
+      'wire drop)',
       () async {
         final dataSource = FakeInputRemoteDataSource();
         final repository = InputRepositoryImpl(remoteDataSource: dataSource);
@@ -168,7 +168,7 @@ void main() {
             type: 'Fertilizer',
             cost: 200,
             date: now,
-            notes: 'Should never reach the wire',
+            notes: 'Now reaches the wire',
             createdAt: now,
             updatedAt: now,
           ),
@@ -177,11 +177,10 @@ void main() {
         expect(dataSource.lastUpdated?.cost, 200);
         expect(
           dataSource.lastUpdated?.notes,
-          isNull,
+          'Now reaches the wire',
           reason:
-              'byte-for-byte flag-off contract: the pre-P3 updateInput '
-              'never set notes on the wire model, regardless of '
-              'Input.notes',
+              'the pre-existing notes drop is fixed: updateInput now sends '
+              'Input.notes on the wire, and the backend accepts it',
         );
       },
     );

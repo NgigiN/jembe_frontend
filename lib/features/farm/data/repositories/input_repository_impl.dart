@@ -19,12 +19,14 @@ import 'package:farm_tracker/features/farm/domain/repositories/input_repository.
 /// Live-HTTP (flag off) or local-first + outbox (flag on) implementation of
 /// [InputRepository].
 ///
-/// ## Flag off (today's behavior — byte for byte)
+/// ## Flag off (today's behavior, with one intentional bug fix)
 /// Every method talks straight to [remoteDataSource], mapping
 /// [NetworkException]/[ServerException] to [NetworkFailure]/[ServerFailure].
 /// This is rule zero for the offline rollout: with
 /// `OfflineConfig.enabled == false`, this class behaves exactly as it did
-/// before the offline pipeline existed.
+/// before the offline pipeline existed — with one deliberate exception:
+/// `notes` is now sent on the wire (see [_toModel]'s doc comment), fixing a
+/// pre-existing drop; the backend has always accepted it.
 ///
 /// ## Flag on — local-first + outbox
 /// Reads come from [local] (the drift-backed mirror); writes land on
@@ -72,16 +74,17 @@ class InputRepositoryImpl
   @override
   SyncEngine? get syncEngine => sync;
 
-  // NOTE: deliberately does NOT pass `notes:` — the original flag-off
-  // `addInput`/`updateInput` construction (pre-P3, see
-  // `git show 4ec8dd7:.../input_repository_impl.dart`) never set `notes` on
-  // the `InputModel` it sent to the remote data source, so the wire always
-  // carried a null `notes` regardless of what the caller's `Input.notes`
-  // held. `_toModel` is used ONLY by the flag-off remote path (below); the
-  // flag-ON local-first path builds its own model via `InputModel.create`,
-  // which DOES carry `notes:` into the local mirror — offline note-taking is
-  // correct dark behavior, only the flag-off wire must stay byte-for-byte
-  // identical to before (rule zero for this rollout).
+  // NOTE: this now DOES pass `notes:` on the flag-off `addInput`/`updateInput`
+  // path. Pre-P3 (see `git show 4ec8dd7:.../input_repository_impl.dart`), the
+  // wire model never set `notes`, so it was silently dropped regardless of
+  // what the caller's `Input.notes` held — a pre-existing bug, not a
+  // deliberate contract. The backend has always fully supported it
+  // (`internal/models/plants/input.go`'s `Notes` column, `input_service.go`'s
+  // select, and the InputRequest DTO/mapper all already bind it), so there is
+  // no reason to keep suppressing it here. `_toModel` is used ONLY by the
+  // flag-off remote path (below); the flag-ON local-first path builds its own
+  // model via `InputModel.create`, which has always carried `notes:` into the
+  // local mirror.
   InputModel _toModel(Input input) {
     return InputModel(
       id: input.id,
@@ -92,6 +95,7 @@ class InputRepositoryImpl
       quantity: input.quantity,
       cost: input.cost,
       date: input.date,
+      notes: input.notes,
       createdAt: input.createdAt,
       updatedAt: input.updatedAt,
     );
@@ -124,9 +128,9 @@ class InputRepositoryImpl
     // and never crash. A single-emission stream mirroring `getInputs()`
     // does that without adding a second remote-fetch code path.
     return Stream.fromFuture(
-      getInputs(sourceType: sourceType).then(
-        (result) => result.fold((_) => <Input>[], (inputs) => inputs),
-      ),
+      getInputs(
+        sourceType: sourceType,
+      ).then((result) => result.fold((_) => <Input>[], (inputs) => inputs)),
     );
   }
 
