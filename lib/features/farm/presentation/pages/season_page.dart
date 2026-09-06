@@ -1,5 +1,6 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
@@ -263,7 +264,11 @@ class _SeasonPageState extends State<SeasonPage> {
     super.initState();
     final seasonBloc = context.read<SeasonBloc>();
     if (seasonBloc.state is! SeasonLoaded) {
-      seasonBloc.add(GetSeasonsEvent());
+      if (OfflineConfig.enabled) {
+        seasonBloc.add(WatchSeasonsEvent());
+      } else {
+        seasonBloc.add(GetSeasonsEvent());
+      }
     }
     final landBloc = context.read<LandBloc>();
     if (landBloc.state is! LandLoaded) {
@@ -271,7 +276,11 @@ class _SeasonPageState extends State<SeasonPage> {
     }
     final plantBloc = context.read<PlantBloc>();
     if (plantBloc.state is! PlantLoaded) {
-      plantBloc.add(GetPlantsEvent());
+      if (OfflineConfig.enabled) {
+        plantBloc.add(WatchPlantsEvent());
+      } else {
+        plantBloc.add(GetPlantsEvent());
+      }
     }
   }
 

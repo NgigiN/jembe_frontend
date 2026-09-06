@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/models/land_model.dart';
 
 /// Drift-backed local data source for the land feature.
@@ -11,7 +12,12 @@ import 'package:farm_tracker/features/farm/data/models/land_model.dart';
 /// server. Every method keys rows by `clientUuid` (the table's primary
 /// key), never by [LandModel] value-equality (which deliberately excludes
 /// `clientUuid` — see `LandModel`'s `Equatable.props`).
-class LandLocalDataSource {
+///
+/// Satisfies [LocalSyncStore] so `BaseEntitySyncer<LandModel>` can drive the
+/// local mirror through the generic contract; the extra reactive-read
+/// ([watchLands]) and [clear] methods are land-specific and sit outside that
+/// interface.
+class LandLocalDataSource implements LocalSyncStore<LandModel> {
   LandLocalDataSource(this._db);
 
   final AppDatabase _db;
@@ -32,6 +38,7 @@ class LandLocalDataSource {
 
   /// Inserts [model], or replaces the existing row sharing its
   /// `clientUuid` (the primary key) if one already exists.
+  @override
   Future<void> upsert(LandModel model, {required bool pending}) {
     return _db
         .into(_db.lands)
@@ -41,6 +48,7 @@ class LandLocalDataSource {
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:
   /// `deletedLocally = true`, `pending = true`. The row is not removed —
   /// call [hardDelete] once the delete has synced with the server.
+  @override
   Future<void> markDeleted(String clientUuid) {
     return (_db.update(
       _db.lands,
@@ -51,6 +59,7 @@ class LandLocalDataSource {
 
   /// Physically removes the row for [clientUuid] — call once a delete has
   /// synced with the server.
+  @override
   Future<void> hardDelete(String clientUuid) {
     return (_db.delete(
       _db.lands,
@@ -59,6 +68,7 @@ class LandLocalDataSource {
 
   /// Reconciles the row for [clientUuid] after a create/update syncs: sets
   /// [serverId] and [updatedAt], and clears `pending`.
+  @override
   Future<void> setServerId(
     String clientUuid,
     String serverId,
@@ -77,6 +87,7 @@ class LandLocalDataSource {
 
   /// The land with the given [clientUuid], or `null` if no such row
   /// exists. Includes local tombstones (unlike [watchLands]).
+  @override
   Future<LandModel?> getByClientUuid(String clientUuid) async {
     final row = await (_db.select(
       _db.lands,
@@ -86,6 +97,7 @@ class LandLocalDataSource {
 
   /// The land with the given server [serverId], or `null` if no such row
   /// exists.
+  @override
   Future<LandModel?> getByServerId(String serverId) async {
     final row = await (_db.select(
       _db.lands,

@@ -3,7 +3,15 @@ import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
 
 abstract class HarvestRemoteDataSource {
-  Future<List<HarvestModel>> getHarvests({String? seasonId});
+  /// Fetches harvests, optionally filtered by [seasonId] (unrelated to
+  /// offline sync — an existing app-level filter), or — when [updatedSince]
+  /// is given — only those the server has changed strictly after that
+  /// instant (used by the sync pull phase, which passes ONLY [updatedSince],
+  /// never [seasonId]). Existing callers are unaffected.
+  Future<List<HarvestModel>> getHarvests({
+    String? seasonId,
+    DateTime? updatedSince,
+  });
   Future<HarvestModel> addHarvest(HarvestModel harvest);
   Future<HarvestModel> updateHarvest(HarvestModel harvest);
   Future<void> deleteHarvest(String id);
@@ -14,15 +22,20 @@ class HarvestRemoteDataSourceImpl implements HarvestRemoteDataSource {
   final Dio dio;
 
   @override
-  Future<List<HarvestModel>> getHarvests({String? seasonId}) async {
+  Future<List<HarvestModel>> getHarvests({
+    String? seasonId,
+    DateTime? updatedSince,
+  }) async {
     try {
-      final queryParams = seasonId != null && seasonId.isNotEmpty
-          ? {'season_id': seasonId}
-          : null;
+      final queryParams = <String, dynamic>{
+        if (seasonId != null && seasonId.isNotEmpty) 'season_id': seasonId,
+        if (updatedSince != null)
+          'updated_since': updatedSince.toUtc().toIso8601String(),
+      };
 
       final response = await dio.get<dynamic>(
         '/api/v1/harvests',
-        queryParameters: queryParams,
+        queryParameters: queryParams.isEmpty ? null : queryParams,
       );
 
       if (response.statusCode == 200) {
@@ -45,7 +58,16 @@ class HarvestRemoteDataSourceImpl implements HarvestRemoteDataSource {
     try {
       final response = await dio.post<dynamic>(
         '/api/v1/harvests',
-        data: harvest.toJson(),
+        data: {
+          ...harvest.toJson(),
+          // Required for the offline sync path: P1's create endpoint keys
+          // its idempotency check on (user_id, client_uuid) — a retried
+          // push (same clientUuid) returns the ALREADY-created row instead
+          // of duplicating it. Harmless for the flag-off legacy path too:
+          // `HarvestModel.create` always mints a fresh clientUuid there, so
+          // this is just an unused-but-valid extra field server-side.
+          'client_uuid': harvest.clientUuid,
+        },
       );
 
       if (response.statusCode == 201) {

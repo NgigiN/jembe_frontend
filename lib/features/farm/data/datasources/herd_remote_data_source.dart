@@ -5,7 +5,11 @@ import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
 
 abstract class HerdRemoteDataSource {
-  Future<List<HerdModel>> getHerds();
+  /// Fetches all herds, or — when [updatedSince] is given — only those the
+  /// server has changed strictly after that instant (used by the sync pull
+  /// phase). Existing no-arg callers (the flag-off repo path) are
+  /// unaffected.
+  Future<List<HerdModel>> getHerds({DateTime? updatedSince});
   Future<HerdModel> addHerd(HerdModel herd);
   Future<HerdModel> updateHerd(HerdModel herd);
   Future<void> deleteHerd(String id);
@@ -16,9 +20,16 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
   final Dio dio;
 
   @override
-  Future<List<HerdModel>> getHerds() async {
+  Future<List<HerdModel>> getHerds({DateTime? updatedSince}) async {
     try {
-      final response = await dio.get<dynamic>('/api/v1/herds');
+      final queryParams = updatedSince != null
+          ? {'updated_since': updatedSince.toUtc().toIso8601String()}
+          : null;
+
+      final response = await dio.get<dynamic>(
+        '/api/v1/herds',
+        queryParameters: queryParams,
+      );
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -42,7 +53,19 @@ class HerdRemoteDataSourceImpl implements HerdRemoteDataSource {
   @override
   Future<HerdModel> addHerd(HerdModel herd) async {
     try {
-      final response = await dio.post<dynamic>('/api/v1/herds', data: herd.toJson());
+      final response = await dio.post<dynamic>(
+        '/api/v1/herds',
+        data: {
+          ...herd.toJson(),
+          // Required for the offline sync path: P1's create endpoint keys
+          // its idempotency check on (user_id, client_uuid) — a retried
+          // push (same clientUuid) returns the ALREADY-created row instead
+          // of duplicating it. Harmless for the flag-off legacy path too:
+          // `HerdModel.create` always mints a fresh clientUuid there, so
+          // this is just an unused-but-valid extra field server-side.
+          'client_uuid': herd.clientUuid,
+        },
+      );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;

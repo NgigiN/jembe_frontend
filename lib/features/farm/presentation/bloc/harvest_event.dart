@@ -14,6 +14,19 @@ class GetHarvestsEvent extends HarvestEvent {
   List<Object> get props => [seasonId ?? ''];
 }
 
+/// Flag-ON only: subscribes (or re-subscribes) `HarvestBloc` to
+/// `repository.watchHarvests(seasonId:)`, scoped exactly like the existing
+/// `GetHarvestsEvent(seasonId:)`. Every subsequent stream emission is turned
+/// into a `HarvestLoaded(harvests: ...)` state — see `HarvestBloc`'s
+/// internal `_HarvestsUpdated` event for how.
+class WatchHarvestsEvent extends HarvestEvent {
+  WatchHarvestsEvent({this.seasonId});
+  final String? seasonId;
+
+  @override
+  List<Object> get props => [seasonId ?? ''];
+}
+
 class AddHarvestEvent extends HarvestEvent {
   AddHarvestEvent(this.harvest);
   final Harvest harvest;

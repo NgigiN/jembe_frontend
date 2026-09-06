@@ -14,6 +14,19 @@ class GetActivitiesEvent extends ActivityEvent {
   List<Object> get props => [sourceType ?? ''];
 }
 
+/// Flag-ON only: subscribes (or re-subscribes) `ActivityBloc` to
+/// `repository.watchActivities(sourceType:)`, scoped exactly like the
+/// existing `GetActivitiesEvent(sourceType:)`. Every subsequent stream
+/// emission is turned into an `ActivityLoaded(activities: ...)` state — see
+/// `ActivityBloc`'s internal `_ActivitiesUpdated` event for how.
+class WatchActivitiesEvent extends ActivityEvent {
+  WatchActivitiesEvent({this.sourceType});
+  final String? sourceType;
+
+  @override
+  List<Object> get props => [sourceType ?? ''];
+}
+
 class AddActivityEvent extends ActivityEvent {
   AddActivityEvent(this.activity);
   final Activity activity;

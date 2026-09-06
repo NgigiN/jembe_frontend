@@ -13,6 +13,7 @@ import 'package:farm_tracker/core/sync/sync_cursor_dao.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:farm_tracker/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:farm_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
@@ -24,20 +25,32 @@ import 'package:farm_tracker/features/content/domain/repositories/content_reposi
 import 'package:farm_tracker/features/content/domain/repositories/question_repository.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/question_bloc.dart';
+import 'package:farm_tracker/features/farm/data/datasources/activity_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/analysis_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/animal_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/animal_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/animal_type_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/animal_type_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/cost_category_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/cost_category_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/harvest_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/harvest_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/herd_activity_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_activity_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/herd_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/infrastructure_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/infrastructure_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/input_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/input_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/land_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/land_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/plant_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/plant_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/revenue_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/season_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/season_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/repositories/activity_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/analysis_repository_impl.dart';
@@ -53,7 +66,19 @@ import 'package:farm_tracker/features/farm/data/repositories/land_repository_imp
 import 'package:farm_tracker/features/farm/data/repositories/plant_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/revenue_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/season_repository_impl.dart';
+import 'package:farm_tracker/features/farm/data/sync/activity_syncer.dart';
+import 'package:farm_tracker/features/farm/data/sync/animal_syncer.dart';
+import 'package:farm_tracker/features/farm/data/sync/animal_type_syncer.dart';
+import 'package:farm_tracker/features/farm/data/sync/cost_category_syncer.dart';
+import 'package:farm_tracker/features/farm/data/sync/harvest_syncer.dart';
+import 'package:farm_tracker/features/farm/data/sync/herd_activity_syncer.dart';
+import 'package:farm_tracker/features/farm/data/sync/herd_syncer.dart';
+import 'package:farm_tracker/features/farm/data/sync/infrastructure_syncer.dart';
+import 'package:farm_tracker/features/farm/data/sync/input_syncer.dart';
 import 'package:farm_tracker/features/farm/data/sync/land_syncer.dart';
+import 'package:farm_tracker/features/farm/data/sync/plant_syncer.dart';
+import 'package:farm_tracker/features/farm/data/sync/revenue_syncer.dart';
+import 'package:farm_tracker/features/farm/data/sync/season_syncer.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/activity_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/analysis_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/animal_repository.dart';
@@ -120,7 +145,17 @@ import 'package:farm_tracker/features/farm/domain/usecases/update_land.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_plant.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_revenue.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_season.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/watch_activities.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/watch_animal_types.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/watch_animals.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/watch_harvests.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/watch_herds.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/watch_infrastructure.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/watch_inputs.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/watch_lands.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/watch_plants.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/watch_revenues.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/watch_seasons.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_bloc.dart';
@@ -152,9 +187,15 @@ final sl = GetIt.instance;
 /// as a plain, already-ready singleton) instead of opening the real file —
 /// `AppDatabase.open()` needs `path_provider`, which isn't available off a
 /// real device/platform channel in unit tests. `main.dart`'s no-arg
-/// `await di.init()` call is unaffected: it still opens the real file via
-/// the async-singleton branch below, and `await sl.allReady()` at the end
-/// of this function guarantees that file is open before `runApp`.
+/// `await di.init()` call is unaffected: it still registers the real
+/// `AppDatabase` via the async-singleton branch below. That database wraps a
+/// `LazyDatabase`, so constructing it opens NO file — the SQLite file is
+/// opened lazily on the first query, which (flag-off) never happens. So
+/// `await sl.allReady()` guarantees the singleton is CONSTRUCTED before
+/// `runApp`, not that any file I/O has occurred — a deliberate part of the
+/// dark-ship: init adds no startup file I/O and no new failure mode.
+/// (Do NOT "fix" this to open the file eagerly — that would reintroduce
+/// flag-off startup I/O.)
 Future<void> init({AppDatabase? database}) async {
   // Initialize logging
   appLogger.initialize();
@@ -190,6 +231,7 @@ Future<void> init({AppDatabase? database}) async {
         addPlant: sl(),
         updatePlant: sl(),
         deletePlant: sl(),
+        watchPlants: sl(),
       ),
     )
     ..registerFactory(
@@ -198,6 +240,7 @@ Future<void> init({AppDatabase? database}) async {
         addSeason: sl(),
         updateSeason: sl(),
         deleteSeason: sl(),
+        watchSeasons: sl(),
       ),
     )
     ..registerFactory(
@@ -206,6 +249,7 @@ Future<void> init({AppDatabase? database}) async {
         addActivity: sl(),
         updateActivity: sl(),
         deleteActivity: sl(),
+        watchActivities: sl(),
       ),
     )
     ..registerFactory(
@@ -214,6 +258,7 @@ Future<void> init({AppDatabase? database}) async {
         addInput: sl(),
         updateInput: sl(),
         deleteInput: sl(),
+        watchInputs: sl(),
       ),
     )
     ..registerFactory(
@@ -222,6 +267,7 @@ Future<void> init({AppDatabase? database}) async {
         addHarvest: sl(),
         updateHarvest: sl(),
         deleteHarvest: sl(),
+        watchHarvests: sl(),
       ),
     )
     ..registerFactory(
@@ -230,6 +276,7 @@ Future<void> init({AppDatabase? database}) async {
         addAnimalType: sl(),
         updateAnimalType: sl(),
         deleteAnimalType: sl(),
+        watchAnimalTypes: sl(),
       ),
     )
     ..registerFactory(
@@ -238,6 +285,7 @@ Future<void> init({AppDatabase? database}) async {
         addHerd: sl(),
         updateHerd: sl(),
         deleteHerd: sl(),
+        watchHerds: sl(),
       ),
     )
     ..registerFactory(
@@ -246,6 +294,7 @@ Future<void> init({AppDatabase? database}) async {
         addAnimal: sl(),
         updateAnimal: sl(),
         deleteAnimal: sl(),
+        watchAnimals: sl(),
       ),
     )
     ..registerFactory(() => HerdActivityBloc(addHerdActivity: sl()))
@@ -255,6 +304,7 @@ Future<void> init({AppDatabase? database}) async {
         addInfrastructure: sl(),
         updateInfrastructure: sl(),
         deleteInfrastructure: sl(),
+        watchInfrastructure: sl(),
       ),
     )
     ..registerFactory(
@@ -271,6 +321,7 @@ Future<void> init({AppDatabase? database}) async {
         addRevenue: sl(),
         updateRevenue: sl(),
         deleteRevenue: sl(),
+        watchRevenues: sl(),
       ),
     )
     ..registerFactory(
@@ -300,39 +351,48 @@ Future<void> init({AppDatabase? database}) async {
     ..registerLazySingleton(() => AddPlant(sl()))
     ..registerLazySingleton(() => UpdatePlant(sl()))
     ..registerLazySingleton(() => DeletePlant(sl()))
+    ..registerLazySingleton(() => WatchPlants(sl()))
     ..registerLazySingleton(() => GetSeasons(sl()))
     ..registerLazySingleton(() => AddSeason(sl()))
     ..registerLazySingleton(() => UpdateSeason(sl()))
     ..registerLazySingleton(() => DeleteSeason(sl()))
+    ..registerLazySingleton(() => WatchSeasons(sl()))
     ..registerLazySingleton(() => GetActivities(sl()))
     ..registerLazySingleton(() => AddActivity(sl()))
     ..registerLazySingleton(() => UpdateActivity(sl()))
     ..registerLazySingleton(() => DeleteActivity(sl()))
+    ..registerLazySingleton(() => WatchActivities(sl()))
     ..registerLazySingleton(() => GetInputs(sl()))
     ..registerLazySingleton(() => AddInput(sl()))
     ..registerLazySingleton(() => UpdateInput(sl()))
     ..registerLazySingleton(() => DeleteInput(sl()))
+    ..registerLazySingleton(() => WatchInputs(sl()))
     ..registerLazySingleton(() => GetHarvests(sl()))
     ..registerLazySingleton(() => AddHarvest(sl()))
     ..registerLazySingleton(() => UpdateHarvest(sl()))
     ..registerLazySingleton(() => DeleteHarvest(sl()))
+    ..registerLazySingleton(() => WatchHarvests(sl()))
     ..registerLazySingleton(() => GetAnimals(sl()))
     ..registerLazySingleton(() => AddAnimal(sl()))
     ..registerLazySingleton(() => UpdateAnimal(sl()))
     ..registerLazySingleton(() => DeleteAnimal(sl()))
+    ..registerLazySingleton(() => WatchAnimals(sl()))
     ..registerLazySingleton(() => GetAnimalTypes(sl()))
     ..registerLazySingleton(() => AddAnimalType(sl()))
     ..registerLazySingleton(() => UpdateAnimalType(sl()))
     ..registerLazySingleton(() => DeleteAnimalType(sl()))
+    ..registerLazySingleton(() => WatchAnimalTypes(sl()))
     ..registerLazySingleton(() => GetHerds(sl()))
     ..registerLazySingleton(() => AddHerd(sl()))
     ..registerLazySingleton(() => UpdateHerd(sl()))
     ..registerLazySingleton(() => DeleteHerd(sl()))
+    ..registerLazySingleton(() => WatchHerds(sl()))
     ..registerLazySingleton(() => AddHerdActivity(sl()))
     ..registerLazySingleton(() => GetInfrastructure(sl()))
     ..registerLazySingleton(() => AddInfrastructure(sl()))
     ..registerLazySingleton(() => UpdateInfrastructure(sl()))
     ..registerLazySingleton(() => DeleteInfrastructure(sl()))
+    ..registerLazySingleton(() => WatchInfrastructure(sl()))
     ..registerLazySingleton(() => GetTotalCostsBySeason(sl()))
     ..registerLazySingleton(() => GetCostBreakdown(sl()))
     ..registerLazySingleton(() => GetAnnualCostSummary(sl()))
@@ -341,6 +401,7 @@ Future<void> init({AppDatabase? database}) async {
     ..registerLazySingleton(() => AddRevenue(sl()))
     ..registerLazySingleton(() => UpdateRevenue(sl()))
     ..registerLazySingleton(() => DeleteRevenue(sl()))
+    ..registerLazySingleton(() => WatchRevenues(sl()))
     ..registerLazySingleton(() => GetCostCategories(sl()))
     ..registerLazySingleton(() => AddCostCategory(sl()))
     ..registerLazySingleton(() => DeleteCostCategory(sl()))
@@ -364,43 +425,103 @@ Future<void> init({AppDatabase? database}) async {
       ),
     )
     ..registerLazySingleton<PlantRepository>(
-      () => PlantRepositoryImpl(remoteDataSource: sl()),
+      () => PlantRepositoryImpl(
+        remoteDataSource: sl(),
+        local: sl(),
+        outbox: sl(),
+        sync: sl(),
+      ),
     )
     ..registerLazySingleton<SeasonRepository>(
-      () => SeasonRepositoryImpl(remoteDataSource: sl()),
+      () => SeasonRepositoryImpl(
+        remoteDataSource: sl(),
+        local: sl(),
+        outbox: sl(),
+        sync: sl(),
+      ),
     )
     ..registerLazySingleton<ActivityRepository>(
-      () => ActivityRepositoryImpl(remoteDataSource: sl()),
+      () => ActivityRepositoryImpl(
+        remoteDataSource: sl(),
+        local: sl(),
+        outbox: sl(),
+        sync: sl(),
+      ),
     )
     ..registerLazySingleton<InputRepository>(
-      () => InputRepositoryImpl(remoteDataSource: sl()),
+      () => InputRepositoryImpl(
+        remoteDataSource: sl(),
+        local: sl(),
+        outbox: sl(),
+        sync: sl(),
+      ),
     )
     ..registerLazySingleton<HarvestRepository>(
-      () => HarvestRepositoryImpl(remoteDataSource: sl()),
+      () => HarvestRepositoryImpl(
+        remoteDataSource: sl(),
+        local: sl(),
+        outbox: sl(),
+        sync: sl(),
+      ),
     )
     ..registerLazySingleton<AnimalRepository>(
-      () => AnimalRepositoryImpl(remoteDataSource: sl()),
+      () => AnimalRepositoryImpl(
+        remoteDataSource: sl(),
+        local: sl(),
+        outbox: sl(),
+        sync: sl(),
+      ),
     )
     ..registerLazySingleton<AnimalTypeRepository>(
-      () => AnimalTypeRepositoryImpl(remoteDataSource: sl()),
+      () => AnimalTypeRepositoryImpl(
+        remoteDataSource: sl(),
+        local: sl(),
+        outbox: sl(),
+        sync: sl(),
+      ),
     )
     ..registerLazySingleton<HerdRepository>(
-      () => HerdRepositoryImpl(remoteDataSource: sl()),
+      () => HerdRepositoryImpl(
+        remoteDataSource: sl(),
+        local: sl(),
+        outbox: sl(),
+        sync: sl(),
+      ),
     )
     ..registerLazySingleton<HerdActivityRepository>(
-      () => HerdActivityRepositoryImpl(remoteDataSource: sl()),
+      () => HerdActivityRepositoryImpl(
+        remoteDataSource: sl(),
+        local: sl(),
+        outbox: sl(),
+        sync: sl(),
+      ),
     )
     ..registerLazySingleton<InfrastructureRepository>(
-      () => InfrastructureRepositoryImpl(remoteDataSource: sl()),
+      () => InfrastructureRepositoryImpl(
+        remoteDataSource: sl(),
+        local: sl(),
+        outbox: sl(),
+        sync: sl(),
+      ),
     )
     ..registerLazySingleton<AnalysisRepository>(
       () => AnalysisRepositoryImpl(remoteDataSource: sl()),
     )
     ..registerLazySingleton<RevenueRepository>(
-      () => RevenueRepositoryImpl(remoteDataSource: sl()),
+      () => RevenueRepositoryImpl(
+        remoteDataSource: sl(),
+        local: sl(),
+        outbox: sl(),
+        sync: sl(),
+      ),
     )
     ..registerLazySingleton<CostCategoryRepository>(
-      () => CostCategoryRepositoryImpl(remoteDataSource: sl()),
+      () => CostCategoryRepositoryImpl(
+        remoteDataSource: sl(),
+        local: sl(),
+        outbox: sl(),
+        sync: sl(),
+      ),
     )
     ..registerLazySingleton<ProfileRepository>(
       () => ProfileRepositoryImpl(remoteDataSource: sl()),
@@ -485,24 +606,102 @@ Future<void> init({AppDatabase? database}) async {
     ..registerLazySingleton(() => OutboxDao(sl()))
     ..registerLazySingleton(() => SyncCursorDao(sl()))
     ..registerLazySingleton(() => LandLocalDataSource(sl()))
+    ..registerLazySingleton(() => PlantLocalDataSource(sl()))
+    ..registerLazySingleton(() => SeasonLocalDataSource(sl()))
+    ..registerLazySingleton(() => AnimalLocalDataSource(sl()))
+    ..registerLazySingleton(() => HarvestLocalDataSource(sl()))
+    ..registerLazySingleton(() => InputLocalDataSource(sl()))
+    ..registerLazySingleton(() => ActivityLocalDataSource(sl()))
+    ..registerLazySingleton(() => AnimalTypeLocalDataSource(sl()))
+    ..registerLazySingleton(() => HerdLocalDataSource(sl()))
+    ..registerLazySingleton(() => InfrastructureLocalDataSource(sl()))
+    ..registerLazySingleton(() => RevenueLocalDataSource(sl()))
+    ..registerLazySingleton(() => CostCategoryLocalDataSource(sl()))
+    ..registerLazySingleton(() => HerdActivityLocalDataSource(sl()))
     ..registerLazySingleton(ConnectivityService.new)
     ..registerLazySingleton(() => LandSyncer(remote: sl(), local: sl()))
+    ..registerLazySingleton(() => PlantSyncer(remote: sl(), local: sl()))
+    ..registerLazySingleton(() => SeasonSyncer(remote: sl(), local: sl()))
+    ..registerLazySingleton(() => AnimalSyncer(remote: sl(), local: sl()))
+    ..registerLazySingleton(() => HarvestSyncer(remote: sl(), local: sl()))
+    ..registerLazySingleton(() => InputSyncer(remote: sl(), local: sl()))
+    ..registerLazySingleton(() => ActivitySyncer(remote: sl(), local: sl()))
+    ..registerLazySingleton(() => AnimalTypeSyncer(remote: sl(), local: sl()))
+    ..registerLazySingleton(() => HerdSyncer(remote: sl(), local: sl()))
     ..registerLazySingleton(
-      () => DeletionsDataSource(dio: sl(), landLocal: sl()),
+      () => InfrastructureSyncer(remote: sl(), local: sl()),
+    )
+    ..registerLazySingleton(() => RevenueSyncer(remote: sl(), local: sl()))
+    ..registerLazySingleton(
+      () => CostCategorySyncer(remote: sl(), local: sl()),
+    )
+    ..registerLazySingleton(
+      () => HerdActivitySyncer(remote: sl(), local: sl()),
+    )
+    ..registerLazySingleton(
+      // All 13 offline-mirrored entities: applies inbound /sync/deletions
+      // tombstones per entity.
+      () => DeletionsDataSource(
+        dio: sl(),
+        stores: {
+          'land': sl<LandLocalDataSource>(),
+          'plant': sl<PlantLocalDataSource>(),
+          'season': sl<SeasonLocalDataSource>(),
+          'animal': sl<AnimalLocalDataSource>(),
+          'harvest': sl<HarvestLocalDataSource>(),
+          'input': sl<InputLocalDataSource>(),
+          'activity': sl<ActivityLocalDataSource>(),
+          'animal_type': sl<AnimalTypeLocalDataSource>(),
+          'herd': sl<HerdLocalDataSource>(),
+          'infrastructure': sl<InfrastructureLocalDataSource>(),
+          'revenue': sl<RevenueLocalDataSource>(),
+          'cost_category': sl<CostCategoryLocalDataSource>(),
+          'herd_activity': sl<HerdActivityLocalDataSource>(),
+        },
+      ),
     )
     ..registerLazySingleton(
       () => SyncEngine(
         outbox: sl(),
-        syncers: [sl<LandSyncer>()],
+        syncers: [
+          sl<LandSyncer>(),
+          sl<PlantSyncer>(),
+          sl<SeasonSyncer>(),
+          sl<AnimalSyncer>(),
+          sl<HarvestSyncer>(),
+          sl<InputSyncer>(),
+          sl<ActivitySyncer>(),
+          sl<AnimalTypeSyncer>(),
+          sl<HerdSyncer>(),
+          sl<InfrastructureSyncer>(),
+          sl<RevenueSyncer>(),
+          sl<CostCategorySyncer>(),
+          sl<HerdActivitySyncer>(),
+        ],
         cursors: sl(),
         connectivity: sl(),
         deletions: sl<DeletionsDataSource>(),
+        // Pre-flip hardening: gate every sync pass on an authenticated
+        // session so a pre-login launch/resume/connectivity-regain trigger
+        // never hits a protected endpoint, gets a 401, and forces an
+        // unwarranted logout (see `SyncEngine`'s "Authenticated gate" doc).
+        // isLoggedIn() (not a bare token-presence check) is expiry-aware: a
+        // token stored >24h ago is treated as unauthenticated, not just an
+        // absent one, so a stale session can't slip a pass through either.
+        isAuthenticated: () => UserStorageService.isLoggedIn(),
+        // Pre-flip hardening: surface an otherwise-swallowed non-transient
+        // pass failure (see SyncEngine's "Error logging" doc) via the app
+        // logger instead of silently ending the pass in `SyncPhase.error`.
+        onError: (error, stackTrace) =>
+            appLogger.logError('SyncEngine', error, stackTrace),
       ),
     );
 
-  // Blocks until the async `AppDatabase` singleton (real file open, when
-  // `database` wasn't supplied) has completed - callers of `await di.init()`
-  // are guaranteed a fully-open DB before proceeding (e.g. `main()` before
-  // `runApp`).
+  // Blocks until the async `AppDatabase` singleton is CONSTRUCTED (when
+  // `database` wasn't supplied) - callers of `await di.init()` are guaranteed
+  // the DB object exists before proceeding (e.g. `main()` before `runApp`).
+  // Its `LazyDatabase` opens the SQLite file lazily on the first query, so
+  // this does NOT force a file open at startup (flag-off, no query ever runs)
+  // - keeping init free of startup file I/O for the dark ship.
   await sl.allReady();
 }

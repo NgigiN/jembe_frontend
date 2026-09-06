@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/error/failures.dart';
@@ -262,6 +264,60 @@ void main() {
       expect: () => [
         LandError('boom', lands: [land()]),
       ],
+    );
+  });
+
+  group('watch stream resilience (onError / onDone)', () {
+    late StreamController<List<Land>> controller;
+
+    setUp(() {
+      controller = StreamController<List<Land>>();
+    });
+
+    tearDown(() async {
+      if (!controller.isClosed) await controller.close();
+    });
+
+    blocTest<LandBloc, LandState>(
+      'a stream error emits a non-fatal LandError over the last known '
+      'lands without crashing the bloc, and the subscription stays alive '
+      'for a later emission (proving it was not torn down by the error)',
+      setUp: () => OfflineConfig.enabled = true,
+      build: () {
+        when(() => mockWatchLands()).thenAnswer((_) => controller.stream);
+        return buildBloc();
+      },
+      seed: () => LandLoaded(lands: [land()]),
+      act: (bloc) async {
+        bloc.add(WatchLandsEvent());
+        await Future<void>.delayed(Duration.zero);
+        controller.addError(Exception('boom'));
+        await Future<void>.delayed(Duration.zero);
+        controller.add([land(id: 'land-2')]);
+      },
+      wait: const Duration(milliseconds: 50),
+      expect: () => [
+        LandError('Live sync interrupted. Pull to refresh.', lands: [land()]),
+        LandLoaded(lands: [land(id: 'land-2')]),
+      ],
+    );
+
+    blocTest<LandBloc, LandState>(
+      'a completed stream (onDone) does not emit any state or crash the '
+      'bloc',
+      setUp: () => OfflineConfig.enabled = true,
+      build: () {
+        when(() => mockWatchLands()).thenAnswer((_) => controller.stream);
+        return buildBloc();
+      },
+      seed: () => LandLoaded(lands: [land()]),
+      act: (bloc) async {
+        bloc.add(WatchLandsEvent());
+        await Future<void>.delayed(Duration.zero);
+        await controller.close();
+      },
+      wait: const Duration(milliseconds: 50),
+      expect: () => <LandState>[],
     );
   });
 }

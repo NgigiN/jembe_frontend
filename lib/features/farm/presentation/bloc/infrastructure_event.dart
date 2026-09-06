@@ -9,6 +9,12 @@ abstract class InfrastructureEvent extends Equatable {
 
 class GetInfrastructuresEvent extends InfrastructureEvent {}
 
+/// Flag-ON only: subscribes (or re-subscribes) `InfrastructureBloc` to
+/// `repository.watchInfrastructures()`. Every subsequent stream emission is
+/// turned into an `InfrastructureLoaded(...)` state — see
+/// `InfrastructureBloc`'s internal `_InfrastructuresUpdated` event for how.
+class WatchInfrastructureEvent extends InfrastructureEvent {}
+
 class AddInfrastructureEvent extends InfrastructureEvent {
   const AddInfrastructureEvent({
     required this.type,

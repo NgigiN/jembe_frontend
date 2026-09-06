@@ -5,10 +5,16 @@ import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/farm/data/models/revenue_model.dart';
 
 abstract class RevenueRemoteDataSource {
+  /// Fetches revenues matching the given filters, or — when [updatedSince]
+  /// is given — only those the server has changed strictly after that
+  /// instant (used by the sync pull phase, which passes ONLY
+  /// [updatedSince], never [source]/[startDate]/[endDate]). Existing
+  /// filtered callers (the flag-off repo path) are unaffected.
   Future<List<RevenueModel>> getRevenues({
     String? source,
     DateTime? startDate,
     DateTime? endDate,
+    DateTime? updatedSince,
   });
   Future<RevenueModel> getRevenueById(String id);
   Future<RevenueModel> addRevenue(RevenueModel revenue);
@@ -25,6 +31,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
     String? source,
     DateTime? startDate,
     DateTime? endDate,
+    DateTime? updatedSince,
   }) async {
     try {
       final queryParams = <String, dynamic>{};
@@ -36,6 +43,9 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
       }
       if (endDate != null) {
         queryParams['end_date'] = endDate.toIso8601String().split('T')[0];
+      }
+      if (updatedSince != null) {
+        queryParams['updated_since'] = updatedSince.toUtc().toIso8601String();
       }
 
       final response = await dio.get<dynamic>(
@@ -87,7 +97,16 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
     try {
       final response = await dio.post<dynamic>(
         '/api/v1/revenue',
-        data: revenue.toJson(),
+        data: {
+          ...revenue.toJson(),
+          // Required for the offline sync path: P1's create endpoint keys
+          // its idempotency check on (user_id, client_uuid) — a retried
+          // push (same clientUuid) returns the ALREADY-created row instead
+          // of duplicating it. Harmless for the flag-off legacy path too:
+          // `RevenueModel.create` always mints a fresh clientUuid there, so
+          // this is just an unused-but-valid extra field server-side.
+          'client_uuid': revenue.clientUuid,
+        },
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {

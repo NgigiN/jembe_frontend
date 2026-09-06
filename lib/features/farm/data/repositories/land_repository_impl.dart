@@ -5,6 +5,7 @@ import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
+import 'package:farm_tracker/core/offline/offline_repository.dart';
 import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/outbox_coalescing.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
@@ -40,7 +41,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/land_repository.d
 /// nullable `serverId` is used ONLY by the syncer (via `LandModel.fromDrift`)
 /// to build server URLs — it never surfaces through this repository's
 /// presentation.
-class LandRepositoryImpl implements LandRepository {
+class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {
   LandRepositoryImpl({
     required this.remoteDataSource,
     this.local,
@@ -62,6 +63,13 @@ class LandRepositoryImpl implements LandRepository {
   bool get _offlineFirst =>
       OfflineConfig.enabled && local != null && outbox != null && sync != null;
 
+  @override
+  String get syncEntity => 'land';
+  @override
+  OutboxDao? get syncOutbox => outbox;
+  @override
+  SyncEngine? get syncEngine => sync;
+
   Land _toLand(LandModel model) => Land(
     id: model.clientUuid,
     userId: model.userId,
@@ -77,7 +85,7 @@ class LandRepositoryImpl implements LandRepository {
   @override
   Stream<List<Land>> watchLands() {
     if (OfflineConfig.enabled && local != null) {
-      return local!.watchLands().map((models) => models.map(_toLand).toList());
+      return watchAsDomain(local!.watchLands(), _toLand);
     }
     // Unused by the app while the flag is off (the bloc keeps its
     // remote-polling `GetLandsEvent` path) — this only needs to compile and
@@ -118,16 +126,12 @@ class LandRepositoryImpl implements LandRepository {
         tenureType: land.tenureType,
         uuid: uuid,
       );
-      await local!.upsert(model, pending: true);
-      await outbox!.enqueue(
-        OutboxIntent(
-          op: OutboxOp.create,
-          entity: 'land',
-          clientUuid: model.clientUuid,
-          payload: jsonEncode(model.toJson()),
-        ),
+      await stageWrite(
+        local!,
+        model,
+        jsonEncode(model.toJson()),
+        OutboxOp.create,
       );
-      unawaited(sync!.syncNow());
       return Right(_toLand(model));
     }
 
@@ -172,16 +176,12 @@ class LandRepositoryImpl implements LandRepository {
         updatedAt: DateTime.now(),
         pending: true,
       );
-      await local!.upsert(updated, pending: true);
-      await outbox!.enqueue(
-        OutboxIntent(
-          op: OutboxOp.update,
-          entity: 'land',
-          clientUuid: land.id,
-          payload: jsonEncode(updated.toJson()),
-        ),
+      await stageWrite(
+        local!,
+        updated,
+        jsonEncode(updated.toJson()),
+        OutboxOp.update,
       );
-      unawaited(sync!.syncNow());
       return Right(land);
     }
 
@@ -212,11 +212,7 @@ class LandRepositoryImpl implements LandRepository {
   Future<Either<Failure, void>> deleteLand(String id) async {
     if (_offlineFirst) {
       // `id` is a clientUuid (presentation identity) — see class docs.
-      await local!.markDeleted(id);
-      await outbox!.enqueue(
-        OutboxIntent(op: OutboxOp.delete, entity: 'land', clientUuid: id),
-      );
-      unawaited(sync!.syncNow());
+      await stageDelete(local!, id);
       return const Right(null);
     }
 

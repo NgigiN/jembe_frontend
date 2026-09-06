@@ -1,5 +1,6 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
@@ -46,7 +47,11 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
     super.initState();
     final bloc = context.read<InfrastructureBloc>();
     if (bloc.state is! InfrastructureLoaded) {
-      bloc.add(GetInfrastructuresEvent());
+      if (OfflineConfig.enabled) {
+        bloc.add(WatchInfrastructureEvent());
+      } else {
+        bloc.add(GetInfrastructuresEvent());
+      }
     }
   }
 

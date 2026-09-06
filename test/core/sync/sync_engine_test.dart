@@ -47,7 +47,11 @@ void main() {
   late List<String> events;
   late SyncEngine engine;
 
-  SyncEngine build({List<OutboxRow> rows = const []}) {
+  SyncEngine build({
+    List<OutboxRow> rows = const [],
+    Future<bool> Function()? isAuthenticated,
+    void Function(Object error, StackTrace stackTrace)? onError,
+  }) {
     events = <String>[];
     connectivity = _FakeConnectivity();
     outbox = _FakeOutbox(List.of(rows));
@@ -60,6 +64,8 @@ void main() {
       cursors: cursors,
       connectivity: connectivity,
       deletions: deletions,
+      isAuthenticated: isAuthenticated,
+      onError: onError,
     );
   }
 
@@ -83,6 +89,30 @@ void main() {
     expect(outbox.acked, isEmpty);
     expect(engine.status.phase, SyncPhase.idle);
     expect(engine.status.pendingCount, 1);
+  });
+
+  test('unauthenticated: syncNow calls no push or pull (no-op) even when '
+      'online', () async {
+    engine = build(rows: [_row(1)], isAuthenticated: () async => false);
+
+    await engine.syncNow();
+
+    expect(syncer.pushCount, 0);
+    expect(syncer.pullCount, 0);
+    expect(outbox.acked, isEmpty);
+    expect(engine.status.phase, SyncPhase.idle);
+    expect(engine.status.pendingCount, 1);
+  });
+
+  test('authenticated + online: the pass runs as before', () async {
+    engine = build(rows: [_row(1)], isAuthenticated: () async => true);
+
+    await engine.syncNow();
+
+    expect(syncer.pushCount, 1);
+    expect(syncer.pullCount, 1);
+    expect(outbox.acked, [1]);
+    expect(engine.status.phase, SyncPhase.idle);
   });
 
   test('push runs before pull, deletions runs last', () async {
@@ -174,6 +204,77 @@ void main() {
 
     expect(syncer.pullSinceArgs, hasLength(1));
     expect(syncer.pullSinceArgs.single!.isAtSameMomentAs(since), isTrue);
+  });
+
+  group('deletions cursor excludes cursorless syncers', () {
+    // A cursorless syncer (`hasCursor = false`, e.g. `CostCategorySyncer` —
+    // no timestamps, `pull` always returns `null`) has a PERMANENTLY null
+    // entry in `preCursors`. Before this fix, `_oldestCursor` would treat
+    // that the same as a genuinely-unsynced entity and force
+    // `applyDeletions(null)` (a full replay) on every single pass, forever.
+    late _FakeSyncer landSyncer;
+    late _FakeSyncer costCategorySyncer;
+    late _FakeCursors localCursors;
+    late _FakeDeletions localDeletions;
+    late _FakeConnectivity localConnectivity;
+    late SyncEngine localEngine;
+
+    void buildTwoSyncerEngine() {
+      landSyncer = _FakeSyncer('land', events);
+      costCategorySyncer = _FakeSyncer('cost_category', events)
+        ..hasCursor = false;
+      localCursors = _FakeCursors();
+      localDeletions = _FakeDeletions(events);
+      localConnectivity = _FakeConnectivity();
+      localEngine = SyncEngine(
+        outbox: _FakeOutbox(const []),
+        syncers: [landSyncer, costCategorySyncer],
+        cursors: localCursors,
+        connectivity: localConnectivity,
+        deletions: localDeletions,
+      );
+    }
+
+    tearDown(() {
+      localEngine.dispose();
+      localConnectivity.dispose();
+    });
+
+    test(
+      'a cursor-bearing entity with an already-set cursor calls '
+      'applyDeletions with THAT cursor, not null — the cursorless '
+      "syncer's perpetual-null cursor no longer forces a full replay",
+      () async {
+        buildTwoSyncerEngine();
+        final since = DateTime.utc(2026, 4);
+        localCursors.storage['land'] = since;
+        // cost_category never gets an entry in `storage` — its cursor is
+        // permanently null; it must not drag the computation down to null.
+
+        await localEngine.syncNow();
+
+        expect(localDeletions.sinceArgs, hasLength(1));
+        expect(localDeletions.sinceArgs.single, isNotNull);
+        expect(
+          localDeletions.sinceArgs.single!.isAtSameMomentAs(since),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'a genuinely-unsynced cursor-bearing entity (null cursor) still '
+      'forces applyDeletions(null), even alongside a cursorless syncer',
+      () async {
+        buildTwoSyncerEngine();
+        // Neither `land` nor `cost_category` has a stored cursor. `land` IS
+        // cursor-bearing, so its null cursor must still force a full replay.
+
+        await localEngine.syncNow();
+
+        expect(localDeletions.sinceArgs, [null]);
+      },
+    );
   });
 
   test('transient (NetworkException) push: entry not acked, status error, '
@@ -286,6 +387,58 @@ void main() {
     expect(engine.status.phase, SyncPhase.idle);
   });
 
+  test('generic (non-network) error: the injected onError hook is called '
+      'with the error + stack trace, and status ends error', () async {
+    final logged = <Object>[];
+    final loggedStackTraces = <StackTrace>[];
+    engine = build(
+      rows: [_row(1)],
+      onError: (error, stackTrace) {
+        logged.add(error);
+        loggedStackTraces.add(stackTrace);
+      },
+    );
+    final thrown = Exception('boom');
+    syncer.pullThrows = thrown;
+
+    await engine.syncNow();
+
+    expect(logged, [thrown]);
+    expect(loggedStackTraces, hasLength(1));
+    expect(engine.status.phase, SyncPhase.error);
+  });
+
+  test('transient (NetworkException) error: the injected onError hook is '
+      'NOT called (backoff retry is the signal for an expected/offline '
+      'failure, not a log line)', () {
+    fakeAsync((async) {
+      var calls = 0;
+      engine = build(
+        rows: [_row(1)],
+        onError: (error, stackTrace) => calls++,
+      );
+      syncer.onPush = (row) => NetworkException();
+
+      unawaited(engine.syncNow());
+      async.flushMicrotasks();
+
+      expect(engine.status.phase, SyncPhase.error);
+      expect(calls, 0);
+
+      engine.dispose();
+    });
+  });
+
+  test('no onError hook supplied: a generic error still ends status error '
+      'without throwing (default no-op)', () async {
+    engine = build(rows: [_row(1)]);
+    syncer.pullThrows = Exception('boom');
+
+    await engine.syncNow();
+
+    expect(engine.status.phase, SyncPhase.error);
+  });
+
   test('start(): regaining connectivity triggers a sync', () async {
     engine = build(rows: [_row(1)])..start();
 
@@ -334,6 +487,13 @@ class _FakeSyncer implements EntitySyncer {
   @override
   final String entity;
   final List<String> _events;
+
+  /// Settable so a test can build a "cost_category-like" cursorless syncer
+  /// (`hasCursor = false`) alongside a normal cursor-bearing one — defaults
+  /// to `true` (every existing test's fake syncer is cursor-bearing, like
+  /// `land`).
+  @override
+  bool hasCursor = true;
 
   int pushCount = 0;
   int pullCount = 0;

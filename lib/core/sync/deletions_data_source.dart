@@ -3,22 +3,25 @@ import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/core/sync/entity_syncer.dart';
-import 'package:farm_tracker/features/farm/data/datasources/land_local_data_source.dart';
+import 'package:farm_tracker/core/sync/sync_contracts.dart';
 
 /// Applies P1's `/api/v1/sync/deletions` tombstone feed to the local mirror.
 ///
 /// The server returns every hard-deletion across ALL offline-mirrored
-/// entities as `[{entity, id, client_uuid, deleted_at}]`. This phase of the
-/// pilot only knows how to apply `land` tombstones (`landLocal.hardDelete`);
-/// tombstones for every other entity are ignored — their local mirrors land
-/// in later phases. [applyDeletions] is idempotent: re-applying an
-/// already-gone row's tombstone is a no-op (`hardDelete` is a DELETE...WHERE,
-/// safe when nothing matches).
+/// entities as `[{entity, id, client_uuid, deleted_at}]`. [applyDeletions]
+/// applies a tombstone for every entity registered in [stores]; tombstones
+/// for an entity with no registered store are ignored — that entity's local
+/// mirror lands in a later rollout task. [applyDeletions] is idempotent:
+/// re-applying an already-gone row's tombstone is a no-op (`hardDelete` is a
+/// DELETE...WHERE, safe when nothing matches).
 class DeletionsDataSource implements DeletionsApplier {
-  DeletionsDataSource({required this.dio, required this.landLocal});
+  DeletionsDataSource({required this.dio, required this.stores});
 
   final Dio dio;
-  final LandLocalDataSource landLocal;
+
+  /// The local mirror for each offline-mirrored entity, keyed by the same
+  /// `entity` tag used in the outbox/tombstone feed (e.g. `'land'`).
+  final Map<String, LocalSyncStore<SyncableModel>> stores;
 
   @override
   Future<void> applyDeletions(DateTime? since) async {
@@ -53,11 +56,12 @@ class DeletionsDataSource implements DeletionsApplier {
 
   Future<void> _applyTombstone(Map<String, dynamic> tombstone) async {
     final entity = (tombstone['entity'] ?? '').toString();
-    if (entity != 'land') return; // other entities' phases come later.
+    final store = stores[entity];
+    if (store == null) return; // no local mirror registered for this entity yet.
 
     final clientUuid = (tombstone['client_uuid'] ?? '').toString();
     if (clientUuid.isNotEmpty) {
-      await landLocal.hardDelete(clientUuid);
+      await store.hardDelete(clientUuid);
       return;
     }
 
@@ -66,9 +70,7 @@ class DeletionsDataSource implements DeletionsApplier {
     final serverId = (tombstone['id'] ?? '').toString();
     if (serverId.isEmpty) return; // nothing to key on.
 
-    final local = await landLocal.getByServerId(serverId);
-    if (local != null) {
-      await landLocal.hardDelete(local.clientUuid);
-    }
+    final local = await store.getByServerId(serverId);
+    if (local != null) await store.hardDelete(local.syncClientUuid);
   }
 }

@@ -5,7 +5,11 @@ import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/farm/data/models/infrastructure_model.dart';
 
 abstract class InfrastructureRemoteDataSource {
-  Future<List<InfrastructureModel>> getInfrastructures();
+  /// Fetches all infrastructure rows, or — when [updatedSince] is given —
+  /// only those the server has changed strictly after that instant (used by
+  /// the sync pull phase). Existing no-arg callers (the flag-off repo path)
+  /// are unaffected.
+  Future<List<InfrastructureModel>> getInfrastructures({DateTime? updatedSince});
   Future<InfrastructureModel> addInfrastructure(InfrastructureModel infrastructure);
   Future<InfrastructureModel> updateInfrastructure(InfrastructureModel infrastructure);
   Future<void> deleteInfrastructure(String id);
@@ -16,9 +20,18 @@ class InfrastructureRemoteDataSourceImpl implements InfrastructureRemoteDataSour
   final Dio dio;
 
   @override
-  Future<List<InfrastructureModel>> getInfrastructures() async {
+  Future<List<InfrastructureModel>> getInfrastructures({
+    DateTime? updatedSince,
+  }) async {
     try {
-      final response = await dio.get<dynamic>('/api/v1/infrastructure');
+      final queryParams = updatedSince != null
+          ? {'updated_since': updatedSince.toUtc().toIso8601String()}
+          : null;
+
+      final response = await dio.get<dynamic>(
+        '/api/v1/infrastructure',
+        queryParameters: queryParams,
+      );
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -44,7 +57,17 @@ class InfrastructureRemoteDataSourceImpl implements InfrastructureRemoteDataSour
     try {
       final response = await dio.post<dynamic>(
         '/api/v1/infrastructure',
-        data: infrastructure.toJson(),
+        data: {
+          ...infrastructure.toJson(),
+          // Required for the offline sync path: P1's create endpoint keys
+          // its idempotency check on (user_id, client_uuid) — a retried
+          // push (same clientUuid) returns the ALREADY-created row instead
+          // of duplicating it. Harmless for the flag-off legacy path too:
+          // `InfrastructureModel.create` always mints a fresh clientUuid
+          // there, so this is just an unused-but-valid extra field
+          // server-side.
+          'client_uuid': infrastructure.clientUuid,
+        },
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {

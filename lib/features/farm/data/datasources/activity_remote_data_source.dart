@@ -5,7 +5,15 @@ import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
 
 abstract class ActivityRemoteDataSource {
-  Future<List<ActivityModel>> getActivities({String? sourceType});
+  /// Fetches activities, optionally filtered by [sourceType] (unrelated to
+  /// offline sync — an existing app-level filter), or — when [updatedSince]
+  /// is given — only those the server has changed strictly after that
+  /// instant (used by the sync pull phase, which passes ONLY [updatedSince],
+  /// never [sourceType]). Existing callers are unaffected.
+  Future<List<ActivityModel>> getActivities({
+    String? sourceType,
+    DateTime? updatedSince,
+  });
   Future<ActivityModel> addActivity(ActivityModel activity);
   Future<ActivityModel> updateActivity(ActivityModel activity);
   Future<void> deleteActivity(String id);
@@ -16,15 +24,21 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
   final Dio dio;
 
   @override
-  Future<List<ActivityModel>> getActivities({String? sourceType}) async {
+  Future<List<ActivityModel>> getActivities({
+    String? sourceType,
+    DateTime? updatedSince,
+  }) async {
     try {
-      final queryParams = sourceType != null && sourceType.isNotEmpty
-          ? {'source_type': sourceType}
-          : null;
+      final queryParams = <String, dynamic>{
+        if (sourceType != null && sourceType.isNotEmpty)
+          'source_type': sourceType,
+        if (updatedSince != null)
+          'updated_since': updatedSince.toUtc().toIso8601String(),
+      };
 
       final response = await dio.get<dynamic>(
         '/api/v1/activities',
-        queryParameters: queryParams,
+        queryParameters: queryParams.isEmpty ? null : queryParams,
       );
 
       appLogger.debug(
@@ -86,6 +100,13 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       if (activity.animalId != null && activity.animalId != 0) {
         requestBody['animal_id'] = activity.animalId;
       }
+      // Required for the offline sync path: P1's create endpoint keys its
+      // idempotency check on (user_id, client_uuid) — a retried push (same
+      // clientUuid) returns the ALREADY-created row instead of duplicating
+      // it. Harmless for the flag-off legacy path too: `ActivityModel.create`
+      // always mints a fresh clientUuid there, so this is just an
+      // unused-but-valid extra field server-side.
+      requestBody['client_uuid'] = activity.clientUuid;
 
       final response = await dio.post<Map<String, dynamic>>(
         '/api/v1/activities',

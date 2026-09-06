@@ -6,9 +6,11 @@ import 'package:drift/native.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/sync/deletions_data_source.dart';
+import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/datasources/land_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/land_model.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
 /// Fake [HttpClientAdapter] that returns a canned body/status without
 /// touching the network, and records the [RequestOptions] it was called
@@ -57,6 +59,20 @@ class _ThrowingAdapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
+/// Mocktail double for a registered entity's local mirror — used to prove
+/// tombstones route to the correct entry in [DeletionsDataSource.stores]
+/// without needing a second real drift-backed data source per entity.
+class _MockLocalStore extends Mock implements LocalSyncStore<SyncableModel> {}
+
+/// Minimal [SyncableModel] returned by a mocked `getByServerId`, just enough
+/// to exercise the no-client_uuid fallback (`local.syncClientUuid`).
+class _FakeSyncableModel extends Fake implements SyncableModel {
+  _FakeSyncableModel(this.syncClientUuid);
+
+  @override
+  final String syncClientUuid;
+}
+
 LandModel _land({required String clientUuid, required String id}) {
   final now = DateTime.utc(2026);
   return LandModel(
@@ -94,7 +110,10 @@ void main() {
           '[{"entity":"land","id":1,"client_uuid":"cu-1",'
           '"deleted_at":"2026-01-02T00:00:00Z"}]',
     );
-    final source = DeletionsDataSource(dio: dioWith(adapter), landLocal: landLocal);
+    final source = DeletionsDataSource(
+      dio: dioWith(adapter),
+      stores: {'land': landLocal},
+    );
 
     await source.applyDeletions(null);
 
@@ -108,7 +127,10 @@ void main() {
           '[{"entity":"plant","id":2,"client_uuid":"cu-2",'
           '"deleted_at":"2026-01-02T00:00:00Z"}]',
     );
-    final source = DeletionsDataSource(dio: dioWith(adapter), landLocal: landLocal);
+    final source = DeletionsDataSource(
+      dio: dioWith(adapter),
+      stores: {'land': landLocal},
+    );
 
     await source.applyDeletions(null);
 
@@ -122,7 +144,10 @@ void main() {
           '[{"entity":"land","id":3,"client_uuid":"",'
           '"deleted_at":"2026-01-02T00:00:00Z"}]',
     );
-    final source = DeletionsDataSource(dio: dioWith(adapter), landLocal: landLocal);
+    final source = DeletionsDataSource(
+      dio: dioWith(adapter),
+      stores: {'land': landLocal},
+    );
 
     await source.applyDeletions(null);
 
@@ -135,7 +160,10 @@ void main() {
           '[{"entity":"land","id":99,"client_uuid":"missing",'
           '"deleted_at":"2026-01-02T00:00:00Z"}]',
     );
-    final source = DeletionsDataSource(dio: dioWith(adapter), landLocal: landLocal);
+    final source = DeletionsDataSource(
+      dio: dioWith(adapter),
+      stores: {'land': landLocal},
+    );
 
     await source.applyDeletions(null);
     await source.applyDeletions(null);
@@ -145,7 +173,10 @@ void main() {
 
   test('sends updated_since as an RFC3339 query param when given', () async {
     final adapter = _FakeAdapter(body: '[]');
-    final source = DeletionsDataSource(dio: dioWith(adapter), landLocal: landLocal);
+    final source = DeletionsDataSource(
+      dio: dioWith(adapter),
+      stores: {'land': landLocal},
+    );
 
     await source.applyDeletions(DateTime.utc(2026, 3, 4));
 
@@ -157,7 +188,10 @@ void main() {
 
   test('omits the query param when since is null', () async {
     final adapter = _FakeAdapter(body: '[]');
-    final source = DeletionsDataSource(dio: dioWith(adapter), landLocal: landLocal);
+    final source = DeletionsDataSource(
+      dio: dioWith(adapter),
+      stores: {'land': landLocal},
+    );
 
     await source.applyDeletions(null);
 
@@ -167,7 +201,7 @@ void main() {
   test('propagates a NetworkException on connection failure', () async {
     final source = DeletionsDataSource(
       dio: dioWith(_ThrowingAdapter()),
-      landLocal: landLocal,
+      stores: {'land': landLocal},
     );
 
     await expectLater(
@@ -178,11 +212,96 @@ void main() {
 
   test('propagates a ServerException on a non-200 response', () async {
     final adapter = _FakeAdapter(body: '{"error":"boom"}', statusCode: 500);
-    final source = DeletionsDataSource(dio: dioWith(adapter), landLocal: landLocal);
+    final source = DeletionsDataSource(
+      dio: dioWith(adapter),
+      stores: {'land': landLocal},
+    );
 
     await expectLater(
       source.applyDeletions(null),
       throwsA(isA<ServerException>()),
+    );
+  });
+
+  group('entity-keyed routing (two registered entities)', () {
+    late _MockLocalStore landStore;
+    late _MockLocalStore plantStore;
+
+    setUp(() {
+      landStore = _MockLocalStore();
+      plantStore = _MockLocalStore();
+      when(() => landStore.hardDelete(any())).thenAnswer((_) async {});
+      when(() => plantStore.hardDelete(any())).thenAnswer((_) async {});
+    });
+
+    DeletionsDataSource sourceWith(HttpClientAdapter adapter) {
+      return DeletionsDataSource(
+        dio: dioWith(adapter),
+        stores: {'land': landStore, 'plant': plantStore},
+      );
+    }
+
+    test('a land tombstone hard-deletes on the land store only', () async {
+      final adapter = _FakeAdapter(
+        body:
+            '[{"entity":"land","id":1,"client_uuid":"cu-land-1",'
+            '"deleted_at":"2026-01-02T00:00:00Z"}]',
+      );
+
+      await sourceWith(adapter).applyDeletions(null);
+
+      verify(() => landStore.hardDelete('cu-land-1')).called(1);
+      verifyNever(() => plantStore.hardDelete(any()));
+    });
+
+    test('a plant tombstone hard-deletes on the plant store only', () async {
+      final adapter = _FakeAdapter(
+        body:
+            '[{"entity":"plant","id":2,"client_uuid":"cu-plant-1",'
+            '"deleted_at":"2026-01-02T00:00:00Z"}]',
+      );
+
+      await sourceWith(adapter).applyDeletions(null);
+
+      verify(() => plantStore.hardDelete('cu-plant-1')).called(1);
+      verifyNever(() => landStore.hardDelete(any()));
+    });
+
+    test(
+      'a tombstone for an unregistered entity is a no-op on every store',
+      () async {
+        final adapter = _FakeAdapter(
+          body:
+              '[{"entity":"animal","id":3,"client_uuid":"cu-animal-1",'
+              '"deleted_at":"2026-01-02T00:00:00Z"}]',
+        );
+
+        await sourceWith(adapter).applyDeletions(null);
+
+        verifyNever(() => landStore.hardDelete(any()));
+        verifyNever(() => plantStore.hardDelete(any()));
+      },
+    );
+
+    test(
+      'the no-client_uuid fallback resolves via getByServerId then hard-deletes '
+      'on the right store',
+      () async {
+        when(
+          () => plantStore.getByServerId('5'),
+        ).thenAnswer((_) async => _FakeSyncableModel('resolved-cu'));
+        final adapter = _FakeAdapter(
+          body:
+              '[{"entity":"plant","id":5,"client_uuid":"",'
+              '"deleted_at":"2026-01-02T00:00:00Z"}]',
+        );
+
+        await sourceWith(adapter).applyDeletions(null);
+
+        verify(() => plantStore.getByServerId('5')).called(1);
+        verify(() => plantStore.hardDelete('resolved-cu')).called(1);
+        verifyNever(() => landStore.hardDelete(any()));
+      },
     );
   });
 }

@@ -16,6 +16,23 @@ class LoadRevenues extends RevenueEvent {
   List<Object?> get props => [source, startDate, endDate];
 }
 
+/// Flag-on counterpart to [LoadRevenues]: on first dispatch, subscribes to
+/// the repository's reactive, UNFILTERED `watchRevenues()` stream (guarded
+/// against a double-subscribe — see `RevenueBloc._watchStarted`) and caches
+/// every emission. [source]/[startDate]/[endDate] seed (and, on a later
+/// dispatch, UPDATE) the bloc's in-memory filter — re-dispatching this event
+/// after the stream is already live never re-subscribes; it only changes
+/// which of the cached revenues get emitted. See `RevenueBloc`'s R1 doc.
+class WatchRevenuesEvent extends RevenueEvent {
+  WatchRevenuesEvent({this.source, this.startDate, this.endDate});
+  final String? source;
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  @override
+  List<Object?> get props => [source, startDate, endDate];
+}
+
 
 class AddRevenueEvent extends RevenueEvent {
 

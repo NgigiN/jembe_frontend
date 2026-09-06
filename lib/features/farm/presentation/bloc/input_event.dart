@@ -14,6 +14,19 @@ class GetInputsEvent extends InputEvent {
   List<Object> get props => [sourceType ?? ''];
 }
 
+/// Flag-ON only: subscribes (or re-subscribes) `InputBloc` to
+/// `repository.watchInputs(sourceType:)`, scoped exactly like the existing
+/// `GetInputsEvent(sourceType:)`. Every subsequent stream emission is turned
+/// into an `InputLoaded(inputs: ...)` state — see `InputBloc`'s internal
+/// `_InputsUpdated` event for how.
+class WatchInputsEvent extends InputEvent {
+  WatchInputsEvent({this.sourceType});
+  final String? sourceType;
+
+  @override
+  List<Object> get props => [sourceType ?? ''];
+}
+
 class AddInputEvent extends InputEvent {
   AddInputEvent(this.input);
   final Input input;

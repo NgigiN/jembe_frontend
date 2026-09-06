@@ -1,9 +1,10 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 
-class LandModel extends Land {
+class LandModel extends Land implements SyncableModel {
   const LandModel({
     required super.id,
     required super.userId,
@@ -152,6 +153,47 @@ class LandModel extends Land {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+    );
+  }
+
+  // --- SyncableModel: the read-only sync fields BaseEntitySyncer reads off
+  // this model, mapped onto LandModel's existing fields (the server id lives on
+  // `id`, blank until synced; the local flags on `pending`/`deletedLocally`).
+  @override
+  String get syncClientUuid => clientUuid;
+
+  @override
+  String get syncServerId => id;
+
+  @override
+  DateTime get syncUpdatedAt => updatedAt;
+
+  @override
+  bool get syncPending => pending;
+
+  @override
+  bool get syncDeletedLocally => deletedLocally;
+
+  /// Returns this model with [clientUuid] substituted, every other field
+  /// untouched — or `this` unchanged when it already carries [clientUuid]. Used
+  /// by the pull reconciler to re-key a server row under the local row's client
+  /// uuid before upserting. Mirrors the old `LandSyncer._withClientUuid`
+  /// verbatim: the copy carries no local sync flags (they default `false`),
+  /// which is exactly how the pulled server row is always upserted.
+  @override
+  LandModel withSyncClientUuid(String clientUuid) {
+    if (this.clientUuid == clientUuid) return this;
+    return LandModel(
+      id: id,
+      clientUuid: clientUuid,
+      userId: userId,
+      name: name,
+      size: size,
+      location: location,
+      soilType: soilType,
+      tenureType: tenureType,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 }

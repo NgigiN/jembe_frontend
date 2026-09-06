@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
@@ -25,6 +26,21 @@ class _LandsUpdated extends LandEvent {
 
   @override
   List<Object> get props => [lands];
+}
+
+/// Internal-only event: the `WatchLandsEvent` handler's stream subscription
+/// routes its `onError` through here (same reasoning as `_LandsUpdated` —
+/// `emit` is only valid inside an active `on<...>` handler, not from a raw
+/// stream callback). Non-fatal: it surfaces a `LandError` over the last
+/// known `lands` snapshot rather than crashing the bloc or dropping
+/// reactivity — the subscription is NOT cancelled, so a later emission (if
+/// the underlying stream keeps going) still comes through.
+class _LandsWatchFailed extends LandEvent {
+  _LandsWatchFailed(this.message);
+  final String message;
+
+  @override
+  List<Object> get props => [message];
 }
 
 class LandBloc extends Bloc<LandEvent, LandState> {
@@ -56,11 +72,25 @@ class LandBloc extends Bloc<LandEvent, LandState> {
       _watchStarted = true;
       _landsSubscription = watchLands().listen(
         (lands) => add(_LandsUpdated(lands)),
+        onError: (Object error, StackTrace stackTrace) {
+          appLogger.logError('LandBloc.watchLands', error, stackTrace);
+          add(_LandsWatchFailed('Live sync interrupted. Pull to refresh.'));
+        },
+        onDone: () {
+          appLogger.info(
+            LogCategory.farm,
+            'LandBloc.watchLands stream completed',
+          );
+        },
       );
     });
 
     on<_LandsUpdated>((event, emit) {
       emit(LandLoaded(lands: event.lands));
+    });
+
+    on<_LandsWatchFailed>((event, emit) {
+      emit(LandError(event.message, lands: state.lands));
     });
 
     on<AddLandEvent>((event, emit) async {

@@ -14,6 +14,7 @@ abstract class CostCategoryRemoteDataSource {
     required String name,
     required String type,
     required String category,
+    String? clientUuid,
   });
 
   Future<void> deleteCostCategory(String id);
@@ -55,11 +56,22 @@ class CostCategoryRemoteDataSourceImpl implements CostCategoryRemoteDataSource {
     required String name,
     required String type,
     required String category,
+    String? clientUuid,
   }) async {
     try {
       final response = await dio.post<dynamic>(
         '/api/v1/cost-categories',
-        data: {'name': name, 'type': type, 'category': category},
+        data: {
+          'name': name,
+          'type': type,
+          'category': category,
+          // Offline sync path only (Task 9a): P1's create idempotency key is
+          // (user_id, client_uuid) — a retried push (same clientUuid)
+          // resolves to the already-created row server-side instead of
+          // duplicating it. Omitted (and the wire body unchanged) when the
+          // flag-off repo calls this without a clientUuid.
+          if (clientUuid != null) 'client_uuid': clientUuid,
+        },
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
