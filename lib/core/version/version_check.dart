@@ -56,3 +56,15 @@ UpgradeRequirement decideUpgrade(dynamic meta, String current) {
   }
   return UpgradeRequirement.none;
 }
+
+/// Parses the `offline_enabled` kill-switch out of a decoded `/meta` payload.
+///
+/// [metaData] is the same decoded JSON body [decideUpgrade] receives.
+/// Anything malformed — a non-map, a missing field, or a non-bool value
+/// (garbage) — degrades to `false` so a corrupt/unexpected response can never
+/// accidentally turn offline mode on; only an explicit JSON `true` does.
+bool parseOfflineEnabled(dynamic metaData) {
+  if (metaData is! Map) return false;
+  final value = metaData['offline_enabled'];
+  return value is bool && value;
+}

@@ -324,6 +324,82 @@ void main() {
     );
   });
 
+  group('empty-pull cursor advance', () {
+    // Regression coverage: before this fix, a cursor-bearing syncer whose
+    // pull SUCCEEDED but returned null (no rows changed) never had its
+    // cursor set at all. Its cursor stayed permanently null, so
+    // `_oldestCursor` kept returning null forever, forcing an unbounded full
+    // `/sync/deletions` replay on every single pass. The fix advances the
+    // cursor to (pass-start − 2 minutes) instead.
+    late _FakeSyncer landSyncer;
+    late _FakeCursors localCursors;
+    late _FakeDeletions localDeletions;
+    late _FakeConnectivity localConnectivity;
+    late SyncEngine localEngine;
+    late DateTime fakeNow;
+
+    void buildEngine() {
+      landSyncer = _FakeSyncer('land', events);
+      localCursors = _FakeCursors();
+      localDeletions = _FakeDeletions(events);
+      localConnectivity = _FakeConnectivity();
+      localEngine = SyncEngine(
+        outbox: _FakeOutbox(const []),
+        syncers: [landSyncer],
+        cursors: localCursors,
+        connectivity: localConnectivity,
+        deletions: localDeletions,
+        now: () => fakeNow,
+      );
+    }
+
+    tearDown(() {
+      localEngine.dispose();
+      localConnectivity.dispose();
+    });
+
+    test(
+      'a successful empty pull (null result) advances the cursor to '
+      'pass-start minus a 2-minute buffer, instead of leaving it null',
+      () async {
+        fakeNow = DateTime.utc(2026, 5, 5, 12);
+        buildEngine();
+        // landSyncer.pullResult defaults to null: a successful, empty pull.
+
+        await localEngine.syncNow();
+
+        expect(localCursors.storage['land'], isNotNull);
+        expect(
+          localCursors.storage['land']!.isAtSameMomentAs(
+            fakeNow.subtract(const Duration(minutes: 2)),
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'once every cursor-bearing entity has a cursor (even buffer-advanced), '
+      'a later pass calls applyDeletions with a non-null since — no more '
+      'forced full replay',
+      () async {
+        fakeNow = DateTime.utc(2026, 5, 5, 12);
+        buildEngine();
+
+        await localEngine.syncNow(); // pass 1: empty pull, cursor advances.
+        fakeNow = fakeNow.add(const Duration(minutes: 10));
+        await localEngine.syncNow(); // pass 2: preCursors now sees it.
+
+        expect(localDeletions.sinceArgs, hasLength(2));
+        // pass 1 still forces a full replay (preCursors snapshotted BEFORE
+        // pass 1's pull loop advanced the cursor).
+        expect(localDeletions.sinceArgs[0], isNull);
+        // pass 2 sees the cursor the fix set during pass 1.
+        expect(localDeletions.sinceArgs[1], isNotNull);
+      },
+    );
+  });
+
   test('transient (NetworkException) push: entry not acked, status error, '
       'backoff retry fires and succeeds once the syncer recovers', () {
     fakeAsync((async) {

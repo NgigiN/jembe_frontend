@@ -253,7 +253,8 @@ void main() {
 
   test(
     'wipeAll() clears every offline-first table (all 13 entity mirrors, '
-    'Outbox, SyncCursor) in one go',
+    'Outbox, SyncCursor) in one go and completes without error including '
+    'the post-wipe VACUUM',
     () async {
       final db = AppDatabase.forTesting(NativeDatabase.memory());
       final now = DateTime(2026);
@@ -489,6 +490,21 @@ void main() {
       expect(await db.select(db.herdActivities).get(), isEmpty);
       expect(await db.select(db.outbox).get(), isEmpty);
       expect(await db.select(db.syncCursor).get(), isEmpty);
+
+      // The post-wipe VACUUM (a no-op on this in-memory DB, but must still
+      // complete without throwing) didn't leave the schema unusable.
+      await db
+          .into(db.lands)
+          .insert(
+            LandsCompanion.insert(
+              clientUuid: 'post-vacuum',
+              userId: 'u1',
+              name: 'Post-vacuum check',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      expect(await db.select(db.lands).get(), hasLength(1));
 
       await db.close();
     },

@@ -12,7 +12,7 @@ import flutter_secure_storage_macos
 import google_sign_in_ios
 import package_info_plus
 import shared_preferences_foundation
-import sqlite3_flutter_libs
+import sqlcipher_flutter_libs
 import url_launcher_macos
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {

@@ -286,6 +286,11 @@ class SyncEngine {
   }
 
   Future<void> _pullPhase() async {
+    // Captured once, before any syncer's pull runs, so a successful-but-empty
+    // pull can advance its cursor to a stable pass-wide timestamp below
+    // (rather than each syncer racing wall-clock time independently).
+    final passStart = _now();
+
     // Snapshot cursors BEFORE pulling so deletions ask from the same point.
     final preCursors = <String, DateTime?>{};
     for (final syncer in _syncers.values) {
@@ -296,6 +301,26 @@ class SyncEngine {
       final newCursor = await syncer.pull(preCursors[syncer.entity]);
       if (newCursor != null) {
         await _cursors.set(syncer.entity, newCursor);
+      } else if (syncer.hasCursor) {
+        // A cursor-bearing syncer's pull SUCCEEDED (we're past the `await`
+        // inside this loop — an exception would have propagated out and
+        // skipped this branch entirely) but returned null: no rows changed.
+        // Leaving the cursor null forever would make `_oldestCursor` return
+        // null on every future pass, forcing an unbounded full
+        // `/sync/deletions` replay, app-wide, forever. Advance to the
+        // pass-start wall-clock time minus a small safety buffer instead:
+        // both the delta pull (`?updated_since=`) and `/sync/deletions` are
+        // idempotent, so the buffer makes client/server clock skew harmless
+        // (worst case: a few already-synced rows get re-fetched next pass),
+        // while a synced-but-empty entity stops forcing the full replay.
+        // Cursorless syncers (`hasCursor == false`, e.g. `CostCategorySyncer`)
+        // are excluded — they self-handle deletions via their own full
+        // re-fetch and must keep their perpetual-null cursor (see the
+        // `cursorBearingCursors` filter below).
+        await _cursors.set(
+          syncer.entity,
+          passStart.subtract(const Duration(minutes: 2)),
+        );
       }
     }
 

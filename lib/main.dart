@@ -7,6 +7,7 @@ import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
+import 'package:farm_tracker/core/offline/offline_flag_store.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/app_theme.dart';
@@ -55,6 +56,16 @@ void main() async {
   } catch (_) {
     // Keep the "0.0.0" default; startup must never fail on version lookup.
   }
+
+  // Initialize the offline kill-switch from its persisted value BEFORE
+  // di.init() so every collaborator resolves with the correct flag state,
+  // and before the launch-sync check below. This is a fast local
+  // shared_prefs read (no network) — the server-authoritative value is
+  // applied later, when/if `/meta` is reachable (see splash_page.dart's
+  // `_checkAppVersion`). Persisted default is `false`, so until the server
+  // first enables it this is the only new launch work: one extra
+  // shared_prefs read alongside the ones the app already does at launch.
+  OfflineConfig.enabled = await const OfflineFlagStore().read();
 
   await di.init();
 
