@@ -43,7 +43,10 @@ class _FakeHerdActivityRemoteDataSource
 HerdActivityModel _activity({
   required String clientUuid,
   String id = '',
-  String herdId = 'herd-1',
+  // Numeric == already-synced-herd semantics: `resolveFkOrThrow` returns a
+  // numeric value unchanged (no resolver lookup needed), so tests that don't
+  // care about FK translation can use `FkResolver(const {})` untouched.
+  String herdId = '1',
   String activityType = 'birth',
   int count = 1,
   DateTime? date,
@@ -110,7 +113,7 @@ void main() {
     test('calls remote.addHerdActivity(model.herdId, model) with the right '
         'herdId, then reconciles the server id via setServerId', () async {
       await local.upsert(
-        _activity(clientUuid: 'cu-1', herdId: 'herd-42', count: 4),
+        _activity(clientUuid: 'cu-1', herdId: '42', count: 4),
         pending: true,
       );
       remote.responseBuilder = (herdId, model) => HerdActivityModel(
@@ -128,7 +131,7 @@ void main() {
         FkResolver(const {}),
       );
 
-      expect(remote.herdIdCalls, ['herd-42']);
+      expect(remote.herdIdCalls, ['42']);
       expect(remote.addedModels, hasLength(1));
       expect(remote.addedModels.single.clientUuid, 'cu-1');
       expect(remote.addedModels.single.activityType, 'birth');
