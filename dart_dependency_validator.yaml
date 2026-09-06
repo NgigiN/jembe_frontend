@@ -1,8 +1,27 @@
 # Config for `dependency_validator` (run in CI as the "Verify dependencies" step).
-# ignore: packages that are genuinely used but not via a Dart `import`, so the
-# validator cannot see the usage and would otherwise flag them as unused.
+# ignore: packages that are genuinely used but not via a Dart `import` (so the
+# validator cannot see the usage and would otherwise flag them as unused), OR
+# whose pubspec.yaml version constraint is a deliberate pin (see below) rather
+# than an accidental one the validator should keep warning about.
 #
-# - sqlite3_flutter_libs: ships the native SQLite libraries that `drift` links at
-#   runtime (a platform plugin, no Dart import). Required for the offline drift DB.
+# - sqlcipher_flutter_libs: the package's main purpose is shipping the native
+#   SQLCipher-enabled SQLite libraries that `drift` links at runtime on each
+#   platform (a native platform plugin, not something a Dart import can show
+#   usage of) — that's what this ignore exists for. It happens to also expose
+#   two small Dart helpers (`applyWorkaroundToOpenSqlCipherOnOldAndroidVersions`,
+#   `openCipherOnAndroid`), imported in app_database.dart, but the native-lib
+#   provisioning is the load-bearing reason it's a dependency at all. Required
+#   for the offline drift DB's at-rest encryption.
+#
+# - drift / drift_dev: deliberately pinned to ">=2.20.0 <2.32.0" (see
+#   pubspec.yaml). drift 2.32.0 bumped its sqlite3 dependency to ^3.x, which
+#   removed the `package:sqlite3/open.dart` override API
+#   (`OperatingSystem`/`overrideFor`) that `sqlcipher_flutter_libs` needs to
+#   load the SQLCipher-enabled native library on Android — sqlite3 3.x's own
+#   encryption story is an unrelated, much bigger native-assets build-hook
+#   mechanism. Ignored here so the validator's (correct, generally-useful)
+#   "don't pin a version range" check doesn't flag this intentional pin.
 ignore:
-  - sqlite3_flutter_libs
+  - sqlcipher_flutter_libs
+  - drift
+  - drift_dev

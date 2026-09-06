@@ -2,8 +2,13 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:farm_tracker/core/database/db_key_service.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:sqlcipher_flutter_libs/sqlcipher_flutter_libs.dart';
+import 'package:sqlite3/open.dart';
+import 'package:sqlite3/sqlite3.dart' as sqlite3_lib;
 
 part 'app_database.g.dart';
 
@@ -402,9 +407,117 @@ class AppDatabase extends _$AppDatabase {
   }
 }
 
+/// Opens the local drift database, encrypted at rest with SQLCipher.
+///
+/// Everything in this function — reading/generating the encryption key,
+/// registering the SQLCipher native library override, and touching the
+/// database file at all — is deferred until this `LazyDatabase` is actually
+/// opened (drift's first real query against [AppDatabase]). With
+/// `OfflineConfig.enabled == false`, no repository ever issues that first
+/// query, so none of this runs: no key generation, no secure-storage read,
+/// no SQLCipher work at startup (rule zero for this rollout).
+///
+/// The recipe follows drift's documented pre-3.x SQLCipher integration
+/// (https://github.com/simolus3/sqlite3.dart/tree/main/sqlcipher_flutter_libs):
+/// register [openCipherOnAndroid] as the Android SQLite loader via
+/// `package:sqlite3/open.dart`'s `open.overrideFor`, await
+/// [applyWorkaroundToOpenSqlCipherOnOldAndroidVersions] before touching
+/// sqlite3 at all, then set the key with `PRAGMA key` immediately after
+/// opening, before any other statement runs.
+///
+/// Because [NativeDatabase.createInBackground] opens the database lazily on
+/// a background isolate (only when drift's own machinery first calls
+/// `ensureOpen`), a bad key would otherwise only surface much later, on
+/// whatever query happens to trigger that — nowhere near this function, and
+/// with no chance to recover. So this function proves the key works itself,
+/// first, via [_canOpenWithKey]'s direct (non-isolate) open-with-canary
+/// check, before ever constructing the real connection. If that check
+/// fails — key lost, or the file otherwise unreadable — the database file
+/// is wiped, the key is discarded and regenerated, and the check is retried
+/// once against the fresh (necessarily empty) file. The server is the
+/// source of truth for this offline-first pilot, so wiping and re-syncing
+/// is the approved recovery: any unsynced outbox writes lived in that same
+/// encrypted file and are unrecoverable regardless of which way this fails.
 LazyDatabase _openConnection() => LazyDatabase(() async {
   final dir = await getApplicationDocumentsDirectory();
+  if (!dir.existsSync()) {
+    // sqlite3 can create the database file itself but not its parent
+    // directory; the preflight open below needs this to already exist
+    // (drift's own background-isolate open would otherwise be the only
+    // thing creating it, too late for the preflight check).
+    dir.createSync(recursive: true);
+  }
+  final dbFile = File(p.join(dir.path, 'shamba.sqlite'));
+  final keyService = DbKeyService();
+
+  await applyWorkaroundToOpenSqlCipherOnOldAndroidVersions();
+  open.overrideFor(OperatingSystem.android, openCipherOnAndroid);
+
+  var key = await keyService.getOrCreateKey();
+
+  if (!_canOpenWithKey(dbFile, key)) {
+    appLogger.warning(
+      LogCategory.general,
+      'Local database unreadable with the stored encryption key; wiping '
+      'and re-provisioning a fresh encrypted database (server re-sync).',
+    );
+    if (dbFile.existsSync()) {
+      dbFile.deleteSync();
+    }
+    await keyService.deleteKey();
+    key = await keyService.getOrCreateKey();
+
+    if (!_canOpenWithKey(dbFile, key)) {
+      // A fresh file with a freshly-generated key must always open; if it
+      // doesn't, the problem isn't the key (disk full, permissions, a
+      // corrupt SQLCipher native lib, ...) and retrying again won't help.
+      throw StateError(
+        'Unable to open the local database even after wiping it and '
+        'generating a fresh encryption key.',
+      );
+    }
+  }
+
   return NativeDatabase.createInBackground(
-    File(p.join(dir.path, 'shamba.sqlite')),
+    dbFile,
+    isolateSetup: () async {
+      // The override above only affects the isolate it ran on; the
+      // background isolate this spawns needs its own registration before it
+      // touches sqlite3.
+      open.overrideFor(OperatingSystem.android, openCipherOnAndroid);
+    },
+    setup: (db) {
+      // PRAGMA key first, then a canary read of the schema — touching it
+      // now proves the key is correct. A wrong/missing key throws here, on
+      // the background isolate, as defense in depth on top of the
+      // preflight check above.
+      db
+        ..execute("PRAGMA key = '$key';")
+        ..select('SELECT count(*) FROM sqlite_master;');
+    },
   );
 });
+
+/// Opens [dbFile] directly with [key] applied — bypassing drift and the
+/// background isolate entirely — and proves the key actually decrypts it by
+/// running a canary query against the schema. Returns `false` if opening or
+/// the canary throws (wrong/missing key, or a corrupt file); `true` if the
+/// key works. Always closes the connection it opens.
+bool _canOpenWithKey(File dbFile, String key) {
+  sqlite3_lib.Database? db;
+  try {
+    db = sqlite3_lib.sqlite3.open(dbFile.path)
+      ..execute("PRAGMA key = '$key';")
+      ..select('SELECT count(*) FROM sqlite_master;');
+    return true;
+  } catch (e) {
+    appLogger.warning(
+      LogCategory.general,
+      'Preflight open of the local database failed',
+      e,
+    );
+    return false;
+  } finally {
+    db?.dispose();
+  }
+}
