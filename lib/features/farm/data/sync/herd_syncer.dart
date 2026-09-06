@@ -4,6 +4,7 @@ import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
+import 'package:farm_tracker/features/farm/data/sync/fk_translators.dart';
 
 /// Thin [RemoteSyncAdapter] over [HerdRemoteDataSource], mapping the generic
 /// add/update/delete/getSince onto the herd endpoints. Exceptions
@@ -37,9 +38,18 @@ class HerdRemoteAdapter implements RemoteSyncAdapter<HerdModel> {
 /// (via [HerdRemoteAdapter]) and local mirror ([HerdLocalDataSource], which
 /// implements `LocalSyncStore<HerdModel>`) into it and stamps the `'herd'`
 /// entity tag.
+///
+/// FK reconciliation for `animalTypeId` (an unsynced parent's client_uuid
+/// substituted with its server id before push) is implemented via
+/// [translateHerdFks] — see `fk_translators.dart`.
 class HerdSyncer extends BaseEntitySyncer<HerdModel> {
   HerdSyncer({
     required HerdRemoteDataSource remote,
     required HerdLocalDataSource local,
-  }) : super(entity: 'herd', remote: HerdRemoteAdapter(remote), local: local);
+  }) : super(
+         entity: 'herd',
+         remote: HerdRemoteAdapter(remote),
+         local: local,
+         resolveFks: translateHerdFks,
+       );
 }

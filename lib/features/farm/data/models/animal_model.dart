@@ -205,4 +205,24 @@ class AnimalModel extends Animal implements SyncableModel {
       updatedAt: updatedAt,
     );
   }
+
+  /// Returns a copy with the given FK fields overridden (each `null` arg keeps
+  /// the current value), every other field untouched. Used by the P4 sync FK
+  /// translator to substitute a parent's server id for its client_uuid before
+  /// push. Reconstruct via the SAME constructor `withSyncClientUuid` uses.
+  AnimalModel withResolvedFks({String? animalTypeId, String? herdId}) {
+    return AnimalModel(
+      id: id,
+      clientUuid: clientUuid,
+      userId: userId,
+      name: name,
+      animalTypeId: animalTypeId ?? this.animalTypeId,
+      herdId: herdId ?? this.herdId,
+      birthDate: birthDate,
+      sex: sex,
+      acquisitionSource: acquisitionSource,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
 }

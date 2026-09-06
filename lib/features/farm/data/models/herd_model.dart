@@ -219,4 +219,25 @@ class HerdModel extends Herd implements SyncableModel {
       updatedAt: updatedAt,
     );
   }
+
+  /// Returns a copy with the given FK fields overridden (each `null` arg keeps
+  /// the current value), every other field untouched. Used by the P4 sync FK
+  /// translator to substitute a parent's server id for its client_uuid before
+  /// push. Reconstruct via the SAME constructor `withSyncClientUuid` uses.
+  HerdModel withResolvedFks({String? animalTypeId}) {
+    return HerdModel(
+      id: id,
+      clientUuid: clientUuid,
+      userId: userId,
+      name: name,
+      animalTypeId: animalTypeId ?? this.animalTypeId,
+      location: location,
+      initialHeadCount: initialHeadCount,
+      currentHeadCount: currentHeadCount,
+      startDate: startDate,
+      endDate: endDate,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
 }

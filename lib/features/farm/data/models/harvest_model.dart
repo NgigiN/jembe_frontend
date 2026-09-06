@@ -186,6 +186,25 @@ class HarvestModel extends Harvest implements SyncableModel {
     );
   }
 
+  /// Returns a copy with the given FK fields overridden (each `null` arg keeps
+  /// the current value), every other field untouched. Used by the P4 sync FK
+  /// translator to substitute a parent's server id for its client_uuid before
+  /// push. Reconstruct via the SAME constructor `withSyncClientUuid` uses.
+  HarvestModel withResolvedFks({String? seasonId, String? revenueId}) {
+    return HarvestModel(
+      id: id,
+      clientUuid: clientUuid,
+      seasonId: seasonId ?? this.seasonId,
+      quantity: quantity,
+      unit: unit,
+      date: date,
+      notes: notes,
+      revenueId: revenueId ?? this.revenueId,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
   static DateTime _parseDate(dynamic dateValue) {
     if (dateValue == null) return DateTime.now();
     if (dateValue is String) {

@@ -1,5 +1,8 @@
 import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/sync/fk_resolver.dart';
+import 'package:farm_tracker/features/farm/data/models/animal_model.dart';
+import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
+import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
 import 'package:farm_tracker/features/farm/data/models/season_model.dart';
 import 'package:farm_tracker/features/farm/data/sync/fk_translators.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -48,6 +51,99 @@ void main() {
       final r = FkResolver(const {})..record('land', 'land-uuid', '20');
       expect(
         () => translateSeasonFks(unsyncedSeason(), r),
+        throwsA(isA<SyncDependencyException>()),
+      );
+    });
+  });
+
+  group('translateAnimalFks', () {
+    AnimalModel unsyncedAnimal({String herdId = 'herd-uuid'}) =>
+        AnimalModel.create(
+          userId: 'user-1',
+          name: 'Animal 1',
+          animalTypeId: 'at-uuid',
+          herdId: herdId,
+          birthDate: DateTime(2026, 1, 1),
+        );
+
+    test('translates animal_type + herd parent uuids to server ids', () async {
+      final r = FkResolver(const {})
+        ..record('animal_type', 'at-uuid', '3')
+        ..record('herd', 'herd-uuid', '5');
+      final out = await translateAnimalFks(unsyncedAnimal(), r);
+      expect(out.animalTypeId, '3');
+      expect(out.herdId, '5');
+    });
+
+    test('parks when the animal_type is unsynced', () async {
+      expect(
+        () => translateAnimalFks(
+          unsyncedAnimal(herdId: ''),
+          FkResolver(const {}),
+        ),
+        throwsA(isA<SyncDependencyException>()),
+      );
+    });
+  });
+
+  group('translateHarvestFks', () {
+    HarvestModel unsyncedHarvest() => HarvestModel.create(
+          seasonId: 'season-uuid',
+          quantity: 10,
+          unit: 'kg',
+          date: DateTime(2026, 1, 1),
+        );
+
+    test('translates the season parent uuid to its server id', () async {
+      final r = FkResolver(const {})..record('season', 'season-uuid', '7');
+      final out = await translateHarvestFks(unsyncedHarvest(), r);
+      expect(out.seasonId, '7');
+    });
+
+    test('a null revenueId is left null', () async {
+      final r = FkResolver(const {})..record('season', 'season-uuid', '7');
+      final out = await translateHarvestFks(unsyncedHarvest(), r);
+      expect(out.revenueId, isNull);
+    });
+
+    test('translates a non-null revenue parent uuid to its server id', () async {
+      final withRevenue = unsyncedHarvest().withResolvedFks(
+        revenueId: 'revenue-uuid',
+      );
+      final r = FkResolver(const {})
+        ..record('season', 'season-uuid', '7')
+        ..record('revenue', 'revenue-uuid', '11');
+      final out = await translateHarvestFks(withRevenue, r);
+      expect(out.revenueId, '11');
+    });
+
+    test('parks when the season has not synced', () async {
+      expect(
+        () => translateHarvestFks(unsyncedHarvest(), FkResolver(const {})),
+        throwsA(isA<SyncDependencyException>()),
+      );
+    });
+  });
+
+  group('translateHerdFks', () {
+    HerdModel unsyncedHerd() => HerdModel.create(
+          userId: 'user-1',
+          name: 'Herd 1',
+          animalTypeId: 'at-uuid',
+          location: 'Field A',
+          initialHeadCount: 4,
+          startDate: DateTime(2026, 1, 1),
+        );
+
+    test('translates the animal_type parent uuid to its server id', () async {
+      final r = FkResolver(const {})..record('animal_type', 'at-uuid', '9');
+      final out = await translateHerdFks(unsyncedHerd(), r);
+      expect(out.animalTypeId, '9');
+    });
+
+    test('parks when the animal_type has not synced', () async {
+      expect(
+        () => translateHerdFks(unsyncedHerd(), FkResolver(const {})),
         throwsA(isA<SyncDependencyException>()),
       );
     });

@@ -1,5 +1,8 @@
 import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/sync/fk_resolver.dart';
+import 'package:farm_tracker/features/farm/data/models/animal_model.dart';
+import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
+import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
 import 'package:farm_tracker/features/farm/data/models/season_model.dart';
 
 /// Resolves one child FK field for a push. Returns [value] unchanged when it's
@@ -23,4 +26,26 @@ Future<SeasonModel> translateSeasonFks(SeasonModel m, FkResolver r) async {
   final plantId = await resolveFkOrThrow(r, 'plant', m.plantId);
   final landId = await resolveFkOrThrow(r, 'land', m.landId);
   return m.withResolvedFks(plantId: plantId, landId: landId);
+}
+
+/// `animal` parents: `animal_type` (`animal_type_id`) + `herd` (`herd_id`).
+Future<AnimalModel> translateAnimalFks(AnimalModel m, FkResolver r) async {
+  final animalTypeId = await resolveFkOrThrow(r, 'animal_type', m.animalTypeId);
+  final herdId = await resolveFkOrThrow(r, 'herd', m.herdId);
+  return m.withResolvedFks(animalTypeId: animalTypeId, herdId: herdId);
+}
+
+/// `harvest` parents: `season` (`season_id`) + optional `revenue` (`revenue_id`).
+Future<HarvestModel> translateHarvestFks(HarvestModel m, FkResolver r) async {
+  final seasonId = await resolveFkOrThrow(r, 'season', m.seasonId);
+  final revenueId = m.revenueId == null
+      ? null
+      : await resolveFkOrThrow(r, 'revenue', m.revenueId!);
+  return m.withResolvedFks(seasonId: seasonId, revenueId: revenueId);
+}
+
+/// `herd` parent: `animal_type` (`animal_type_id`).
+Future<HerdModel> translateHerdFks(HerdModel m, FkResolver r) async {
+  final animalTypeId = await resolveFkOrThrow(r, 'animal_type', m.animalTypeId);
+  return m.withResolvedFks(animalTypeId: animalTypeId);
 }
