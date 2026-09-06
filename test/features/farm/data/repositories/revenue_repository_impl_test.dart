@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:drift/native.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
@@ -18,6 +20,8 @@ class FakeRevenueRemoteDataSource implements RevenueRemoteDataSource {
   RevenueModel? lastUpdated;
   final List<String> deleteCalls = [];
   List<RevenueModel> getRevenuesResult = [];
+  Exception? throwOnGet;
+  Exception? throwOnAdd;
 
   @override
   Future<List<RevenueModel>> getRevenues({
@@ -25,7 +29,10 @@ class FakeRevenueRemoteDataSource implements RevenueRemoteDataSource {
     DateTime? startDate,
     DateTime? endDate,
     DateTime? updatedSince,
-  }) async => getRevenuesResult;
+  }) async {
+    if (throwOnGet != null) throw throwOnGet!;
+    return getRevenuesResult;
+  }
 
   @override
   Future<RevenueModel> getRevenueById(String id) async {
@@ -34,6 +41,7 @@ class FakeRevenueRemoteDataSource implements RevenueRemoteDataSource {
 
   @override
   Future<RevenueModel> addRevenue(RevenueModel revenue) async {
+    if (throwOnAdd != null) throw throwOnAdd!;
     lastAdded = revenue;
     return revenue;
   }
@@ -228,6 +236,102 @@ void main() {
         expect(emission, isEmpty);
       },
     );
+  });
+
+  group('flag OFF error mapping (R2-02 net)', () {
+    test('getRevenues: a NetworkException maps to NetworkFailure', () async {
+      final dataSource = FakeRevenueRemoteDataSource()
+        ..throwOnGet = NetworkException();
+      final repository = RevenueRepositoryImpl(remoteDataSource: dataSource);
+
+      final result = await repository.getRevenues();
+
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'getRevenues: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeRevenueRemoteDataSource()
+          ..throwOnGet = const ServerException('boom');
+        final repository = RevenueRepositoryImpl(remoteDataSource: dataSource);
+
+        final result = await repository.getRevenues();
+
+        result.fold(
+          (failure) => expect((failure as ServerFailure).message, 'boom'),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('addRevenue: a NetworkException maps to NetworkFailure', () async {
+      final dataSource = FakeRevenueRemoteDataSource()
+        ..throwOnAdd = NetworkException();
+      final repository = RevenueRepositoryImpl(remoteDataSource: dataSource);
+      final date = DateTime.utc(2026, 3);
+
+      final result = await repository.addRevenue(
+        source: 'plant',
+        sourceId: 'server-season-1',
+        type: 'Maize Harvest',
+        quantity: 10,
+        unitPrice: 50,
+        date: date,
+      );
+
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'addRevenue: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeRevenueRemoteDataSource()
+          ..throwOnAdd = const ServerException('quantity is required');
+        final repository = RevenueRepositoryImpl(remoteDataSource: dataSource);
+        final date = DateTime.utc(2026, 3);
+
+        final result = await repository.addRevenue(
+          source: 'plant',
+          sourceId: 'server-season-1',
+          type: 'Maize Harvest',
+          quantity: 10,
+          unitPrice: 50,
+          date: date,
+        );
+
+        result.fold(
+          (failure) => expect(
+            (failure as ServerFailure).message,
+            'quantity is required',
+          ),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('a successful addRevenue maps to Right', () async {
+      final dataSource = FakeRevenueRemoteDataSource();
+      final repository = RevenueRepositoryImpl(remoteDataSource: dataSource);
+      final date = DateTime.utc(2026, 3);
+
+      final result = await repository.addRevenue(
+        source: 'plant',
+        sourceId: 'server-season-1',
+        type: 'Maize Harvest',
+        quantity: 10,
+        unitPrice: 50,
+        date: date,
+      );
+
+      expect(result.isRight(), isTrue);
+    });
   });
 
   group('flag ON (local-first + outbox)', () {

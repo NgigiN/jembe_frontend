@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:drift/native.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
@@ -18,12 +20,18 @@ class FakeSeasonRemoteDataSource implements SeasonRemoteDataSource {
   SeasonModel? lastAdded;
   SeasonModel? lastUpdated;
   final List<String> deleteCalls = [];
+  Exception? throwOnGet;
+  Exception? throwOnAdd;
 
   @override
-  Future<List<SeasonModel>> getSeasons({DateTime? updatedSince}) async => [];
+  Future<List<SeasonModel>> getSeasons({DateTime? updatedSince}) async {
+    if (throwOnGet != null) throw throwOnGet!;
+    return [];
+  }
 
   @override
   Future<SeasonModel> addSeason(SeasonModel season) async {
+    if (throwOnAdd != null) throw throwOnAdd!;
     lastAdded = season;
     return season;
   }
@@ -168,6 +176,114 @@ void main() {
         expect(emission, isEmpty);
       },
     );
+  });
+
+  group('flag OFF error mapping (R2-02 net)', () {
+    test('getSeasons: a NetworkException maps to NetworkFailure', () async {
+      final dataSource = FakeSeasonRemoteDataSource()
+        ..throwOnGet = NetworkException();
+      final repository = SeasonRepositoryImpl(remoteDataSource: dataSource);
+
+      final result = await repository.getSeasons();
+
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'getSeasons: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeSeasonRemoteDataSource()
+          ..throwOnGet = const ServerException('boom');
+        final repository = SeasonRepositoryImpl(remoteDataSource: dataSource);
+
+        final result = await repository.getSeasons();
+
+        result.fold(
+          (failure) => expect((failure as ServerFailure).message, 'boom'),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('addSeason: a NetworkException maps to NetworkFailure', () async {
+      final dataSource = FakeSeasonRemoteDataSource()
+        ..throwOnAdd = NetworkException();
+      final repository = SeasonRepositoryImpl(remoteDataSource: dataSource);
+      final now = DateTime.now();
+
+      final result = await repository.addSeason(
+        Season(
+          id: '',
+          userId: 'user-1',
+          name: 'Long Rains 2026',
+          plantId: 'plant-1',
+          landId: 'land-1',
+          startDate: now,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'addSeason: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeSeasonRemoteDataSource()
+          ..throwOnAdd = const ServerException('plant_id is required');
+        final repository = SeasonRepositoryImpl(remoteDataSource: dataSource);
+        final now = DateTime.now();
+
+        final result = await repository.addSeason(
+          Season(
+            id: '',
+            userId: 'user-1',
+            name: 'Long Rains 2026',
+            plantId: 'plant-1',
+            landId: 'land-1',
+            startDate: now,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+
+        result.fold(
+          (failure) => expect(
+            (failure as ServerFailure).message,
+            'plant_id is required',
+          ),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('a successful addSeason maps to Right', () async {
+      final dataSource = FakeSeasonRemoteDataSource();
+      final repository = SeasonRepositoryImpl(remoteDataSource: dataSource);
+      final now = DateTime.now();
+
+      final result = await repository.addSeason(
+        Season(
+          id: '',
+          userId: 'user-1',
+          name: 'Long Rains 2026',
+          plantId: 'plant-1',
+          landId: 'land-1',
+          startDate: now,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      expect(result.isRight(), isTrue);
+    });
   });
 
   group('flag ON (local-first + outbox)', () {

@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:drift/native.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
@@ -19,18 +21,22 @@ class FakeInputRemoteDataSource implements InputRemoteDataSource {
   InputModel? lastUpdated;
   String? lastGetSourceType;
   final List<String> deleteCalls = [];
+  Exception? throwOnGet;
+  Exception? throwOnAdd;
 
   @override
   Future<List<InputModel>> getInputs({
     String? sourceType,
     DateTime? updatedSince,
   }) async {
+    if (throwOnGet != null) throw throwOnGet!;
     lastGetSourceType = sourceType;
     return [];
   }
 
   @override
   Future<InputModel> addInput(InputModel input) async {
+    if (throwOnAdd != null) throw throwOnAdd!;
     lastAdded = input;
     return input;
   }
@@ -209,6 +215,117 @@ void main() {
         expect(emission, isEmpty);
       },
     );
+  });
+
+  group('flag OFF error mapping (R2-02 net)', () {
+    test('getInputs: a NetworkException maps to NetworkFailure', () async {
+      final dataSource = FakeInputRemoteDataSource()
+        ..throwOnGet = NetworkException();
+      final repository = InputRepositoryImpl(remoteDataSource: dataSource);
+
+      final result = await repository.getInputs();
+
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'getInputs: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeInputRemoteDataSource()
+          ..throwOnGet = const ServerException('boom');
+        final repository = InputRepositoryImpl(remoteDataSource: dataSource);
+
+        final result = await repository.getInputs();
+
+        result.fold(
+          (failure) => expect((failure as ServerFailure).message, 'boom'),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('addInput: a NetworkException maps to NetworkFailure', () async {
+      final dataSource = FakeInputRemoteDataSource()
+        ..throwOnAdd = NetworkException();
+      final repository = InputRepositoryImpl(remoteDataSource: dataSource);
+      final now = DateTime.now();
+
+      final result = await repository.addInput(
+        Input(
+          id: '',
+          sourceType: 'plant',
+          sourceId: 'season-1',
+          type: 'Fertilizer',
+          quantity: 5,
+          cost: 100,
+          date: now,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'addInput: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeInputRemoteDataSource()
+          ..throwOnAdd = const ServerException('cost is required');
+        final repository = InputRepositoryImpl(remoteDataSource: dataSource);
+        final now = DateTime.now();
+
+        final result = await repository.addInput(
+          Input(
+            id: '',
+            sourceType: 'plant',
+            sourceId: 'season-1',
+            type: 'Fertilizer',
+            quantity: 5,
+            cost: 100,
+            date: now,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+
+        result.fold(
+          (failure) => expect(
+            (failure as ServerFailure).message,
+            'cost is required',
+          ),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('a successful addInput maps to Right', () async {
+      final dataSource = FakeInputRemoteDataSource();
+      final repository = InputRepositoryImpl(remoteDataSource: dataSource);
+      final now = DateTime.now();
+
+      final result = await repository.addInput(
+        Input(
+          id: '',
+          sourceType: 'plant',
+          sourceId: 'season-1',
+          type: 'Fertilizer',
+          quantity: 5,
+          cost: 100,
+          date: now,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      expect(result.isRight(), isTrue);
+    });
   });
 
   group('flag ON (local-first + outbox)', () {

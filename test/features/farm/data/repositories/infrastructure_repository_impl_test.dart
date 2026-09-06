@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:drift/native.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
@@ -19,16 +21,22 @@ class FakeInfrastructureRemoteDataSource
   InfrastructureModel? lastUpdated;
   final List<String> deleteCalls = [];
   List<InfrastructureModel> getInfrastructuresResult = [];
+  Exception? throwOnGet;
+  Exception? throwOnAdd;
 
   @override
   Future<List<InfrastructureModel>> getInfrastructures({
     DateTime? updatedSince,
-  }) async => getInfrastructuresResult;
+  }) async {
+    if (throwOnGet != null) throw throwOnGet!;
+    return getInfrastructuresResult;
+  }
 
   @override
   Future<InfrastructureModel> addInfrastructure(
     InfrastructureModel infrastructure,
   ) async {
+    if (throwOnAdd != null) throw throwOnAdd!;
     lastAdded = infrastructure;
     return infrastructure;
   }
@@ -190,6 +198,118 @@ void main() {
         expect(emission, isEmpty);
       },
     );
+  });
+
+  group('flag OFF error mapping (R2-02 net)', () {
+    test(
+      'getInfrastructures: a NetworkException maps to NetworkFailure',
+      () async {
+        final dataSource = FakeInfrastructureRemoteDataSource()
+          ..throwOnGet = NetworkException();
+        final repository = InfrastructureRepositoryImpl(
+          remoteDataSource: dataSource,
+        );
+
+        final result = await repository.getInfrastructures();
+
+        result.fold(
+          (failure) => expect(failure, isA<NetworkFailure>()),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test(
+      'getInfrastructures: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeInfrastructureRemoteDataSource()
+          ..throwOnGet = const ServerException('boom');
+        final repository = InfrastructureRepositoryImpl(
+          remoteDataSource: dataSource,
+        );
+
+        final result = await repository.getInfrastructures();
+
+        result.fold(
+          (failure) => expect((failure as ServerFailure).message, 'boom'),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('addInfrastructure: a NetworkException maps to NetworkFailure', () async {
+      final dataSource = FakeInfrastructureRemoteDataSource()
+        ..throwOnAdd = NetworkException();
+      final repository = InfrastructureRepositoryImpl(
+        remoteDataSource: dataSource,
+      );
+      final date = DateTime.utc(2026, 3);
+
+      final result = await repository.addInfrastructure(
+        'Barn',
+        'Main Barn',
+        'North Field',
+        1000,
+        date,
+        'user-1',
+        null,
+      );
+
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'addInfrastructure: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeInfrastructureRemoteDataSource()
+          ..throwOnAdd = const ServerException('name is required');
+        final repository = InfrastructureRepositoryImpl(
+          remoteDataSource: dataSource,
+        );
+        final date = DateTime.utc(2026, 3);
+
+        final result = await repository.addInfrastructure(
+          'Barn',
+          'Main Barn',
+          'North Field',
+          1000,
+          date,
+          'user-1',
+          null,
+        );
+
+        result.fold(
+          (failure) => expect(
+            (failure as ServerFailure).message,
+            'name is required',
+          ),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('a successful addInfrastructure maps to Right', () async {
+      final dataSource = FakeInfrastructureRemoteDataSource();
+      final repository = InfrastructureRepositoryImpl(
+        remoteDataSource: dataSource,
+      );
+      final date = DateTime.utc(2026, 3);
+
+      final result = await repository.addInfrastructure(
+        'Barn',
+        'Main Barn',
+        'North Field',
+        1000,
+        date,
+        'user-1',
+        null,
+      );
+
+      expect(result.isRight(), isTrue);
+    });
   });
 
   group('flag ON (local-first + outbox)', () {

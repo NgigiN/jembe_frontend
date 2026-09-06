@@ -80,15 +80,49 @@ Activity _activityFor(String sourceType, String sourceId, DateTime createdAt) =>
     );
 
 void main() {
+  late MockDio mockDio;
+
   setUp(() {
+    mockDio = MockDio();
+    // A proper no-op stub: the real AnalyticsService.flush() posts here on
+    // its 30s timer/size threshold, and initState() always fires a
+    // 'farm_activity_viewed' track() call. Previously this registered a
+    // bare, unstubbed MockDio - flush()'s internal try/catch silently
+    // swallowed the resulting mocktail error, so these tests never actually
+    // exercised (or asserted on) real analytics behavior. Stubbing a
+    // success response here lets each test verify the real POST instead.
+    when(
+      () => mockDio.post<void>(any(), data: any(named: 'data')),
+    ).thenAnswer(
+      (_) async =>
+          Response<void>(requestOptions: RequestOptions(), statusCode: 201),
+    );
     sl.registerLazySingleton<AnalyticsService>(
-      () => AnalyticsService(dio: MockDio()),
+      () => AnalyticsService(dio: mockDio),
     );
   });
 
   tearDown(() {
     sl.unregister<AnalyticsService>();
   });
+
+  /// Flushes the buffered analytics event and asserts the real POST that
+  /// `FarmActivityCard.initState()` fires on every pump: exactly one
+  /// request to `/api/v1/events` carrying a `farm_activity_viewed` event.
+  Future<void> flushAndVerifyAnalytics() async {
+    await sl<AnalyticsService>().flush();
+
+    final captured = verify(
+      () => mockDio.post<void>(
+        '/api/v1/events',
+        data: captureAny(named: 'data'),
+      ),
+    ).captured;
+    final body = captured.single as Map<String, dynamic>;
+    final events = body['events'] as List;
+    expect(events, hasLength(1));
+    expect(events.single['name'], 'farm_activity_viewed');
+  }
 
   testWidgets('renders nothing when the farmer has no herds and no seasons', (
     tester,
@@ -151,11 +185,7 @@ void main() {
     // schedules a real 30s flush Timer. flutter_test's
     // AutomatedTestWidgetsFlutterBinding asserts no Timer is left pending
     // when a test ends, so drain it explicitly here rather than waiting.
-    // flush() cancels its own timer first, then (since the buffer isn't
-    // empty) attempts a POST via the unstubbed MockDio - that failure is
-    // caught and logged inside AnalyticsService.flush() itself, so it
-    // doesn't propagate here.
-    await sl<AnalyticsService>().flush();
+    await flushAndVerifyAnalytics();
   });
 
   testWidgets(
@@ -235,7 +265,7 @@ void main() {
       // should render nothing (SizedBox.shrink()), not a partial-data card.
       expect(find.byType(Card), findsNothing);
 
-      await sl<AnalyticsService>().flush();
+      await flushAndVerifyAnalytics();
     },
   );
 
@@ -315,7 +345,7 @@ void main() {
         expect(find.byType(InkWell), findsWidgets);
         expect(find.byType(LivelyTap), findsOneWidget);
 
-        await sl<AnalyticsService>().flush();
+        await flushAndVerifyAnalytics();
       },
     );
 
@@ -328,7 +358,7 @@ void main() {
 
       expect(find.text('1-week streak'), findsOneWidget);
 
-      await sl<AnalyticsService>().flush();
+      await flushAndVerifyAnalytics();
     });
   });
 
@@ -411,7 +441,7 @@ void main() {
 
       expect(find.text('Farm Activity Streak'), findsOneWidget);
 
-      await sl<AnalyticsService>().flush();
+      await flushAndVerifyAnalytics();
     });
   });
 }
