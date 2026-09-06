@@ -48,7 +48,9 @@ class ActivityRemoteAdapter implements RemoteSyncAdapter<ActivityModel> {
 /// FK reconciliation for the polymorphic `sourceId` (an unsynced season/herd
 /// parent's client_uuid substituted with its server id before push) is
 /// implemented via [translateActivityFks] — see `fk_translators.dart`.
-/// `animal_id` stays out of scope (see `ActivityModel`'s `// TODO(P4)` note).
+/// `animal_id` stays out of scope — it's an `int?` field that can't carry a
+/// client_uuid, so it remains synced-animal-only (see `ActivityModel`'s
+/// NOTE on `.create()`).
 class ActivitySyncer extends BaseEntitySyncer<ActivityModel> {
   ActivitySyncer({
     required ActivityRemoteDataSource remote,

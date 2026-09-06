@@ -42,8 +42,10 @@ class RevenueModel extends Revenue implements SyncableModel {
       clientUuid: clientUuid ?? uuid.v4(),
       userId: '',
       source: source,
-      // TODO(P4): sourceId is a clientUuid flag-on; translate→server id
-      // before push. P3 = synced-parent-only.
+      // sourceId may hold an unsynced parent's client_uuid here; the
+      // syncer's `translateRevenueFks` (fk_translators.dart) resolves it to
+      // the parent's server id at push time via
+      // `BaseEntitySyncer.resolveFks`.
       sourceId: sourceId,
       type: type,
       quantity: quantity,
@@ -143,8 +145,10 @@ class RevenueModel extends Revenue implements SyncableModel {
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{
       'source': source,
-      // TODO(P4): sourceId is a clientUuid flag-on; translate→server id
-      // before push. P3 = synced-parent-only.
+      // sourceId may hold an unsynced parent's client_uuid here; the
+      // syncer's `translateRevenueFks` (fk_translators.dart) resolves it to
+      // the parent's server id at push time via
+      // `BaseEntitySyncer.resolveFks`.
       'source_id': int.tryParse(sourceId) ?? sourceId,
       'type': type,
       'quantity': quantity,

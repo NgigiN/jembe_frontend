@@ -38,9 +38,10 @@ class AnimalModel extends Animal implements SyncableModel {
       clientUuid: clientUuid ?? uuid.v4(),
       userId: userId,
       name: name,
-      // TODO(P4): unsynced/clientUuid-parent FK reconciliation — translate
-      // parent clientUuid→server id + parent-before-child ordering before
-      // push. P3 supports create under an ALREADY-SYNCED parent only.
+      // animalTypeId/herdId may hold an unsynced parent's client_uuid here;
+      // the syncer's `translateAnimalFks` (fk_translators.dart) resolves them
+      // to the parents' server ids at push time via
+      // `BaseEntitySyncer.resolveFks`.
       animalTypeId: animalTypeId,
       herdId: herdId,
       birthDate: birthDate,
@@ -128,9 +129,10 @@ class AnimalModel extends Animal implements SyncableModel {
   Map<String, dynamic> toJson() {
     return {
       'name': name,
-      // TODO(P4): unsynced/clientUuid-parent FK reconciliation — translate
-      // parent clientUuid→server id + parent-before-child ordering before
-      // push. P3 supports create under an ALREADY-SYNCED parent only.
+      // animalTypeId/herdId may hold an unsynced parent's client_uuid here;
+      // the syncer's `translateAnimalFks` (fk_translators.dart) resolves them
+      // to the parents' server ids at push time via
+      // `BaseEntitySyncer.resolveFks`.
       'animal_type_id': int.tryParse(animalTypeId) ?? animalTypeId,
       'herd_id': int.tryParse(herdId) ?? herdId,
       'birth_date': birthDate.toUtc().toIso8601String(),

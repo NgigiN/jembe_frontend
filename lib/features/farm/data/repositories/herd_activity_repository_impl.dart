@@ -69,10 +69,11 @@ class HerdActivityRepositoryImpl
     String? notes,
   ) async {
     if (_offlineFirst) {
-      // TODO(P4): herdId is a clientUuid flag-on; the nested-URL push needs
-      // the herd's server id — translate + require synced parent before
-      // push. P3 = synced-parent-only (an offline create under an unsynced
-      // herd would 404 on push — acceptable while dark).
+      // herdId is passed through as-is here — this repository stages the
+      // create locally with whatever id it's given (a synced herd's server
+      // id or an unsynced herd's client_uuid). `HerdActivitySyncer.push`
+      // resolves an unsynced herd's client_uuid to its server id at push
+      // time via `resolveFkOrThrow` before firing the nested-URL create.
       final model = HerdActivityModel.create(
         herdId: herdId,
         activityType: activityType,

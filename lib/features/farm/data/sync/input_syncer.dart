@@ -45,7 +45,9 @@ class InputRemoteAdapter implements RemoteSyncAdapter<InputModel> {
 /// FK reconciliation for the polymorphic `sourceId` (an unsynced season/herd
 /// parent's client_uuid substituted with its server id before push) is
 /// implemented via [translateInputFks] — see `fk_translators.dart`.
-/// `animal_id` stays out of scope (see `InputModel`'s `// TODO(P4)` note).
+/// `animal_id` stays out of scope — it's an `int?` field that can't carry a
+/// client_uuid, so it remains synced-animal-only (see `InputModel`'s NOTE
+/// on `.create()`).
 class InputSyncer extends BaseEntitySyncer<InputModel> {
   InputSyncer({
     required InputRemoteDataSource remote,

@@ -41,12 +41,12 @@ import 'package:farm_tracker/features/farm/domain/repositories/revenue_repositor
 /// `RevenueModel.fromDrift`) to build server URLs — it never surfaces
 /// through this repository's presentation.
 ///
-/// ### FK note (P3 scope)
-/// `sourceId` is passed through as-is — see the `// TODO(P4)` note in
-/// `revenue_model.dart`. This repository supports create/update only for a
-/// revenue whose parent source (season/herd) is already synced (has a
-/// server id); reconciling an unsynced parent's clientUuid into a server id
-/// is P4 work.
+/// ### FK note
+/// `sourceId` is passed through as-is here — this repository stages the
+/// mutation locally with whatever id it's given (a synced parent's server id
+/// or an unsynced parent's client_uuid). The syncer's `translateRevenueFks`
+/// (`fk_translators.dart`) resolves an unsynced parent's client_uuid to its
+/// server id at push time via `BaseEntitySyncer.resolveFks`.
 class RevenueRepositoryImpl
     with OfflineRepositoryMixin
     implements RevenueRepository {

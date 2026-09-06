@@ -34,9 +34,14 @@ class ActivityModel extends Activity implements SyncableModel {
     return ActivityModel(
       id: '',
       clientUuid: clientUuid ?? uuid.v4(),
-      // TODO(P4): unsynced-parent FK — animalId serializes to 0 / sourceId is
-      // a clientUuid flag-on; translate + order parent-before-child before
-      // push. P3 = synced-parent-only.
+      // sourceId may hold an unsynced parent's client_uuid here; the
+      // syncer's `translateActivityFks` (fk_translators.dart) resolves it to
+      // the parent's server id at push time via
+      // `BaseEntitySyncer.resolveFks`.
+      //
+      // NOTE: `animalId` (int?) can't carry a client_uuid, so it stays
+      // synced-animal-only — an offline activity against an unsynced animal
+      // still serializes `animal_id: 0` on push. See `withResolvedFks`.
       sourceType: sourceType,
       sourceId: sourceId,
       animalId: animalId,
@@ -124,9 +129,11 @@ class ActivityModel extends Activity implements SyncableModel {
   /// from a server response (`fromJson`) or `create`.
   final bool deletedLocally;
 
-  // TODO(P4): unsynced-parent FK — animalId serializes to 0 / sourceId is a
-  // clientUuid flag-on; translate + order parent-before-child before push.
-  // P3 = synced-parent-only.
+  // NOTE: `animal_id` (int?) can't carry a client_uuid, so it stays
+  // synced-animal-only — an offline activity against an unsynced animal
+  // still serializes `animal_id: 0` here. `source_id` IS resolved by the
+  // syncer's `translateActivityFks` (fk_translators.dart) before this
+  // reaches the wire.
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -227,7 +234,8 @@ class ActivityModel extends Activity implements SyncableModel {
   /// `withSyncClientUuid` uses.
   ///
   /// `animal_id` (int?) is NOT part of this — it can't carry a client_uuid,
-  /// so it's left untouched here; see the `// TODO(P4)` note on `.create()`.
+  /// so it's left untouched here; it remains synced-animal-only (see the
+  /// NOTE on `.create()`).
   ActivityModel withResolvedFks({String? sourceId}) {
     return ActivityModel(
       id: id,

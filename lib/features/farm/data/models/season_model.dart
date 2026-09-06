@@ -36,10 +36,9 @@ class SeasonModel extends Season implements SyncableModel {
       clientUuid: clientUuid ?? uuid.v4(),
       userId: userId,
       name: name,
-      // TODO(P4): unsynced-parent FK reconciliation — plantId/landId are
-      // client-side ids; an unsynced parent serializes '' and the server
-      // create will reject/mislink. P3 supports create under an
-      // ALREADY-SYNCED parent only.
+      // plantId/landId may hold an unsynced parent's client_uuid here; the
+      // syncer's `translateSeasonFks` (fk_translators.dart) resolves it to
+      // the parent's server id at push time via `BaseEntitySyncer.resolveFks`.
       plantId: plantId,
       landId: landId,
       startDate: startDate,
@@ -126,10 +125,9 @@ class SeasonModel extends Season implements SyncableModel {
       'client_uuid': clientUuid,
       'user_id': userId,
       'name': name,
-      // TODO(P4): unsynced-parent FK reconciliation — plantId/landId are
-      // client-side ids; an unsynced parent serializes '' and the server
-      // create will reject/mislink. P3 supports create under an
-      // ALREADY-SYNCED parent only.
+      // plantId/landId may hold an unsynced parent's client_uuid here; the
+      // syncer's `translateSeasonFks` (fk_translators.dart) resolves it to
+      // the parent's server id at push time via `BaseEntitySyncer.resolveFks`.
       'plant_id': plantId,
       'land_id': landId,
       'start_date': startDate.toIso8601String().split('T')[0],

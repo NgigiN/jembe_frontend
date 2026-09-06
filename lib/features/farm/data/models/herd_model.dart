@@ -38,8 +38,9 @@ class HerdModel extends Herd implements SyncableModel {
       clientUuid: clientUuid ?? uuid.v4(),
       userId: userId,
       name: name,
-      // TODO(P4): animalTypeId is a clientUuid flag-on; translate→server id
-      // + parent-before-child before push. P3 = synced-parent-only.
+      // animalTypeId may hold an unsynced parent's client_uuid here; the
+      // syncer's `translateHerdFks` (fk_translators.dart) resolves it to the
+      // parent's server id at push time via `BaseEntitySyncer.resolveFks`.
       animalTypeId: animalTypeId,
       location: location,
       initialHeadCount: initialHeadCount,
@@ -137,8 +138,9 @@ class HerdModel extends Herd implements SyncableModel {
   Map<String, dynamic> toJson() {
     return {
       'name': name,
-      // TODO(P4): animalTypeId is a clientUuid flag-on; translate→server id
-      // + parent-before-child before push. P3 = synced-parent-only.
+      // animalTypeId may hold an unsynced parent's client_uuid here; the
+      // syncer's `translateHerdFks` (fk_translators.dart) resolves it to the
+      // parent's server id at push time via `BaseEntitySyncer.resolveFks`.
       'animal_type_id': int.tryParse(animalTypeId) ?? animalTypeId,
       'location': location,
       'initial_head_count': initialHeadCount,

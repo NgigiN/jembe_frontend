@@ -70,11 +70,11 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
         '/api/v1/seasons',
         data: {
           'name': season.name,
-          // TODO(P4): unsynced-parent FK reconciliation — plantId/landId are
-          // client-side ids; an unsynced parent's clientUuid int-parses to
-          // null (coerced to 0 below) and the server create will
-          // reject/mislink. P3 supports create under an ALREADY-SYNCED
-          // parent only (whose id is already the server's numeric id).
+          // By the time this reaches the wire, `season.plantId`/`landId`
+          // are already the parent's server id — the syncer's
+          // `translateSeasonFks` (fk_translators.dart) resolves an unsynced
+          // parent's client_uuid to its server id before push via
+          // `BaseEntitySyncer.resolveFks`.
           'plant_id': int.tryParse(season.plantId) ?? 0,
           'land_id': int.tryParse(season.landId) ?? 0,
           'start_date': season.startDate.toUtc().toIso8601String(),

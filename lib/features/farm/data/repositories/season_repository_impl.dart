@@ -42,11 +42,13 @@ import 'package:farm_tracker/features/farm/domain/repositories/season_repository
 /// `SeasonModel.fromDrift`) to build server URLs — it never surfaces
 /// through this repository's presentation.
 ///
-/// ### FK note (P3 scope)
-/// `plantId`/`landId` are passed through as-is — see the `// TODO(P4)` note
-/// in `season_model.dart`. This repository supports create/update only for
-/// a season whose parent plant/land is already synced (has a server id);
-/// reconciling an unsynced parent's clientUuid into a server id is P4 work.
+/// ### FK note
+/// `plantId`/`landId` are passed through as-is here — this repository stages
+/// the mutation locally with whatever ids it's given (a synced parent's
+/// server id or an unsynced parent's client_uuid). The syncer's
+/// `translateSeasonFks` (`fk_translators.dart`) resolves an unsynced
+/// parent's client_uuid to its server id at push time via
+/// `BaseEntitySyncer.resolveFks`.
 class SeasonRepositoryImpl
     with OfflineRepositoryMixin
     implements SeasonRepository {

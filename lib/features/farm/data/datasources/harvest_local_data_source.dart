@@ -31,8 +31,13 @@ class HarvestLocalDataSource implements LocalSyncStore<HarvestModel> {
   /// Ordered by `createdAt` ascending (oldest first) — a stable order tied
   /// to when a harvest was first created locally, unaffected by later edits.
   ///
-  /// TODO(P4): seasonId filter is a clientUuid flag-on; pulled rows keyed by
-  /// server id won't match until FK reconciliation.
+  /// TODO(P5): FK reconciliation (`translateHarvestFks`) only translates
+  /// `seasonId` on the PUSH WIRE — it never rewrites the LOCAL row. So this
+  /// filter, given a synced season's numeric server-id `seasonId`, can miss
+  /// an offline-created harvest whose local row still carries its (unsynced)
+  /// season's client_uuid, until a pull reconciles that row's FK. Equality
+  /// filters like this one stay unreliable across a client_uuid/server-id
+  /// split until the local representation is translated too.
   Stream<List<HarvestModel>> watchHarvests({String? seasonId}) {
     final query = _db.select(_db.harvests)
       ..where((row) => row.deletedLocally.equals(false));
