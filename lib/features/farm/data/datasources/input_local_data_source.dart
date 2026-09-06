@@ -27,8 +27,8 @@ class InputLocalDataSource implements LocalSyncStore<InputModel> {
   /// [sourceType] — mirrors `input_page.dart`'s existing
   /// `GetInputsEvent(sourceType:)` scoped list. `sourceType` is a stable
   /// string discriminator ('plant'/'animal'/…), not a parent id, so this
-  /// filter has no P4/clientUuid concern (unlike the `animalId`/`sourceId`
-  /// FK — see `InputModel`'s `// TODO(P4)` note).
+  /// filter has no clientUuid concern (unlike the `animalId`/`sourceId`
+  /// FK — see `InputModel`'s notes on `.create()`).
   ///
   /// Ordered by `createdAt` ascending (oldest first) — a stable order tied
   /// to when an input was first created locally, unaffected by later edits.

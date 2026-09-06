@@ -4,6 +4,7 @@ import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/datasources/revenue_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/revenue_model.dart';
+import 'package:farm_tracker/features/farm/data/sync/fk_translators.dart';
 
 /// Thin [RemoteSyncAdapter] over [RevenueRemoteDataSource], mapping the
 /// generic add/update/delete/getSince onto the revenue endpoints. Exceptions
@@ -42,6 +43,11 @@ class RevenueRemoteAdapter implements RemoteSyncAdapter<RevenueModel> {
 /// (via [RevenueRemoteAdapter]) and local mirror ([RevenueLocalDataSource],
 /// which implements `LocalSyncStore<RevenueModel>`) into it and stamps the
 /// `'revenue'` entity tag.
+///
+/// FK reconciliation for the polymorphic `sourceId` (an unsynced season/herd
+/// parent's client_uuid substituted with its server id before push) is
+/// implemented via [translateRevenueFks] — see `fk_translators.dart`. Note
+/// revenue's source discriminator field is `source`, not `sourceType`.
 class RevenueSyncer extends BaseEntitySyncer<RevenueModel> {
   RevenueSyncer({
     required RevenueRemoteDataSource remote,
@@ -50,5 +56,6 @@ class RevenueSyncer extends BaseEntitySyncer<RevenueModel> {
          entity: 'revenue',
          remote: RevenueRemoteAdapter(remote),
          local: local,
+         resolveFks: translateRevenueFks,
        );
 }

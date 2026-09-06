@@ -1,5 +1,6 @@
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/sync/fk_resolver.dart';
 
 /// Per-entity sync adapter driven by the `SyncEngine`.
 ///
@@ -14,12 +15,16 @@ abstract class EntitySyncer {
   /// Applies exactly ONE outbox [entry] to the server and reconciles the
   /// local id (e.g. writing back the server id on a create).
   ///
+  /// The [resolver] translates FK fields that reference an unsynced parent;
+  /// a syncer with no FKs ignores it. Throwing [SyncDependencyException]
+  /// parks the entry for a later pass.
+  ///
   /// SUCCESS is a normal return. On failure it MUST throw one of:
   /// - [NetworkException] — transient/offline; the engine keeps the entry
   ///   queued, stops the push phase and schedules a backoff retry.
   /// - [ServerException] — permanent (server-side, includes 4xx); the engine
   ///   parks the entry (`markFailed`) and continues with the next one.
-  Future<void> push(OutboxRow entry);
+  Future<void> push(OutboxRow entry, FkResolver resolver);
 
   /// Fetches server changes strictly after [since] (null = full pull),
   /// upserts them into the local mirror, and returns the greatest

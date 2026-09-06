@@ -206,7 +206,9 @@ class _Harness {
 }
 
 /// Builds a domain [Harvest] targeting an already-synced parent season
-/// (server id `'server-season-1'`) to pass into the repository.
+/// (numeric server id `'701'` — P4's `translateHarvestFks` passes a
+/// numeric-string FK through untouched, same as an unsynced clientUuid it
+/// has resolved).
 Harvest _domainHarvest({
   String id = '',
   double quantity = 10,
@@ -219,7 +221,7 @@ Harvest _domainHarvest({
   final at = createdAt ?? DateTime.utc(2026);
   return Harvest(
     id: id,
-    seasonId: 'server-season-1',
+    seasonId: '701',
     quantity: quantity,
     unit: unit,
     date: date ?? at,
@@ -234,7 +236,7 @@ Harvest _domainHarvest({
 HarvestModel _harvest({
   required String clientUuid,
   String id = '',
-  String seasonId = 'server-season-1',
+  String seasonId = '701',
   double quantity = 10,
   String unit = 'kg',
   DateTime? date,
@@ -333,12 +335,12 @@ void main() {
       expect(local2!.id, isNotEmpty, reason: 'serverId reconciled');
       expect(local2.quantity, 25);
 
-      // The already-synced parent season id is pushed through untouched
-      // (P3 scope — no clientUuid->serverId FK translation attempted).
+      // The already-synced (numeric) parent season id is pushed through
+      // untouched by translateHarvestFks — no FK translation needed.
       final pushed = h.remote.allRows.firstWhere(
         (r) => r.clientUuid == harvest1.id,
       );
-      expect(pushed.seasonId, 'server-season-1');
+      expect(pushed.seasonId, '701');
     },
   );
 
@@ -517,7 +519,7 @@ void main() {
       await h.repo.addHarvest(
         Harvest(
           id: '',
-          seasonId: 'server-season-OTHER',
+          seasonId: '702',
           quantity: 999,
           unit: 'kg',
           date: DateTime.utc(2026),
@@ -526,9 +528,7 @@ void main() {
         ),
       );
 
-      final scoped = await h.local
-          .watchHarvests(seasonId: 'server-season-1')
-          .first;
+      final scoped = await h.local.watchHarvests(seasonId: '701').first;
       expect(scoped, hasLength(1));
       expect(scoped.single.quantity, 7);
 
@@ -536,7 +536,7 @@ void main() {
       await h.engine.syncNow();
 
       final scopedAfterSync = await h.local
-          .watchHarvests(seasonId: 'server-season-1')
+          .watchHarvests(seasonId: '701')
           .first;
       expect(scopedAfterSync, hasLength(1));
       expect(scopedAfterSync.single.quantity, 7);

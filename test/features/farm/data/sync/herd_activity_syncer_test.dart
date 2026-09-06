@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/sync/fk_resolver.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_activity_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_activity_model.dart';
@@ -10,7 +11,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// Controllable fake of [HerdActivityRemoteDataSource] — records every call
 /// so tests can assert exactly what [HerdActivitySyncer] sent, and lets a
 /// test inject a canned response or a thrown exception.
-class _FakeHerdActivityRemoteDataSource implements HerdActivityRemoteDataSource {
+class _FakeHerdActivityRemoteDataSource
+    implements HerdActivityRemoteDataSource {
   final List<String> herdIdCalls = [];
   final List<HerdActivityModel> addedModels = [];
   HerdActivityModel Function(String herdId, HerdActivityModel model)?
@@ -41,7 +43,10 @@ class _FakeHerdActivityRemoteDataSource implements HerdActivityRemoteDataSource 
 HerdActivityModel _activity({
   required String clientUuid,
   String id = '',
-  String herdId = 'herd-1',
+  // Numeric == already-synced-herd semantics: `resolveFkOrThrow` returns a
+  // numeric value unchanged (no resolver lookup needed), so tests that don't
+  // care about FK translation can use `FkResolver(const {})` untouched.
+  String herdId = '1',
   String activityType = 'birth',
   int count = 1,
   DateTime? date,
@@ -63,7 +68,11 @@ HerdActivityModel _activity({
   );
 }
 
-OutboxRow _entry({required String op, required String clientUuid, int seq = 1}) {
+OutboxRow _entry({
+  required String op,
+  required String clientUuid,
+  int seq = 1,
+}) {
   return OutboxRow(
     seq: seq,
     entity: 'herd_activity',
@@ -101,49 +110,52 @@ void main() {
   });
 
   group('push — create', () {
-    test(
-      'calls remote.addHerdActivity(model.herdId, model) with the right '
-      'herdId, then reconciles the server id via setServerId',
-      () async {
-        await local.upsert(
-          _activity(clientUuid: 'cu-1', herdId: 'herd-42', count: 4),
-          pending: true,
-        );
-        remote.responseBuilder = (herdId, model) => HerdActivityModel(
-          id: 'server-99',
-          herdId: herdId,
-          activityType: model.activityType,
-          count: model.count,
-          date: model.date,
-          notes: model.notes,
-          createdAt: DateTime.utc(2026, 9, 6, 15, 30),
-        );
+    test('calls remote.addHerdActivity(model.herdId, model) with the right '
+        'herdId, then reconciles the server id via setServerId', () async {
+      await local.upsert(
+        _activity(clientUuid: 'cu-1', herdId: '42', count: 4),
+        pending: true,
+      );
+      remote.responseBuilder = (herdId, model) => HerdActivityModel(
+        id: 'server-99',
+        herdId: herdId,
+        activityType: model.activityType,
+        count: model.count,
+        date: model.date,
+        notes: model.notes,
+        createdAt: DateTime.utc(2026, 9, 6, 15, 30),
+      );
 
-        await syncer.push(_entry(op: 'create', clientUuid: 'cu-1'));
+      await syncer.push(
+        _entry(op: 'create', clientUuid: 'cu-1'),
+        FkResolver(const {}),
+      );
 
-        expect(remote.herdIdCalls, ['herd-42']);
-        expect(remote.addedModels, hasLength(1));
-        expect(remote.addedModels.single.clientUuid, 'cu-1');
-        expect(remote.addedModels.single.activityType, 'birth');
-        expect(remote.addedModels.single.count, 4);
+      expect(remote.herdIdCalls, ['42']);
+      expect(remote.addedModels, hasLength(1));
+      expect(remote.addedModels.single.clientUuid, 'cu-1');
+      expect(remote.addedModels.single.activityType, 'birth');
+      expect(remote.addedModels.single.count, 4);
 
-        final row = await local.getByClientUuid('cu-1');
-        expect(row, isNotNull);
-        expect(row!.pending, isFalse);
-        expect(row.id, 'server-99');
+      final row = await local.getByClientUuid('cu-1');
+      expect(row, isNotNull);
+      expect(row!.pending, isFalse);
+      expect(row.id, 'server-99');
 
-        final driftRow = await (db.select(
-          db.herdActivities,
-        )..where((r) => r.clientUuid.equals('cu-1'))).getSingle();
-        expect(
-          driftRow.updatedAt.isAtSameMomentAs(DateTime.utc(2026, 9, 6, 15, 30)),
-          isTrue,
-        );
-      },
-    );
+      final driftRow = await (db.select(
+        db.herdActivities,
+      )..where((r) => r.clientUuid.equals('cu-1'))).getSingle();
+      expect(
+        driftRow.updatedAt.isAtSameMomentAs(DateTime.utc(2026, 9, 6, 15, 30)),
+        isTrue,
+      );
+    });
 
     test('is a no-op when the local row is gone (annihilated)', () async {
-      await syncer.push(_entry(op: 'create', clientUuid: 'missing'));
+      await syncer.push(
+        _entry(op: 'create', clientUuid: 'missing'),
+        FkResolver(const {}),
+      );
 
       expect(remote.addedModels, isEmpty);
     });
@@ -155,7 +167,10 @@ void main() {
         remote.throwOnAdd = NetworkException();
 
         await expectLater(
-          syncer.push(_entry(op: 'create', clientUuid: 'cu-1')),
+          syncer.push(
+            _entry(op: 'create', clientUuid: 'cu-1'),
+            FkResolver(const {}),
+          ),
           throwsA(isA<NetworkException>()),
         );
       },
@@ -168,7 +183,10 @@ void main() {
         remote.throwOnAdd = const ServerException('bad request');
 
         await expectLater(
-          syncer.push(_entry(op: 'create', clientUuid: 'cu-1')),
+          syncer.push(
+            _entry(op: 'create', clientUuid: 'cu-1'),
+            FkResolver(const {}),
+          ),
           throwsA(isA<ServerException>()),
         );
       },
@@ -182,7 +200,10 @@ void main() {
         pending: true,
       );
 
-      await syncer.push(_entry(op: 'update', clientUuid: 'cu-1'));
+      await syncer.push(
+        _entry(op: 'update', clientUuid: 'cu-1'),
+        FkResolver(const {}),
+      );
 
       expect(remote.addedModels, isEmpty);
     });
@@ -193,7 +214,10 @@ void main() {
         pending: true,
       );
 
-      await syncer.push(_entry(op: 'delete', clientUuid: 'cu-1'));
+      await syncer.push(
+        _entry(op: 'delete', clientUuid: 'cu-1'),
+        FkResolver(const {}),
+      );
 
       expect(remote.addedModels, isEmpty);
     });

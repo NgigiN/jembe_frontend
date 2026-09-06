@@ -34,9 +34,14 @@ class InputModel extends Input implements SyncableModel {
     return InputModel(
       id: '',
       clientUuid: clientUuid ?? uuid.v4(),
-      // TODO(P4): unsynced-parent FK — animalId serializes to 0 / sourceId is
-      // a clientUuid flag-on; translate + order parent-before-child before
-      // push. P3 = synced-parent-only.
+      // sourceId may hold an unsynced parent's client_uuid here; the
+      // syncer's `translateInputFks` (fk_translators.dart) resolves it to
+      // the parent's server id at push time via
+      // `BaseEntitySyncer.resolveFks`.
+      //
+      // NOTE: `animalId` (int?) can't carry a client_uuid, so it stays
+      // synced-animal-only — an offline input against an unsynced animal
+      // still serializes `animal_id: 0` on push. See `withResolvedFks`.
       sourceType: sourceType,
       sourceId: sourceId,
       animalId: animalId,
@@ -126,9 +131,10 @@ class InputModel extends Input implements SyncableModel {
   /// from a server response (`fromJson`) or `create`.
   final bool deletedLocally;
 
-  // TODO(P4): unsynced-parent FK — animalId serializes to 0 / sourceId is a
-  // clientUuid flag-on; translate + order parent-before-child before push.
-  // P3 = synced-parent-only.
+  // NOTE: `animal_id` (int?) can't carry a client_uuid, so it stays
+  // synced-animal-only — an offline input against an unsynced animal still
+  // serializes `animal_id: 0` here. `source_id` IS resolved by the syncer's
+  // `translateInputFks` (fk_translators.dart) before this reaches the wire.
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -220,5 +226,31 @@ class InputModel extends Input implements SyncableModel {
       return DateTime.parse(dateValue);
     }
     return DateTime.now();
+  }
+
+  /// Returns a copy with [sourceId] overridden (a `null` arg keeps the
+  /// current value), every other field untouched. Used by the P4 sync FK
+  /// translator to substitute the polymorphic source parent's server id for
+  /// its client_uuid before push. Reconstruct via the SAME constructor
+  /// `withSyncClientUuid` uses.
+  ///
+  /// `animal_id` (int?) is NOT part of this — it can't carry a client_uuid,
+  /// so it's left untouched here; it remains synced-animal-only (see the
+  /// NOTE on `.create()`).
+  InputModel withResolvedFks({String? sourceId}) {
+    return InputModel(
+      id: id,
+      clientUuid: clientUuid,
+      sourceType: sourceType,
+      sourceId: sourceId ?? this.sourceId,
+      animalId: animalId,
+      type: type,
+      quantity: quantity,
+      cost: cost,
+      date: date,
+      notes: notes,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
   }
 }

@@ -28,8 +28,8 @@ class ActivityLocalDataSource implements LocalSyncStore<ActivityModel> {
   /// [sourceType] — mirrors `activity_page.dart`'s existing
   /// `GetActivitiesEvent(sourceType:)` scoped list. `sourceType` is a
   /// stable string discriminator ('plant'/'animal'/…), not a parent id, so
-  /// this filter has no P4/clientUuid concern (unlike the
-  /// `animalId`/`sourceId` FK — see `ActivityModel`'s `// TODO(P4)` note).
+  /// this filter has no clientUuid concern (unlike the
+  /// `animalId`/`sourceId` FK — see `ActivityModel`'s notes on `.create()`).
   ///
   /// Ordered by `createdAt` ascending (oldest first) — a stable order tied
   /// to when an activity was first created locally, unaffected by later

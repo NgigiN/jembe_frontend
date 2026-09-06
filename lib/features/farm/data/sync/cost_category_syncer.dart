@@ -1,5 +1,6 @@
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/entity_syncer.dart';
+import 'package:farm_tracker/core/sync/fk_resolver.dart';
 import 'package:farm_tracker/features/farm/data/datasources/cost_category_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/cost_category_remote_data_source.dart';
 
@@ -56,7 +57,7 @@ class CostCategorySyncer implements EntitySyncer {
   bool get hasCursor => false;
 
   @override
-  Future<void> push(OutboxRow entry) async {
+  Future<void> push(OutboxRow entry, FkResolver resolver) async {
     if (entry.op == 'create') {
       await _pushCreate(entry.clientUuid);
     } else if (entry.op == 'delete') {
@@ -64,6 +65,7 @@ class CostCategorySyncer implements EntitySyncer {
     }
     // 'update' (and any op outside the {'create','delete'} contract this
     // entity actually uses): nothing to do — cost_category has no update.
+    // `resolver` is unused — this entity has no FKs.
   }
 
   Future<void> _pushCreate(String clientUuid) async {

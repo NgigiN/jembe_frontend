@@ -9,6 +9,7 @@ import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
 import 'package:farm_tracker/core/sync/deletions_data_source.dart';
 import 'package:farm_tracker/core/sync/outbox.dart';
+import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/core/sync/sync_cursor_dao.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/features/auth/data/datasources/auth_remote_data_source.dart';
@@ -632,33 +633,44 @@ Future<void> init({AppDatabase? database}) async {
       () => InfrastructureSyncer(remote: sl(), local: sl()),
     )
     ..registerLazySingleton(() => RevenueSyncer(remote: sl(), local: sl()))
-    ..registerLazySingleton(
-      () => CostCategorySyncer(remote: sl(), local: sl()),
-    )
+    ..registerLazySingleton(() => CostCategorySyncer(remote: sl(), local: sl()))
     ..registerLazySingleton(
       () => HerdActivitySyncer(remote: sl(), local: sl()),
-    )
+    );
+
+  // All 13 offline-mirrored entities' local mirrors, keyed by the same
+  // `entity` tag used in the outbox/tombstone feed. Shared by BOTH
+  // `DeletionsDataSource` (applies inbound tombstones) and `SyncEngine` (the
+  // FK resolver's prior-pass fallback) — one registry, one place to add a
+  // 14th entity.
+  //
+  // `late` is load-bearing: `AppDatabase` (which every `*LocalDataSource`
+  // depends on) is a `registerSingletonAsync` not yet READY at this point in
+  // `init()` — only after the `await sl.allReady()` below. An eager `final`
+  // here would force every `sl<...LocalDataSource>()` call immediately,
+  // before the database is ready, and crash. `late` defers this map's first
+  // build to whenever `DeletionsDataSource`/`SyncEngine` is first actually
+  // resolved (well after `allReady`), while still computing it exactly once
+  // and sharing that one instance between both registrations below.
+  late final syncStores = <String, LocalSyncStore<SyncableModel>>{
+    'land': sl<LandLocalDataSource>(),
+    'plant': sl<PlantLocalDataSource>(),
+    'season': sl<SeasonLocalDataSource>(),
+    'animal': sl<AnimalLocalDataSource>(),
+    'harvest': sl<HarvestLocalDataSource>(),
+    'input': sl<InputLocalDataSource>(),
+    'activity': sl<ActivityLocalDataSource>(),
+    'animal_type': sl<AnimalTypeLocalDataSource>(),
+    'herd': sl<HerdLocalDataSource>(),
+    'infrastructure': sl<InfrastructureLocalDataSource>(),
+    'revenue': sl<RevenueLocalDataSource>(),
+    'cost_category': sl<CostCategoryLocalDataSource>(),
+    'herd_activity': sl<HerdActivityLocalDataSource>(),
+  };
+
+  sl
     ..registerLazySingleton(
-      // All 13 offline-mirrored entities: applies inbound /sync/deletions
-      // tombstones per entity.
-      () => DeletionsDataSource(
-        dio: sl(),
-        stores: {
-          'land': sl<LandLocalDataSource>(),
-          'plant': sl<PlantLocalDataSource>(),
-          'season': sl<SeasonLocalDataSource>(),
-          'animal': sl<AnimalLocalDataSource>(),
-          'harvest': sl<HarvestLocalDataSource>(),
-          'input': sl<InputLocalDataSource>(),
-          'activity': sl<ActivityLocalDataSource>(),
-          'animal_type': sl<AnimalTypeLocalDataSource>(),
-          'herd': sl<HerdLocalDataSource>(),
-          'infrastructure': sl<InfrastructureLocalDataSource>(),
-          'revenue': sl<RevenueLocalDataSource>(),
-          'cost_category': sl<CostCategoryLocalDataSource>(),
-          'herd_activity': sl<HerdActivityLocalDataSource>(),
-        },
-      ),
+      () => DeletionsDataSource(dio: sl(), stores: syncStores),
     )
     ..registerLazySingleton(
       () => SyncEngine(
@@ -681,6 +693,7 @@ Future<void> init({AppDatabase? database}) async {
         cursors: sl(),
         connectivity: sl(),
         deletions: sl<DeletionsDataSource>(),
+        fkStores: syncStores,
         // Pre-flip hardening: gate every sync pass on an authenticated
         // session so a pre-login launch/resume/connectivity-regain trigger
         // never hits a protected endpoint, gets a 401, and forces an

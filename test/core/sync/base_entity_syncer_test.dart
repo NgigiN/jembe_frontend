@@ -8,6 +8,7 @@
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/sync/base_entity_syncer.dart';
+import 'package:farm_tracker/core/sync/fk_resolver.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -198,14 +199,20 @@ void main() {
 
   group('push — create', () {
     test('calls add and reconciles the server id + clears pending', () async {
-      local.byClientUuid['cu-1'] = _FakeModel(clientUuid: 'cu-1', pending: true);
+      local.byClientUuid['cu-1'] = _FakeModel(
+        clientUuid: 'cu-1',
+        pending: true,
+      );
       remote.onAdd = (sent) => _FakeModel(
         clientUuid: sent.clientUuid,
         serverId: 'server-1',
         updatedAt: DateTime.utc(2026, 2),
       );
 
-      await syncer.push(_entry(op: 'create', clientUuid: 'cu-1'));
+      await syncer.push(
+        _entry(op: 'create', clientUuid: 'cu-1'),
+        FkResolver(const {}),
+      );
 
       expect(remote.addCalls, hasLength(1));
       expect(remote.addCalls.single.clientUuid, 'cu-1');
@@ -215,44 +222,100 @@ void main() {
     });
 
     test('is a no-op when the local row is gone (annihilated)', () async {
-      await syncer.push(_entry(op: 'create', clientUuid: 'missing'));
+      await syncer.push(
+        _entry(op: 'create', clientUuid: 'missing'),
+        FkResolver(const {}),
+      );
       expect(remote.addCalls, isEmpty);
     });
 
-    test('idempotent retry: same server row twice does not duplicate', () async {
-      local.byClientUuid['cu-1'] = _FakeModel(clientUuid: 'cu-1', pending: true);
-      remote.onAdd = (sent) => _FakeModel(
-        clientUuid: 'cu-1',
-        serverId: 'server-1',
-        updatedAt: DateTime.utc(2026, 2),
-      );
+    test(
+      'idempotent retry: same server row twice does not duplicate',
+      () async {
+        local.byClientUuid['cu-1'] = _FakeModel(
+          clientUuid: 'cu-1',
+          pending: true,
+        );
+        remote.onAdd = (sent) => _FakeModel(
+          clientUuid: 'cu-1',
+          serverId: 'server-1',
+          updatedAt: DateTime.utc(2026, 2),
+        );
 
-      await syncer.push(_entry(op: 'create', clientUuid: 'cu-1'));
-      await syncer.push(_entry(op: 'create', clientUuid: 'cu-1'));
+        await syncer.push(
+          _entry(op: 'create', clientUuid: 'cu-1'),
+          FkResolver(const {}),
+        );
+        await syncer.push(
+          _entry(op: 'create', clientUuid: 'cu-1'),
+          FkResolver(const {}),
+        );
 
-      expect(remote.addCalls, hasLength(2));
-      expect(local.byClientUuid, hasLength(1));
-      expect(local.byClientUuid['cu-1']!.serverId, 'server-1');
-    });
+        expect(remote.addCalls, hasLength(2));
+        expect(local.byClientUuid, hasLength(1));
+        expect(local.byClientUuid['cu-1']!.serverId, 'server-1');
+      },
+    );
 
     test('a NetworkException from add propagates (not swallowed)', () async {
-      local.byClientUuid['cu-1'] = _FakeModel(clientUuid: 'cu-1', pending: true);
+      local.byClientUuid['cu-1'] = _FakeModel(
+        clientUuid: 'cu-1',
+        pending: true,
+      );
       remote.throwOnAdd = NetworkException();
 
       await expectLater(
-        syncer.push(_entry(op: 'create', clientUuid: 'cu-1')),
+        syncer.push(
+          _entry(op: 'create', clientUuid: 'cu-1'),
+          FkResolver(const {}),
+        ),
         throwsA(isA<NetworkException>()),
       );
     });
 
     test('a ServerException from add propagates (not swallowed)', () async {
-      local.byClientUuid['cu-1'] = _FakeModel(clientUuid: 'cu-1', pending: true);
+      local.byClientUuid['cu-1'] = _FakeModel(
+        clientUuid: 'cu-1',
+        pending: true,
+      );
       remote.throwOnAdd = const ServerException('bad request');
 
       await expectLater(
-        syncer.push(_entry(op: 'create', clientUuid: 'cu-1')),
+        syncer.push(
+          _entry(op: 'create', clientUuid: 'cu-1'),
+          FkResolver(const {}),
+        ),
         throwsA(isA<ServerException>()),
       );
+    });
+
+    test('applies the resolveFks translator before add and records the new '
+        'id', () async {
+      local.byClientUuid['c1'] = _FakeModel(clientUuid: 'c1', pending: true);
+      remote.onAdd = (sent) => _FakeModel(
+        clientUuid: sent.clientUuid,
+        serverId: '99',
+        updatedAt: DateTime.utc(2026, 2),
+      );
+      var translated = false;
+      final translatingSyncer = BaseEntitySyncer<_FakeModel>(
+        entity: 'thing',
+        remote: remote,
+        local: local,
+        resolveFks: (m, r) async {
+          translated = true;
+          return m;
+        },
+      );
+      final resolver = FkResolver(const {});
+
+      await translatingSyncer.push(
+        _entry(op: 'create', clientUuid: 'c1'),
+        resolver,
+      );
+
+      expect(translated, isTrue);
+      expect(await resolver.resolve('thing', 'c1'), '99');
     });
   });
 
@@ -271,7 +334,10 @@ void main() {
         name: sent.name,
       );
 
-      await syncer.push(_entry(op: 'update', clientUuid: 'cu-1'));
+      await syncer.push(
+        _entry(op: 'update', clientUuid: 'cu-1'),
+        FkResolver(const {}),
+      );
 
       expect(remote.updateCalls, hasLength(1));
       expect(remote.updateCalls.single.serverId, 'server-1');
@@ -280,14 +346,20 @@ void main() {
     });
 
     test('falls back to create when the row has no server id', () async {
-      local.byClientUuid['cu-1'] = _FakeModel(clientUuid: 'cu-1', pending: true);
+      local.byClientUuid['cu-1'] = _FakeModel(
+        clientUuid: 'cu-1',
+        pending: true,
+      );
       remote.onAdd = (sent) => _FakeModel(
         clientUuid: 'cu-1',
         serverId: 'server-9',
         updatedAt: DateTime.utc(2026, 4),
       );
 
-      await syncer.push(_entry(op: 'update', clientUuid: 'cu-1'));
+      await syncer.push(
+        _entry(op: 'update', clientUuid: 'cu-1'),
+        FkResolver(const {}),
+      );
 
       expect(remote.addCalls, hasLength(1));
       expect(remote.updateCalls, isEmpty);
@@ -297,48 +369,65 @@ void main() {
 
   group('push — delete', () {
     test('calls delete with the server id then hard-deletes locally', () async {
-      local.byClientUuid['cu-1'] =
-          _FakeModel(clientUuid: 'cu-1', serverId: 'server-1');
+      local.byClientUuid['cu-1'] = _FakeModel(
+        clientUuid: 'cu-1',
+        serverId: 'server-1',
+      );
 
-      await syncer.push(_entry(op: 'delete', clientUuid: 'cu-1'));
+      await syncer.push(
+        _entry(op: 'delete', clientUuid: 'cu-1'),
+        FkResolver(const {}),
+      );
 
       expect(remote.deleteCalls, ['server-1']);
       expect(local.byClientUuid.containsKey('cu-1'), isFalse);
     });
 
     test('a never-synced row (no server id) is just hard-deleted', () async {
-      local.byClientUuid['cu-1'] = _FakeModel(clientUuid: 'cu-1', pending: true);
+      local.byClientUuid['cu-1'] = _FakeModel(
+        clientUuid: 'cu-1',
+        pending: true,
+      );
 
-      await syncer.push(_entry(op: 'delete', clientUuid: 'cu-1'));
+      await syncer.push(
+        _entry(op: 'delete', clientUuid: 'cu-1'),
+        FkResolver(const {}),
+      );
 
       expect(remote.deleteCalls, isEmpty);
       expect(local.byClientUuid.containsKey('cu-1'), isFalse);
     });
 
     test('is a no-op when the local row is already gone', () async {
-      await syncer.push(_entry(op: 'delete', clientUuid: 'missing'));
+      await syncer.push(
+        _entry(op: 'delete', clientUuid: 'missing'),
+        FkResolver(const {}),
+      );
       expect(remote.deleteCalls, isEmpty);
     });
   });
 
   group('pull', () {
-    test('upserts a changed server row and returns the max updatedAt', () async {
-      remote.onGetSince = (since) => [
-        _FakeModel(
-          clientUuid: 'cu-1',
-          serverId: 'server-1',
-          updatedAt: DateTime.utc(2026, 5),
-        ),
-      ];
+    test(
+      'upserts a changed server row and returns the max updatedAt',
+      () async {
+        remote.onGetSince = (since) => [
+          _FakeModel(
+            clientUuid: 'cu-1',
+            serverId: 'server-1',
+            updatedAt: DateTime.utc(2026, 5),
+          ),
+        ];
 
-      final cursor = await syncer.pull(null);
+        final cursor = await syncer.pull(null);
 
-      expect(remote.getSinceCalls, [null]);
-      expect(cursor!.isAtSameMomentAs(DateTime.utc(2026, 5)), isTrue);
-      final row = local.byClientUuid['cu-1']!;
-      expect(row.serverId, 'server-1');
-      expect(row.pending, isFalse);
-    });
+        expect(remote.getSinceCalls, [null]);
+        expect(cursor!.isAtSameMomentAs(DateTime.utc(2026, 5)), isTrue);
+        final row = local.byClientUuid['cu-1']!;
+        expect(row.serverId, 'server-1');
+        expect(row.pending, isFalse);
+      },
+    );
 
     test('passes the cursor through as getSince argument', () async {
       final since = DateTime.utc(2026);
@@ -354,9 +443,21 @@ void main() {
 
     test('returns the MAX updatedAt across multiple server rows', () async {
       remote.onGetSince = (since) => [
-        _FakeModel(clientUuid: 'cu-1', serverId: 's-1', updatedAt: DateTime.utc(2026)),
-        _FakeModel(clientUuid: 'cu-2', serverId: 's-2', updatedAt: DateTime.utc(2026, 6)),
-        _FakeModel(clientUuid: 'cu-3', serverId: 's-3', updatedAt: DateTime.utc(2026, 3)),
+        _FakeModel(
+          clientUuid: 'cu-1',
+          serverId: 's-1',
+          updatedAt: DateTime.utc(2026),
+        ),
+        _FakeModel(
+          clientUuid: 'cu-2',
+          serverId: 's-2',
+          updatedAt: DateTime.utc(2026, 6),
+        ),
+        _FakeModel(
+          clientUuid: 'cu-3',
+          serverId: 's-3',
+          updatedAt: DateTime.utc(2026, 3),
+        ),
       ];
 
       final cursor = await syncer.pull(null);
@@ -397,29 +498,32 @@ void main() {
       expect(local.byClientUuid, isEmpty);
     });
 
-    test('LWW: a pending local edit NEWER than the server row is kept', () async {
-      local.byClientUuid['cu-1'] = _FakeModel(
-        clientUuid: 'cu-1',
-        serverId: 'server-1',
-        name: 'Local edit',
-        updatedAt: DateTime.utc(2026, 8),
-        pending: true,
-      );
-      remote.onGetSince = (since) => [
-        _FakeModel(
+    test(
+      'LWW: a pending local edit NEWER than the server row is kept',
+      () async {
+        local.byClientUuid['cu-1'] = _FakeModel(
           clientUuid: 'cu-1',
           serverId: 'server-1',
-          name: 'Stale server value',
-          updatedAt: DateTime.utc(2026, 6),
-        ),
-      ];
+          name: 'Local edit',
+          updatedAt: DateTime.utc(2026, 8),
+          pending: true,
+        );
+        remote.onGetSince = (since) => [
+          _FakeModel(
+            clientUuid: 'cu-1',
+            serverId: 'server-1',
+            name: 'Stale server value',
+            updatedAt: DateTime.utc(2026, 6),
+          ),
+        ];
 
-      await syncer.pull(null);
+        await syncer.pull(null);
 
-      final row = local.byClientUuid['cu-1']!;
-      expect(row.name, 'Local edit');
-      expect(row.pending, isTrue);
-    });
+        final row = local.byClientUuid['cu-1']!;
+        expect(row.name, 'Local edit');
+        expect(row.pending, isTrue);
+      },
+    );
 
     test('LWW: a NEWER server row overwrites a pending local edit', () async {
       local.byClientUuid['cu-1'] = _FakeModel(
@@ -529,14 +633,20 @@ void main() {
       expect(local.byClientUuid['cu-new']!.pending, isFalse);
     });
 
-    test('a NetworkException from getSince propagates (not swallowed)', () async {
-      remote.throwOnGetSince = NetworkException();
-      await expectLater(syncer.pull(null), throwsA(isA<NetworkException>()));
-    });
+    test(
+      'a NetworkException from getSince propagates (not swallowed)',
+      () async {
+        remote.throwOnGetSince = NetworkException();
+        await expectLater(syncer.pull(null), throwsA(isA<NetworkException>()));
+      },
+    );
 
-    test('a ServerException from getSince propagates (not swallowed)', () async {
-      remote.throwOnGetSince = const ServerException('boom');
-      await expectLater(syncer.pull(null), throwsA(isA<ServerException>()));
-    });
+    test(
+      'a ServerException from getSince propagates (not swallowed)',
+      () async {
+        remote.throwOnGetSince = const ServerException('boom');
+        await expectLater(syncer.pull(null), throwsA(isA<ServerException>()));
+      },
+    );
   });
 }

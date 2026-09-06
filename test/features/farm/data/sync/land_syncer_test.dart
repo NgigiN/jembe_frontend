@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/sync/fk_resolver.dart';
 import 'package:farm_tracker/features/farm/data/datasources/land_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/land_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/land_model.dart';
@@ -104,29 +105,38 @@ void main() {
   });
 
   group('push — create', () {
-    test('calls addLand and reconciles the server id + clears pending', () async {
-      await local.upsert(_land(clientUuid: 'cu-1'), pending: true);
-      remote.onAdd = (sent) => _land(
-        clientUuid: sent.clientUuid,
-        id: 'server-1',
-        name: sent.name,
-        updatedAt: DateTime.utc(2026, 2),
-      );
+    test(
+      'calls addLand and reconciles the server id + clears pending',
+      () async {
+        await local.upsert(_land(clientUuid: 'cu-1'), pending: true);
+        remote.onAdd = (sent) => _land(
+          clientUuid: sent.clientUuid,
+          id: 'server-1',
+          name: sent.name,
+          updatedAt: DateTime.utc(2026, 2),
+        );
 
-      await syncer.push(_entry(op: 'create', clientUuid: 'cu-1'));
+        await syncer.push(
+          _entry(op: 'create', clientUuid: 'cu-1'),
+          FkResolver(const {}),
+        );
 
-      expect(remote.addCalls, hasLength(1));
-      expect(remote.addCalls.single.clientUuid, 'cu-1');
+        expect(remote.addCalls, hasLength(1));
+        expect(remote.addCalls.single.clientUuid, 'cu-1');
 
-      final row = await (db.select(
-        db.lands,
-      )..where((r) => r.clientUuid.equals('cu-1'))).getSingle();
-      expect(row.serverId, 'server-1');
-      expect(row.pending, isFalse);
-    });
+        final row = await (db.select(
+          db.lands,
+        )..where((r) => r.clientUuid.equals('cu-1'))).getSingle();
+        expect(row.serverId, 'server-1');
+        expect(row.pending, isFalse);
+      },
+    );
 
     test('is a no-op when the local row is gone (annihilated)', () async {
-      await syncer.push(_entry(op: 'create', clientUuid: 'missing'));
+      await syncer.push(
+        _entry(op: 'create', clientUuid: 'missing'),
+        FkResolver(const {}),
+      );
 
       expect(remote.addCalls, isEmpty);
     });
@@ -140,10 +150,16 @@ void main() {
         updatedAt: DateTime.utc(2026, 2),
       );
 
-      await syncer.push(_entry(op: 'create', clientUuid: 'cu-1'));
+      await syncer.push(
+        _entry(op: 'create', clientUuid: 'cu-1'),
+        FkResolver(const {}),
+      );
       // Simulate a retried push (e.g. the ack was lost after a successful
       // create) — P1 guarantees the SAME server row comes back.
-      await syncer.push(_entry(op: 'create', clientUuid: 'cu-1'));
+      await syncer.push(
+        _entry(op: 'create', clientUuid: 'cu-1'),
+        FkResolver(const {}),
+      );
 
       expect(remote.addCalls, hasLength(2));
       final rows = await db.select(db.lands).get();
@@ -151,22 +167,31 @@ void main() {
       expect(rows.single.serverId, 'server-1');
     });
 
-    test('a NetworkException from addLand propagates (not swallowed)', () async {
-      await local.upsert(_land(clientUuid: 'cu-1'), pending: true);
-      remote.throwOnAdd = NetworkException();
+    test(
+      'a NetworkException from addLand propagates (not swallowed)',
+      () async {
+        await local.upsert(_land(clientUuid: 'cu-1'), pending: true);
+        remote.throwOnAdd = NetworkException();
 
-      await expectLater(
-        syncer.push(_entry(op: 'create', clientUuid: 'cu-1')),
-        throwsA(isA<NetworkException>()),
-      );
-    });
+        await expectLater(
+          syncer.push(
+            _entry(op: 'create', clientUuid: 'cu-1'),
+            FkResolver(const {}),
+          ),
+          throwsA(isA<NetworkException>()),
+        );
+      },
+    );
 
     test('a ServerException from addLand propagates (not swallowed)', () async {
       await local.upsert(_land(clientUuid: 'cu-1'), pending: true);
       remote.throwOnAdd = const ServerException('bad request');
 
       await expectLater(
-        syncer.push(_entry(op: 'create', clientUuid: 'cu-1')),
+        syncer.push(
+          _entry(op: 'create', clientUuid: 'cu-1'),
+          FkResolver(const {}),
+        ),
         throwsA(isA<ServerException>()),
       );
     });
@@ -189,7 +214,10 @@ void main() {
         updatedAt: DateTime.utc(2026, 3),
       );
 
-      await syncer.push(_entry(op: 'update', clientUuid: 'cu-1'));
+      await syncer.push(
+        _entry(op: 'update', clientUuid: 'cu-1'),
+        FkResolver(const {}),
+      );
 
       expect(remote.updateCalls, hasLength(1));
       expect(remote.updateCalls.single.id, 'server-1');
@@ -206,10 +234,16 @@ void main() {
       'falls back to create when the local row has no server id (defensive)',
       () async {
         await local.upsert(_land(clientUuid: 'cu-1'), pending: true);
-        remote.onAdd = (sent) =>
-            _land(clientUuid: 'cu-1', id: 'server-9', updatedAt: DateTime.utc(2026, 4));
+        remote.onAdd = (sent) => _land(
+          clientUuid: 'cu-1',
+          id: 'server-9',
+          updatedAt: DateTime.utc(2026, 4),
+        );
 
-        await syncer.push(_entry(op: 'update', clientUuid: 'cu-1'));
+        await syncer.push(
+          _entry(op: 'update', clientUuid: 'cu-1'),
+          FkResolver(const {}),
+        );
 
         expect(remote.addCalls, hasLength(1));
         expect(remote.updateCalls, isEmpty);
@@ -222,21 +256,33 @@ void main() {
   });
 
   group('push — delete', () {
-    test('calls deleteLand with the server id then hard-deletes locally', () async {
-      await local.upsert(_land(clientUuid: 'cu-1', id: 'server-1'), pending: false);
+    test(
+      'calls deleteLand with the server id then hard-deletes locally',
+      () async {
+        await local.upsert(
+          _land(clientUuid: 'cu-1', id: 'server-1'),
+          pending: false,
+        );
 
-      await syncer.push(_entry(op: 'delete', clientUuid: 'cu-1'));
+        await syncer.push(
+          _entry(op: 'delete', clientUuid: 'cu-1'),
+          FkResolver(const {}),
+        );
 
-      expect(remote.deleteCalls, ['server-1']);
-      expect(await local.getByClientUuid('cu-1'), isNull);
-    });
+        expect(remote.deleteCalls, ['server-1']);
+        expect(await local.getByClientUuid('cu-1'), isNull);
+      },
+    );
 
     test(
       'a row that never synced (no server id) is just hard-deleted locally',
       () async {
         await local.upsert(_land(clientUuid: 'cu-1'), pending: true);
 
-        await syncer.push(_entry(op: 'delete', clientUuid: 'cu-1'));
+        await syncer.push(
+          _entry(op: 'delete', clientUuid: 'cu-1'),
+          FkResolver(const {}),
+        );
 
         expect(remote.deleteCalls, isEmpty);
         expect(await local.getByClientUuid('cu-1'), isNull);
@@ -244,32 +290,38 @@ void main() {
     );
 
     test('is a no-op when the local row is already gone', () async {
-      await syncer.push(_entry(op: 'delete', clientUuid: 'missing'));
+      await syncer.push(
+        _entry(op: 'delete', clientUuid: 'missing'),
+        FkResolver(const {}),
+      );
 
       expect(remote.deleteCalls, isEmpty);
     });
   });
 
   group('pull', () {
-    test('upserts a changed server row and returns the max updatedAt', () async {
-      final serverRow = _land(
-        clientUuid: 'cu-1',
-        id: 'server-1',
-        updatedAt: DateTime.utc(2026, 5),
-      );
-      remote.onGetLands = (since) => [serverRow];
+    test(
+      'upserts a changed server row and returns the max updatedAt',
+      () async {
+        final serverRow = _land(
+          clientUuid: 'cu-1',
+          id: 'server-1',
+          updatedAt: DateTime.utc(2026, 5),
+        );
+        remote.onGetLands = (since) => [serverRow];
 
-      final cursor = await syncer.pull(null);
+        final cursor = await syncer.pull(null);
 
-      expect(remote.getLandsCalls, [null]);
-      expect(cursor, isNotNull);
-      expect(cursor!.isAtSameMomentAs(DateTime.utc(2026, 5)), isTrue);
+        expect(remote.getLandsCalls, [null]);
+        expect(cursor, isNotNull);
+        expect(cursor!.isAtSameMomentAs(DateTime.utc(2026, 5)), isTrue);
 
-      final local1 = await local.getByClientUuid('cu-1');
-      expect(local1, isNotNull);
-      expect(local1!.id, 'server-1');
-      expect(local1.pending, isFalse);
-    });
+        final local1 = await local.getByClientUuid('cu-1');
+        expect(local1, isNotNull);
+        expect(local1!.id, 'server-1');
+        expect(local1.pending, isFalse);
+      },
+    );
 
     test('passes the cursor through as updatedSince', () async {
       final since = DateTime.utc(2026);
@@ -279,11 +331,14 @@ void main() {
       expect(remote.getLandsCalls, [since]);
     });
 
-    test('returns null and touches nothing when the server has no changes', () async {
-      final cursor = await syncer.pull(DateTime.utc(2026));
+    test(
+      'returns null and touches nothing when the server has no changes',
+      () async {
+        final cursor = await syncer.pull(DateTime.utc(2026));
 
-      expect(cursor, isNull);
-    });
+        expect(cursor, isNull);
+      },
+    );
 
     test('returns the MAX updatedAt across multiple server rows', () async {
       remote.onGetLands = (since) => [
@@ -297,71 +352,42 @@ void main() {
       expect(cursor!.isAtSameMomentAs(DateTime.utc(2026, 6)), isTrue);
     });
 
-    test(
-      'falls back to matching by server id when the server row carries no '
-      'client_uuid',
-      () async {
-        await local.upsert(
-          _land(clientUuid: 'cu-1', id: 'server-1', name: 'Old name'),
-          pending: false,
-        );
-        remote.onGetLands = (since) => [
-          LandModel(
-            id: 'server-1',
-            clientUuid: '',
-            userId: 'user-1',
-            name: 'Server name',
-            createdAt: DateTime.utc(2026),
-            updatedAt: DateTime.utc(2026, 7),
-          ),
-        ];
-
-        await syncer.pull(null);
-
-        final row = await local.getByClientUuid('cu-1');
-        expect(row!.name, 'Server name');
-      },
-    );
-
-    test('LWW: a pending local edit NEWER than the server row is kept', () async {
+    test('falls back to matching by server id when the server row carries no '
+        'client_uuid', () async {
       await local.upsert(
-        _land(clientUuid: 'cu-1', id: 'server-1', name: 'Local edit'),
+        _land(clientUuid: 'cu-1', id: 'server-1', name: 'Old name'),
         pending: false,
       );
-      await local.upsert(
-        _land(
-          clientUuid: 'cu-1',
-          id: 'server-1',
-          name: 'Local edit',
-          updatedAt: DateTime.utc(2026, 8),
-        ),
-        pending: true,
-      );
       remote.onGetLands = (since) => [
-        _land(
-          clientUuid: 'cu-1',
+        LandModel(
           id: 'server-1',
-          name: 'Stale server value',
-          updatedAt: DateTime.utc(2026, 6),
+          clientUuid: '',
+          userId: 'user-1',
+          name: 'Server name',
+          createdAt: DateTime.utc(2026),
+          updatedAt: DateTime.utc(2026, 7),
         ),
       ];
 
       await syncer.pull(null);
 
       final row = await local.getByClientUuid('cu-1');
-      expect(row!.name, 'Local edit');
-      expect(row.pending, isTrue);
+      expect(row!.name, 'Server name');
     });
 
     test(
-      'LWW: a NEWER server row overwrites a pending local edit',
+      'LWW: a pending local edit NEWER than the server row is kept',
       () async {
+        await local.upsert(
+          _land(clientUuid: 'cu-1', id: 'server-1', name: 'Local edit'),
+          pending: false,
+        );
         await local.upsert(
           _land(
             clientUuid: 'cu-1',
             id: 'server-1',
             name: 'Local edit',
-            updatedAt: DateTime.utc(2026, 6),
+            updatedAt: DateTime.utc(2026, 8),
           ),
           pending: true,
         );
@@ -369,21 +395,50 @@ void main() {
           _land(
             clientUuid: 'cu-1',
             id: 'server-1',
-            name: 'Newer server value',
-            updatedAt: DateTime.utc(2026, 8),
+            name: 'Stale server value',
+            updatedAt: DateTime.utc(2026, 6),
           ),
         ];
 
         await syncer.pull(null);
 
         final row = await local.getByClientUuid('cu-1');
-        expect(row!.name, 'Newer server value');
-        expect(row.pending, isFalse);
+        expect(row!.name, 'Local edit');
+        expect(row.pending, isTrue);
       },
     );
 
+    test('LWW: a NEWER server row overwrites a pending local edit', () async {
+      await local.upsert(
+        _land(
+          clientUuid: 'cu-1',
+          id: 'server-1',
+          name: 'Local edit',
+          updatedAt: DateTime.utc(2026, 6),
+        ),
+        pending: true,
+      );
+      remote.onGetLands = (since) => [
+        _land(
+          clientUuid: 'cu-1',
+          id: 'server-1',
+          name: 'Newer server value',
+          updatedAt: DateTime.utc(2026, 8),
+        ),
+      ];
+
+      await syncer.pull(null);
+
+      final row = await local.getByClientUuid('cu-1');
+      expect(row!.name, 'Newer server value');
+      expect(row.pending, isFalse);
+    });
+
     test('delete-wins: does not resurrect a pending local delete', () async {
-      await local.upsert(_land(clientUuid: 'cu-1', id: 'server-1'), pending: false);
+      await local.upsert(
+        _land(clientUuid: 'cu-1', id: 'server-1'),
+        pending: false,
+      );
       await local.markDeleted('cu-1');
       remote.onGetLands = (since) => [
         _land(
@@ -426,16 +481,22 @@ void main() {
       expect(row!.name, 'New');
     });
 
-    test('a NetworkException from getLands propagates (not swallowed)', () async {
-      remote.throwOnGetLands = NetworkException();
+    test(
+      'a NetworkException from getLands propagates (not swallowed)',
+      () async {
+        remote.throwOnGetLands = NetworkException();
 
-      await expectLater(syncer.pull(null), throwsA(isA<NetworkException>()));
-    });
+        await expectLater(syncer.pull(null), throwsA(isA<NetworkException>()));
+      },
+    );
 
-    test('a ServerException from getLands propagates (not swallowed)', () async {
-      remote.throwOnGetLands = const ServerException('boom');
+    test(
+      'a ServerException from getLands propagates (not swallowed)',
+      () async {
+        remote.throwOnGetLands = const ServerException('boom');
 
-      await expectLater(syncer.pull(null), throwsA(isA<ServerException>()));
-    });
+        await expectLater(syncer.pull(null), throwsA(isA<ServerException>()));
+      },
+    );
   });
 }

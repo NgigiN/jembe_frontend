@@ -36,10 +36,9 @@ class SeasonModel extends Season implements SyncableModel {
       clientUuid: clientUuid ?? uuid.v4(),
       userId: userId,
       name: name,
-      // TODO(P4): unsynced-parent FK reconciliation — plantId/landId are
-      // client-side ids; an unsynced parent serializes '' and the server
-      // create will reject/mislink. P3 supports create under an
-      // ALREADY-SYNCED parent only.
+      // plantId/landId may hold an unsynced parent's client_uuid here; the
+      // syncer's `translateSeasonFks` (fk_translators.dart) resolves it to
+      // the parent's server id at push time via `BaseEntitySyncer.resolveFks`.
       plantId: plantId,
       landId: landId,
       startDate: startDate,
@@ -126,10 +125,9 @@ class SeasonModel extends Season implements SyncableModel {
       'client_uuid': clientUuid,
       'user_id': userId,
       'name': name,
-      // TODO(P4): unsynced-parent FK reconciliation — plantId/landId are
-      // client-side ids; an unsynced parent serializes '' and the server
-      // create will reject/mislink. P3 supports create under an
-      // ALREADY-SYNCED parent only.
+      // plantId/landId may hold an unsynced parent's client_uuid here; the
+      // syncer's `translateSeasonFks` (fk_translators.dart) resolves it to
+      // the parent's server id at push time via `BaseEntitySyncer.resolveFks`.
       'plant_id': plantId,
       'land_id': landId,
       'start_date': startDate.toIso8601String().split('T')[0],
@@ -197,6 +195,25 @@ class SeasonModel extends Season implements SyncableModel {
       name: name,
       plantId: plantId,
       landId: landId,
+      startDate: startDate,
+      endDate: endDate,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
+  /// Returns a copy with the given FK fields overridden (each `null` arg keeps
+  /// the current value), every other field untouched. Used by the P4 sync FK
+  /// translator to substitute a parent's server id for its client_uuid before
+  /// push. Reconstruct via the SAME constructor `withSyncClientUuid` uses.
+  SeasonModel withResolvedFks({String? plantId, String? landId}) {
+    return SeasonModel(
+      id: id,
+      clientUuid: clientUuid,
+      userId: userId,
+      name: name,
+      plantId: plantId ?? this.plantId,
+      landId: landId ?? this.landId,
       startDate: startDate,
       endDate: endDate,
       createdAt: createdAt,

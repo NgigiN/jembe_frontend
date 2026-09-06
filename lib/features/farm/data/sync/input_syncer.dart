@@ -4,6 +4,7 @@ import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/datasources/input_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/input_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/input_model.dart';
+import 'package:farm_tracker/features/farm/data/sync/fk_translators.dart';
 
 /// Thin [RemoteSyncAdapter] over [InputRemoteDataSource], mapping the
 /// generic add/update/delete/getSince onto the input endpoints. Exceptions
@@ -40,9 +41,21 @@ class InputRemoteAdapter implements RemoteSyncAdapter<InputModel> {
 /// [InputRemoteAdapter]) and local mirror ([InputLocalDataSource], which
 /// implements `LocalSyncStore<InputModel>`) into it and stamps the
 /// `'input'` entity tag.
+///
+/// FK reconciliation for the polymorphic `sourceId` (an unsynced season/herd
+/// parent's client_uuid substituted with its server id before push) is
+/// implemented via [translateInputFks] — see `fk_translators.dart`.
+/// `animal_id` stays out of scope — it's an `int?` field that can't carry a
+/// client_uuid, so it remains synced-animal-only (see `InputModel`'s NOTE
+/// on `.create()`).
 class InputSyncer extends BaseEntitySyncer<InputModel> {
   InputSyncer({
     required InputRemoteDataSource remote,
     required InputLocalDataSource local,
-  }) : super(entity: 'input', remote: InputRemoteAdapter(remote), local: local);
+  }) : super(
+         entity: 'input',
+         remote: InputRemoteAdapter(remote),
+         local: local,
+         resolveFks: translateInputFks,
+       );
 }

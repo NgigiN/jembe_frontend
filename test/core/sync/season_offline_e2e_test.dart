@@ -196,8 +196,10 @@ class _Harness {
   }
 }
 
-/// Builds a domain [Season] targeting an already-synced parent (server ids
-/// `'server-plant-1'` / `'server-land-1'`) to pass into the repository.
+/// Builds a domain [Season] targeting an already-synced parent (numeric
+/// server ids `'501'` / `'601'` — P4's `translateSeasonFks` passes a
+/// numeric-string FK through untouched, same as an unsynced clientUuid it
+/// has resolved).
 Season _domainSeason({
   String id = '',
   String name = 'Season',
@@ -210,8 +212,8 @@ Season _domainSeason({
     id: id,
     userId: 'user-1',
     name: name,
-    plantId: 'server-plant-1',
-    landId: 'server-land-1',
+    plantId: '501',
+    landId: '601',
     startDate: startDate ?? at,
     createdAt: at,
     updatedAt: updatedAt ?? at,
@@ -234,8 +236,8 @@ SeasonModel _season({
     clientUuid: clientUuid,
     userId: 'user-1',
     name: name,
-    plantId: 'server-plant-1',
-    landId: 'server-land-1',
+    plantId: '501',
+    landId: '601',
     startDate: startDate ?? at,
     createdAt: at,
     updatedAt: updatedAt ?? at,
@@ -320,13 +322,13 @@ void main() {
       expect(local2!.id, isNotEmpty, reason: 'serverId reconciled');
       expect(local2.name, 'Short Rains Edited');
 
-      // The already-synced parent ids are pushed through untouched (P3
-      // scope — no clientUuid->serverId FK translation attempted).
+      // The already-synced (numeric) parent ids are pushed through
+      // untouched by translateSeasonFks — no FK translation needed.
       final pushed = h.remote.allRows.firstWhere(
         (r) => r.clientUuid == season1.id,
       );
-      expect(pushed.plantId, 'server-plant-1');
-      expect(pushed.landId, 'server-land-1');
+      expect(pushed.plantId, '501');
+      expect(pushed.landId, '601');
     },
   );
 

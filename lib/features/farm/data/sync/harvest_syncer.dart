@@ -4,6 +4,7 @@ import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/datasources/harvest_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/harvest_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
+import 'package:farm_tracker/features/farm/data/sync/fk_translators.dart';
 
 /// Thin [RemoteSyncAdapter] over [HarvestRemoteDataSource], mapping the
 /// generic add/update/delete/getSince onto the harvest endpoints. Exceptions
@@ -41,6 +42,10 @@ class HarvestRemoteAdapter implements RemoteSyncAdapter<HarvestModel> {
 /// [HarvestRemoteAdapter]) and local mirror ([HarvestLocalDataSource], which
 /// implements `LocalSyncStore<HarvestModel>`) into it and stamps the
 /// `'harvest'` entity tag.
+///
+/// FK reconciliation for `seasonId`/`revenueId` (an unsynced parent's
+/// client_uuid substituted with its server id before push) is implemented
+/// via [translateHarvestFks] — see `fk_translators.dart`.
 class HarvestSyncer extends BaseEntitySyncer<HarvestModel> {
   HarvestSyncer({
     required HarvestRemoteDataSource remote,
@@ -49,5 +54,6 @@ class HarvestSyncer extends BaseEntitySyncer<HarvestModel> {
          entity: 'harvest',
          remote: HarvestRemoteAdapter(remote),
          local: local,
+         resolveFks: translateHarvestFks,
        );
 }

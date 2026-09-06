@@ -33,9 +33,10 @@ class HarvestModel extends Harvest implements SyncableModel {
     return HarvestModel(
       id: '',
       clientUuid: clientUuid ?? uuid.v4(),
-      // TODO(P4): unsynced/clientUuid-parent FK reconciliation — translate
-      // parent clientUuid→server id + parent-before-child ordering before
-      // push. P3 supports create under an ALREADY-SYNCED parent only.
+      // seasonId may hold an unsynced parent's client_uuid here; the
+      // syncer's `translateHarvestFks` (fk_translators.dart) resolves it to
+      // the parent's server id at push time via
+      // `BaseEntitySyncer.resolveFks`.
       seasonId: seasonId,
       quantity: quantity,
       unit: unit,
@@ -181,6 +182,25 @@ class HarvestModel extends Harvest implements SyncableModel {
       date: date,
       notes: notes,
       revenueId: revenueId,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
+  /// Returns a copy with the given FK fields overridden (each `null` arg keeps
+  /// the current value), every other field untouched. Used by the P4 sync FK
+  /// translator to substitute a parent's server id for its client_uuid before
+  /// push. Reconstruct via the SAME constructor `withSyncClientUuid` uses.
+  HarvestModel withResolvedFks({String? seasonId, String? revenueId}) {
+    return HarvestModel(
+      id: id,
+      clientUuid: clientUuid,
+      seasonId: seasonId ?? this.seasonId,
+      quantity: quantity,
+      unit: unit,
+      date: date,
+      notes: notes,
+      revenueId: revenueId ?? this.revenueId,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );

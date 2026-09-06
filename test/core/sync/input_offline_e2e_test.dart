@@ -211,7 +211,7 @@ class _Harness {
 }
 
 /// Builds a domain [Input] targeting an already-synced parent season
-/// (server id `'server-season-1'`) to pass into the repository.
+/// (server id `'801'`) to pass into the repository.
 Input _domainInput({
   String id = '',
   String sourceType = 'plant',
@@ -226,7 +226,7 @@ Input _domainInput({
   return Input(
     id: id,
     sourceType: sourceType,
-    sourceId: 'server-season-1',
+    sourceId: '801',
     type: 'Fertilizer',
     quantity: quantity,
     cost: cost,
@@ -243,7 +243,7 @@ InputModel _input({
   required String clientUuid,
   String id = '',
   String sourceType = 'plant',
-  String sourceId = 'server-season-1',
+  String sourceId = '801',
   double cost = 100,
   DateTime? date,
   DateTime? createdAt,
@@ -348,7 +348,7 @@ void main() {
       final pushed = h.remote.allRows.firstWhere(
         (r) => r.clientUuid == input1.id,
       );
-      expect(pushed.sourceId, 'server-season-1');
+      expect(pushed.sourceId, '801');
     },
   );
 

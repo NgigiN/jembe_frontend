@@ -38,8 +38,9 @@ class HerdModel extends Herd implements SyncableModel {
       clientUuid: clientUuid ?? uuid.v4(),
       userId: userId,
       name: name,
-      // TODO(P4): animalTypeId is a clientUuid flag-on; translate→server id
-      // + parent-before-child before push. P3 = synced-parent-only.
+      // animalTypeId may hold an unsynced parent's client_uuid here; the
+      // syncer's `translateHerdFks` (fk_translators.dart) resolves it to the
+      // parent's server id at push time via `BaseEntitySyncer.resolveFks`.
       animalTypeId: animalTypeId,
       location: location,
       initialHeadCount: initialHeadCount,
@@ -137,8 +138,9 @@ class HerdModel extends Herd implements SyncableModel {
   Map<String, dynamic> toJson() {
     return {
       'name': name,
-      // TODO(P4): animalTypeId is a clientUuid flag-on; translate→server id
-      // + parent-before-child before push. P3 = synced-parent-only.
+      // animalTypeId may hold an unsynced parent's client_uuid here; the
+      // syncer's `translateHerdFks` (fk_translators.dart) resolves it to the
+      // parent's server id at push time via `BaseEntitySyncer.resolveFks`.
       'animal_type_id': int.tryParse(animalTypeId) ?? animalTypeId,
       'location': location,
       'initial_head_count': initialHeadCount,
@@ -210,6 +212,27 @@ class HerdModel extends Herd implements SyncableModel {
       userId: userId,
       name: name,
       animalTypeId: animalTypeId,
+      location: location,
+      initialHeadCount: initialHeadCount,
+      currentHeadCount: currentHeadCount,
+      startDate: startDate,
+      endDate: endDate,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
+  /// Returns a copy with the given FK fields overridden (each `null` arg keeps
+  /// the current value), every other field untouched. Used by the P4 sync FK
+  /// translator to substitute a parent's server id for its client_uuid before
+  /// push. Reconstruct via the SAME constructor `withSyncClientUuid` uses.
+  HerdModel withResolvedFks({String? animalTypeId}) {
+    return HerdModel(
+      id: id,
+      clientUuid: clientUuid,
+      userId: userId,
+      name: name,
+      animalTypeId: animalTypeId ?? this.animalTypeId,
       location: location,
       initialHeadCount: initialHeadCount,
       currentHeadCount: currentHeadCount,
