@@ -1,3 +1,4 @@
+import 'package:farm_tracker/core/utils/json_parsing.dart';
 import 'package:farm_tracker/features/content/domain/entities/question.dart';
 
 class QuestionModel extends Question {
@@ -19,12 +20,7 @@ class QuestionModel extends Question {
       answeredAt: json['answered_at'] != null
           ? DateTime.tryParse(json['answered_at'].toString())
           : null,
-      createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
+      createdAt: parseDate(dualKey(json, 'created_at')),
     );
-  }
-
-  static DateTime _parseDate(dynamic dateValue) {
-    if (dateValue is String) return DateTime.parse(dateValue);
-    return DateTime.now();
   }
 }

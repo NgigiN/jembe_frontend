@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/json_parsing.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd_activity.dart';
 
 /// Data model for the `herd_activity` offline outlier.
@@ -53,11 +54,11 @@ class HerdActivityModel extends HerdActivity implements SyncableModel {
       id: (json['ID'] ?? json['id'] ?? '').toString(),
       herdId: (json['herd_id'] ?? json['HerdID'] ?? '').toString(),
       activityType: (json['activity_type'] ?? json['ActivityType'] ?? '').toString(),
-      count: _parseInt(json['count'] ?? json['Count']),
-      date: _parseDate(json['date'] ?? json['Date']),
+      count: parseInt(json['count'] ?? json['Count']),
+      date: parseDate(json['date'] ?? json['Date']),
       // The backend stores and returns this field as `reason`.
       notes: (json['reason'] ?? json['Reason'] ?? '').toString(),
-      createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
+      createdAt: parseDate(dualKey(json, 'created_at')),
     );
   }
 
@@ -103,21 +104,6 @@ class HerdActivityModel extends HerdActivity implements SyncableModel {
   /// this entity is create-only and never deleted, but the flag is carried
   /// for schema uniformity with every other offline-mirrored table.
   final bool deletedLocally;
-
-  static int _parseInt(dynamic value) {
-    if (value == null) return 0;
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return int.tryParse(value.toString()) ?? 0;
-  }
-
-  static DateTime _parseDate(dynamic dateValue) {
-    if (dateValue == null) return DateTime.now();
-    if (dateValue is String) {
-      return DateTime.parse(dateValue);
-    }
-    return DateTime.now();
-  }
 
   /// Wire body — preserved VERBATIM from the pre-offline model. OMITS
   /// [herdId] (it travels in the nested URL, not the body) and serializes
