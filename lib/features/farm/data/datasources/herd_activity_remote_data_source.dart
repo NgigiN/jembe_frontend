@@ -20,7 +20,10 @@ class HerdActivityRemoteDataSourceImpl implements HerdActivityRemoteDataSource {
     try {
       final response = await dio.post<dynamic>(
         '/api/v1/herds/$herdId/activities',
-        data: activity.toJson(),
+        // Spreads `client_uuid` alongside the wire body — matches every
+        // other entity's create; the backend dedupes herd_activity creates
+        // on (herd_id, client_uuid), so a retried push is idempotent.
+        data: {...activity.toJson(), 'client_uuid': activity.clientUuid},
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {

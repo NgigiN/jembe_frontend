@@ -77,4 +77,31 @@ void main() {
       expect(decideUpgrade(meta, '1.0.0'), UpgradeRequirement.forced);
     });
   });
+
+  group('parseOfflineEnabled', () {
+    test('true when the field is explicitly true', () {
+      expect(parseOfflineEnabled({'offline_enabled': true}), isTrue);
+    });
+
+    test('false when the field is explicitly false', () {
+      expect(parseOfflineEnabled({'offline_enabled': false}), isFalse);
+    });
+
+    test('false when the field is missing', () {
+      expect(parseOfflineEnabled(<String, dynamic>{}), isFalse);
+      expect(
+        parseOfflineEnabled({'min_supported_version': '1.0.0'}),
+        isFalse,
+      );
+    });
+
+    test('false for garbage payloads (non-map, non-bool value)', () {
+      expect(parseOfflineEnabled(null), isFalse);
+      expect(parseOfflineEnabled('garbage'), isFalse);
+      expect(parseOfflineEnabled(<dynamic>[true]), isFalse);
+      expect(parseOfflineEnabled({'offline_enabled': 'true'}), isFalse);
+      expect(parseOfflineEnabled({'offline_enabled': 1}), isFalse);
+      expect(parseOfflineEnabled({'offline_enabled': null}), isFalse);
+    });
+  });
 }

@@ -1,6 +1,7 @@
 import 'package:farm_tracker/core/constants/harvest_units.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
@@ -47,7 +48,11 @@ class _HarvestPageState extends State<HarvestPage> {
     super.initState();
     final harvestBloc = context.read<HarvestBloc>();
     if (harvestBloc.state is! HarvestLoaded) {
-      harvestBloc.add(GetHarvestsEvent(seasonId: widget.seasonId));
+      if (OfflineConfig.enabled) {
+        harvestBloc.add(WatchHarvestsEvent(seasonId: widget.seasonId));
+      } else {
+        harvestBloc.add(GetHarvestsEvent(seasonId: widget.seasonId));
+      }
     }
     final seasonBloc = context.read<SeasonBloc>();
     if (seasonBloc.state is! SeasonLoaded) {

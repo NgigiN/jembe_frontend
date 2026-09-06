@@ -1,4 +1,5 @@
 import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/utils/responsive_utils.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
@@ -51,7 +52,13 @@ class _RevenuePageState extends State<RevenuePage> {
   }
 
   void _loadRevenues() {
-    context.read<RevenueBloc>().add(LoadRevenues(source: _selectedSource));
+    if (OfflineConfig.enabled) {
+      context.read<RevenueBloc>().add(
+        WatchRevenuesEvent(source: _selectedSource),
+      );
+    } else {
+      context.read<RevenueBloc>().add(LoadRevenues(source: _selectedSource));
+    }
   }
 
   @override
@@ -559,7 +566,11 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
               context,
             ).showSnackBar(AppSnackBar.success(context, 'Revenue added successfully'));
             Navigator.pop(context);
-            context.read<RevenueBloc>().add(LoadRevenues());
+            if (OfflineConfig.enabled) {
+              context.read<RevenueBloc>().add(WatchRevenuesEvent());
+            } else {
+              context.read<RevenueBloc>().add(LoadRevenues());
+            }
           } else if (state is RevenueError) {
             ScaffoldMessenger.of(
               context,

@@ -9,6 +9,12 @@ abstract class AnimalTypeEvent extends Equatable {
 
 class GetAnimalTypesEvent extends AnimalTypeEvent {}
 
+/// Flag-ON only: subscribes (or re-subscribes) `AnimalTypeBloc` to
+/// `repository.watchAnimalTypes()`. Every subsequent stream emission is
+/// turned into an `AnimalTypeLoaded(...)` state — see `AnimalTypeBloc`'s
+/// internal `_AnimalTypesUpdated` event for how.
+class WatchAnimalTypesEvent extends AnimalTypeEvent {}
+
 class AddAnimalTypeEvent extends AnimalTypeEvent {
   const AddAnimalTypeEvent(this.name, this.notes, this.userId);
   final String name;

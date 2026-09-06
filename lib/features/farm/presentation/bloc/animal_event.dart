@@ -8,6 +8,12 @@ abstract class AnimalEvent extends Equatable {
 
 class GetAnimalsEvent extends AnimalEvent {}
 
+/// Flag-ON only: subscribes (or re-subscribes) `AnimalBloc` to
+/// `repository.watchAnimals()`. Every subsequent stream emission is turned
+/// into an `AnimalLoaded(animals: ...)` state — see `AnimalBloc`'s internal
+/// `_AnimalsUpdated` event for how.
+class WatchAnimalsEvent extends AnimalEvent {}
+
 class AddAnimalEvent extends AnimalEvent {
   AddAnimalEvent(this.animal);
   final Animal animal;

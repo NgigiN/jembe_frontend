@@ -1,4 +1,6 @@
 import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/offline/widgets/offline_banner.dart';
+import 'package:farm_tracker/core/offline/widgets/sync_status_indicator.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
 import 'package:flutter/material.dart';
@@ -18,7 +20,32 @@ class LandingPage extends StatelessWidget {
         }
       },
       child: Scaffold(
-        body: child,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Self-hides (SizedBox.shrink()) when OfflineConfig.enabled is
+            // false or the device is online, so this row contributes zero
+            // height and the shell is byte-for-byte identical to today
+            // flag-off. Sits above every tab's content (not inside it) so
+            // the same banner shows regardless of which tab is active.
+            const OfflineBanner(),
+            // Self-hides (SizedBox.shrink()) when OfflineConfig.enabled is
+            // false, so — like the banner above — this row collapses to
+            // zero height flag-off (only the horizontal padding survives,
+            // and it never paints anything without a visible child). A
+            // single, always-in-the-same-place status row (rather than
+            // per-tab app bar actions) keeps sync state visible no matter
+            // which tab the user is on.
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: SyncStatusIndicator(),
+              ),
+            ),
+            Expanded(child: child),
+          ],
+        ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _calculateIndex(context),
           onDestinationSelected: (index) => _onTabSelected(index, context),

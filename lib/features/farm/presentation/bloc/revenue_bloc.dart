@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_revenue.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_revenue.dart';
@@ -6,9 +10,42 @@ import 'package:farm_tracker/features/farm/domain/usecases/get_revenue_by_id.dar
 import 'package:farm_tracker/features/farm/domain/usecases/get_revenues.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_revenues_params.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_revenue.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/watch_revenues.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+/// Internal-only event: never dispatched from outside this file. The
+/// `WatchRevenuesEvent` handler below listens to `watchRevenues()` (the
+/// repository's UNFILTERED stream — see R1 doc on `WatchRevenuesEvent`) and
+/// funnels every emission back through the bloc's own event queue via
+/// `add(...)` instead of calling `emit` directly from the stream callback —
+/// the standard bloc pattern for turning an external stream into state,
+/// since `emit` is only valid while its owning `on<...>` handler is still
+/// active.
+class _RevenuesUpdated extends RevenueEvent {
+  _RevenuesUpdated(this.revenues);
+  final List<Revenue> revenues;
+
+  @override
+  List<Object> get props => [revenues];
+}
+
+/// Internal-only event: the `WatchRevenuesEvent` handler's stream
+/// subscription routes its `onError` through here (same reasoning as
+/// `_RevenuesUpdated` — `emit` is only valid inside an active `on<...>`
+/// handler, not from a raw stream callback). Non-fatal: it surfaces a
+/// `RevenueError` over the last known (filtered) revenues snapshot rather
+/// than crashing the bloc or dropping reactivity — the subscription is NOT
+/// cancelled, so a later emission (if the underlying stream keeps going)
+/// still comes through.
+class _RevenuesWatchFailed extends RevenueEvent {
+  _RevenuesWatchFailed(this.message);
+  final String message;
+
+  @override
+  List<Object> get props => [message];
+}
 
 class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
@@ -18,8 +55,19 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     required this.addRevenue,
     required this.updateRevenue,
     required this.deleteRevenue,
+    required this.watchRevenues,
   }) : super(RevenueInitial()) {
     on<LoadRevenues>(_onLoadRevenues);
+    on<WatchRevenuesEvent>(_onWatchRevenues);
+    on<_RevenuesUpdated>((event, emit) {
+      _allRevenues = event.revenues;
+      emit(RevenueLoaded(revenues: _filtered()));
+    });
+    on<_RevenuesWatchFailed>((event, emit) {
+      // Keeps the CURRENT state's list (not a re-derived `_filtered()`) —
+      // mirrors `LandBloc`'s `_LandsWatchFailed` handler verbatim.
+      emit(RevenueError(event.message, revenues: state.revenues));
+    });
     on<AddRevenueEvent>(_onAddRevenue);
     on<UpdateRevenueEvent>(_onUpdateRevenue);
     on<DeleteRevenueEvent>(_onDeleteRevenue);
@@ -29,6 +77,35 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
   final AddRevenue addRevenue;
   final UpdateRevenue updateRevenue;
   final DeleteRevenue deleteRevenue;
+  final WatchRevenues watchRevenues;
+
+  StreamSubscription<List<Revenue>>? _revenuesSubscription;
+  bool _watchStarted = false;
+
+  /// The full, UNFILTERED list from the last `watchRevenues()` emission —
+  /// see R1: `RevenueBloc` is a singleton with a user-changeable filter, so
+  /// a drift-level filtered watch would force a churny re-subscribe on every
+  /// filter change. Instead this bloc caches the whole stream and filters
+  /// it in memory (see [_filtered]) both on a fresh stream emission and on
+  /// a filter-only change (no re-subscribe).
+  List<Revenue> _allRevenues = const [];
+
+  // The current source/date-range filter, seeded (and later updated) by
+  // `WatchRevenuesEvent`'s args. Mirrors the server-side filter semantics
+  // `RevenueRepositoryImpl`'s offline `getRevenues` branch uses: source
+  // equality, date inclusive within [_startDate, _endDate].
+  String? _source;
+  DateTime? _startDate;
+  DateTime? _endDate;
+
+  List<Revenue> _filtered() {
+    return _allRevenues.where((r) {
+      if (_source != null && r.source != _source) return false;
+      if (_startDate != null && r.date.isBefore(_startDate!)) return false;
+      if (_endDate != null && r.date.isAfter(_endDate!)) return false;
+      return true;
+    }).toList();
+  }
 
   Future<void> _onLoadRevenues(
     LoadRevenues event,
@@ -55,11 +132,78 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     );
   }
 
+  // Synchronous handler, no `await` before the guard: dispatching
+  // WatchRevenuesEvent twice in quick succession (e.g. initState + a
+  // source-selector change) must never race and orphan a live subscription
+  // — the guard makes every dispatch after the first update the in-memory
+  // filter and re-emit from the cached list, WITHOUT ever re-subscribing.
+  void _onWatchRevenues(
+    WatchRevenuesEvent event,
+    Emitter<RevenueState> emit,
+  ) {
+    _source = event.source;
+    _startDate = event.startDate;
+    _endDate = event.endDate;
+
+    if (_watchStarted) {
+      // The stream is already live: this is a filter change (or a no-op
+      // re-dispatch) — re-emit from the cached full list, no re-subscribe.
+      emit(RevenueLoaded(revenues: _filtered()));
+      return;
+    }
+
+    _watchStarted = true;
+    _revenuesSubscription = watchRevenues().listen(
+      (revenues) => add(_RevenuesUpdated(revenues)),
+      onError: (Object error, StackTrace stackTrace) {
+        appLogger.logError('RevenueBloc.watchRevenues', error, stackTrace);
+        add(_RevenuesWatchFailed('Live sync interrupted. Pull to refresh.'));
+      },
+      onDone: () {
+        appLogger.info(
+          LogCategory.farm,
+          'RevenueBloc.watchRevenues stream completed',
+        );
+      },
+    );
+  }
 
   Future<void> _onAddRevenue(
     AddRevenueEvent event,
     Emitter<RevenueState> emit,
   ) async {
+    if (OfflineConfig.enabled) {
+      final params = AddRevenueParams(
+        source: event.source,
+        sourceId: event.sourceId,
+        type: event.type,
+        quantity: event.quantity,
+        unitPrice: event.unitPrice,
+        total: event.total,
+        date: event.date,
+        notes: event.notes,
+      );
+
+      final result = await addRevenue(params);
+
+      result.fold(
+        (failure) {
+          emit(RevenueError(
+            resolveFailureMessage(failure, 'Failed to add revenue'),
+            revenues: state.revenues,
+          ));
+        },
+        (revenue) {
+          // NO manual append — the watch stream (still subscribed; the
+          // local upsert this write staged will land in its next emission)
+          // refreshes `state.revenues`. Only the distinct ack state and the
+          // offline-built model change here.
+          emit(RevenueAdded(revenue: revenue, revenues: state.revenues));
+        },
+      );
+      return;
+    }
+
     final currentRevenues = state.revenues;
     emit(RevenueLoading(revenues: currentRevenues));
 
@@ -94,6 +238,37 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     UpdateRevenueEvent event,
     Emitter<RevenueState> emit,
   ) async {
+    if (OfflineConfig.enabled) {
+      final params = UpdateRevenueParams(
+        id: event.id,
+        source: event.source,
+        sourceId: event.sourceId,
+        type: event.type,
+        quantity: event.quantity,
+        unitPrice: event.unitPrice,
+        total: event.total,
+        date: event.date,
+        notes: event.notes,
+      );
+
+      final result = await updateRevenue(params);
+
+      result.fold(
+        (failure) {
+          emit(RevenueError(
+            resolveFailureMessage(failure, 'Failed to update revenue'),
+            revenues: state.revenues,
+          ));
+        },
+        (revenue) {
+          // NO manual list replace — the watch stream refreshes
+          // `state.revenues`.
+          emit(RevenueUpdated(revenue: revenue, revenues: state.revenues));
+        },
+      );
+      return;
+    }
+
     final currentRevenues = state.revenues;
     emit(RevenueLoading(revenues: currentRevenues));
 
@@ -133,6 +308,25 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     DeleteRevenueEvent event,
     Emitter<RevenueState> emit,
   ) async {
+    if (OfflineConfig.enabled) {
+      final result = await deleteRevenue(event.id);
+
+      result.fold(
+        (failure) {
+          emit(RevenueError(
+            resolveFailureMessage(failure, 'Failed to delete revenue'),
+            revenues: state.revenues,
+          ));
+        },
+        (_) {
+          // NO manual removeWhere — the watch stream refreshes
+          // `state.revenues`.
+          emit(RevenueDeleted(revenues: state.revenues));
+        },
+      );
+      return;
+    }
+
     final currentRevenues = state.revenues;
     emit(RevenueLoading(revenues: currentRevenues));
 
@@ -152,5 +346,10 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
       },
     );
   }
-}
 
+  @override
+  Future<void> close() async {
+    await _revenuesSubscription?.cancel();
+    return super.close();
+  }
+}

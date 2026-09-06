@@ -8,6 +8,12 @@ abstract class LandEvent extends Equatable {
 
 class GetLandsEvent extends LandEvent {}
 
+/// Flag-ON only: subscribes (or re-subscribes) `LandBloc` to
+/// `repository.watchLands()`. Every subsequent stream emission is turned
+/// into a `LandLoaded(lands: ...)` state — see `LandBloc`'s internal
+/// `_LandsUpdated` event for how.
+class WatchLandsEvent extends LandEvent {}
+
 class AddLandEvent extends LandEvent {
   AddLandEvent(this.land);
   final Land land;

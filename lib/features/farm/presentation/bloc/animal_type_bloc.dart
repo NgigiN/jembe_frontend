@@ -1,23 +1,66 @@
+import 'dart:async';
+
 import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/add_animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/delete_animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/get_animal_types.dart';
 import 'package:farm_tracker/features/farm/domain/usecases/update_animal_type.dart';
+import 'package:farm_tracker/features/farm/domain/usecases/watch_animal_types.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
+/// Internal-only event: never dispatched from outside this file. The
+/// `WatchAnimalTypesEvent` handler below listens to `watchAnimalTypes()` and
+/// funnels every emission back through the bloc's own event queue via
+/// `add(...)` instead of calling `emit` directly from the stream callback —
+/// the standard bloc pattern for turning an external stream into state,
+/// since `emit` is only valid while its owning `on<...>` handler is still
+/// active.
+class _AnimalTypesUpdated extends AnimalTypeEvent {
+  _AnimalTypesUpdated(this.animalTypes);
+  final List<AnimalType> animalTypes;
 
+  @override
+  List<Object> get props => [animalTypes];
+}
+
+/// Internal-only event: the `WatchAnimalTypesEvent` handler's stream
+/// subscription routes its `onError` through here (same reasoning as
+/// `_AnimalTypesUpdated` — `emit` is only valid inside an active `on<...>`
+/// handler, not from a raw stream callback). Non-fatal: it surfaces an
+/// `AnimalTypeError` over the last known `animalTypes` snapshot rather than
+/// crashing the bloc or dropping reactivity — the subscription is NOT
+/// cancelled, so a later emission (if the underlying stream keeps going)
+/// still comes through.
+class _AnimalTypesWatchFailed extends AnimalTypeEvent {
+  _AnimalTypesWatchFailed(this.message);
+  final String message;
+
+  @override
+  List<Object> get props => [message];
+}
+
+class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
   AnimalTypeBloc({
     required this.getAnimalTypes,
     required this.addAnimalType,
     required this.updateAnimalType,
     required this.deleteAnimalType,
+    required this.watchAnimalTypes,
   }) : super(AnimalTypeInitial()) {
     on<GetAnimalTypesEvent>(_onGetAnimalTypes);
+    on<WatchAnimalTypesEvent>(_onWatchAnimalTypes);
+    on<_AnimalTypesUpdated>((event, emit) {
+      emit(AnimalTypeLoaded(event.animalTypes));
+    });
+    on<_AnimalTypesWatchFailed>((event, emit) {
+      emit(AnimalTypeError(event.message, animalTypes: state.animalTypes));
+    });
     on<AddAnimalTypeEvent>(_onAddAnimalType);
     on<UpdateAnimalTypeEvent>(_onUpdateAnimalType);
     on<DeleteAnimalTypeEvent>(_onDeleteAnimalType);
@@ -26,6 +69,10 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
   final AddAnimalType addAnimalType;
   final UpdateAnimalType updateAnimalType;
   final DeleteAnimalType deleteAnimalType;
+  final WatchAnimalTypes watchAnimalTypes;
+
+  StreamSubscription<List<AnimalType>>? _animalTypesSubscription;
+  bool _watchStarted = false;
 
   Future<void> _onGetAnimalTypes(
     GetAnimalTypesEvent event,
@@ -41,10 +88,50 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
     );
   }
 
+  void _onWatchAnimalTypes(
+    WatchAnimalTypesEvent event,
+    Emitter<AnimalTypeState> emit,
+  ) {
+    // Synchronous handler, no `await` before the guard: dispatching
+    // WatchAnimalTypesEvent twice in quick succession (e.g. initState +
+    // pull-to-refresh) must never race and orphan a live subscription — the
+    // guard makes the second (and every subsequent) dispatch a pure no-op
+    // instead.
+    if (_watchStarted) return;
+    _watchStarted = true;
+    _animalTypesSubscription = watchAnimalTypes().listen(
+      (animalTypes) => add(_AnimalTypesUpdated(animalTypes)),
+      onError: (Object error, StackTrace stackTrace) {
+        appLogger.logError('AnimalTypeBloc.watchAnimalTypes', error, stackTrace);
+        add(_AnimalTypesWatchFailed('Live sync interrupted. Pull to refresh.'));
+      },
+      onDone: () {
+        appLogger.info(
+          LogCategory.farm,
+          'AnimalTypeBloc.watchAnimalTypes stream completed',
+        );
+      },
+    );
+  }
+
   Future<void> _onAddAnimalType(
     AddAnimalTypeEvent event,
     Emitter<AnimalTypeState> emit,
   ) async {
+    if (OfflineConfig.enabled) {
+      final result = await addAnimalType(event.name, event.notes, event.userId);
+      result.fold(
+        (failure) => emit(AnimalTypeError(
+          resolveFailureMessage(failure, 'Failed to add animal type'),
+          animalTypes: state.animalTypes,
+        )),
+        (_) => emit(
+          AnimalTypeLoaded(state.animalTypes, successMessage: 'Animal type added'),
+        ),
+      );
+      return;
+    }
+
     final currentAnimalTypes = state.animalTypes;
 
     emit(AnimalTypeLoading(animalTypes: currentAnimalTypes));
@@ -66,6 +153,20 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
     UpdateAnimalTypeEvent event,
     Emitter<AnimalTypeState> emit,
   ) async {
+    if (OfflineConfig.enabled) {
+      final result = await updateAnimalType(event.id, event.name, event.notes);
+      result.fold(
+        (failure) => emit(AnimalTypeError(
+          resolveFailureMessage(failure, 'Failed to update animal type'),
+          animalTypes: state.animalTypes,
+        )),
+        (_) => emit(
+          AnimalTypeLoaded(state.animalTypes, successMessage: 'Animal type updated'),
+        ),
+      );
+      return;
+    }
+
     final currentAnimalTypes = state.animalTypes;
     emit(AnimalTypeLoading(animalTypes: currentAnimalTypes));
     final result = await updateAnimalType(event.id, event.name, event.notes);
@@ -87,6 +188,20 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
     DeleteAnimalTypeEvent event,
     Emitter<AnimalTypeState> emit,
   ) async {
+    if (OfflineConfig.enabled) {
+      final result = await deleteAnimalType(event.id);
+      result.fold(
+        (failure) => emit(AnimalTypeError(
+          resolveFailureMessage(failure, 'Failed to delete animal type'),
+          animalTypes: state.animalTypes,
+        )),
+        (_) => emit(
+          AnimalTypeLoaded(state.animalTypes, successMessage: 'Animal type deleted'),
+        ),
+      );
+      return;
+    }
+
     final currentAnimalTypes = state.animalTypes;
     emit(AnimalTypeLoading(animalTypes: currentAnimalTypes));
     final result = await deleteAnimalType(event.id);
@@ -101,5 +216,11 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
         emit(AnimalTypeLoaded(updatedAnimalTypes, successMessage: 'Animal type deleted'));
       },
     );
+  }
+
+  @override
+  Future<void> close() async {
+    await _animalTypesSubscription?.cancel();
+    return super.close();
   }
 }

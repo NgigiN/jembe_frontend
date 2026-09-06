@@ -9,6 +9,12 @@ abstract class HerdEvent extends Equatable {
 
 class GetHerdsEvent extends HerdEvent {}
 
+/// Flag-ON only: subscribes (or re-subscribes) `HerdBloc` to
+/// `repository.watchHerds()`. Every subsequent stream emission is turned
+/// into a `HerdLoaded(...)` state — see `HerdBloc`'s internal
+/// `_HerdsUpdated` event for how.
+class WatchHerdsEvent extends HerdEvent {}
+
 class AddHerdEvent extends HerdEvent {
   const AddHerdEvent(
     this.name,

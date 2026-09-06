@@ -1,6 +1,8 @@
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
+import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/auth/data/services/google_sign_in_service.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:farm_tracker/features/auth/data/utils/google_sign_in_errors.dart';
@@ -81,9 +83,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LogoutEvent>((event, emit) async {
       appLogger.logAuthEvent('Logout');
       // Drop any cached protected-resource responses so a stale cache entry
-      // can't leak the previous user's data to whoever logs in next.
+      // can't leak the previous user's data to whoever logs in next. Guarded
+      // so a failure here (e.g. a broken cache store) can never leave logout
+      // half-done — the token clear, sign-out, and state emit below must
+      // still run regardless.
       if (sl.isRegistered<CacheStore>()) {
-        await sl<CacheStore>().clean();
+        try {
+          await sl<CacheStore>().clean();
+        } catch (e, st) {
+          appLogger.logError('AuthBloc.logout: CacheStore.clean', e, st);
+        }
+      }
+      // Offline-first wipe-on-logout (Task 10): flag-guarded, so this is a
+      // no-op while `OfflineConfig.enabled` is false (dark ship). When on,
+      // wipe the local Lands mirror + outbox + sync cursors so no other
+      // user's data (or queued mutation) survives on a shared device.
+      // `SyncEngine` is a DI singleton and is intentionally NOT disposed
+      // here — only its tables are cleared. Guarded for the same reason as
+      // `CacheStore.clean` above: a wipe failure must not block the rest of
+      // logout.
+      if (OfflineConfig.enabled && sl.isRegistered<AppDatabase>()) {
+        try {
+          await sl<AppDatabase>().wipeAll();
+        } catch (e, st) {
+          appLogger.logError('AuthBloc.logout: AppDatabase.wipeAll', e, st);
+        }
       }
       await UserStorageService.clearUserData();
       final googleSignIn = auth_google.GoogleSignIn.instance;

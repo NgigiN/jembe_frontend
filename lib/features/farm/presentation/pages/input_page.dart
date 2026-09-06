@@ -1,5 +1,6 @@
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
@@ -337,7 +338,12 @@ class _InputPageState extends State<InputPage> {
     // screen after navigating here for 'plant'), so they're always
     // re-fetched. HerdBloc/SeasonBloc/LandBloc are unparameterized and
     // safe to guard.
-    context.read<InputBloc>().add(GetInputsEvent(sourceType: widget.sourceType));
+    final inputBloc = context.read<InputBloc>();
+    if (OfflineConfig.enabled) {
+      inputBloc.add(WatchInputsEvent(sourceType: widget.sourceType));
+    } else {
+      inputBloc.add(GetInputsEvent(sourceType: widget.sourceType));
+    }
     final herdBloc = context.read<HerdBloc>();
     if (herdBloc.state is! HerdLoaded) {
       herdBloc.add(GetHerdsEvent());

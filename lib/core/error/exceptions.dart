@@ -17,3 +17,11 @@ class ServerException extends Exceptions {
 class CacheException extends Exceptions {}
 
 class NetworkException extends Exceptions {}
+
+/// Thrown by a syncer's push when a child record's FK still points at a
+/// parent that has not synced (no server id yet). It is NOT a failure: the
+/// engine parks the entry (leaves it `pending`, no backoff) and retries it on
+/// the next pass, after the parent has synced. Distinct from
+/// `NetworkException` (transient, stops the phase) and `ServerException`
+/// (permanent, parks as `failed`).
+class SyncDependencyException extends Exceptions {}
