@@ -52,4 +52,40 @@ void main() {
     // AnalyticsService.flush() itself, so it doesn't propagate here.
     await sl<AnalyticsService>().flush();
   });
+
+  group('decideOfflineFlagChange', () {
+    test('no-op when the parsed value already matches the current flag', () {
+      final same = decideOfflineFlagChange(
+        parsedValue: false,
+        currentValue: false,
+      );
+      expect(same.changed, isFalse);
+      expect(same.newlyEnabled, isFalse);
+
+      final sameOn = decideOfflineFlagChange(
+        parsedValue: true,
+        currentValue: true,
+      );
+      expect(sameOn.changed, isFalse);
+      expect(sameOn.newlyEnabled, isFalse);
+    });
+
+    test('off-to-on transition is a change AND newly enabled', () {
+      final decision = decideOfflineFlagChange(
+        parsedValue: true,
+        currentValue: false,
+      );
+      expect(decision.changed, isTrue);
+      expect(decision.newlyEnabled, isTrue);
+    });
+
+    test('on-to-off transition (rollback) is a change but NOT newly enabled', () {
+      final decision = decideOfflineFlagChange(
+        parsedValue: false,
+        currentValue: true,
+      );
+      expect(decision.changed, isTrue);
+      expect(decision.newlyEnabled, isFalse);
+    });
+  });
 }

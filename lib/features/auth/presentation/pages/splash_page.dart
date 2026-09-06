@@ -4,6 +4,9 @@ import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
+import 'package:farm_tracker/core/offline/offline_flag_store.dart';
+import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/version/upgrade_dialog.dart';
 import 'package:farm_tracker/core/version/version_check.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
@@ -56,6 +59,7 @@ class _SplashPageState extends State<SplashPage> {
           receiveTimeout: const Duration(seconds: 5),
         ),
       );
+      await _applyOfflineFlag(response.data);
       final requirement = decideUpgrade(response.data, AppConfig.appVersion);
       if (requirement == UpgradeRequirement.none) return;
       // Guard the BuildContext across the network await. If the splash has
@@ -68,6 +72,29 @@ class _SplashPageState extends State<SplashPage> {
       );
     } catch (_) {
       // Swallow everything: a failed/slow/garbage /meta must be invisible.
+    }
+  }
+
+  /// Reads the server-controlled `offline_enabled` kill-switch out of a
+  /// successful `/meta` response and applies it: updates the runtime
+  /// [OfflineConfig.enabled], persists it via [OfflineFlagStore] so it
+  /// survives to the next launch, and — only when the flag just flipped from
+  /// off to on — kicks an immediate [SyncEngine.syncNow] so a pending outbox
+  /// (or a fresh pull) doesn't wait for the next launch/resume/connectivity
+  /// trigger. A no-op when the parsed value matches the current flag. Callers
+  /// only reach this after a successful GET, so a `/meta` failure leaves the
+  /// flag at its persisted/default value untouched (fail to last-known).
+  Future<void> _applyOfflineFlag(dynamic metaData) async {
+    final parsed = parseOfflineEnabled(metaData);
+    final decision = decideOfflineFlagChange(
+      parsedValue: parsed,
+      currentValue: OfflineConfig.enabled,
+    );
+    if (!decision.changed) return;
+    OfflineConfig.enabled = parsed;
+    await const OfflineFlagStore().write(parsed);
+    if (decision.newlyEnabled) {
+      unawaited(sl<SyncEngine>().syncNow());
     }
   }
 
@@ -153,4 +180,31 @@ class _SplashPageState extends State<SplashPage> {
       ),
     );
   }
+}
+
+/// The outcome of comparing a freshly parsed `offline_enabled` value against
+/// the flag's current runtime value.
+///
+/// A pure decision, deliberately factored out of [_SplashPageState] so it's
+/// testable without pumping a widget: [changed] is `false` when the parsed
+/// value already matches [OfflineConfig.enabled] (nothing to persist or
+/// apply); when `true`, [newlyEnabled] says whether this is specifically an
+/// off-to-on transition, the only case that should kick an immediate sync.
+class OfflineFlagDecision {
+  const OfflineFlagDecision({required this.changed, required this.newlyEnabled});
+
+  final bool changed;
+  final bool newlyEnabled;
+}
+
+/// Decides what to do with a parsed `offline_enabled` value ([parsedValue])
+/// given the flag's [currentValue]. See [OfflineFlagDecision].
+OfflineFlagDecision decideOfflineFlagChange({
+  required bool parsedValue,
+  required bool currentValue,
+}) {
+  if (parsedValue == currentValue) {
+    return const OfflineFlagDecision(changed: false, newlyEnabled: false);
+  }
+  return OfflineFlagDecision(changed: true, newlyEnabled: parsedValue);
 }
