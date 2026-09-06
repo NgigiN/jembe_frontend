@@ -386,8 +386,16 @@ class AppDatabase extends _$AppDatabase {
   /// device. Runs inside a transaction so a crash mid-wipe can't leave a
   /// partial wipe (e.g. cursors cleared but stale rows left behind in one
   /// of the mirrors).
-  Future<void> wipeAll() {
-    return transaction(() async {
+  ///
+  /// After the wipe transaction commits, runs a `VACUUM` to actually reclaim
+  /// the disk space freed by deleting every row (SQLite doesn't shrink the
+  /// file on `DELETE` alone) — minimal retention hygiene, no periodic/
+  /// scheduled cleanup. `VACUUM` cannot run inside a transaction, so it must
+  /// happen after `transaction(...)` returns. It's best-effort: a `VACUUM`
+  /// failure (e.g. no free disk space for the temporary copy it makes) must
+  /// never break logout — the wipe itself already succeeded by this point.
+  Future<void> wipeAll() async {
+    await transaction(() async {
       await delete(lands).go();
       await delete(plants).go();
       await delete(seasons).go();
@@ -404,6 +412,18 @@ class AppDatabase extends _$AppDatabase {
       await delete(outbox).go();
       await delete(syncCursor).go();
     });
+
+    try {
+      await customStatement('VACUUM;');
+    } on Object catch (e, st) {
+      appLogger.error(
+        LogCategory.general,
+        'AppDatabase.wipeAll: VACUUM failed after the logout wipe '
+        '(non-fatal — the wipe itself already succeeded)',
+        e,
+        st,
+      );
+    }
   }
 }
 
