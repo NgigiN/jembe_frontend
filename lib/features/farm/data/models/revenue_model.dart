@@ -233,4 +233,27 @@ class RevenueModel extends Revenue implements SyncableModel {
       updatedAt: updatedAt,
     );
   }
+
+  /// Returns a copy with [sourceId] overridden (a `null` arg keeps the
+  /// current value), every other field untouched. Used by the P4 sync FK
+  /// translator to substitute the polymorphic source parent's server id for
+  /// its client_uuid before push. Reconstruct via the SAME constructor
+  /// `withSyncClientUuid` uses.
+  RevenueModel withResolvedFks({String? sourceId}) {
+    return RevenueModel(
+      id: id,
+      clientUuid: clientUuid,
+      userId: userId,
+      source: source,
+      sourceId: sourceId ?? this.sourceId,
+      type: type,
+      quantity: quantity,
+      unitPrice: unitPrice,
+      total: total,
+      date: date,
+      notes: notes,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
 }

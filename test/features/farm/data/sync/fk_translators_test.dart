@@ -1,8 +1,11 @@
 import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/sync/fk_resolver.dart';
+import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
 import 'package:farm_tracker/features/farm/data/models/animal_model.dart';
 import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
+import 'package:farm_tracker/features/farm/data/models/input_model.dart';
+import 'package:farm_tracker/features/farm/data/models/revenue_model.dart';
 import 'package:farm_tracker/features/farm/data/models/season_model.dart';
 import 'package:farm_tracker/features/farm/data/sync/fk_translators.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -144,6 +147,156 @@ void main() {
     test('parks when the animal_type has not synced', () async {
       expect(
         () => translateHerdFks(unsyncedHerd(), FkResolver(const {})),
+        throwsA(isA<SyncDependencyException>()),
+      );
+    });
+  });
+
+  group('translateInputFks', () {
+    // Polymorphic source_id: 'plant' source_type -> season parent, 'animal'
+    // source_type -> herd parent. animal_id (int?) is untouched — out of P4
+    // scope (see InputModel's TODO note).
+    InputModel unsyncedInput({
+      String sourceType = 'plant',
+      String sourceId = 'season-uuid',
+      int? animalId,
+    }) => InputModel.create(
+      sourceType: sourceType,
+      sourceId: sourceId,
+      animalId: animalId,
+      type: 'Fertilizer',
+      cost: 100,
+      date: DateTime(2026, 1, 1),
+    );
+
+    test('plant source -> resolves source_id against season', () async {
+      final r = FkResolver(const {})..record('season', 'season-uuid', '8');
+      final out = await translateInputFks(unsyncedInput(), r);
+      expect(out.sourceId, '8');
+    });
+
+    test('animal source -> resolves source_id against herd', () async {
+      final r = FkResolver(const {})..record('herd', 'herd-uuid', '9');
+      final out = await translateInputFks(
+        unsyncedInput(sourceType: 'animal', sourceId: 'herd-uuid', animalId: 0),
+        r,
+      );
+      expect(out.sourceId, '9');
+    });
+
+    test('parks when the season parent is unsynced', () async {
+      expect(
+        () => translateInputFks(unsyncedInput(), FkResolver(const {})),
+        throwsA(isA<SyncDependencyException>()),
+      );
+    });
+
+    test('parks when the herd parent is unsynced', () async {
+      expect(
+        () => translateInputFks(
+          unsyncedInput(sourceType: 'animal', sourceId: 'herd-uuid'),
+          FkResolver(const {}),
+        ),
+        throwsA(isA<SyncDependencyException>()),
+      );
+    });
+  });
+
+  group('translateActivityFks', () {
+    // Same two branches as translateInputFks (discriminator: sourceType).
+    ActivityModel unsyncedActivity({
+      String sourceType = 'plant',
+      String sourceId = 'season-uuid',
+      int? animalId,
+    }) => ActivityModel.create(
+      sourceType: sourceType,
+      sourceId: sourceId,
+      animalId: animalId,
+      type: 'Weeding',
+      cost: 50,
+      date: DateTime(2026, 1, 1),
+    );
+
+    test('plant source -> resolves source_id against season', () async {
+      final r = FkResolver(const {})..record('season', 'season-uuid', '12');
+      final out = await translateActivityFks(unsyncedActivity(), r);
+      expect(out.sourceId, '12');
+    });
+
+    test('animal source -> resolves source_id against herd', () async {
+      final r = FkResolver(const {})..record('herd', 'herd-uuid', '13');
+      final out = await translateActivityFks(
+        unsyncedActivity(
+          sourceType: 'animal',
+          sourceId: 'herd-uuid',
+          animalId: 0,
+        ),
+        r,
+      );
+      expect(out.sourceId, '13');
+    });
+
+    test('parks when the season parent is unsynced', () async {
+      expect(
+        () => translateActivityFks(unsyncedActivity(), FkResolver(const {})),
+        throwsA(isA<SyncDependencyException>()),
+      );
+    });
+
+    test('parks when the herd parent is unsynced', () async {
+      expect(
+        () => translateActivityFks(
+          unsyncedActivity(sourceType: 'animal', sourceId: 'herd-uuid'),
+          FkResolver(const {}),
+        ),
+        throwsA(isA<SyncDependencyException>()),
+      );
+    });
+  });
+
+  group('translateRevenueFks', () {
+    // Same two branches, but the discriminator field is `source`, not
+    // `sourceType`.
+    RevenueModel unsyncedRevenue({
+      String source = 'plant',
+      String sourceId = 'season-uuid',
+    }) => RevenueModel.create(
+      source: source,
+      sourceId: sourceId,
+      type: 'Maize Harvest',
+      quantity: 10,
+      unitPrice: 50,
+      date: DateTime(2026, 1, 1),
+    );
+
+    test('plant source -> resolves source_id against season', () async {
+      final r = FkResolver(const {})..record('season', 'season-uuid', '21');
+      final out = await translateRevenueFks(unsyncedRevenue(), r);
+      expect(out.sourceId, '21');
+    });
+
+    test('animal source -> resolves source_id against herd', () async {
+      final r = FkResolver(const {})..record('herd', 'herd-uuid', '22');
+      final out = await translateRevenueFks(
+        unsyncedRevenue(source: 'animal', sourceId: 'herd-uuid'),
+        r,
+      );
+      expect(out.sourceId, '22');
+    });
+
+    test('parks when the season parent is unsynced', () async {
+      expect(
+        () => translateRevenueFks(unsyncedRevenue(), FkResolver(const {})),
+        throwsA(isA<SyncDependencyException>()),
+      );
+    });
+
+    test('parks when the herd parent is unsynced', () async {
+      expect(
+        () => translateRevenueFks(
+          unsyncedRevenue(source: 'animal', sourceId: 'herd-uuid'),
+          FkResolver(const {}),
+        ),
         throwsA(isA<SyncDependencyException>()),
       );
     });

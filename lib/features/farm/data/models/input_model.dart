@@ -221,4 +221,29 @@ class InputModel extends Input implements SyncableModel {
     }
     return DateTime.now();
   }
+
+  /// Returns a copy with [sourceId] overridden (a `null` arg keeps the
+  /// current value), every other field untouched. Used by the P4 sync FK
+  /// translator to substitute the polymorphic source parent's server id for
+  /// its client_uuid before push. Reconstruct via the SAME constructor
+  /// `withSyncClientUuid` uses.
+  ///
+  /// `animal_id` (int?) is NOT part of this — it can't carry a client_uuid,
+  /// so it's left untouched here; see the `// TODO(P4)` note on `.create()`.
+  InputModel withResolvedFks({String? sourceId}) {
+    return InputModel(
+      id: id,
+      clientUuid: clientUuid,
+      sourceType: sourceType,
+      sourceId: sourceId ?? this.sourceId,
+      animalId: animalId,
+      type: type,
+      quantity: quantity,
+      cost: cost,
+      date: date,
+      notes: notes,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
 }

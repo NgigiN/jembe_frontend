@@ -4,6 +4,7 @@ import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/datasources/activity_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
+import 'package:farm_tracker/features/farm/data/sync/fk_translators.dart';
 
 /// Thin [RemoteSyncAdapter] over [ActivityRemoteDataSource], mapping the
 /// generic add/update/delete/getSince onto the activity endpoints.
@@ -43,6 +44,11 @@ class ActivityRemoteAdapter implements RemoteSyncAdapter<ActivityModel> {
 /// (via [ActivityRemoteAdapter]) and local mirror ([ActivityLocalDataSource],
 /// which implements `LocalSyncStore<ActivityModel>`) into it and stamps the
 /// `'activity'` entity tag.
+///
+/// FK reconciliation for the polymorphic `sourceId` (an unsynced season/herd
+/// parent's client_uuid substituted with its server id before push) is
+/// implemented via [translateActivityFks] — see `fk_translators.dart`.
+/// `animal_id` stays out of scope (see `ActivityModel`'s `// TODO(P4)` note).
 class ActivitySyncer extends BaseEntitySyncer<ActivityModel> {
   ActivitySyncer({
     required ActivityRemoteDataSource remote,
@@ -51,5 +57,6 @@ class ActivitySyncer extends BaseEntitySyncer<ActivityModel> {
          entity: 'activity',
          remote: ActivityRemoteAdapter(remote),
          local: local,
+         resolveFks: translateActivityFks,
        );
 }

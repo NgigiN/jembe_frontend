@@ -220,12 +220,12 @@ class _Harness {
 
 /// Builds a [RevenueModel] for seeding the local mirror or the fake server
 /// directly (bypassing the repository). Targets an already-synced parent
-/// source (server id `'server-season-1'`).
+/// source (server id `'901'`).
 RevenueModel _revenue({
   required String clientUuid,
   String id = '',
   String source = 'plant',
-  String sourceId = 'server-season-1',
+  String sourceId = '901',
   double quantity = 10,
   double unitPrice = 50,
   DateTime? date,
@@ -280,7 +280,7 @@ void main() {
       final revenue1 = _unwrap(
         await h.repo.addRevenue(
           source: 'plant',
-          sourceId: 'server-season-1',
+          sourceId: '901',
           type: 'Maize Harvest',
           quantity: 10,
           unitPrice: 50,
@@ -290,7 +290,7 @@ void main() {
       final revenue2 = _unwrap(
         await h.repo.addRevenue(
           source: 'animal',
-          sourceId: 'server-herd-1',
+          sourceId: '902',
           type: 'Milk Sale',
           quantity: 20,
           unitPrice: 5,
@@ -345,7 +345,7 @@ void main() {
       final pushed = h.remote.allRows.firstWhere(
         (r) => r.clientUuid == revenue1.id,
       );
-      expect(pushed.sourceId, 'server-season-1');
+      expect(pushed.sourceId, '901');
     },
   );
 
@@ -358,7 +358,7 @@ void main() {
       final ghost = _unwrap(
         await h.repo.addRevenue(
           source: 'plant',
-          sourceId: 'server-season-1',
+          sourceId: '901',
           type: 'Maize Harvest',
           quantity: 99,
           unitPrice: 1,
@@ -529,7 +529,7 @@ void main() {
 
       await h.repo.addRevenue(
         source: 'plant',
-        sourceId: 'server-season-1',
+        sourceId: '901',
         type: 'Maize Harvest',
         quantity: 7,
         unitPrice: 1,
@@ -537,7 +537,7 @@ void main() {
       );
       await h.repo.addRevenue(
         source: 'animal',
-        sourceId: 'server-herd-OTHER',
+        sourceId: '903',
         type: 'Milk Sale',
         quantity: 999,
         unitPrice: 1,
