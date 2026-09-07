@@ -26,7 +26,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/herd_activity_rep
 ///
 /// ## Flag off (today's behavior — byte for byte)
 /// Talks straight to [remoteDataSource], mapping
-/// [NetworkException]/[ServerException] to [NetworkFailure]/[ServerFailure].
+/// `NetworkException`/`ServerException` to [NetworkFailure]/[ServerFailure].
 /// This is rule zero for the offline rollout: with
 /// `OfflineConfig.enabled == false`, this class behaves exactly as it did
 /// before the offline pipeline existed.

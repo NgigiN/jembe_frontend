@@ -21,7 +21,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/input_repository.
 ///
 /// ## Flag off (today's behavior, with one intentional bug fix)
 /// Every method talks straight to [remoteDataSource], mapping
-/// [NetworkException]/[ServerException] to [NetworkFailure]/[ServerFailure].
+/// `NetworkException`/`ServerException` to [NetworkFailure]/[ServerFailure].
 /// This is rule zero for the offline rollout: with
 /// `OfflineConfig.enabled == false`, this class behaves exactly as it did
 /// before the offline pipeline existed — with one deliberate exception:
