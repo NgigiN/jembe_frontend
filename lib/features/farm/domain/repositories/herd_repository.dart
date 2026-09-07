@@ -3,7 +3,10 @@ import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 
 abstract class HerdRepository {
-  Future<Either<Failure, List<Herd>>> getHerds();
+  /// [limit]/[cursor] drive the online infinite-scroll list path (P3-02a):
+  /// they are threaded through only when the offline flag is off. The offline
+  /// (`watchHerds`) path ignores them — it mirrors the whole local store.
+  Future<Either<Failure, List<Herd>>> getHerds({int? limit, int? cursor});
 
   /// Reactive stream of herds.
   ///

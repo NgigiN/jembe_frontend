@@ -22,6 +22,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart'
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/dashboard_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
@@ -31,6 +32,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/trash_bloc.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:farm_tracker/injection_container.dart' as di;
 import 'package:flutter/material.dart';
@@ -157,10 +159,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           create: (_) => di.sl<InfrastructureBloc>(),
         ),
         BlocProvider<AnalysisBloc>(create: (_) => di.sl<AnalysisBloc>()),
+        BlocProvider<DashboardBloc>(create: (_) => di.sl<DashboardBloc>()),
         BlocProvider<RevenueBloc>(create: (_) => di.sl<RevenueBloc>()),
         BlocProvider<CostCategoryBloc>(
           create: (_) => di.sl<CostCategoryBloc>(),
         ),
+        BlocProvider<TrashBloc>(create: (_) => di.sl<TrashBloc>()),
         BlocProvider<ProfileBloc>(create: (_) => di.sl<ProfileBloc>()),
         BlocProvider<ContentBloc>(create: (_) => di.sl<ContentBloc>()),
         BlocProvider<QuestionBloc>(create: (_) => di.sl<QuestionBloc>()),

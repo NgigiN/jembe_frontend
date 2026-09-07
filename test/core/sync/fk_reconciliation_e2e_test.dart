@@ -121,8 +121,11 @@ class _FakePlantRemoteDataSource implements PlantRemoteDataSource {
   Future<void> deletePlant(String id) async {}
 
   @override
-  Future<List<PlantModel>> getPlants({DateTime? updatedSince}) async =>
-      allRows;
+  Future<List<PlantModel>> getPlants({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  }) async => allRows;
 }
 
 class _FakeSeasonRemoteDataSource implements SeasonRemoteDataSource {
@@ -165,8 +168,11 @@ class _FakeSeasonRemoteDataSource implements SeasonRemoteDataSource {
   Future<void> deleteSeason(String id) async {}
 
   @override
-  Future<List<SeasonModel>> getSeasons({DateTime? updatedSince}) async =>
-      allRows;
+  Future<List<SeasonModel>> getSeasons({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  }) async => allRows;
 }
 
 class _FakeHarvestRemoteDataSource implements HarvestRemoteDataSource {
@@ -260,6 +266,8 @@ class _FakeAnimalTypeRemoteDataSource implements AnimalTypeRemoteDataSource {
   @override
   Future<List<AnimalTypeModel>> getAnimalTypes({
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async => allRows;
 }
 
@@ -305,8 +313,11 @@ class _FakeHerdRemoteDataSource implements HerdRemoteDataSource {
   Future<void> deleteHerd(String id) async {}
 
   @override
-  Future<List<HerdModel>> getHerds({DateTime? updatedSince}) async =>
-      allRows;
+  Future<List<HerdModel>> getHerds({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  }) async => allRows;
 }
 
 class _FakeAnimalRemoteDataSource implements AnimalRemoteDataSource {
@@ -350,7 +361,11 @@ class _FakeAnimalRemoteDataSource implements AnimalRemoteDataSource {
   Future<void> deleteAnimal(String id) async {}
 
   @override
-  Future<List<AnimalModel>> getAnimals({DateTime? updatedSince}) async =>
+  Future<List<AnimalModel>> getAnimals({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  }) async =>
       allRows;
 }
 

@@ -10,6 +10,13 @@ import 'package:farm_tracker/core/error/failures.dart';
 /// - success                -> `Right(result)`
 /// - [NetworkException]     -> `Left(NetworkFailure())`
 /// - [UnauthorizedException] -> `Left(UnauthorizedFailure())` (F1-05/S4-C1)
+/// - [ConflictException]    -> `Left(ConflictFailure(e.message))` (Phase 8
+///   A3/B2's 409s) — checked before [ServerException] since
+///   [ConflictException] extends it. Behaviour-neutral today: the only
+///   thing that throws it is `TrashRemoteDataSourceImpl.restore`, and
+///   `TrashRepositoryImpl` talks to that datasource directly, bypassing
+///   `guard()` entirely. This branch just future-proofs `guard()` in case a
+///   later datasource routes a conflict through it instead.
 /// - [ServerException]      -> `Left(ServerFailure(e.message))`
 ///
 /// By default any OTHER error is rethrown, matching the repositories that only
@@ -31,6 +38,8 @@ Future<Either<Failure, T>> guard<T>(
     return const Left(NetworkFailure());
   } on UnauthorizedException {
     return const Left(UnauthorizedFailure());
+  } on ConflictException catch (e) {
+    return Left(ConflictFailure(e.message));
   } on ServerException catch (e) {
     return Left(ServerFailure(e.message));
   } catch (e) {

@@ -16,12 +16,27 @@ class InfrastructureLoading extends InfrastructureState {
 }
 
 class InfrastructureLoaded extends InfrastructureState {
-  const InfrastructureLoaded(List<Infrastructure> infrastructures, {this.successMessage})
-      : super(infrastructures: infrastructures);
+  const InfrastructureLoaded(
+    List<Infrastructure> infrastructures, {
+    this.successMessage,
+    this.hasReachedMax = true,
+    this.nextCursor,
+  }) : super(infrastructures: infrastructures);
   final String? successMessage;
 
+  /// Online infinite-scroll (P3-02a): `false` only when the last page came
+  /// back full (== `kOnlineListPageSize`), i.e. another page may exist.
+  /// Defaults to `true` so the offline stream path (and the Add/Update/
+  /// Delete handlers, which don't page) never trigger a load-more.
+  final bool hasReachedMax;
+
+  /// The server id to page from next (`?cursor=`), i.e. the last item's id.
+  /// `null` once [hasReachedMax] or when the list is empty.
+  final int? nextCursor;
+
   @override
-  List<Object?> get props => [infrastructures, successMessage];
+  List<Object?> get props =>
+      [infrastructures, successMessage, hasReachedMax, nextCursor];
 }
 
 class InfrastructureError extends InfrastructureState {

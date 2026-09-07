@@ -15,6 +15,13 @@ class GetInfrastructuresEvent extends InfrastructureEvent {}
 /// `InfrastructureBloc`'s internal `_InfrastructuresUpdated` event for how.
 class WatchInfrastructureEvent extends InfrastructureEvent {}
 
+/// Flag-OFF (online) only: fetches the NEXT page of infrastructure rows
+/// using the current `InfrastructureLoaded.nextCursor` and APPENDS it.
+/// Ignored when the loaded state has already reached max or a load-more is
+/// in flight. The offline (`watchInfrastructures`) path never dispatches
+/// this.
+class LoadMoreInfrastructuresEvent extends InfrastructureEvent {}
+
 class AddInfrastructureEvent extends InfrastructureEvent {
   const AddInfrastructureEvent({
     required this.type,

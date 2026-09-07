@@ -408,13 +408,28 @@ class _SettingsPageState extends State<SettingsPage> {
                     _buildSettingsCard(
                       context,
                       title: 'Resources',
-                      child: ListTile(
-                        leading: const Icon(Icons.menu_book_outlined),
-                        title: const Text('Browse Farming Tips'),
-                        subtitle: const Text(
-                          'Guides for your crops and animals',
-                        ),
-                        onTap: () => context.push(AppRoutePath.contentTips),
+                      child: Column(
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.menu_book_outlined),
+                            title: const Text('Browse Farming Tips'),
+                            subtitle: const Text(
+                              'Guides for your crops and animals',
+                            ),
+                            onTap: () =>
+                                context.push(AppRoutePath.contentTips),
+                          ),
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: const Icon(Icons.delete_outline),
+                            title: const Text('Recently Deleted'),
+                            subtitle: const Text(
+                              'Restore lands, plants, animals and other '
+                              'deleted records',
+                            ),
+                            onTap: () => context.push(AppRoutePath.trash),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 24),

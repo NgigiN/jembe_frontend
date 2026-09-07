@@ -14,6 +14,12 @@ class GetPlantsEvent extends PlantEvent {}
 /// `_PlantsUpdated` event for how.
 class WatchPlantsEvent extends PlantEvent {}
 
+/// Flag-OFF (online) only: fetches the NEXT page of plants using the
+/// current `PlantLoaded.nextCursor` and APPENDS it. Ignored when the loaded
+/// state has already reached max or a load-more is in flight. The offline
+/// (`watchPlants`) path never dispatches this.
+class LoadMorePlantsEvent extends PlantEvent {}
+
 class AddPlantEvent extends PlantEvent {
   AddPlantEvent(this.plant);
   final Plant plant;

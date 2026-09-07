@@ -3,7 +3,10 @@ import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 
 abstract class PlantRepository {
-  Future<Either<Failure, List<Plant>>> getPlants();
+  /// [limit]/[cursor] drive the online infinite-scroll list path (P3-02a):
+  /// they are threaded through only when the offline flag is off. The offline
+  /// (`watchPlants`) path ignores them — it mirrors the whole local store.
+  Future<Either<Failure, List<Plant>>> getPlants({int? limit, int? cursor});
 
   /// Reactive stream of plants.
   ///

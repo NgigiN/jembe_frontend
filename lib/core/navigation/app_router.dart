@@ -24,6 +24,7 @@ import 'package:farm_tracker/features/farm/presentation/pages/plants_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/revenue_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/season_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/settings_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/trash_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -55,6 +56,7 @@ class AppRouteName {
   static const contentTips = 'content-tips';
   static const contentDetail = 'content-detail';
   static const askQuestion = 'ask-question';
+  static const trash = 'trash';
 }
 
 class AppRoutePath {
@@ -85,6 +87,7 @@ class AppRoutePath {
   static const contentTips = '/content';
   static const contentDetailTemplate = '/content/:id';
   static const askQuestion = '/ask-question';
+  static const trash = '/trash';
 
   static String inputsFor(String sourceType) => '/inputs/$sourceType';
   static String activitiesFor(String sourceType) => '/activities/$sourceType';
@@ -320,6 +323,12 @@ class AppRouter {
         caseSensitive: false,
         pageBuilder: (context, state) =>
             _slidePage(const AskQuestionPage(), state),
+      ),
+      GoRoute(
+        name: AppRouteName.trash,
+        path: AppRoutePath.trash,
+        caseSensitive: false,
+        pageBuilder: (context, state) => _slidePage(const TrashPage(), state),
       ),
     ],
   );

@@ -31,3 +31,16 @@ class UnauthorizedException extends Exceptions {}
 /// `NetworkException` (transient, stops the phase) and `ServerException`
 /// (permanent, parks as `failed`).
 class SyncDependencyException extends Exceptions {}
+
+/// Thrown by `TrashRemoteDataSourceImpl.restore` for a 409 response — a
+/// restore blocked by a still-tombstoned parent, or (cost_category) a live
+/// row colliding on the name/type/category partial-unique index (Phase 8
+/// A3/B2). Distinct from [ServerException] so `TrashRepositoryImpl` can
+/// surface it as a `ConflictFailure` instead of a generic one, mirroring how
+/// [UnauthorizedException] is split out from [ServerException] for 401.
+/// Scoped to the trash restore flow — `mapDioException`
+/// (core/network/dio_client.dart), used by every other datasource, is not
+/// touched, so no other endpoint's 409 handling changes.
+class ConflictException extends ServerException {
+  const ConflictException([super.message]);
+}

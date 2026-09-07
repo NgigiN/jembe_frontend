@@ -130,7 +130,11 @@ class _FakeLandRemoteDataSource implements LandRemoteDataSource {
   }
 
   @override
-  Future<List<LandModel>> getLands({DateTime? updatedSince}) async {
+  Future<List<LandModel>> getLands({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  }) async {
     if (updatedSince == null) return allRows;
     return _byServerId.values
         .where((row) => !row.updatedAt.isBefore(updatedSince))
@@ -320,7 +324,11 @@ class _FakeSeasonRemoteDataSource implements SeasonRemoteDataSource {
   }
 
   @override
-  Future<List<SeasonModel>> getSeasons({DateTime? updatedSince}) async {
+  Future<List<SeasonModel>> getSeasons({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  }) async {
     if (updatedSince == null) return allRows;
     return _byServerId.values
         .where((row) => !row.updatedAt.isBefore(updatedSince))

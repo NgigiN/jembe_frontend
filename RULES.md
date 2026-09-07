@@ -56,7 +56,25 @@ them as load-bearing.
   the encryption recipe. **Do not** re-pin `drift <2.32` or re-add `sqlcipher_flutter_libs`/
   `sqlite3_flutter_libs` (that was the pre-D15 recipe, now removed).
 
+## 7. Phase 8 invariants (dashboard, trash, pagination)
+
+- **Dashboard (`GET /api/v1/dashboard`) is ONLINE-only.** `PlantsPage`/`AnimalsPage` fetch it for
+  COUNTS on the online path only; under `OfflineConfig.enabled` they keep their `Watch*` streams. It
+  SEEDS the landing counts — it does NOT replace the drill-down list pages' own fetches (shared
+  singleton blocs), and does NOT cover the related-content / plant-name / content fetches. Don't route
+  it through the offline path.
+- **Trash / "Recently deleted" is ONLINE-only.** Restore talks straight to the network (`GET /trash`,
+  `POST /<entity>/:id/restore`); the offline local mirror hard-deletes on tombstone, so there is nothing
+  local to restore against — do NOT wire trash into `sync_engine`/the offline stack. A 409 (still-
+  tombstoned parent, or a cost_category name/type/category collision) maps to `ConflictFailure` and
+  KEEPS the item in the list (don't collapse it into a generic error).
+- **All 11 CRUD list entities now use the P3-02a infinite-scroll pattern** (activity/input/revenue/
+  harvest from P3-02a + animal/animal_type/herd/infrastructure/land/plant/season from Phase 8) via the
+  shared `PaginatedListView` + `LoadMoreX` events + `hasReachedMax`/`nextCursor` state, online-path only,
+  behaviour-neutral for ≤500-row accounts. **`cost_category` is deliberately excluded** — it's a picker
+  with no list page.
+
 ---
 _Origin: pre-release audit `docs/audit/20-redundancy.md` §R2-05, plus decisions from remediation phases
-R2-01/R2-02/R2-06. This file lives in the repo so the decision travels with the code — the root `docs/`
-audit is local-only, and this repo's `docs/` is gitignored._
+R2-01/R2-02/R2-06 and Phase 8 (dashboard/trash/pagination). This file lives in the repo so the decision
+travels with the code — the root `docs/` audit is local-only, and this repo's `docs/` is gitignored._

@@ -24,7 +24,11 @@ class FakeAnimalRemoteDataSource implements AnimalRemoteDataSource {
   Exception? throwOnAdd;
 
   @override
-  Future<List<AnimalModel>> getAnimals({DateTime? updatedSince}) async {
+  Future<List<AnimalModel>> getAnimals({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  }) async {
     if (throwOnGet != null) throw throwOnGet!;
     return [];
   }

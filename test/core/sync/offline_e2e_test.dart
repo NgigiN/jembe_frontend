@@ -105,7 +105,11 @@ class _FakeLandRemoteDataSource implements LandRemoteDataSource {
   }
 
   @override
-  Future<List<LandModel>> getLands({DateTime? updatedSince}) async {
+  Future<List<LandModel>> getLands({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  }) async {
     if (updatedSince == null) return allRows;
     return _byServerId.values
         .where((row) => !row.updatedAt.isBefore(updatedSince))

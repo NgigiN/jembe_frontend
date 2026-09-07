@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
@@ -45,7 +46,7 @@ void main() {
       'GetPlantsEvent emits [PlantLoading, PlantLoaded] from the repository',
       build: () {
         when(
-          () => mockRepository.getPlants(),
+          () => mockRepository.getPlants(limit: any(named: 'limit')),
         ).thenAnswer((_) async => Right([plant()]));
         return buildBloc();
       },
@@ -253,6 +254,96 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       expect: () => <PlantState>[],
+    );
+  });
+
+  group('online infinite scroll (P3-02a, flag off)', () {
+    blocTest<PlantBloc, PlantState>(
+      'GetPlantsEvent under a full page sets hasReachedMax true and '
+      'derives nextCursor from the last id',
+      build: () {
+        when(
+          () => mockRepository.getPlants(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (_) async => Right([plant(id: '3'), plant(id: '2')]),
+        );
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(GetPlantsEvent()),
+      expect: () => [
+        const PlantLoading(),
+        PlantLoaded(plants: [plant(id: '3'), plant(id: '2')], nextCursor: 2),
+      ],
+    );
+
+    blocTest<PlantBloc, PlantState>(
+      'LoadMorePlantsEvent is a no-op when hasReachedMax (a ≤500-row '
+      'account never issues a second fetch)',
+      build: buildBloc,
+      seed: () => PlantLoaded(plants: [plant(id: '2')], nextCursor: 2),
+      act: (bloc) => bloc.add(LoadMorePlantsEvent()),
+      wait: const Duration(milliseconds: 50),
+      expect: () => <PlantState>[],
+      verify: (_) {
+        verifyNever(
+          () => mockRepository.getPlants(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        );
+      },
+    );
+
+    blocTest<PlantBloc, PlantState>(
+      'a full first page sets hasReachedMax false; LoadMore fetches with '
+      'the cursor, APPENDS the next page and recomputes '
+      'hasReachedMax/nextCursor',
+      build: () {
+        final page1 = List.generate(
+          kOnlineListPageSize,
+          (i) => plant(id: '${1000 - i}'),
+        );
+        final page2 = [plant(id: '500'), plant(id: '499')];
+        when(
+          () => mockRepository.getPlants(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((invocation) async {
+          final cursor = invocation.namedArguments[#cursor] as int?;
+          return Right(cursor == null ? page1 : page2);
+        });
+        return buildBloc();
+      },
+      act: (bloc) async {
+        bloc.add(GetPlantsEvent());
+        await bloc.stream.firstWhere((s) => s is PlantLoaded);
+        bloc.add(LoadMorePlantsEvent());
+      },
+      wait: const Duration(milliseconds: 100),
+      expect: () => [
+        const PlantLoading(),
+        isA<PlantLoaded>()
+            .having((s) => s.plants.length, 'page 1 length', kOnlineListPageSize)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', false)
+            .having((s) => s.nextCursor, 'nextCursor', 501),
+        isA<PlantLoaded>()
+            .having((s) => s.plants.length, 'appended length',
+                kOnlineListPageSize + 2)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', true)
+            .having((s) => s.nextCursor, 'nextCursor', 499),
+      ],
+      verify: (_) {
+        verify(
+          () => mockRepository.getPlants(
+            limit: any(named: 'limit'),
+            cursor: 501,
+          ),
+        ).called(1);
+      },
     );
   });
 }

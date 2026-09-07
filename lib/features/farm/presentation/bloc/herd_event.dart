@@ -15,6 +15,12 @@ class GetHerdsEvent extends HerdEvent {}
 /// `_HerdsUpdated` event for how.
 class WatchHerdsEvent extends HerdEvent {}
 
+/// Flag-OFF (online) only: fetches the NEXT page of herds using the current
+/// `HerdLoaded.nextCursor` and APPENDS it. Ignored when the loaded state has
+/// already reached max or a load-more is in flight. The offline
+/// (`watchHerds`) path never dispatches this.
+class LoadMoreHerdsEvent extends HerdEvent {}
+
 class AddHerdEvent extends HerdEvent {
   const AddHerdEvent(
     this.name,

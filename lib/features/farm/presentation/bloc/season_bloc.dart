@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
@@ -46,7 +47,7 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
       appLogger.debug(LogCategory.farm, 'GetSeasonsEvent triggered');
       emit(const SeasonLoading());
 
-      final result = await repository.getSeasons();
+      final result = await repository.getSeasons(limit: kOnlineListPageSize);
       result.fold(
         (failure) {
           appLogger.warning(LogCategory.farm, 'GetSeasons failed: $failure');
@@ -54,10 +55,20 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
         },
         (seasons) {
           appLogger.info(LogCategory.farm, 'Loaded ${seasons.length} seasons');
-          emit(SeasonLoaded(seasons: seasons));
+          // Online (flag off): this was page 1 of a cursor-paged list.
+          // Offline returns the whole local mirror in one shot, so it
+          // always reaches max here and never pages.
+          final online = !OfflineConfig.enabled;
+          emit(SeasonLoaded(
+            seasons: seasons,
+            hasReachedMax: !online || seasons.length < kOnlineListPageSize,
+            nextCursor: online ? _cursorOf(seasons) : null,
+          ));
         },
       );
     });
+
+    on<LoadMoreSeasonsEvent>(_onLoadMoreSeasons);
 
     on<WatchSeasonsEvent>((event, emit) {
       // Synchronous handler, no `await` before the guard: dispatching
@@ -206,6 +217,64 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
 
   StreamSubscription<List<Season>>? _seasonsSubscription;
   bool _watchStarted = false;
+
+  /// Concurrency latch for [LoadMoreSeasonsEvent]: guards against a second
+  /// page fetch starting while the first is still in flight.
+  bool _isLoadingMore = false;
+
+  /// Fetches and APPENDS the next online page. No-op when offline, when the
+  /// current loaded page already reached max, when there is no cursor to page
+  /// from, or when a load-more is already running.
+  Future<void> _onLoadMoreSeasons(
+    LoadMoreSeasonsEvent event,
+    Emitter<SeasonState> emit,
+  ) async {
+    if (OfflineConfig.enabled) return;
+    final current = state;
+    if (current is! SeasonLoaded) return;
+    if (current.hasReachedMax ||
+        current.nextCursor == null ||
+        _isLoadingMore) {
+      return;
+    }
+    _isLoadingMore = true;
+    try {
+      final result = await repository.getSeasons(
+        limit: kOnlineListPageSize,
+        cursor: current.nextCursor,
+      );
+      _isLoadingMore = false;
+      result.fold(
+        (failure) {
+          if (state != current) return;
+          emit(SeasonError(
+            resolveFailureMessage(failure, 'Failed to load seasons'),
+            seasons: current.seasons,
+          ));
+        },
+        (more) {
+          // A concurrent Add/Update/Delete/refresh emitted a newer state
+          // while this fetch was in flight: drop this now-stale page rather
+          // than clobbering it — the user's next scroll re-triggers
+          // LoadMore against the fresh state.
+          if (state != current) return;
+          final combined = List<Season>.from(current.seasons)..addAll(more);
+          emit(SeasonLoaded(
+            seasons: combined,
+            hasReachedMax: more.length < kOnlineListPageSize,
+            nextCursor: _cursorOf(more),
+          ));
+        },
+      );
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
+
+  /// The next `?cursor=` value — the last (oldest, since the list is
+  /// newest-first) item's server id, or `null` when the page is empty.
+  int? _cursorOf(List<Season> seasons) =>
+      seasons.isEmpty ? null : int.tryParse(seasons.last.id);
 
   @override
   Future<void> close() async {

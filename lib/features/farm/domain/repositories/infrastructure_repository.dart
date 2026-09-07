@@ -3,7 +3,14 @@ import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/features/farm/domain/entities/infrastructure.dart';
 
 abstract class InfrastructureRepository {
-  Future<Either<Failure, List<Infrastructure>>> getInfrastructures();
+  /// [limit]/[cursor] drive the online infinite-scroll list path (P3-02a):
+  /// they are threaded through only when the offline flag is off. The offline
+  /// (`watchInfrastructures`) path ignores them — it mirrors the whole local
+  /// store.
+  Future<Either<Failure, List<Infrastructure>>> getInfrastructures({
+    int? limit,
+    int? cursor,
+  });
 
   /// Reactive stream of infrastructure rows.
   ///

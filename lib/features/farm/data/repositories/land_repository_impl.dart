@@ -99,12 +99,19 @@ class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {
   }
 
   @override
-  Future<Either<Failure, List<Land>>> getLands() async {
+  Future<Either<Failure, List<Land>>> getLands({
+    int? limit,
+    int? cursor,
+  }) async {
     if (_offlineFirst) {
+      // Offline mirror shows the whole local store — pagination
+      // ([limit]/[cursor]) is an online-only concern and is ignored here.
       final models = await local!.watchLands().first;
       return Right(models.map(_toLand).toList());
     }
-    return guard(remoteDataSource.getLands);
+    return guard(
+      () => remoteDataSource.getLands(limit: limit, cursor: cursor),
+    );
   }
 
   @override
