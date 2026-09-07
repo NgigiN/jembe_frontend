@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/offline_repository.dart';
@@ -10,6 +9,7 @@ import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/outbox_coalescing.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/guard.dart';
 import 'package:farm_tracker/features/farm/data/datasources/activity_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
@@ -131,16 +131,9 @@ class ActivityRepositoryImpl
           await local!.watchActivities(sourceType: sourceType).first;
       return Right(models.map(_toActivity).toList());
     }
-    try {
-      final activities = await remoteDataSource.getActivities(
-        sourceType: sourceType,
-      );
-      return Right(activities);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(
+      () => remoteDataSource.getActivities(sourceType: sourceType),
+    );
   }
 
   @override
@@ -166,14 +159,7 @@ class ActivityRepositoryImpl
       return Right(_toActivity(model));
     }
 
-    try {
-      final result = await remoteDataSource.addActivity(_toModel(activity));
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.addActivity(_toModel(activity)));
   }
 
   @override
@@ -209,16 +195,7 @@ class ActivityRepositoryImpl
       return Right(activity);
     }
 
-    try {
-      final result = await remoteDataSource.updateActivity(
-        _toModel(activity),
-      );
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.updateActivity(_toModel(activity)));
   }
 
   @override
@@ -229,13 +206,6 @@ class ActivityRepositoryImpl
       return const Right(null);
     }
 
-    try {
-      await remoteDataSource.deleteActivity(id);
-      return const Right(null);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.deleteActivity(id));
   }
 }

@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/offline_repository.dart';
@@ -9,6 +8,7 @@ import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/outbox_coalescing.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/guard.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_activity_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_activity_model.dart';
@@ -90,7 +90,7 @@ class HerdActivityRepositoryImpl
       );
       return Right(model);
     }
-    try {
+    return guard(() {
       final model = HerdActivityModel.create(
         herdId: herdId,
         activityType: activityType,
@@ -98,14 +98,7 @@ class HerdActivityRepositoryImpl
         date: date,
         notes: notes,
       );
-      final result = await remoteDataSource.addHerdActivity(herdId, model);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Unexpected error: $e'));
-    }
+      return remoteDataSource.addHerdActivity(herdId, model);
+    }, onUnexpected: (e) => 'Unexpected error: $e');
   }
 }

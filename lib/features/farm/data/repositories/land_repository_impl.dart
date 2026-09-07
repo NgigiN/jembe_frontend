@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/offline_repository.dart';
@@ -10,6 +9,7 @@ import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/outbox_coalescing.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/guard.dart';
 import 'package:farm_tracker/features/farm/data/datasources/land_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/land_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/land_model.dart';
@@ -104,14 +104,7 @@ class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {
       final models = await local!.watchLands().first;
       return Right(models.map(_toLand).toList());
     }
-    try {
-      final lands = await remoteDataSource.getLands();
-      return Right(lands);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(remoteDataSource.getLands);
   }
 
   @override
@@ -135,7 +128,7 @@ class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {
       return Right(_toLand(model));
     }
 
-    try {
+    return guard(() {
       // Use the create factory method to convert Land entity to LandModel
       final landModel = LandModel.create(
         userId: land.userId,
@@ -146,13 +139,8 @@ class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {
         tenureType: land.tenureType,
       );
 
-      final result = await remoteDataSource.addLand(landModel);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+      return remoteDataSource.addLand(landModel);
+    });
   }
 
   @override
@@ -185,7 +173,7 @@ class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {
       return Right(land);
     }
 
-    try {
+    return guard(() {
       // Convert Land entity to LandModel
       final landModel = LandModel(
         id: land.id,
@@ -199,13 +187,8 @@ class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {
         updatedAt: land.updatedAt,
       );
 
-      final result = await remoteDataSource.updateLand(landModel);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+      return remoteDataSource.updateLand(landModel);
+    });
   }
 
   @override
@@ -216,13 +199,6 @@ class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {
       return const Right(null);
     }
 
-    try {
-      await remoteDataSource.deleteLand(id);
-      return const Right(null);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.deleteLand(id));
   }
 }

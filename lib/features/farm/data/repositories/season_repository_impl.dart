@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/offline_repository.dart';
@@ -10,6 +9,7 @@ import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/outbox_coalescing.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/guard.dart';
 import 'package:farm_tracker/features/farm/data/datasources/season_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/season_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/season_model.dart';
@@ -114,14 +114,7 @@ class SeasonRepositoryImpl
       final models = await local!.watchSeasons().first;
       return Right(models.map(_toSeason).toList());
     }
-    try {
-      final seasons = await remoteDataSource.getSeasons();
-      return Right(seasons);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(remoteDataSource.getSeasons);
   }
 
   @override
@@ -145,7 +138,7 @@ class SeasonRepositoryImpl
       return Right(_toSeason(model));
     }
 
-    try {
+    return guard(() {
       // Convert Season entity to SeasonModel
       final seasonModel = SeasonModel(
         id: season.id,
@@ -159,13 +152,8 @@ class SeasonRepositoryImpl
         updatedAt: DateTime.now(),
       );
 
-      final result = await remoteDataSource.addSeason(seasonModel);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+      return remoteDataSource.addSeason(seasonModel);
+    });
   }
 
   @override
@@ -176,14 +164,7 @@ class SeasonRepositoryImpl
       return const Right(null);
     }
 
-    try {
-      await remoteDataSource.deleteSeason(id);
-      return const Right(null);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.deleteSeason(id));
   }
 
   @override
@@ -217,7 +198,7 @@ class SeasonRepositoryImpl
       return Right(season);
     }
 
-    try {
+    return guard(() {
       final seasonModel = SeasonModel(
         id: season.id,
         userId: season.userId,
@@ -229,12 +210,7 @@ class SeasonRepositoryImpl
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      final result = await remoteDataSource.updateSeason(seasonModel);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+      return remoteDataSource.updateSeason(seasonModel);
+    });
   }
 }
