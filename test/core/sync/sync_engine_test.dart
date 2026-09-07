@@ -565,6 +565,63 @@ void main() {
     expect(engine.status.phase, SyncPhase.error);
   });
 
+  group('unauthorized (401): transient-auth stop, not a fault', () {
+    test('push 401: entry left pending (not acked, not failed), status error, '
+        'pull skipped', () {
+      fakeAsync((async) {
+        engine = build(
+          rows: [
+            _row(1),
+            _row(2, clientUuid: 'b'),
+          ],
+        );
+        syncer.onPush = (row) => UnauthorizedException();
+
+        unawaited(engine.syncNow());
+        async.flushMicrotasks();
+
+        expect(syncer.pushCount, 1); // stopped at the first row
+        expect(outbox.acked, isEmpty);
+        expect(outbox.failed, isEmpty); // NOT parked — the row isn't at fault
+        expect(outbox.stateOf(1), 'pending');
+        expect(engine.status.phase, SyncPhase.error);
+        expect(syncer.pullCount, 0); // pull skipped after the transient stop
+
+        engine.dispose();
+      });
+    });
+
+    test('pull 401: status error, push ack preserved', () {
+      fakeAsync((async) {
+        engine = build(rows: [_row(1)]);
+        syncer.pullThrows = UnauthorizedException();
+
+        unawaited(engine.syncNow());
+        async.flushMicrotasks();
+
+        expect(outbox.acked, [1]); // push succeeded before the pull 401
+        expect(engine.status.phase, SyncPhase.error);
+
+        engine.dispose();
+      });
+    });
+
+    test('401 is NOT routed through onError (expected auth condition, not a '
+        'bug to log at error level)', () async {
+      final logged = <Object>[];
+      engine = build(
+        rows: [_row(1)],
+        onError: (error, stackTrace) => logged.add(error),
+      );
+      syncer.pullThrows = UnauthorizedException();
+
+      await engine.syncNow();
+
+      expect(engine.status.phase, SyncPhase.error);
+      expect(logged, isEmpty); // unlike a generic (non-auth) error
+    });
+  });
+
   test('start(): regaining connectivity triggers a sync', () async {
     engine = build(rows: [_row(1)])..start();
 

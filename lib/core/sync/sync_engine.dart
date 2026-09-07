@@ -230,6 +230,18 @@ class SyncEngine {
       // backoff retry is the signal, not a log line.
       phase = SyncPhase.error;
       scheduleRetry = true;
+    } on UnauthorizedException {
+      // A 401 escaping the push or pull phase means the session died
+      // mid-sync; the Dio error interceptor is already forcing a logout
+      // (F1-05/S4-C1). Treat it like a transient stop, NOT an unexpected
+      // fault: the offending outbox row is left `pending` (never markFailed —
+      // the row isn't at fault) along with the rest, and a retry is scheduled.
+      // That retry safely no-ops via the `!authenticated` guard above until
+      // re-login, at which point the pending rows push. Deliberately NOT
+      // routed through `_onError`: an expired session is expected (like
+      // NetworkException), not a bug to log at error level.
+      phase = SyncPhase.error;
+      scheduleRetry = true;
     } on Object catch (error, stackTrace) {
       // Any OTHER failure (a ServerException from the pull phase, a DAO error,
       // a syncer breaking the push contract): never crash the pass or surface
