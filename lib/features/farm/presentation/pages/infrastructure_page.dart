@@ -14,6 +14,7 @@ import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/crud/paginated_list_view.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
@@ -113,10 +114,20 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
             );
           }
 
-          return ListView.builder(
+          final offline = OfflineConfig.enabled;
+          final hasReachedMax = offline ||
+              state is! InfrastructureLoaded ||
+              state.hasReachedMax;
+          return PaginatedListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: context.scrollListPadding(forFab: true),
             itemCount: infrastructures.length,
+            hasReachedMax: hasReachedMax,
+            onEndReached: offline
+                ? () {}
+                : () => context.read<InfrastructureBloc>().add(
+                      LoadMoreInfrastructuresEvent(),
+                    ),
             itemBuilder: (context, index) {
               final item = infrastructures[index];
               final location = item.location.isNotEmpty

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/offline_repository.dart';
@@ -10,6 +9,7 @@ import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/outbox_coalescing.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/guard.dart';
 import 'package:farm_tracker/features/farm/data/datasources/activity_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
@@ -21,7 +21,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/activity_reposito
 ///
 /// ## Flag off (today's behavior — byte for byte)
 /// Every method talks straight to [remoteDataSource], mapping
-/// [NetworkException]/[ServerException] to [NetworkFailure]/[ServerFailure].
+/// `NetworkException`/`ServerException` to [NetworkFailure]/[ServerFailure].
 /// This is rule zero for the offline rollout: with
 /// `OfflineConfig.enabled == false`, this class behaves exactly as it did
 /// before the offline pipeline existed.
@@ -125,22 +125,23 @@ class ActivityRepositoryImpl
   @override
   Future<Either<Failure, List<Activity>>> getActivities({
     String? sourceType,
+    int? limit,
+    int? cursor,
   }) async {
     if (_offlineFirst) {
+      // Offline mirror shows the whole local store — pagination
+      // ([limit]/[cursor]) is an online-only concern and is ignored here.
       final models =
           await local!.watchActivities(sourceType: sourceType).first;
       return Right(models.map(_toActivity).toList());
     }
-    try {
-      final activities = await remoteDataSource.getActivities(
+    return guard(
+      () => remoteDataSource.getActivities(
         sourceType: sourceType,
-      );
-      return Right(activities);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+        limit: limit,
+        cursor: cursor,
+      ),
+    );
   }
 
   @override
@@ -166,14 +167,7 @@ class ActivityRepositoryImpl
       return Right(_toActivity(model));
     }
 
-    try {
-      final result = await remoteDataSource.addActivity(_toModel(activity));
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.addActivity(_toModel(activity)));
   }
 
   @override
@@ -209,16 +203,7 @@ class ActivityRepositoryImpl
       return Right(activity);
     }
 
-    try {
-      final result = await remoteDataSource.updateActivity(
-        _toModel(activity),
-      );
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.updateActivity(_toModel(activity)));
   }
 
   @override
@@ -229,13 +214,6 @@ class ActivityRepositoryImpl
       return const Right(null);
     }
 
-    try {
-      await remoteDataSource.deleteActivity(id);
-      return const Right(null);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.deleteActivity(id));
   }
 }

@@ -26,10 +26,6 @@ analyzer:
     - "**/*.freezed.dart"
     - android/**
     - ios/**
-    - web/**
-    - windows/**
-    - macos/**
-    - linux/**
   errors:
     invalid_annotation_target: ignore
     lines_longer_than_80_chars: ignore

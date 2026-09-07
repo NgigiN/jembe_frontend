@@ -2,30 +2,19 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_infrastructure.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/infrastructure_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockGetInfrastructure extends Mock implements GetInfrastructure {}
-
-class MockAddInfrastructure extends Mock implements AddInfrastructure {}
-
-class MockUpdateInfrastructure extends Mock implements UpdateInfrastructure {}
-
-class MockDeleteInfrastructure extends Mock implements DeleteInfrastructure {}
-
-class MockWatchInfrastructure extends Mock implements WatchInfrastructure {}
+class MockInfrastructureRepository extends Mock
+    implements InfrastructureRepository {}
 
 void main() {
   final now = DateTime.now();
@@ -43,43 +32,26 @@ void main() {
         updatedAt: now,
       );
 
-  late MockGetInfrastructure mockGetInfrastructure;
-  late MockAddInfrastructure mockAddInfrastructure;
-  late MockUpdateInfrastructure mockUpdateInfrastructure;
-  late MockDeleteInfrastructure mockDeleteInfrastructure;
-  late MockWatchInfrastructure mockWatchInfrastructure;
-
-  setUpAll(() {
-    registerFallbackValue(NoParams());
-  });
+  late MockInfrastructureRepository mockRepository;
 
   setUp(() {
-    mockGetInfrastructure = MockGetInfrastructure();
-    mockAddInfrastructure = MockAddInfrastructure();
-    mockUpdateInfrastructure = MockUpdateInfrastructure();
-    mockDeleteInfrastructure = MockDeleteInfrastructure();
-    mockWatchInfrastructure = MockWatchInfrastructure();
+    mockRepository = MockInfrastructureRepository();
   });
 
   tearDown(() {
     OfflineConfig.enabled = false;
   });
 
-  InfrastructureBloc buildBloc() => InfrastructureBloc(
-    getInfrastructure: mockGetInfrastructure,
-    addInfrastructure: mockAddInfrastructure,
-    updateInfrastructure: mockUpdateInfrastructure,
-    deleteInfrastructure: mockDeleteInfrastructure,
-    watchInfrastructure: mockWatchInfrastructure,
-  );
+  InfrastructureBloc buildBloc() =>
+      InfrastructureBloc(repository: mockRepository);
 
   group("flag OFF (today's one-shot behavior, unchanged)", () {
     blocTest<InfrastructureBloc, InfrastructureState>(
       'GetInfrastructuresEvent emits [InfrastructureLoading, '
-      'InfrastructureLoaded] from the use case',
+      'InfrastructureLoaded] from the repository',
       build: () {
         when(
-          () => mockGetInfrastructure(any()),
+          () => mockRepository.getInfrastructures(limit: any(named: 'limit')),
         ).thenAnswer((_) async => Right([infrastructure()]));
         return buildBloc();
       },
@@ -95,7 +67,8 @@ void main() {
       "successMessage 'Infrastructure added'",
       build: () {
         when(
-          () => mockAddInfrastructure(any(), any(), any(), any(), any(), any(), any()),
+          () => mockRepository.addInfrastructure(
+            any(), any(), any(), any(), any(), any(), any()),
         ).thenAnswer((_) async => Right(infrastructure(id: 'infra-2')));
         return buildBloc();
       },
@@ -124,7 +97,8 @@ void main() {
       'current infrastructures',
       build: () {
         when(
-          () => mockAddInfrastructure(any(), any(), any(), any(), any(), any(), any()),
+          () => mockRepository.addInfrastructure(
+            any(), any(), any(), any(), any(), any(), any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -154,7 +128,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchInfrastructure(),
+          () => mockRepository.watchInfrastructures(),
         ).thenAnswer((_) => Stream.value([infrastructure()]));
         return buildBloc();
       },
@@ -171,7 +145,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchInfrastructure(),
+          () => mockRepository.watchInfrastructures(),
         ).thenAnswer((_) => Stream.value([infrastructure()]));
         return buildBloc();
       },
@@ -182,7 +156,7 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       verify: (_) {
-        verify(() => mockWatchInfrastructure()).called(1);
+        verify(() => mockRepository.watchInfrastructures()).called(1);
       },
     );
 
@@ -192,7 +166,8 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddInfrastructure(any(), any(), any(), any(), any(), any(), any()),
+          () => mockRepository.addInfrastructure(
+            any(), any(), any(), any(), any(), any(), any()),
         ).thenAnswer((_) async => Right(infrastructure(id: 'infra-2')));
         return buildBloc();
       },
@@ -221,7 +196,8 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockUpdateInfrastructure(any(), any(), any(), any(), any(), any(), any()),
+          () => mockRepository.updateInfrastructure(
+            any(), any(), any(), any(), any(), any(), any()),
         ).thenAnswer((_) async => Right(infrastructure(name: 'Renamed')));
         return buildBloc();
       },
@@ -250,7 +226,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockDeleteInfrastructure(any()),
+          () => mockRepository.deleteInfrastructure(any()),
         ).thenAnswer((_) async => const Right<Failure, void>(null));
         return buildBloc();
       },
@@ -283,7 +259,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchInfrastructure(),
+          () => mockRepository.watchInfrastructures(),
         ).thenAnswer((_) => controller.stream);
         return buildBloc();
       },
@@ -303,6 +279,102 @@ void main() {
         ),
         InfrastructureLoaded([infrastructure(id: 'infra-2')]),
       ],
+    );
+  });
+
+  group('online infinite scroll (P3-02a, flag off)', () {
+    blocTest<InfrastructureBloc, InfrastructureState>(
+      'GetInfrastructuresEvent under a full page sets hasReachedMax true '
+      'and derives nextCursor from the last id',
+      build: () {
+        when(
+          () => mockRepository.getInfrastructures(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              Right([infrastructure(id: '3'), infrastructure(id: '2')]),
+        );
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(GetInfrastructuresEvent()),
+      expect: () => [
+        const InfrastructureLoading(),
+        InfrastructureLoaded(
+          [infrastructure(id: '3'), infrastructure(id: '2')],
+          nextCursor: 2,
+        ),
+      ],
+    );
+
+    blocTest<InfrastructureBloc, InfrastructureState>(
+      'LoadMoreInfrastructuresEvent is a no-op when hasReachedMax (a '
+      '≤500-row account never issues a second fetch)',
+      build: buildBloc,
+      seed: () =>
+          InfrastructureLoaded([infrastructure(id: '2')], nextCursor: 2),
+      act: (bloc) => bloc.add(LoadMoreInfrastructuresEvent()),
+      wait: const Duration(milliseconds: 50),
+      expect: () => <InfrastructureState>[],
+      verify: (_) {
+        verifyNever(
+          () => mockRepository.getInfrastructures(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        );
+      },
+    );
+
+    blocTest<InfrastructureBloc, InfrastructureState>(
+      'a full first page sets hasReachedMax false; LoadMore fetches with '
+      'the cursor, APPENDS the next page and recomputes '
+      'hasReachedMax/nextCursor',
+      build: () {
+        final page1 = List.generate(
+          kOnlineListPageSize,
+          (i) => infrastructure(id: '${1000 - i}'),
+        );
+        final page2 = [infrastructure(id: '500'), infrastructure(id: '499')];
+        when(
+          () => mockRepository.getInfrastructures(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((invocation) async {
+          final cursor = invocation.namedArguments[#cursor] as int?;
+          return Right(cursor == null ? page1 : page2);
+        });
+        return buildBloc();
+      },
+      act: (bloc) async {
+        bloc.add(GetInfrastructuresEvent());
+        await bloc.stream.firstWhere((s) => s is InfrastructureLoaded);
+        bloc.add(LoadMoreInfrastructuresEvent());
+      },
+      wait: const Duration(milliseconds: 100),
+      expect: () => [
+        const InfrastructureLoading(),
+        isA<InfrastructureLoaded>()
+            .having((s) => s.infrastructures.length, 'page 1 length',
+                kOnlineListPageSize)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', false)
+            .having((s) => s.nextCursor, 'nextCursor', 501),
+        isA<InfrastructureLoaded>()
+            .having((s) => s.infrastructures.length, 'appended length',
+                kOnlineListPageSize + 2)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', true)
+            .having((s) => s.nextCursor, 'nextCursor', 499),
+      ],
+      verify: (_) {
+        verify(
+          () => mockRepository.getInfrastructures(
+            limit: any(named: 'limit'),
+            cursor: 501,
+          ),
+        ).called(1);
+      },
     );
   });
 }

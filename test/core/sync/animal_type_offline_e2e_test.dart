@@ -100,7 +100,11 @@ class _FakeAnimalTypeRemoteDataSource implements AnimalTypeRemoteDataSource {
   }
 
   @override
-  Future<List<AnimalTypeModel>> getAnimalTypes({DateTime? updatedSince}) async {
+  Future<List<AnimalTypeModel>> getAnimalTypes({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  }) async {
     Iterable<AnimalTypeModel> rows = _byServerId.values;
     if (updatedSince != null) {
       rows = rows.where((row) => !row.updatedAt.isBefore(updatedSince));

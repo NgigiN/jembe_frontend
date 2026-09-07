@@ -5,11 +5,23 @@
 // `GetXEvent()` initState site. The other blocs this page reads
 // (Land/Plant/Season/Content) are pre-loaded here so only the harvest gate
 // is under test.
+//
+// Phase 8 B1 superseded the flag-off half of this: online, the harvest
+// COUNT now comes from `GET /api/v1/dashboard` (`DashboardBloc`) instead of
+// an unfiltered `GetHarvestsEvent()` fired purely to learn a count — see
+// `plants_page_dashboard_test.dart` for the dashboard-adoption coverage.
+// Flag-on is untouched (still `WatchHarvestsEvent()`, unconditionally, since
+// there is no offline mirror for the dashboard aggregate) and is still
+// pinned here.
 import 'package:bloc_test/bloc_test.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_event.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_state.dart';
+import 'package:farm_tracker/features/farm/domain/entities/dashboard.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/dashboard_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/dashboard_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/dashboard_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/harvest_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/harvest_state.dart';
@@ -42,12 +54,16 @@ class MockHarvestBloc extends MockBloc<HarvestEvent, HarvestState>
 class MockContentBloc extends MockBloc<ContentEvent, ContentState>
     implements ContentBloc {}
 
+class MockDashboardBloc extends MockBloc<DashboardEvent, DashboardState>
+    implements DashboardBloc {}
+
 Widget _wrap({
   required LandBloc landBloc,
   required PlantBloc plantBloc,
   required SeasonBloc seasonBloc,
   required HarvestBloc harvestBloc,
   required ContentBloc contentBloc,
+  required DashboardBloc dashboardBloc,
 }) {
   return MultiBlocProvider(
     providers: [
@@ -56,6 +72,7 @@ Widget _wrap({
       BlocProvider<SeasonBloc>.value(value: seasonBloc),
       BlocProvider<HarvestBloc>.value(value: harvestBloc),
       BlocProvider<ContentBloc>.value(value: contentBloc),
+      BlocProvider<DashboardBloc>.value(value: dashboardBloc),
     ],
     child: const MaterialApp(home: PlantsPage()),
   );
@@ -66,10 +83,12 @@ void main() {
   late MockPlantBloc plantBloc;
   late MockSeasonBloc seasonBloc;
   late MockContentBloc contentBloc;
+  late MockDashboardBloc dashboardBloc;
 
   setUpAll(() {
     registerFallbackValue(GetHarvestsEvent());
     registerFallbackValue(WatchHarvestsEvent());
+    registerFallbackValue(GetDashboardEvent());
   });
 
   setUp(() {
@@ -77,6 +96,7 @@ void main() {
     plantBloc = MockPlantBloc();
     seasonBloc = MockSeasonBloc();
     contentBloc = MockContentBloc();
+    dashboardBloc = MockDashboardBloc();
     whenListen(
       landBloc,
       const Stream<LandState>.empty(),
@@ -97,6 +117,14 @@ void main() {
       const Stream<ContentState>.empty(),
       initialState: const ContentLoaded(items: []),
     );
+    whenListen(
+      dashboardBloc,
+      const Stream<DashboardState>.empty(),
+      initialState: const DashboardLoaded(
+        counts: DashboardCounts.zero(),
+        totals: DashboardTotals.zero(),
+      ),
+    );
   });
 
   tearDown(() {
@@ -104,8 +132,8 @@ void main() {
   });
 
   testWidgets(
-    'flag OFF: dispatches the one-shot unfiltered GetHarvestsEvent when not '
-    'yet loaded',
+    'flag OFF (Phase 8 B1): never touches HarvestBloc — the count comes '
+    'from the dashboard instead',
     (tester) async {
       final harvestBloc = MockHarvestBloc();
       whenListen(
@@ -121,14 +149,11 @@ void main() {
           seasonBloc: seasonBloc,
           harvestBloc: harvestBloc,
           contentBloc: contentBloc,
+          dashboardBloc: dashboardBloc,
         ),
       );
 
-      final captured = verify(
-        () => harvestBloc.add(captureAny(that: isA<GetHarvestsEvent>())),
-      ).captured;
-      expect(captured, hasLength(1));
-      expect((captured.single as GetHarvestsEvent).seasonId, isNull);
+      verifyNever(() => harvestBloc.add(any(that: isA<GetHarvestsEvent>())));
       verifyNever(() => harvestBloc.add(any(that: isA<WatchHarvestsEvent>())));
     },
   );
@@ -152,6 +177,7 @@ void main() {
           seasonBloc: seasonBloc,
           harvestBloc: harvestBloc,
           contentBloc: contentBloc,
+          dashboardBloc: dashboardBloc,
         ),
       );
 
@@ -181,6 +207,7 @@ void main() {
         seasonBloc: seasonBloc,
         harvestBloc: harvestBloc,
         contentBloc: contentBloc,
+        dashboardBloc: dashboardBloc,
       ),
     );
 

@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
+import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
 
 abstract class HarvestRemoteDataSource {
@@ -8,9 +10,16 @@ abstract class HarvestRemoteDataSource {
   /// is given — only those the server has changed strictly after that
   /// instant (used by the sync pull phase, which passes ONLY [updatedSince],
   /// never [seasonId]). Existing callers are unaffected.
+  ///
+  /// [limit] caps the page size (server default & max is 500) and [cursor]
+  /// pages backward through the newest-first list — the server returns rows
+  /// with `id < cursor`. Both are used ONLY by the online infinite-scroll
+  /// list path (P3-02a); the sync pull passes neither.
   Future<List<HarvestModel>> getHarvests({
     String? seasonId,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   });
   Future<HarvestModel> addHarvest(HarvestModel harvest);
   Future<HarvestModel> updateHarvest(HarvestModel harvest);
@@ -25,12 +34,16 @@ class HarvestRemoteDataSourceImpl implements HarvestRemoteDataSource {
   Future<List<HarvestModel>> getHarvests({
     String? seasonId,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async {
     try {
       final queryParams = <String, dynamic>{
         if (seasonId != null && seasonId.isNotEmpty) 'season_id': seasonId,
         if (updatedSince != null)
           'updated_since': updatedSince.toUtc().toIso8601String(),
+        if (limit != null) 'limit': limit,
+        if (cursor != null) 'cursor': cursor,
       };
 
       final response = await dio.get<dynamic>(
@@ -47,9 +60,11 @@ class HarvestRemoteDataSourceImpl implements HarvestRemoteDataSource {
             .map((json) => HarvestModel.fromJson(json as Map<String, dynamic>))
             .toList();
       }
-      throw const ServerException('Failed to load harvests');
+      final msg = extractServerErrorMessage(response.data);
+      throw ServerException(msg.isNotEmpty ? msg : 'Failed to load harvests');
     } on DioException catch (e) {
-      throw ServerException(e.message ?? 'Failed to load harvests');
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 
@@ -73,9 +88,11 @@ class HarvestRemoteDataSourceImpl implements HarvestRemoteDataSource {
       if (response.statusCode == 201) {
         return HarvestModel.fromJson(response.data as Map<String, dynamic>);
       }
-      throw const ServerException('Failed to add harvest');
+      final msg = extractServerErrorMessage(response.data);
+      throw ServerException(msg.isNotEmpty ? msg : 'Failed to add harvest');
     } on DioException catch (e) {
-      throw ServerException(_extractError(e, 'Failed to add harvest'));
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 
@@ -90,9 +107,11 @@ class HarvestRemoteDataSourceImpl implements HarvestRemoteDataSource {
       if (response.statusCode == 200) {
         return HarvestModel.fromJson(response.data as Map<String, dynamic>);
       }
-      throw const ServerException('Failed to update harvest');
+      final msg = extractServerErrorMessage(response.data);
+      throw ServerException(msg.isNotEmpty ? msg : 'Failed to update harvest');
     } on DioException catch (e) {
-      throw ServerException(_extractError(e, 'Failed to update harvest'));
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
   }
 
@@ -101,22 +120,14 @@ class HarvestRemoteDataSourceImpl implements HarvestRemoteDataSource {
     try {
       final response = await dio.delete<dynamic>('/api/v1/harvests/$id');
       if (response.statusCode != 200) {
-        throw const ServerException('Failed to delete harvest');
+        final msg = extractServerErrorMessage(response.data);
+        throw ServerException(
+          msg.isNotEmpty ? msg : 'Failed to delete harvest',
+        );
       }
     } on DioException catch (e) {
-      throw ServerException(_extractError(e, 'Failed to delete harvest'));
+      appLogger.error(LogCategory.http, 'DioException', e);
+      throw mapDioException(e);
     }
-  }
-
-  String _extractError(DioException e, String fallback) {
-    if (e.response?.data != null) {
-      try {
-        final errorData = e.response!.data as Map<String, dynamic>;
-        if (errorData['error'] != null) {
-          return errorData['error'].toString();
-        }
-      } catch (_) {}
-    }
-    return fallback;
   }
 }

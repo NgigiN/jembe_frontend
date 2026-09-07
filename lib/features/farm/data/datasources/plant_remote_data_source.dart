@@ -9,7 +9,16 @@ abstract class PlantRemoteDataSource {
   /// server has changed strictly after that instant (used by the sync
   /// pull phase). Existing no-arg callers (the flag-off repo path) are
   /// unaffected.
-  Future<List<PlantModel>> getPlants({DateTime? updatedSince});
+  ///
+  /// [limit] caps the page size (server default & max is 500) and [cursor]
+  /// pages backward through the newest-first list — the server returns rows
+  /// with `id < cursor`. Both are used ONLY by the online infinite-scroll
+  /// list path (P3-02a); the sync pull passes neither.
+  Future<List<PlantModel>> getPlants({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  });
   Future<PlantModel> addPlant(PlantModel plant);
   Future<PlantModel> updatePlant(PlantModel plant);
   Future<void> deletePlant(String id);
@@ -20,15 +29,22 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
   final Dio dio;
 
   @override
-  Future<List<PlantModel>> getPlants({DateTime? updatedSince}) async {
+  Future<List<PlantModel>> getPlants({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  }) async {
     try {
-      final queryParams = updatedSince != null
-          ? {'updated_since': updatedSince.toUtc().toIso8601String()}
-          : null;
+      final queryParams = <String, dynamic>{
+        if (updatedSince != null)
+          'updated_since': updatedSince.toUtc().toIso8601String(),
+        if (limit != null) 'limit': limit,
+        if (cursor != null) 'cursor': cursor,
+      };
 
       final response = await dio.get<dynamic>(
         '/api/v1/plants',
-        queryParameters: queryParams,
+        queryParameters: queryParams.isEmpty ? null : queryParams,
       );
 
       if (response.statusCode == 200) {
@@ -39,10 +55,9 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
               .toList();
         }
         return [];
-      } else {
-        final msg = extractServerErrorMessage(response.data);
-        throw ServerException(msg.isNotEmpty ? msg : null);
       }
+      final msg = extractServerErrorMessage(response.data);
+      throw ServerException(msg.isNotEmpty ? msg : null);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException', e);
       throw mapDioException(e);
@@ -70,10 +85,9 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
       if (response.statusCode == 201) {
         final data = response.data as Map<String, dynamic>;
         return PlantModel.fromJson(data);
-      } else {
-        final msg = extractServerErrorMessage(response.data);
-        throw ServerException(msg.isNotEmpty ? msg : null);
       }
+      final msg = extractServerErrorMessage(response.data);
+      throw ServerException(msg.isNotEmpty ? msg : null);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException', e);
       throw mapDioException(e);
@@ -91,10 +105,9 @@ class PlantRemoteDataSourceImpl implements PlantRemoteDataSource {
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
         return PlantModel.fromJson(data);
-      } else {
-        final msg = extractServerErrorMessage(response.data);
-        throw ServerException(msg.isNotEmpty ? msg : null);
       }
+      final msg = extractServerErrorMessage(response.data);
+      throw ServerException(msg.isNotEmpty ? msg : null);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException', e);
       throw mapDioException(e);

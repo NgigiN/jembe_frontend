@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/json_parsing.dart';
 import 'package:farm_tracker/features/farm/domain/entities/infrastructure.dart';
 
 class InfrastructureModel extends Infrastructure implements SyncableModel {
@@ -57,11 +58,11 @@ class InfrastructureModel extends Infrastructure implements SyncableModel {
       type: (json['type'] ?? json['Type'] ?? '').toString(),
       name: (json['name'] ?? json['Name'] ?? '').toString(),
       location: (json['location'] ?? json['Location'] ?? '').toString(),
-      cost: _parseDouble(json['cost'] ?? json['Cost']),
-      date: _parseDate(json['date'] ?? json['Date']),
+      cost: parseDouble(json['cost'] ?? json['Cost']),
+      date: parseDate(json['date'] ?? json['Date']),
       notes: (json['notes'] ?? json['Notes'] ?? '').toString(),
-      createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
-      updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
+      createdAt: parseDate(dualKey(json, 'created_at')),
+      updatedAt: parseDate(dualKey(json, 'updated_at')),
     );
   }
 
@@ -109,22 +110,6 @@ class InfrastructureModel extends Infrastructure implements SyncableModel {
   /// `InfrastructureLocalDataSource.markDeleted`). Always `false` on a model
   /// built from a server response (`fromJson`) or `create`.
   final bool deletedLocally;
-
-  static double _parseDouble(dynamic value) {
-    if (value == null) return 0;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is num) return value.toDouble();
-    return double.tryParse(value.toString()) ?? 0.0;
-  }
-
-  static DateTime _parseDate(dynamic dateValue) {
-    if (dateValue == null) return DateTime.now();
-    if (dateValue is String) {
-      return DateTime.parse(dateValue);
-    }
-    return DateTime.now();
-  }
 
   Map<String, dynamic> toJson() {
     return {

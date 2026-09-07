@@ -2,30 +2,18 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/input.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_input.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_input.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_inputs.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_inputs_params.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_input.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_inputs.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/input_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockGetInputs extends Mock implements GetInputs {}
-
-class MockAddInput extends Mock implements AddInput {}
-
-class MockUpdateInput extends Mock implements UpdateInput {}
-
-class MockDeleteInput extends Mock implements DeleteInput {}
-
-class MockWatchInputs extends Mock implements WatchInputs {}
+class MockInputRepository extends Mock implements InputRepository {}
 
 void main() {
   final now = DateTime.now();
@@ -40,45 +28,31 @@ void main() {
     updatedAt: now,
   );
 
-  late MockGetInputs mockGetInputs;
-  late MockAddInput mockAddInput;
-  late MockUpdateInput mockUpdateInput;
-  late MockDeleteInput mockDeleteInput;
-  late MockWatchInputs mockWatchInputs;
+  late MockInputRepository mockRepository;
 
   setUpAll(() {
-    registerFallbackValue(GetInputsParams());
-    registerFallbackValue(AddInputParams(input: input()));
-    registerFallbackValue(UpdateInputParams(input: input()));
-    registerFallbackValue(DeleteInputParams(id: 'input-1'));
+    registerFallbackValue(input());
   });
 
   setUp(() {
-    mockGetInputs = MockGetInputs();
-    mockAddInput = MockAddInput();
-    mockUpdateInput = MockUpdateInput();
-    mockDeleteInput = MockDeleteInput();
-    mockWatchInputs = MockWatchInputs();
+    mockRepository = MockInputRepository();
   });
 
   tearDown(() {
     OfflineConfig.enabled = false;
   });
 
-  InputBloc buildBloc() => InputBloc(
-    getInputs: mockGetInputs,
-    addInput: mockAddInput,
-    updateInput: mockUpdateInput,
-    deleteInput: mockDeleteInput,
-    watchInputs: mockWatchInputs,
-  );
+  InputBloc buildBloc() => InputBloc(repository: mockRepository);
 
   group("flag OFF (today's one-shot behavior, unchanged)", () {
     blocTest<InputBloc, InputState>(
-      'GetInputsEvent emits [InputLoading, InputLoaded] from the use case',
+      'GetInputsEvent emits [InputLoading, InputLoaded] from the repository',
       build: () {
         when(
-          () => mockGetInputs(any()),
+          () => mockRepository.getInputs(
+            sourceType: any(named: 'sourceType'),
+            limit: any(named: 'limit'),
+          ),
         ).thenAnswer((_) async => Right([input()]));
         return buildBloc();
       },
@@ -90,11 +64,11 @@ void main() {
     );
 
     blocTest<InputBloc, InputState>(
-      "AddInputEvent success appends the returned input and sets "
+      'AddInputEvent success appends the returned input and sets '
       "successMessage 'Input added'",
       build: () {
         when(
-          () => mockAddInput(any()),
+          () => mockRepository.addInput(any()),
         ).thenAnswer((_) async => Right(input(id: 'input-2')));
         return buildBloc();
       },
@@ -113,7 +87,7 @@ void main() {
       'AddInputEvent failure emits InputError preserving current inputs',
       build: () {
         when(
-          () => mockAddInput(any()),
+          () => mockRepository.addInput(any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -133,7 +107,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchInputs(sourceType: any(named: 'sourceType')),
+          () => mockRepository.watchInputs(sourceType: any(named: 'sourceType')),
         ).thenAnswer((_) => Stream.value([input()]));
         return buildBloc();
       },
@@ -144,7 +118,7 @@ void main() {
       ],
       verify: (_) {
         verify(
-          () => mockWatchInputs(sourceType: 'plant'),
+          () => mockRepository.watchInputs(sourceType: 'plant'),
         ).called(1);
       },
     );
@@ -155,7 +129,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchInputs(sourceType: any(named: 'sourceType')),
+          () => mockRepository.watchInputs(sourceType: any(named: 'sourceType')),
         ).thenAnswer((_) => Stream.value([input()]));
         return buildBloc();
       },
@@ -167,7 +141,7 @@ void main() {
       wait: const Duration(milliseconds: 50),
       verify: (_) {
         verify(
-          () => mockWatchInputs(sourceType: any(named: 'sourceType')),
+          () => mockRepository.watchInputs(sourceType: any(named: 'sourceType')),
         ).called(1);
       },
     );
@@ -178,7 +152,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddInput(any()),
+          () => mockRepository.addInput(any()),
         ).thenAnswer((_) async => Right(input(id: 'input-2')));
         return buildBloc();
       },
@@ -195,7 +169,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockUpdateInput(any()),
+          () => mockRepository.updateInput(any()),
         ).thenAnswer((_) async => Right(input(cost: 999)));
         return buildBloc();
       },
@@ -212,7 +186,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockDeleteInput(any()),
+          () => mockRepository.deleteInput(any()),
         ).thenAnswer((_) async => const Right<Failure, void>(null));
         return buildBloc();
       },
@@ -228,7 +202,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddInput(any()),
+          () => mockRepository.addInput(any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -258,7 +232,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchInputs(sourceType: any(named: 'sourceType')),
+          () => mockRepository.watchInputs(sourceType: any(named: 'sourceType')),
         ).thenAnswer((_) => controller.stream);
         return buildBloc();
       },
@@ -286,7 +260,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchInputs(sourceType: any(named: 'sourceType')),
+          () => mockRepository.watchInputs(sourceType: any(named: 'sourceType')),
         ).thenAnswer((_) => controller.stream);
         return buildBloc();
       },
@@ -298,6 +272,98 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       expect: () => <InputState>[],
+    );
+  });
+
+  group('online infinite scroll (P3-02a, flag off)', () {
+    blocTest<InputBloc, InputState>(
+      'GetInputsEvent under a full page sets hasReachedMax true and derives '
+      'nextCursor from the last id',
+      build: () {
+        when(
+          () => mockRepository.getInputs(
+            sourceType: any(named: 'sourceType'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((_) async => Right([input(id: '3'), input(id: '2')]));
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(GetInputsEvent()),
+      expect: () => [
+        const InputLoading(),
+        InputLoaded(inputs: [input(id: '3'), input(id: '2')], nextCursor: 2),
+      ],
+    );
+
+    blocTest<InputBloc, InputState>(
+      'LoadMoreInputsEvent is a no-op when hasReachedMax (a ≤500-row account '
+      'never issues a second fetch)',
+      build: buildBloc,
+      seed: () => InputLoaded(inputs: [input(id: '2')], nextCursor: 2),
+      act: (bloc) => bloc.add(LoadMoreInputsEvent()),
+      wait: const Duration(milliseconds: 50),
+      expect: () => <InputState>[],
+      verify: (_) {
+        verifyNever(
+          () => mockRepository.getInputs(
+            sourceType: any(named: 'sourceType'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        );
+      },
+    );
+
+    blocTest<InputBloc, InputState>(
+      'a full first page sets hasReachedMax false; LoadMore fetches with the '
+      'cursor, APPENDS the next page and recomputes hasReachedMax/nextCursor',
+      build: () {
+        final page1 = List.generate(
+          kOnlineListPageSize,
+          (i) => input(id: '${1000 - i}'),
+        );
+        final page2 = [input(id: '500'), input(id: '499')];
+        when(
+          () => mockRepository.getInputs(
+            sourceType: any(named: 'sourceType'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((invocation) async {
+          final cursor = invocation.namedArguments[#cursor] as int?;
+          return Right(cursor == null ? page1 : page2);
+        });
+        return buildBloc();
+      },
+      act: (bloc) async {
+        bloc.add(GetInputsEvent());
+        await bloc.stream.firstWhere((s) => s is InputLoaded);
+        bloc.add(LoadMoreInputsEvent());
+      },
+      wait: const Duration(milliseconds: 100),
+      expect: () => [
+        const InputLoading(),
+        isA<InputLoaded>()
+            .having((s) => s.inputs.length, 'page 1 length',
+                kOnlineListPageSize)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', false)
+            .having((s) => s.nextCursor, 'nextCursor', 501),
+        isA<InputLoaded>()
+            .having((s) => s.inputs.length, 'appended length',
+                kOnlineListPageSize + 2)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', true)
+            .having((s) => s.nextCursor, 'nextCursor', 499),
+      ],
+      verify: (_) {
+        verify(
+          () => mockRepository.getInputs(
+            sourceType: any(named: 'sourceType'),
+            limit: any(named: 'limit'),
+            cursor: 501,
+          ),
+        ).called(1);
+      },
     );
   });
 }

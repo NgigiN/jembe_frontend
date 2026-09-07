@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/offline_repository.dart';
@@ -10,6 +9,7 @@ import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/outbox_coalescing.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/guard.dart';
 import 'package:farm_tracker/features/farm/data/datasources/season_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/season_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/season_model.dart';
@@ -21,7 +21,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/season_repository
 ///
 /// ## Flag off (today's behavior — byte for byte)
 /// Every method talks straight to [remoteDataSource], mapping
-/// [NetworkException]/[ServerException] to [NetworkFailure]/[ServerFailure].
+/// `NetworkException`/`ServerException` to [NetworkFailure]/[ServerFailure].
 /// This is rule zero for the offline rollout: with
 /// `OfflineConfig.enabled == false`, this class behaves exactly as it did
 /// before the offline pipeline existed.
@@ -109,19 +109,19 @@ class SeasonRepositoryImpl
   }
 
   @override
-  Future<Either<Failure, List<Season>>> getSeasons() async {
+  Future<Either<Failure, List<Season>>> getSeasons({
+    int? limit,
+    int? cursor,
+  }) async {
     if (_offlineFirst) {
+      // Offline mirror shows the whole local store — pagination
+      // ([limit]/[cursor]) is an online-only concern and is ignored here.
       final models = await local!.watchSeasons().first;
       return Right(models.map(_toSeason).toList());
     }
-    try {
-      final seasons = await remoteDataSource.getSeasons();
-      return Right(seasons);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(
+      () => remoteDataSource.getSeasons(limit: limit, cursor: cursor),
+    );
   }
 
   @override
@@ -145,7 +145,7 @@ class SeasonRepositoryImpl
       return Right(_toSeason(model));
     }
 
-    try {
+    return guard(() {
       // Convert Season entity to SeasonModel
       final seasonModel = SeasonModel(
         id: season.id,
@@ -159,13 +159,8 @@ class SeasonRepositoryImpl
         updatedAt: DateTime.now(),
       );
 
-      final result = await remoteDataSource.addSeason(seasonModel);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+      return remoteDataSource.addSeason(seasonModel);
+    });
   }
 
   @override
@@ -176,14 +171,7 @@ class SeasonRepositoryImpl
       return const Right(null);
     }
 
-    try {
-      await remoteDataSource.deleteSeason(id);
-      return const Right(null);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.deleteSeason(id));
   }
 
   @override
@@ -217,7 +205,7 @@ class SeasonRepositoryImpl
       return Right(season);
     }
 
-    try {
+    return guard(() {
       final seasonModel = SeasonModel(
         id: season.id,
         userId: season.userId,
@@ -229,12 +217,7 @@ class SeasonRepositoryImpl
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      final result = await remoteDataSource.updateSeason(seasonModel);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+      return remoteDataSource.updateSeason(seasonModel);
+    });
   }
 }

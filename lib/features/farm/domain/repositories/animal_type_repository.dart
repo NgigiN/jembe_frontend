@@ -3,7 +3,14 @@ import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 
 abstract class AnimalTypeRepository {
-  Future<Either<Failure, List<AnimalType>>> getAnimalTypes();
+  /// [limit]/[cursor] drive the online infinite-scroll list path (P3-02a):
+  /// they are threaded through only when the offline flag is off. The offline
+  /// (`watchAnimalTypes`) path ignores them — it mirrors the whole local
+  /// store.
+  Future<Either<Failure, List<AnimalType>>> getAnimalTypes({
+    int? limit,
+    int? cursor,
+  });
 
   /// Reactive stream of animal types.
   ///

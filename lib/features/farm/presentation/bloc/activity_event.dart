@@ -27,6 +27,18 @@ class WatchActivitiesEvent extends ActivityEvent {
   List<Object> get props => [sourceType ?? ''];
 }
 
+/// Flag-OFF (online) only: fetches the NEXT page of activities using the
+/// current `ActivityLoaded.nextCursor` and APPENDS it. Ignored when the
+/// loaded state has already reached max or a load-more is in flight. The
+/// offline (`watchActivities`) path never dispatches this.
+class LoadMoreActivitiesEvent extends ActivityEvent {
+  LoadMoreActivitiesEvent({this.sourceType});
+  final String? sourceType;
+
+  @override
+  List<Object> get props => [sourceType ?? ''];
+}
+
 class AddActivityEvent extends ActivityEvent {
   AddActivityEvent(this.activity);
   final Activity activity;

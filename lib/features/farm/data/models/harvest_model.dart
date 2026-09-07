@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/json_parsing.dart';
 import 'package:farm_tracker/features/farm/domain/entities/harvest.dart';
 
 class HarvestModel extends Harvest implements SyncableModel {
@@ -57,13 +58,13 @@ class HarvestModel extends Harvest implements SyncableModel {
       seasonId: (json['SeasonID'] ?? json['season_id'] ?? '').toString(),
       quantity: ((json['Quantity'] ?? json['quantity'] ?? 0) as num).toDouble(),
       unit: (json['Unit'] ?? json['unit'] ?? '').toString(),
-      date: _parseDate(json['Date'] ?? json['date']),
+      date: parseDate(json['Date'] ?? json['date']),
       notes: (json['Notes'] ?? json['notes'])?.toString(),
       revenueId: revenueIdValue != null && revenueIdValue != 0
           ? revenueIdValue.toString()
           : null,
-      createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
-      updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
+      createdAt: parseDate(dualKey(json, 'created_at')),
+      updatedAt: parseDate(dualKey(json, 'updated_at')),
     );
   }
 
@@ -204,13 +205,5 @@ class HarvestModel extends Harvest implements SyncableModel {
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
-  }
-
-  static DateTime _parseDate(dynamic dateValue) {
-    if (dateValue == null) return DateTime.now();
-    if (dateValue is String) {
-      return DateTime.parse(dateValue);
-    }
-    return DateTime.now();
   }
 }

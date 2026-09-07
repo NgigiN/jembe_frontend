@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/offline_repository.dart';
@@ -10,6 +9,7 @@ import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/outbox_coalescing.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/guard.dart';
 import 'package:farm_tracker/features/farm/data/datasources/harvest_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/harvest_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
@@ -21,7 +21,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/harvest_repositor
 ///
 /// ## Flag off (today's behavior — byte for byte)
 /// Every method talks straight to [remoteDataSource], mapping
-/// [NetworkException]/[ServerException] to [NetworkFailure]/[ServerFailure].
+/// `NetworkException`/`ServerException` to [NetworkFailure]/[ServerFailure].
 /// This is rule zero for the offline rollout: with
 /// `OfflineConfig.enabled == false`, this class behaves exactly as it did
 /// before the offline pipeline existed.
@@ -120,19 +120,22 @@ class HarvestRepositoryImpl
   @override
   Future<Either<Failure, List<Harvest>>> getHarvests({
     String? seasonId,
+    int? limit,
+    int? cursor,
   }) async {
     if (_offlineFirst) {
+      // Offline mirror shows the whole local store — pagination
+      // ([limit]/[cursor]) is an online-only concern and is ignored here.
       final models = await local!.watchHarvests(seasonId: seasonId).first;
       return Right(models.map(_toHarvest).toList());
     }
-    try {
-      final harvests = await remoteDataSource.getHarvests(seasonId: seasonId);
-      return Right(harvests);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(
+      () => remoteDataSource.getHarvests(
+        seasonId: seasonId,
+        limit: limit,
+        cursor: cursor,
+      ),
+    );
   }
 
   @override
@@ -155,14 +158,7 @@ class HarvestRepositoryImpl
       return Right(_toHarvest(model));
     }
 
-    try {
-      final result = await remoteDataSource.addHarvest(_toModel(harvest));
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.addHarvest(_toModel(harvest)));
   }
 
   @override
@@ -196,14 +192,7 @@ class HarvestRepositoryImpl
       return Right(harvest);
     }
 
-    try {
-      final result = await remoteDataSource.updateHarvest(_toModel(harvest));
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.updateHarvest(_toModel(harvest)));
   }
 
   @override
@@ -214,13 +203,6 @@ class HarvestRepositoryImpl
       return const Right(null);
     }
 
-    try {
-      await remoteDataSource.deleteHarvest(id);
-      return const Right(null);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.deleteHarvest(id));
   }
 }

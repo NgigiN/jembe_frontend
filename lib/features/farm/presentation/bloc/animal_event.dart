@@ -14,6 +14,12 @@ class GetAnimalsEvent extends AnimalEvent {}
 /// `_AnimalsUpdated` event for how.
 class WatchAnimalsEvent extends AnimalEvent {}
 
+/// Flag-OFF (online) only: fetches the NEXT page of animals using the
+/// current `AnimalLoaded.nextCursor` and APPENDS it. Ignored when the loaded
+/// state has already reached max or a load-more is in flight. The offline
+/// (`watchAnimals`) path never dispatches this.
+class LoadMoreAnimalsEvent extends AnimalEvent {}
+
 class AddAnimalEvent extends AnimalEvent {
   AddAnimalEvent(this.animal);
   final Animal animal;

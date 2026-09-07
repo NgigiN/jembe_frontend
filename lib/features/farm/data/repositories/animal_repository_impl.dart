@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/offline_repository.dart';
@@ -10,6 +9,7 @@ import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/outbox_coalescing.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/guard.dart';
 import 'package:farm_tracker/features/farm/data/datasources/animal_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/animal_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/animal_model.dart';
@@ -20,8 +20,8 @@ import 'package:farm_tracker/features/farm/domain/repositories/animal_repository
 /// [AnimalRepository].
 ///
 /// ## Flag off (today's behavior — byte for byte)
-/// Every method talks straight to [remoteDataSource], mapping
-/// [NetworkException]/[ServerException] to [NetworkFailure]/[ServerFailure].
+/// Every method's flag-off branch runs through [guard], mapping
+/// `NetworkException`/`ServerException` to [NetworkFailure]/[ServerFailure].
 /// This is rule zero for the offline rollout: with
 /// `OfflineConfig.enabled == false`, this class behaves exactly as it did
 /// before the offline pipeline existed.
@@ -102,19 +102,19 @@ class AnimalRepositoryImpl
   }
 
   @override
-  Future<Either<Failure, List<Animal>>> getAnimals() async {
+  Future<Either<Failure, List<Animal>>> getAnimals({
+    int? limit,
+    int? cursor,
+  }) async {
     if (_offlineFirst) {
+      // Offline mirror shows the whole local store — pagination
+      // ([limit]/[cursor]) is an online-only concern and is ignored here.
       final models = await local!.watchAnimals().first;
       return Right(models.map(_toAnimal).toList());
     }
-    try {
-      final animals = await remoteDataSource.getAnimals();
-      return Right(animals);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(
+      () => remoteDataSource.getAnimals(limit: limit, cursor: cursor),
+    );
   }
 
   @override
@@ -139,7 +139,7 @@ class AnimalRepositoryImpl
       return Right(_toAnimal(model));
     }
 
-    try {
+    return guard(() {
       final animalModel = AnimalModel.create(
         userId: animal.userId,
         name: animal.name,
@@ -150,13 +150,8 @@ class AnimalRepositoryImpl
         acquisitionSource: animal.acquisitionSource,
       );
 
-      final result = await remoteDataSource.addAnimal(animalModel);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+      return remoteDataSource.addAnimal(animalModel);
+    });
   }
 
   @override
@@ -191,7 +186,7 @@ class AnimalRepositoryImpl
       return Right(animal);
     }
 
-    try {
+    return guard(() {
       final animalModel = AnimalModel(
         id: animal.id,
         userId: animal.userId,
@@ -204,13 +199,8 @@ class AnimalRepositoryImpl
         createdAt: animal.createdAt,
         updatedAt: animal.updatedAt,
       );
-      final result = await remoteDataSource.updateAnimal(animalModel);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+      return remoteDataSource.updateAnimal(animalModel);
+    });
   }
 
   @override
@@ -221,13 +211,6 @@ class AnimalRepositoryImpl
       return const Right(null);
     }
 
-    try {
-      await remoteDataSource.deleteAnimal(id);
-      return const Right(null);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.deleteAnimal(id));
   }
 }

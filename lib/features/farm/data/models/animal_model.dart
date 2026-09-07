@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/json_parsing.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
 
 class AnimalModel extends Animal implements SyncableModel {
@@ -65,11 +66,11 @@ class AnimalModel extends Animal implements SyncableModel {
       name: (json['Name'] ?? json['name'] ?? '').toString(),
       animalTypeId: (json['animal_type_id'] ?? json['AnimalTypeID'] ?? '').toString(),
       herdId: (json['herd_id'] ?? json['HerdID'] ?? '').toString(),
-      birthDate: _parseDate(json['birth_date'] ?? json['BirthDate']),
+      birthDate: parseDate(json['birth_date'] ?? json['BirthDate']),
       sex: sexValue?.toString(),
       acquisitionSource: acquisitionSourceValue?.toString(),
-      createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
-      updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
+      createdAt: parseDate(dualKey(json, 'created_at')),
+      updatedAt: parseDate(dualKey(json, 'updated_at')),
     );
   }
 
@@ -117,14 +118,6 @@ class AnimalModel extends Animal implements SyncableModel {
   /// `AnimalLocalDataSource.markDeleted`). Always `false` on a model built
   /// from a server response (`fromJson`) or `create`.
   final bool deletedLocally;
-
-  static DateTime _parseDate(dynamic dateValue) {
-    if (dateValue == null) return DateTime.now();
-    if (dateValue is String) {
-      return DateTime.parse(dateValue);
-    }
-    return DateTime.now();
-  }
 
   Map<String, dynamic> toJson() {
     return {

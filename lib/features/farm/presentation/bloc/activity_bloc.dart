@@ -1,15 +1,11 @@
 import 'dart:async';
 
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_activity.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_activity.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_activities.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_activities_params.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_activity.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_activities.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/activity_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -46,14 +42,9 @@ class _ActivitiesWatchFailed extends ActivityEvent {
 }
 
 class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
-  ActivityBloc({
-    required this.getActivities,
-    required this.addActivity,
-    required this.updateActivity,
-    required this.deleteActivity,
-    required this.watchActivities,
-  }) : super(ActivityInitial()) {
+  ActivityBloc({required this.repository}) : super(ActivityInitial()) {
     on<GetActivitiesEvent>(_onGetActivities);
+    on<LoadMoreActivitiesEvent>(_onLoadMoreActivities);
     on<WatchActivitiesEvent>(_onWatchActivities);
     on<_ActivitiesUpdated>((event, emit) {
       emit(ActivityLoaded(activities: event.activities));
@@ -66,14 +57,14 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     on<DeleteActivityEvent>(_onDeleteActivity);
   }
 
-  final GetActivities getActivities;
-  final AddActivity addActivity;
-  final UpdateActivity updateActivity;
-  final DeleteActivity deleteActivity;
-  final WatchActivities watchActivities;
+  final ActivityRepository repository;
 
   StreamSubscription<List<Activity>>? _activitiesSubscription;
   bool _watchStarted = false;
+
+  /// Concurrency latch for [LoadMoreActivitiesEvent]: guards against a second
+  /// page fetch starting while the first is still in flight.
+  bool _isLoadingMore = false;
 
   Future<void> _onGetActivities(
     GetActivitiesEvent event,
@@ -82,8 +73,9 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     appLogger.debug(LogCategory.farm, 'GetActivitiesEvent triggered');
     emit(const ActivityLoading());
 
-    final result = await getActivities(
-      GetActivitiesParams(sourceType: event.sourceType),
+    final result = await repository.getActivities(
+      sourceType: event.sourceType,
+      limit: kOnlineListPageSize,
     );
     result.fold(
       (failure) {
@@ -92,10 +84,75 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       },
       (activities) {
         appLogger.info(LogCategory.farm, 'Loaded ${activities.length} activities');
-        emit(ActivityLoaded(activities: activities));
+        // Online (flag off): this was page 1 of a cursor-paged list. Offline
+        // returns the whole local mirror in one shot, so it always reaches
+        // max here and never pages.
+        final online = !OfflineConfig.enabled;
+        emit(ActivityLoaded(
+          activities: activities,
+          hasReachedMax:
+              !online || activities.length < kOnlineListPageSize,
+          nextCursor: online ? _cursorOf(activities) : null,
+        ));
       },
     );
   }
+
+  /// Fetches and APPENDS the next online page. No-op when offline, when the
+  /// current loaded page already reached max, when there is no cursor to page
+  /// from, or when a load-more is already running.
+  Future<void> _onLoadMoreActivities(
+    LoadMoreActivitiesEvent event,
+    Emitter<ActivityState> emit,
+  ) async {
+    if (OfflineConfig.enabled) return;
+    final current = state;
+    if (current is! ActivityLoaded) return;
+    if (current.hasReachedMax ||
+        current.nextCursor == null ||
+        _isLoadingMore) {
+      return;
+    }
+    _isLoadingMore = true;
+    try {
+      final result = await repository.getActivities(
+        sourceType: event.sourceType,
+        limit: kOnlineListPageSize,
+        cursor: current.nextCursor,
+      );
+      _isLoadingMore = false;
+      result.fold(
+        (failure) {
+          if (state != current) return;
+          emit(ActivityError(
+            resolveFailureMessage(failure, 'Failed to load activities'),
+            activities: current.activities,
+          ));
+        },
+        (more) {
+          // A concurrent Add/Update/Delete/refresh emitted a newer state
+          // while this fetch was in flight: drop this now-stale page rather
+          // than clobbering it — the user's next scroll re-triggers
+          // LoadMore against the fresh state.
+          if (state != current) return;
+          final combined = List<Activity>.from(current.activities)
+            ..addAll(more);
+          emit(ActivityLoaded(
+            activities: combined,
+            hasReachedMax: more.length < kOnlineListPageSize,
+            nextCursor: _cursorOf(more),
+          ));
+        },
+      );
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
+
+  /// The next `?cursor=` value — the last (oldest, since the list is
+  /// newest-first) item's server id, or `null` when the page is empty.
+  int? _cursorOf(List<Activity> activities) =>
+      activities.isEmpty ? null : int.tryParse(activities.last.id);
 
   // Synchronous handler, no `await` before the guard: dispatching
   // WatchActivitiesEvent twice in quick succession (e.g. initState +
@@ -108,7 +165,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
   ) {
     if (_watchStarted) return;
     _watchStarted = true;
-    _activitiesSubscription = watchActivities(sourceType: event.sourceType).listen(
+    _activitiesSubscription = repository.watchActivities(sourceType: event.sourceType).listen(
       (activities) => add(_ActivitiesUpdated(activities)),
       onError: (Object error, StackTrace stackTrace) {
         appLogger.logError('ActivityBloc.watchActivities', error, stackTrace);
@@ -128,9 +185,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     Emitter<ActivityState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await addActivity(
-        AddActivityParams(activity: event.activity),
-      );
+      final result = await repository.addActivity(event.activity);
       result.fold(
         (failure) => emit(ActivityError(
           resolveFailureMessage(failure, 'Failed to add activity'),
@@ -149,9 +204,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     final currentActivities = state.activities;
 
     emit(ActivityLoading(activities: currentActivities));
-    final result = await addActivity(
-      AddActivityParams(activity: event.activity),
-    );
+    final result = await repository.addActivity(event.activity);
     result.fold(
       (failure) => emit(ActivityError(
         resolveFailureMessage(failure, 'Failed to add activity'),
@@ -173,9 +226,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     Emitter<ActivityState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await updateActivity(
-        UpdateActivityParams(activity: event.activity),
-      );
+      final result = await repository.updateActivity(event.activity);
       result.fold(
         (failure) => emit(ActivityError(
           resolveFailureMessage(failure, 'Failed to update activity'),
@@ -194,9 +245,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     final currentActivities = state.activities;
 
     emit(ActivityLoading(activities: currentActivities));
-    final result = await updateActivity(
-      UpdateActivityParams(activity: event.activity),
-    );
+    final result = await repository.updateActivity(event.activity);
     result.fold(
       (failure) => emit(ActivityError(
         resolveFailureMessage(failure, 'Failed to update activity'),
@@ -221,7 +270,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     Emitter<ActivityState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await deleteActivity(DeleteActivityParams(id: event.id));
+      final result = await repository.deleteActivity(event.id);
       result.fold(
         (failure) => emit(ActivityError(
           resolveFailureMessage(failure, 'Failed to delete activity'),
@@ -240,7 +289,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     final currentActivities = state.activities;
 
     emit(ActivityLoading(activities: currentActivities));
-    final result = await deleteActivity(DeleteActivityParams(id: event.id));
+    final result = await repository.deleteActivity(event.id);
     result.fold(
       (failure) => emit(ActivityError(
         resolveFailureMessage(failure, 'Failed to delete activity'),

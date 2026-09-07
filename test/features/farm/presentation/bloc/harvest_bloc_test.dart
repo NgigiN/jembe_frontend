@@ -2,29 +2,18 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/harvest.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_harvest.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_harvest.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_harvests.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_harvest.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_harvests.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/harvest_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/harvest_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/harvest_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockGetHarvests extends Mock implements GetHarvests {}
-
-class MockAddHarvest extends Mock implements AddHarvest {}
-
-class MockUpdateHarvest extends Mock implements UpdateHarvest {}
-
-class MockDeleteHarvest extends Mock implements DeleteHarvest {}
-
-class MockWatchHarvests extends Mock implements WatchHarvests {}
+class MockHarvestRepository extends Mock implements HarvestRepository {}
 
 void main() {
   final now = DateTime.now();
@@ -38,46 +27,32 @@ void main() {
     updatedAt: now,
   );
 
-  late MockGetHarvests mockGetHarvests;
-  late MockAddHarvest mockAddHarvest;
-  late MockUpdateHarvest mockUpdateHarvest;
-  late MockDeleteHarvest mockDeleteHarvest;
-  late MockWatchHarvests mockWatchHarvests;
+  late MockHarvestRepository mockRepository;
 
   setUpAll(() {
-    registerFallbackValue(const GetHarvestsParams());
-    registerFallbackValue(AddHarvestParams(harvest: harvest()));
-    registerFallbackValue(UpdateHarvestParams(harvest: harvest()));
-    registerFallbackValue(DeleteHarvestParams(id: 'harvest-1'));
+    registerFallbackValue(harvest());
   });
 
   setUp(() {
-    mockGetHarvests = MockGetHarvests();
-    mockAddHarvest = MockAddHarvest();
-    mockUpdateHarvest = MockUpdateHarvest();
-    mockDeleteHarvest = MockDeleteHarvest();
-    mockWatchHarvests = MockWatchHarvests();
+    mockRepository = MockHarvestRepository();
   });
 
   tearDown(() {
     OfflineConfig.enabled = false;
   });
 
-  HarvestBloc buildBloc() => HarvestBloc(
-    getHarvests: mockGetHarvests,
-    addHarvest: mockAddHarvest,
-    updateHarvest: mockUpdateHarvest,
-    deleteHarvest: mockDeleteHarvest,
-    watchHarvests: mockWatchHarvests,
-  );
+  HarvestBloc buildBloc() => HarvestBloc(repository: mockRepository);
 
   group("flag OFF (today's one-shot behavior, unchanged)", () {
     blocTest<HarvestBloc, HarvestState>(
-      'GetHarvestsEvent emits [HarvestLoading, HarvestLoaded] from the use '
-      'case',
+      'GetHarvestsEvent emits [HarvestLoading, HarvestLoaded] from the '
+      'repository',
       build: () {
         when(
-          () => mockGetHarvests(any()),
+          () => mockRepository.getHarvests(
+            seasonId: any(named: 'seasonId'),
+            limit: any(named: 'limit'),
+          ),
         ).thenAnswer((_) async => Right([harvest()]));
         return buildBloc();
       },
@@ -89,11 +64,11 @@ void main() {
     );
 
     blocTest<HarvestBloc, HarvestState>(
-      "AddHarvestEvent success appends the returned harvest and sets "
+      'AddHarvestEvent success appends the returned harvest and sets '
       "successMessage 'Harvest recorded'",
       build: () {
         when(
-          () => mockAddHarvest(any()),
+          () => mockRepository.addHarvest(any()),
         ).thenAnswer((_) async => Right(harvest(id: 'harvest-2')));
         return buildBloc();
       },
@@ -113,7 +88,7 @@ void main() {
       'harvests',
       build: () {
         when(
-          () => mockAddHarvest(any()),
+          () => mockRepository.addHarvest(any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -133,7 +108,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchHarvests(seasonId: any(named: 'seasonId')),
+          () => mockRepository.watchHarvests(seasonId: any(named: 'seasonId')),
         ).thenAnswer((_) => Stream.value([harvest()]));
         return buildBloc();
       },
@@ -144,7 +119,7 @@ void main() {
       ],
       verify: (_) {
         verify(
-          () => mockWatchHarvests(seasonId: 'season-1'),
+          () => mockRepository.watchHarvests(seasonId: 'season-1'),
         ).called(1);
       },
     );
@@ -155,7 +130,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchHarvests(seasonId: any(named: 'seasonId')),
+          () => mockRepository.watchHarvests(seasonId: any(named: 'seasonId')),
         ).thenAnswer((_) => Stream.value([harvest()]));
         return buildBloc();
       },
@@ -167,7 +142,7 @@ void main() {
       wait: const Duration(milliseconds: 50),
       verify: (_) {
         verify(
-          () => mockWatchHarvests(seasonId: any(named: 'seasonId')),
+          () => mockRepository.watchHarvests(seasonId: any(named: 'seasonId')),
         ).called(1);
       },
     );
@@ -178,7 +153,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddHarvest(any()),
+          () => mockRepository.addHarvest(any()),
         ).thenAnswer((_) async => Right(harvest(id: 'harvest-2')));
         return buildBloc();
       },
@@ -198,7 +173,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockUpdateHarvest(any()),
+          () => mockRepository.updateHarvest(any()),
         ).thenAnswer((_) async => Right(harvest(quantity: 99)));
         return buildBloc();
       },
@@ -215,7 +190,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockDeleteHarvest(any()),
+          () => mockRepository.deleteHarvest(any()),
         ).thenAnswer((_) async => const Right<Failure, void>(null));
         return buildBloc();
       },
@@ -232,7 +207,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddHarvest(any()),
+          () => mockRepository.addHarvest(any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -262,7 +237,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchHarvests(seasonId: any(named: 'seasonId')),
+          () => mockRepository.watchHarvests(seasonId: any(named: 'seasonId')),
         ).thenAnswer((_) => controller.stream);
         return buildBloc();
       },
@@ -290,7 +265,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchHarvests(seasonId: any(named: 'seasonId')),
+          () => mockRepository.watchHarvests(seasonId: any(named: 'seasonId')),
         ).thenAnswer((_) => controller.stream);
         return buildBloc();
       },
@@ -302,6 +277,103 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       expect: () => <HarvestState>[],
+    );
+  });
+
+  group('online infinite scroll (P3-02a, flag off)', () {
+    blocTest<HarvestBloc, HarvestState>(
+      'GetHarvestsEvent under a full page sets hasReachedMax true and derives '
+      'nextCursor from the last id',
+      build: () {
+        when(
+          () => mockRepository.getHarvests(
+            seasonId: any(named: 'seasonId'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (_) async => Right([harvest(id: '3'), harvest(id: '2')]),
+        );
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(GetHarvestsEvent()),
+      expect: () => [
+        const HarvestLoading(),
+        HarvestLoaded(
+          harvests: [harvest(id: '3'), harvest(id: '2')],
+          nextCursor: 2,
+        ),
+      ],
+    );
+
+    blocTest<HarvestBloc, HarvestState>(
+      'LoadMoreHarvestsEvent is a no-op when hasReachedMax (a ≤500-row '
+      'account never issues a second fetch)',
+      build: buildBloc,
+      seed: () => HarvestLoaded(harvests: [harvest(id: '2')], nextCursor: 2),
+      act: (bloc) => bloc.add(LoadMoreHarvestsEvent()),
+      wait: const Duration(milliseconds: 50),
+      expect: () => <HarvestState>[],
+      verify: (_) {
+        verifyNever(
+          () => mockRepository.getHarvests(
+            seasonId: any(named: 'seasonId'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        );
+      },
+    );
+
+    blocTest<HarvestBloc, HarvestState>(
+      'a full first page sets hasReachedMax false; LoadMore fetches with the '
+      'cursor, APPENDS the next page and recomputes hasReachedMax/nextCursor',
+      build: () {
+        final page1 = List.generate(
+          kOnlineListPageSize,
+          (i) => harvest(id: '${1000 - i}'),
+        );
+        final page2 = [harvest(id: '500'), harvest(id: '499')];
+        when(
+          () => mockRepository.getHarvests(
+            seasonId: any(named: 'seasonId'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((invocation) async {
+          final cursor = invocation.namedArguments[#cursor] as int?;
+          return Right(cursor == null ? page1 : page2);
+        });
+        return buildBloc();
+      },
+      act: (bloc) async {
+        bloc.add(GetHarvestsEvent());
+        await bloc.stream.firstWhere((s) => s is HarvestLoaded);
+        bloc.add(LoadMoreHarvestsEvent());
+      },
+      wait: const Duration(milliseconds: 100),
+      expect: () => [
+        const HarvestLoading(),
+        isA<HarvestLoaded>()
+            .having((s) => s.harvests.length, 'page 1 length',
+                kOnlineListPageSize)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', false)
+            .having((s) => s.nextCursor, 'nextCursor', 501),
+        isA<HarvestLoaded>()
+            .having((s) => s.harvests.length, 'appended length',
+                kOnlineListPageSize + 2)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', true)
+            .having((s) => s.nextCursor, 'nextCursor', 499),
+      ],
+      verify: (_) {
+        verify(
+          () => mockRepository.getHarvests(
+            seasonId: any(named: 'seasonId'),
+            limit: any(named: 'limit'),
+            cursor: 501,
+          ),
+        ).called(1);
+      },
     );
   });
 }

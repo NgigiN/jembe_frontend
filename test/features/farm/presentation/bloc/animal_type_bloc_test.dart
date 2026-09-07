@@ -2,73 +2,43 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_animal_types.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_animal_types.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/animal_type_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockGetAnimalTypes extends Mock implements GetAnimalTypes {}
-
-class MockAddAnimalType extends Mock implements AddAnimalType {}
-
-class MockUpdateAnimalType extends Mock implements UpdateAnimalType {}
-
-class MockDeleteAnimalType extends Mock implements DeleteAnimalType {}
-
-class MockWatchAnimalTypes extends Mock implements WatchAnimalTypes {}
+class MockAnimalTypeRepository extends Mock implements AnimalTypeRepository {}
 
 void main() {
   final now = DateTime.now();
   AnimalType animalType({String id = 'type-1', String name = 'Cattle'}) =>
       AnimalType(id: id, userId: 'user-1', name: name, createdAt: now, updatedAt: now);
 
-  late MockGetAnimalTypes mockGetAnimalTypes;
-  late MockAddAnimalType mockAddAnimalType;
-  late MockUpdateAnimalType mockUpdateAnimalType;
-  late MockDeleteAnimalType mockDeleteAnimalType;
-  late MockWatchAnimalTypes mockWatchAnimalTypes;
-
-  setUpAll(() {
-    registerFallbackValue(NoParams());
-  });
+  late MockAnimalTypeRepository mockRepository;
 
   setUp(() {
-    mockGetAnimalTypes = MockGetAnimalTypes();
-    mockAddAnimalType = MockAddAnimalType();
-    mockUpdateAnimalType = MockUpdateAnimalType();
-    mockDeleteAnimalType = MockDeleteAnimalType();
-    mockWatchAnimalTypes = MockWatchAnimalTypes();
+    mockRepository = MockAnimalTypeRepository();
   });
 
   tearDown(() {
     OfflineConfig.enabled = false;
   });
 
-  AnimalTypeBloc buildBloc() => AnimalTypeBloc(
-    getAnimalTypes: mockGetAnimalTypes,
-    addAnimalType: mockAddAnimalType,
-    updateAnimalType: mockUpdateAnimalType,
-    deleteAnimalType: mockDeleteAnimalType,
-    watchAnimalTypes: mockWatchAnimalTypes,
-  );
+  AnimalTypeBloc buildBloc() => AnimalTypeBloc(repository: mockRepository);
 
   group("flag OFF (today's one-shot behavior, unchanged)", () {
     blocTest<AnimalTypeBloc, AnimalTypeState>(
       'GetAnimalTypesEvent emits [AnimalTypeLoading, AnimalTypeLoaded] from '
-      'the use case',
+      'the repository',
       build: () {
         when(
-          () => mockGetAnimalTypes(any()),
+          () => mockRepository.getAnimalTypes(limit: any(named: 'limit')),
         ).thenAnswer((_) async => Right([animalType()]));
         return buildBloc();
       },
@@ -84,7 +54,7 @@ void main() {
       "successMessage 'Animal type added'",
       build: () {
         when(
-          () => mockAddAnimalType(any(), any(), any()),
+          () => mockRepository.addAnimalType(any(), any(), any()),
         ).thenAnswer((_) async => Right(animalType(id: 'type-2')));
         return buildBloc();
       },
@@ -106,7 +76,7 @@ void main() {
       'animalTypes',
       build: () {
         when(
-          () => mockAddAnimalType(any(), any(), any()),
+          () => mockRepository.addAnimalType(any(), any(), any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -128,7 +98,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchAnimalTypes(),
+          () => mockRepository.watchAnimalTypes(),
         ).thenAnswer((_) => Stream.value([animalType()]));
         return buildBloc();
       },
@@ -145,7 +115,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchAnimalTypes(),
+          () => mockRepository.watchAnimalTypes(),
         ).thenAnswer((_) => Stream.value([animalType()]));
         return buildBloc();
       },
@@ -156,7 +126,7 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       verify: (_) {
-        verify(() => mockWatchAnimalTypes()).called(1);
+        verify(() => mockRepository.watchAnimalTypes()).called(1);
       },
     );
 
@@ -166,7 +136,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddAnimalType(any(), any(), any()),
+          () => mockRepository.addAnimalType(any(), any(), any()),
         ).thenAnswer((_) async => Right(animalType(id: 'type-2')));
         return buildBloc();
       },
@@ -188,7 +158,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockUpdateAnimalType(any(), any(), any()),
+          () => mockRepository.updateAnimalType(any(), any(), any()),
         ).thenAnswer((_) async => Right(animalType(name: 'Renamed')));
         return buildBloc();
       },
@@ -210,7 +180,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockDeleteAnimalType(any()),
+          () => mockRepository.deleteAnimalType(any()),
         ).thenAnswer((_) async => const Right<Failure, void>(null));
         return buildBloc();
       },
@@ -242,7 +212,8 @@ void main() {
       'stays alive for a later emission',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchAnimalTypes()).thenAnswer((_) => controller.stream);
+        when(() => mockRepository.watchAnimalTypes())
+            .thenAnswer((_) => controller.stream);
         return buildBloc();
       },
       seed: () => AnimalTypeLoaded([animalType()]),
@@ -261,6 +232,101 @@ void main() {
         ),
         AnimalTypeLoaded([animalType(id: 'type-2')]),
       ],
+    );
+  });
+
+  group('online infinite scroll (P3-02a, flag off)', () {
+    blocTest<AnimalTypeBloc, AnimalTypeState>(
+      'GetAnimalTypesEvent under a full page sets hasReachedMax true and '
+      'derives nextCursor from the last id',
+      build: () {
+        when(
+          () => mockRepository.getAnimalTypes(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (_) async => Right([animalType(id: '3'), animalType(id: '2')]),
+        );
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(GetAnimalTypesEvent()),
+      expect: () => [
+        const AnimalTypeLoading(),
+        AnimalTypeLoaded(
+          [animalType(id: '3'), animalType(id: '2')],
+          nextCursor: 2,
+        ),
+      ],
+    );
+
+    blocTest<AnimalTypeBloc, AnimalTypeState>(
+      'LoadMoreAnimalTypesEvent is a no-op when hasReachedMax (a ≤500-row '
+      'account never issues a second fetch)',
+      build: buildBloc,
+      seed: () =>
+          AnimalTypeLoaded([animalType(id: '2')], nextCursor: 2),
+      act: (bloc) => bloc.add(LoadMoreAnimalTypesEvent()),
+      wait: const Duration(milliseconds: 50),
+      expect: () => <AnimalTypeState>[],
+      verify: (_) {
+        verifyNever(
+          () => mockRepository.getAnimalTypes(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        );
+      },
+    );
+
+    blocTest<AnimalTypeBloc, AnimalTypeState>(
+      'a full first page sets hasReachedMax false; LoadMore fetches with '
+      'the cursor, APPENDS the next page and recomputes '
+      'hasReachedMax/nextCursor',
+      build: () {
+        final page1 = List.generate(
+          kOnlineListPageSize,
+          (i) => animalType(id: '${1000 - i}'),
+        );
+        final page2 = [animalType(id: '500'), animalType(id: '499')];
+        when(
+          () => mockRepository.getAnimalTypes(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((invocation) async {
+          final cursor = invocation.namedArguments[#cursor] as int?;
+          return Right(cursor == null ? page1 : page2);
+        });
+        return buildBloc();
+      },
+      act: (bloc) async {
+        bloc.add(GetAnimalTypesEvent());
+        await bloc.stream.firstWhere((s) => s is AnimalTypeLoaded);
+        bloc.add(LoadMoreAnimalTypesEvent());
+      },
+      wait: const Duration(milliseconds: 100),
+      expect: () => [
+        const AnimalTypeLoading(),
+        isA<AnimalTypeLoaded>()
+            .having((s) => s.animalTypes.length, 'page 1 length',
+                kOnlineListPageSize)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', false)
+            .having((s) => s.nextCursor, 'nextCursor', 501),
+        isA<AnimalTypeLoaded>()
+            .having((s) => s.animalTypes.length, 'appended length',
+                kOnlineListPageSize + 2)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', true)
+            .having((s) => s.nextCursor, 'nextCursor', 499),
+      ],
+      verify: (_) {
+        verify(
+          () => mockRepository.getAnimalTypes(
+            limit: any(named: 'limit'),
+            cursor: 501,
+          ),
+        ).called(1);
+      },
     );
   });
 }

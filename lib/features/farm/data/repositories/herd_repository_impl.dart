@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/offline_repository.dart';
@@ -9,6 +8,7 @@ import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/outbox_coalescing.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/guard.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
@@ -20,7 +20,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/herd_repository.d
 ///
 /// ## Flag off (today's behavior — byte for byte)
 /// Every method talks straight to [remoteDataSource], mapping
-/// [NetworkException]/[ServerException] to [NetworkFailure]/[ServerFailure].
+/// `NetworkException`/`ServerException` to [NetworkFailure]/[ServerFailure].
 /// This is rule zero for the offline rollout: with
 /// `OfflineConfig.enabled == false`, this class behaves exactly as it did
 /// before the offline pipeline existed.
@@ -106,21 +106,20 @@ class HerdRepositoryImpl with OfflineRepositoryMixin implements HerdRepository {
   }
 
   @override
-  Future<Either<Failure, List<Herd>>> getHerds() async {
+  Future<Either<Failure, List<Herd>>> getHerds({
+    int? limit,
+    int? cursor,
+  }) async {
     if (_offlineFirst) {
+      // Offline mirror shows the whole local store — pagination
+      // ([limit]/[cursor]) is an online-only concern and is ignored here.
       final models = await local!.watchHerds().first;
       return Right(models.map(_toHerd).toList());
     }
-    try {
-      final herds = await remoteDataSource.getHerds();
-      return Right(herds);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Unexpected error: $e'));
-    }
+    return guard(
+      () => remoteDataSource.getHerds(limit: limit, cursor: cursor),
+      onUnexpected: (e) => 'Unexpected error: $e',
+    );
   }
 
   @override
@@ -153,7 +152,7 @@ class HerdRepositoryImpl with OfflineRepositoryMixin implements HerdRepository {
       return Right(_toHerd(model));
     }
 
-    try {
+    return guard(() {
       final herdModel = HerdModel.create(
         userId: userId,
         name: name,
@@ -163,15 +162,8 @@ class HerdRepositoryImpl with OfflineRepositoryMixin implements HerdRepository {
         startDate: startDate,
         endDate: endDate,
       );
-      final result = await remoteDataSource.addHerd(herdModel);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Unexpected error: $e'));
-    }
+      return remoteDataSource.addHerd(herdModel);
+    }, onUnexpected: (e) => 'Unexpected error: $e');
   }
 
   @override
@@ -214,7 +206,7 @@ class HerdRepositoryImpl with OfflineRepositoryMixin implements HerdRepository {
       return Right(_toHerd(updated));
     }
 
-    try {
+    return guard(() async {
       final herdModel = await remoteDataSource.getHerds();
       final existingHerd = herdModel.firstWhere((h) => h.id == id);
       final updatedModel = HerdModel(
@@ -230,15 +222,8 @@ class HerdRepositoryImpl with OfflineRepositoryMixin implements HerdRepository {
         createdAt: existingHerd.createdAt,
         updatedAt: DateTime.now(),
       );
-      final result = await remoteDataSource.updateHerd(updatedModel);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Unexpected error: $e'));
-    }
+      return remoteDataSource.updateHerd(updatedModel);
+    }, onUnexpected: (e) => 'Unexpected error: $e');
   }
 
   @override
@@ -249,15 +234,9 @@ class HerdRepositoryImpl with OfflineRepositoryMixin implements HerdRepository {
       return const Right(null);
     }
 
-    try {
-      await remoteDataSource.deleteHerd(id);
-      return const Right(null);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Unexpected error: $e'));
-    }
+    return guard(
+      () => remoteDataSource.deleteHerd(id),
+      onUnexpected: (e) => 'Unexpected error: $e',
+    );
   }
 }

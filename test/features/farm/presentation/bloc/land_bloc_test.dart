@@ -2,30 +2,18 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_land.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_land.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_lands.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_land.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_lands.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/land_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockGetLands extends Mock implements GetLands {}
-
-class MockAddLand extends Mock implements AddLand {}
-
-class MockUpdateLand extends Mock implements UpdateLand {}
-
-class MockDeleteLand extends Mock implements DeleteLand {}
-
-class MockWatchLands extends Mock implements WatchLands {}
+class MockLandRepository extends Mock implements LandRepository {}
 
 void main() {
   final now = DateTime.now();
@@ -37,45 +25,28 @@ void main() {
     updatedAt: now,
   );
 
-  late MockGetLands mockGetLands;
-  late MockAddLand mockAddLand;
-  late MockUpdateLand mockUpdateLand;
-  late MockDeleteLand mockDeleteLand;
-  late MockWatchLands mockWatchLands;
+  late MockLandRepository mockRepository;
 
   setUpAll(() {
-    registerFallbackValue(NoParams());
-    registerFallbackValue(AddLandParams(land: land()));
-    registerFallbackValue(UpdateLandParams(land: land()));
-    registerFallbackValue(DeleteLandParams(id: 'land-1'));
+    registerFallbackValue(land());
   });
 
   setUp(() {
-    mockGetLands = MockGetLands();
-    mockAddLand = MockAddLand();
-    mockUpdateLand = MockUpdateLand();
-    mockDeleteLand = MockDeleteLand();
-    mockWatchLands = MockWatchLands();
+    mockRepository = MockLandRepository();
   });
 
   tearDown(() {
     OfflineConfig.enabled = false;
   });
 
-  LandBloc buildBloc() => LandBloc(
-    getLands: mockGetLands,
-    addLand: mockAddLand,
-    updateLand: mockUpdateLand,
-    deleteLand: mockDeleteLand,
-    watchLands: mockWatchLands,
-  );
+  LandBloc buildBloc() => LandBloc(repository: mockRepository);
 
   group("flag OFF (today's one-shot behavior, unchanged)", () {
     blocTest<LandBloc, LandState>(
-      'GetLandsEvent emits [LandLoading, LandLoaded] from the use case',
+      'GetLandsEvent emits [LandLoading, LandLoaded] from the repository',
       build: () {
         when(
-          () => mockGetLands(any()),
+          () => mockRepository.getLands(limit: any(named: 'limit')),
         ).thenAnswer((_) async => Right([land()]));
         return buildBloc();
       },
@@ -91,7 +62,7 @@ void main() {
       "'Land added', and surfaces its (server) id via addedLandId",
       build: () {
         when(
-          () => mockAddLand(any()),
+          () => mockRepository.addLand(any()),
         ).thenAnswer((_) async => Right(land(id: 'land-2')));
         return buildBloc();
       },
@@ -114,7 +85,7 @@ void main() {
       'AddLandEvent failure emits LandError preserving current lands',
       build: () {
         when(
-          () => mockAddLand(any()),
+          () => mockRepository.addLand(any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -133,7 +104,8 @@ void main() {
       'LandLoaded per emission',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchLands()).thenAnswer((_) => Stream.value([land()]));
+        when(() => mockRepository.watchLands())
+            .thenAnswer((_) => Stream.value([land()]));
         return buildBloc();
       },
       act: (bloc) => bloc.add(WatchLandsEvent()),
@@ -148,7 +120,8 @@ void main() {
       'subscription (idempotent guard, no race/leak)',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchLands()).thenAnswer((_) => Stream.value([land()]));
+        when(() => mockRepository.watchLands())
+            .thenAnswer((_) => Stream.value([land()]));
         return buildBloc();
       },
       act: (bloc) {
@@ -160,7 +133,7 @@ void main() {
       verify: (_) {
         // If the guard didn't prevent a second subscribe, watchLands()
         // (the repository stream factory) would have been invoked twice.
-        verify(() => mockWatchLands()).called(1);
+        verify(() => mockRepository.watchLands()).called(1);
       },
     );
 
@@ -170,12 +143,12 @@ void main() {
       'the created clientUuid through addedLandId',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        // The use case "succeeds" with a different land than what's already
+        // The repository "succeeds" with a different land than what's already
         // in state, to prove the emitted list is untouched by the result
         // (i.e. no manual append) — only a real stream emission would add
         // it, and this test deliberately never seeds one.
         when(
-          () => mockAddLand(any()),
+          () => mockRepository.addLand(any()),
         ).thenAnswer((_) async => Right(land(id: 'land-2')));
         return buildBloc();
       },
@@ -199,7 +172,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddLand(any()),
+          () => mockRepository.addLand(any()),
         ).thenAnswer((_) async => Right(land(id: 'clientUuid-999')));
         return buildBloc();
       },
@@ -222,7 +195,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockUpdateLand(any()),
+          () => mockRepository.updateLand(any()),
         ).thenAnswer((_) async => Right(land(name: 'Renamed')));
         return buildBloc();
       },
@@ -239,7 +212,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockDeleteLand(any()),
+          () => mockRepository.deleteLand(any()),
         ).thenAnswer((_) async => const Right<Failure, void>(null));
         return buildBloc();
       },
@@ -255,7 +228,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddLand(any()),
+          () => mockRepository.addLand(any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -284,7 +257,8 @@ void main() {
       'for a later emission (proving it was not torn down by the error)',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchLands()).thenAnswer((_) => controller.stream);
+        when(() => mockRepository.watchLands())
+            .thenAnswer((_) => controller.stream);
         return buildBloc();
       },
       seed: () => LandLoaded(lands: [land()]),
@@ -307,7 +281,8 @@ void main() {
       'bloc',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchLands()).thenAnswer((_) => controller.stream);
+        when(() => mockRepository.watchLands())
+            .thenAnswer((_) => controller.stream);
         return buildBloc();
       },
       seed: () => LandLoaded(lands: [land()]),
@@ -318,6 +293,96 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       expect: () => <LandState>[],
+    );
+  });
+
+  group('online infinite scroll (P3-02a, flag off)', () {
+    blocTest<LandBloc, LandState>(
+      'GetLandsEvent under a full page sets hasReachedMax true and '
+      'derives nextCursor from the last id',
+      build: () {
+        when(
+          () => mockRepository.getLands(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (_) async => Right([land(id: '3'), land(id: '2')]),
+        );
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(GetLandsEvent()),
+      expect: () => [
+        const LandLoading(),
+        LandLoaded(lands: [land(id: '3'), land(id: '2')], nextCursor: 2),
+      ],
+    );
+
+    blocTest<LandBloc, LandState>(
+      'LoadMoreLandsEvent is a no-op when hasReachedMax (a ≤500-row '
+      'account never issues a second fetch)',
+      build: buildBloc,
+      seed: () => LandLoaded(lands: [land(id: '2')], nextCursor: 2),
+      act: (bloc) => bloc.add(LoadMoreLandsEvent()),
+      wait: const Duration(milliseconds: 50),
+      expect: () => <LandState>[],
+      verify: (_) {
+        verifyNever(
+          () => mockRepository.getLands(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        );
+      },
+    );
+
+    blocTest<LandBloc, LandState>(
+      'a full first page sets hasReachedMax false; LoadMore fetches with '
+      'the cursor, APPENDS the next page and recomputes '
+      'hasReachedMax/nextCursor',
+      build: () {
+        final page1 = List.generate(
+          kOnlineListPageSize,
+          (i) => land(id: '${1000 - i}'),
+        );
+        final page2 = [land(id: '500'), land(id: '499')];
+        when(
+          () => mockRepository.getLands(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((invocation) async {
+          final cursor = invocation.namedArguments[#cursor] as int?;
+          return Right(cursor == null ? page1 : page2);
+        });
+        return buildBloc();
+      },
+      act: (bloc) async {
+        bloc.add(GetLandsEvent());
+        await bloc.stream.firstWhere((s) => s is LandLoaded);
+        bloc.add(LoadMoreLandsEvent());
+      },
+      wait: const Duration(milliseconds: 100),
+      expect: () => [
+        const LandLoading(),
+        isA<LandLoaded>()
+            .having((s) => s.lands.length, 'page 1 length', kOnlineListPageSize)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', false)
+            .having((s) => s.nextCursor, 'nextCursor', 501),
+        isA<LandLoaded>()
+            .having((s) => s.lands.length, 'appended length',
+                kOnlineListPageSize + 2)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', true)
+            .having((s) => s.nextCursor, 'nextCursor', 499),
+      ],
+      verify: (_) {
+        verify(
+          () => mockRepository.getLands(
+            limit: any(named: 'limit'),
+            cursor: 501,
+          ),
+        ).called(1);
+      },
     );
   });
 }

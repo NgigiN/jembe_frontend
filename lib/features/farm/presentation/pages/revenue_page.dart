@@ -8,6 +8,7 @@ import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
+import 'package:farm_tracker/core/widgets/crud/paginated_list_view.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
@@ -106,7 +107,10 @@ class _RevenuePageState extends State<RevenuePage> {
                     return _scrollableEmptyState(_buildEmptyView());
                   }
 
-                  return ListView.builder(
+                  final offline = OfflineConfig.enabled;
+                  final hasReachedMax =
+                      offline || state is! RevenueLoaded || state.hasReachedMax;
+                  return PaginatedListView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: context
                         .scrollListPadding(forFab: true)
@@ -115,6 +119,12 @@ class _RevenuePageState extends State<RevenuePage> {
                           right: context.paddingMedium,
                         ),
                     itemCount: revenues.length,
+                    hasReachedMax: hasReachedMax,
+                    onEndReached: offline
+                        ? () {}
+                        : () => context.read<RevenueBloc>().add(
+                              LoadMoreRevenuesEvent(source: _selectedSource),
+                            ),
                     itemBuilder: (context, index) {
                       final revenue = revenues[index];
                       return _buildRevenueListItem(context, revenue);

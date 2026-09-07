@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/offline_repository.dart';
@@ -10,6 +9,7 @@ import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/outbox_coalescing.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/guard.dart';
 import 'package:farm_tracker/features/farm/data/datasources/input_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/input_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/input_model.dart';
@@ -21,7 +21,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/input_repository.
 ///
 /// ## Flag off (today's behavior, with one intentional bug fix)
 /// Every method talks straight to [remoteDataSource], mapping
-/// [NetworkException]/[ServerException] to [NetworkFailure]/[ServerFailure].
+/// `NetworkException`/`ServerException` to [NetworkFailure]/[ServerFailure].
 /// This is rule zero for the offline rollout: with
 /// `OfflineConfig.enabled == false`, this class behaves exactly as it did
 /// before the offline pipeline existed — with one deliberate exception:
@@ -135,19 +135,24 @@ class InputRepositoryImpl
   }
 
   @override
-  Future<Either<Failure, List<Input>>> getInputs({String? sourceType}) async {
+  Future<Either<Failure, List<Input>>> getInputs({
+    String? sourceType,
+    int? limit,
+    int? cursor,
+  }) async {
     if (_offlineFirst) {
+      // Offline mirror shows the whole local store — pagination
+      // ([limit]/[cursor]) is an online-only concern and is ignored here.
       final models = await local!.watchInputs(sourceType: sourceType).first;
       return Right(models.map(_toInput).toList());
     }
-    try {
-      final inputs = await remoteDataSource.getInputs(sourceType: sourceType);
-      return Right(inputs);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(
+      () => remoteDataSource.getInputs(
+        sourceType: sourceType,
+        limit: limit,
+        cursor: cursor,
+      ),
+    );
   }
 
   @override
@@ -173,14 +178,7 @@ class InputRepositoryImpl
       return Right(_toInput(model));
     }
 
-    try {
-      final result = await remoteDataSource.addInput(_toModel(input));
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.addInput(_toModel(input)));
   }
 
   @override
@@ -216,14 +214,7 @@ class InputRepositoryImpl
       return Right(input);
     }
 
-    try {
-      final result = await remoteDataSource.updateInput(_toModel(input));
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.updateInput(_toModel(input)));
   }
 
   @override
@@ -234,13 +225,6 @@ class InputRepositoryImpl
       return const Right(null);
     }
 
-    try {
-      await remoteDataSource.deleteInput(id);
-      return const Right(null);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.deleteInput(id));
   }
 }

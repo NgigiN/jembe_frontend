@@ -1,14 +1,11 @@
 import 'dart:async';
 
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/harvest.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_harvest.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_harvest.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_harvests.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_harvest.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_harvests.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/harvest_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/harvest_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/harvest_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -45,14 +42,9 @@ class _HarvestsWatchFailed extends HarvestEvent {
 }
 
 class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
-  HarvestBloc({
-    required this.getHarvests,
-    required this.addHarvest,
-    required this.updateHarvest,
-    required this.deleteHarvest,
-    required this.watchHarvests,
-  }) : super(HarvestInitial()) {
+  HarvestBloc({required this.repository}) : super(HarvestInitial()) {
     on<GetHarvestsEvent>(_onGetHarvests);
+    on<LoadMoreHarvestsEvent>(_onLoadMoreHarvests);
     on<WatchHarvestsEvent>(_onWatchHarvests);
     on<_HarvestsUpdated>((event, emit) {
       emit(HarvestLoaded(harvests: event.harvests));
@@ -65,29 +57,98 @@ class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
     on<DeleteHarvestEvent>(_onDeleteHarvest);
   }
 
-  final GetHarvests getHarvests;
-  final AddHarvest addHarvest;
-  final UpdateHarvest updateHarvest;
-  final DeleteHarvest deleteHarvest;
-  final WatchHarvests watchHarvests;
+  final HarvestRepository repository;
 
   StreamSubscription<List<Harvest>>? _harvestsSubscription;
   bool _watchStarted = false;
+
+  /// Concurrency latch for [LoadMoreHarvestsEvent]: guards against a second
+  /// page fetch starting while the first is still in flight.
+  bool _isLoadingMore = false;
 
   Future<void> _onGetHarvests(
     GetHarvestsEvent event,
     Emitter<HarvestState> emit,
   ) async {
     emit(HarvestLoading(harvests: state.harvests));
-    final result = await getHarvests(GetHarvestsParams(seasonId: event.seasonId));
+    final result = await repository.getHarvests(
+      seasonId: event.seasonId,
+      limit: kOnlineListPageSize,
+    );
     result.fold(
       (failure) => emit(HarvestError(
         resolveFailureMessage(failure, 'Failed to load harvests'),
         harvests: state.harvests,
       )),
-      (harvests) => emit(HarvestLoaded(harvests: harvests)),
+      (harvests) {
+        // Online (flag off): this was page 1 of a cursor-paged list. Offline
+        // returns the whole local mirror in one shot, so it always reaches
+        // max here and never pages.
+        final online = !OfflineConfig.enabled;
+        emit(HarvestLoaded(
+          harvests: harvests,
+          hasReachedMax:
+              !online || harvests.length < kOnlineListPageSize,
+          nextCursor: online ? _cursorOf(harvests) : null,
+        ));
+      },
     );
   }
+
+  /// Fetches and APPENDS the next online page. No-op when offline, when the
+  /// current loaded page already reached max, when there is no cursor to page
+  /// from, or when a load-more is already running.
+  Future<void> _onLoadMoreHarvests(
+    LoadMoreHarvestsEvent event,
+    Emitter<HarvestState> emit,
+  ) async {
+    if (OfflineConfig.enabled) return;
+    final current = state;
+    if (current is! HarvestLoaded) return;
+    if (current.hasReachedMax ||
+        current.nextCursor == null ||
+        _isLoadingMore) {
+      return;
+    }
+    _isLoadingMore = true;
+    try {
+      final result = await repository.getHarvests(
+        seasonId: event.seasonId,
+        limit: kOnlineListPageSize,
+        cursor: current.nextCursor,
+      );
+      _isLoadingMore = false;
+      result.fold(
+        (failure) {
+          if (state != current) return;
+          emit(HarvestError(
+            resolveFailureMessage(failure, 'Failed to load harvests'),
+            harvests: current.harvests,
+          ));
+        },
+        (more) {
+          // A concurrent Add/Update/Delete/refresh emitted a newer state
+          // while this fetch was in flight: drop this now-stale page rather
+          // than clobbering it — the user's next scroll re-triggers
+          // LoadMore against the fresh state.
+          if (state != current) return;
+          final combined = List<Harvest>.from(current.harvests)..addAll(more);
+          emit(HarvestLoaded(
+            harvests: combined,
+            hasReachedMax: more.length < kOnlineListPageSize,
+            nextCursor: _cursorOf(more),
+          ));
+        },
+      );
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
+
+  /// The next `?cursor=` value — the last (oldest, since the list is
+  /// newest-first) item's server id, or `null` when the page is empty.
+  int? _cursorOf(List<Harvest> harvests) =>
+      harvests.isEmpty ? null : int.tryParse(harvests.last.id);
 
   // Synchronous handler, no `await` before the guard: dispatching
   // WatchHarvestsEvent twice in quick succession (e.g. initState +
@@ -100,7 +161,7 @@ class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
   ) {
     if (_watchStarted) return;
     _watchStarted = true;
-    _harvestsSubscription = watchHarvests(seasonId: event.seasonId).listen(
+    _harvestsSubscription = repository.watchHarvests(seasonId: event.seasonId).listen(
       (harvests) => add(_HarvestsUpdated(harvests)),
       onError: (Object error, StackTrace stackTrace) {
         appLogger.logError('HarvestBloc.watchHarvests', error, stackTrace);
@@ -120,7 +181,7 @@ class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
     Emitter<HarvestState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await addHarvest(AddHarvestParams(harvest: event.harvest));
+      final result = await repository.addHarvest(event.harvest);
       result.fold(
         (failure) => emit(HarvestError(
           resolveFailureMessage(failure, 'Failed to add harvest'),
@@ -135,7 +196,7 @@ class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
 
     final currentHarvests = state.harvests;
     emit(HarvestLoading(harvests: currentHarvests));
-    final result = await addHarvest(AddHarvestParams(harvest: event.harvest));
+    final result = await repository.addHarvest(event.harvest);
     result.fold(
       (failure) => emit(HarvestError(
         resolveFailureMessage(failure, 'Failed to add harvest'),
@@ -153,8 +214,7 @@ class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
     Emitter<HarvestState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result =
-          await updateHarvest(UpdateHarvestParams(harvest: event.harvest));
+      final result = await repository.updateHarvest(event.harvest);
       result.fold(
         (failure) => emit(HarvestError(
           resolveFailureMessage(failure, 'Failed to update harvest'),
@@ -169,8 +229,7 @@ class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
 
     final currentHarvests = state.harvests;
     emit(HarvestLoading(harvests: currentHarvests));
-    final result =
-        await updateHarvest(UpdateHarvestParams(harvest: event.harvest));
+    final result = await repository.updateHarvest(event.harvest);
     result.fold(
       (failure) => emit(HarvestError(
         resolveFailureMessage(failure, 'Failed to update harvest'),
@@ -191,7 +250,7 @@ class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
     Emitter<HarvestState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await deleteHarvest(DeleteHarvestParams(id: event.id));
+      final result = await repository.deleteHarvest(event.id);
       result.fold(
         (failure) => emit(HarvestError(
           resolveFailureMessage(failure, 'Failed to delete harvest'),
@@ -206,7 +265,7 @@ class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
 
     final currentHarvests = state.harvests;
     emit(HarvestLoading(harvests: currentHarvests));
-    final result = await deleteHarvest(DeleteHarvestParams(id: event.id));
+    final result = await repository.deleteHarvest(event.id);
     result.fold(
       (failure) => emit(HarvestError(
         resolveFailureMessage(failure, 'Failed to delete harvest'),

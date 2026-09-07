@@ -3,7 +3,14 @@ import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/features/farm/domain/entities/input.dart';
 
 abstract class InputRepository {
-  Future<Either<Failure, List<Input>>> getInputs({String? sourceType});
+  /// [limit]/[cursor] drive the online infinite-scroll list path (P3-02a):
+  /// they are threaded through only when the offline flag is off. The offline
+  /// (`watchInputs`) path ignores them — it mirrors the whole local store.
+  Future<Either<Failure, List<Input>>> getInputs({
+    String? sourceType,
+    int? limit,
+    int? cursor,
+  });
 
   /// Reactive stream of inputs, optionally scoped to [sourceType] (mirrors
   /// the existing `getInputs(sourceType:)` app-level filter).

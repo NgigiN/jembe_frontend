@@ -16,11 +16,27 @@ class AnimalTypeLoading extends AnimalTypeState {
 }
 
 class AnimalTypeLoaded extends AnimalTypeState {
-  const AnimalTypeLoaded(List<AnimalType> animalTypes, {this.successMessage}) : super(animalTypes: animalTypes);
+  const AnimalTypeLoaded(
+    List<AnimalType> animalTypes, {
+    this.successMessage,
+    this.hasReachedMax = true,
+    this.nextCursor,
+  }) : super(animalTypes: animalTypes);
   final String? successMessage;
 
+  /// Online infinite-scroll (P3-02a): `false` only when the last page came
+  /// back full (== `kOnlineListPageSize`), i.e. another page may exist.
+  /// Defaults to `true` so the offline stream path (and the Add/Update/
+  /// Delete handlers, which don't page) never trigger a load-more.
+  final bool hasReachedMax;
+
+  /// The server id to page from next (`?cursor=`), i.e. the last item's id.
+  /// `null` once [hasReachedMax] or when the list is empty.
+  final int? nextCursor;
+
   @override
-  List<Object?> get props => [animalTypes, successMessage];
+  List<Object?> get props =>
+      [animalTypes, successMessage, hasReachedMax, nextCursor];
 }
 
 class AnimalTypeError extends AnimalTypeState {

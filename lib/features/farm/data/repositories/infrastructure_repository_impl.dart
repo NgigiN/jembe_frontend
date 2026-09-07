@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/offline_repository.dart';
@@ -9,6 +8,7 @@ import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/outbox_coalescing.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/guard.dart';
 import 'package:farm_tracker/features/farm/data/datasources/infrastructure_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/infrastructure_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/infrastructure_model.dart';
@@ -20,7 +20,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/infrastructure_re
 ///
 /// ## Flag off (today's behavior — byte for byte)
 /// Every method talks straight to [remoteDataSource], mapping
-/// [NetworkException]/[ServerException] to [NetworkFailure]/[ServerFailure].
+/// `NetworkException`/`ServerException` to [NetworkFailure]/[ServerFailure].
 /// This is rule zero for the offline rollout: with
 /// `OfflineConfig.enabled == false`, this class behaves exactly as it did
 /// before the offline pipeline existed.
@@ -103,21 +103,21 @@ class InfrastructureRepositoryImpl
   }
 
   @override
-  Future<Either<Failure, List<Infrastructure>>> getInfrastructures() async {
+  Future<Either<Failure, List<Infrastructure>>> getInfrastructures({
+    int? limit,
+    int? cursor,
+  }) async {
     if (_offlineFirst) {
+      // Offline mirror shows the whole local store — pagination
+      // ([limit]/[cursor]) is an online-only concern and is ignored here.
       final models = await local!.watchInfrastructures().first;
       return Right(models.map(_toInfrastructure).toList());
     }
-    try {
-      final list = await remoteDataSource.getInfrastructures();
-      return Right(list);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Unexpected error: $e'));
-    }
+    return guard(
+      () =>
+          remoteDataSource.getInfrastructures(limit: limit, cursor: cursor),
+      onUnexpected: (e) => 'Unexpected error: $e',
+    );
   }
 
   @override
@@ -150,7 +150,7 @@ class InfrastructureRepositoryImpl
       return Right(_toInfrastructure(model));
     }
 
-    try {
+    return guard(() {
       final model = InfrastructureModel.create(
         userId: userId,
         type: type,
@@ -160,15 +160,8 @@ class InfrastructureRepositoryImpl
         date: date,
         notes: notes,
       );
-      final result = await remoteDataSource.addInfrastructure(model);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Unexpected error: $e'));
-    }
+      return remoteDataSource.addInfrastructure(model);
+    }, onUnexpected: (e) => 'Unexpected error: $e');
   }
 
   @override
@@ -210,7 +203,7 @@ class InfrastructureRepositoryImpl
       return Right(_toInfrastructure(updated));
     }
 
-    try {
+    return guard(() async {
       final items = await remoteDataSource.getInfrastructures();
       final existing = items.firstWhere((item) => item.id == id);
       final updatedModel = InfrastructureModel(
@@ -225,15 +218,8 @@ class InfrastructureRepositoryImpl
         createdAt: existing.createdAt,
         updatedAt: DateTime.now(),
       );
-      final result = await remoteDataSource.updateInfrastructure(updatedModel);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Unexpected error: $e'));
-    }
+      return remoteDataSource.updateInfrastructure(updatedModel);
+    }, onUnexpected: (e) => 'Unexpected error: $e');
   }
 
   @override
@@ -244,15 +230,9 @@ class InfrastructureRepositoryImpl
       return const Right(null);
     }
 
-    try {
-      await remoteDataSource.deleteInfrastructure(id);
-      return const Right(null);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Unexpected error: $e'));
-    }
+    return guard(
+      () => remoteDataSource.deleteInfrastructure(id),
+      onUnexpected: (e) => 'Unexpected error: $e',
+    );
   }
 }

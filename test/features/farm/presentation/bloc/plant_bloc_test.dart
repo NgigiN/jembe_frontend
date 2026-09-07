@@ -2,30 +2,18 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_plants.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_plants.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/plant_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockGetPlants extends Mock implements GetPlants {}
-
-class MockAddPlant extends Mock implements AddPlant {}
-
-class MockUpdatePlant extends Mock implements UpdatePlant {}
-
-class MockDeletePlant extends Mock implements DeletePlant {}
-
-class MockWatchPlants extends Mock implements WatchPlants {}
+class MockPlantRepository extends Mock implements PlantRepository {}
 
 void main() {
   final now = DateTime.now();
@@ -37,45 +25,28 @@ void main() {
     updatedAt: now,
   );
 
-  late MockGetPlants mockGetPlants;
-  late MockAddPlant mockAddPlant;
-  late MockUpdatePlant mockUpdatePlant;
-  late MockDeletePlant mockDeletePlant;
-  late MockWatchPlants mockWatchPlants;
+  late MockPlantRepository mockRepository;
 
   setUpAll(() {
-    registerFallbackValue(NoParams());
-    registerFallbackValue(AddPlantParams(plant: plant()));
-    registerFallbackValue(UpdatePlantParams(plant: plant()));
-    registerFallbackValue(DeletePlantParams(id: 'plant-1'));
+    registerFallbackValue(plant());
   });
 
   setUp(() {
-    mockGetPlants = MockGetPlants();
-    mockAddPlant = MockAddPlant();
-    mockUpdatePlant = MockUpdatePlant();
-    mockDeletePlant = MockDeletePlant();
-    mockWatchPlants = MockWatchPlants();
+    mockRepository = MockPlantRepository();
   });
 
   tearDown(() {
     OfflineConfig.enabled = false;
   });
 
-  PlantBloc buildBloc() => PlantBloc(
-    getPlants: mockGetPlants,
-    addPlant: mockAddPlant,
-    updatePlant: mockUpdatePlant,
-    deletePlant: mockDeletePlant,
-    watchPlants: mockWatchPlants,
-  );
+  PlantBloc buildBloc() => PlantBloc(repository: mockRepository);
 
   group("flag OFF (today's one-shot behavior, unchanged)", () {
     blocTest<PlantBloc, PlantState>(
-      'GetPlantsEvent emits [PlantLoading, PlantLoaded] from the use case',
+      'GetPlantsEvent emits [PlantLoading, PlantLoaded] from the repository',
       build: () {
         when(
-          () => mockGetPlants(any()),
+          () => mockRepository.getPlants(limit: any(named: 'limit')),
         ).thenAnswer((_) async => Right([plant()]));
         return buildBloc();
       },
@@ -91,7 +62,7 @@ void main() {
       "successMessage 'Crop added'",
       build: () {
         when(
-          () => mockAddPlant(any()),
+          () => mockRepository.addPlant(any()),
         ).thenAnswer((_) async => Right(plant(id: 'plant-2')));
         return buildBloc();
       },
@@ -110,7 +81,7 @@ void main() {
       'AddPlantEvent failure emits PlantError preserving current plants',
       build: () {
         when(
-          () => mockAddPlant(any()),
+          () => mockRepository.addPlant(any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -130,7 +101,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchPlants(),
+          () => mockRepository.watchPlants(),
         ).thenAnswer((_) => Stream.value([plant()]));
         return buildBloc();
       },
@@ -147,7 +118,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchPlants(),
+          () => mockRepository.watchPlants(),
         ).thenAnswer((_) => Stream.value([plant()]));
         return buildBloc();
       },
@@ -158,7 +129,7 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       verify: (_) {
-        verify(() => mockWatchPlants()).called(1);
+        verify(() => mockRepository.watchPlants()).called(1);
       },
     );
 
@@ -168,7 +139,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddPlant(any()),
+          () => mockRepository.addPlant(any()),
         ).thenAnswer((_) async => Right(plant(id: 'plant-2')));
         return buildBloc();
       },
@@ -185,7 +156,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockUpdatePlant(any()),
+          () => mockRepository.updatePlant(any()),
         ).thenAnswer((_) async => Right(plant(name: 'Renamed')));
         return buildBloc();
       },
@@ -202,7 +173,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockDeletePlant(any()),
+          () => mockRepository.deletePlant(any()),
         ).thenAnswer((_) async => const Right<Failure, void>(null));
         return buildBloc();
       },
@@ -218,7 +189,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddPlant(any()),
+          () => mockRepository.addPlant(any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -247,7 +218,8 @@ void main() {
       'for a later emission',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchPlants()).thenAnswer((_) => controller.stream);
+        when(() => mockRepository.watchPlants())
+            .thenAnswer((_) => controller.stream);
         return buildBloc();
       },
       seed: () => PlantLoaded(plants: [plant()]),
@@ -270,7 +242,8 @@ void main() {
       'bloc',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchPlants()).thenAnswer((_) => controller.stream);
+        when(() => mockRepository.watchPlants())
+            .thenAnswer((_) => controller.stream);
         return buildBloc();
       },
       seed: () => PlantLoaded(plants: [plant()]),
@@ -281,6 +254,96 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       expect: () => <PlantState>[],
+    );
+  });
+
+  group('online infinite scroll (P3-02a, flag off)', () {
+    blocTest<PlantBloc, PlantState>(
+      'GetPlantsEvent under a full page sets hasReachedMax true and '
+      'derives nextCursor from the last id',
+      build: () {
+        when(
+          () => mockRepository.getPlants(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (_) async => Right([plant(id: '3'), plant(id: '2')]),
+        );
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(GetPlantsEvent()),
+      expect: () => [
+        const PlantLoading(),
+        PlantLoaded(plants: [plant(id: '3'), plant(id: '2')], nextCursor: 2),
+      ],
+    );
+
+    blocTest<PlantBloc, PlantState>(
+      'LoadMorePlantsEvent is a no-op when hasReachedMax (a ≤500-row '
+      'account never issues a second fetch)',
+      build: buildBloc,
+      seed: () => PlantLoaded(plants: [plant(id: '2')], nextCursor: 2),
+      act: (bloc) => bloc.add(LoadMorePlantsEvent()),
+      wait: const Duration(milliseconds: 50),
+      expect: () => <PlantState>[],
+      verify: (_) {
+        verifyNever(
+          () => mockRepository.getPlants(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        );
+      },
+    );
+
+    blocTest<PlantBloc, PlantState>(
+      'a full first page sets hasReachedMax false; LoadMore fetches with '
+      'the cursor, APPENDS the next page and recomputes '
+      'hasReachedMax/nextCursor',
+      build: () {
+        final page1 = List.generate(
+          kOnlineListPageSize,
+          (i) => plant(id: '${1000 - i}'),
+        );
+        final page2 = [plant(id: '500'), plant(id: '499')];
+        when(
+          () => mockRepository.getPlants(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((invocation) async {
+          final cursor = invocation.namedArguments[#cursor] as int?;
+          return Right(cursor == null ? page1 : page2);
+        });
+        return buildBloc();
+      },
+      act: (bloc) async {
+        bloc.add(GetPlantsEvent());
+        await bloc.stream.firstWhere((s) => s is PlantLoaded);
+        bloc.add(LoadMorePlantsEvent());
+      },
+      wait: const Duration(milliseconds: 100),
+      expect: () => [
+        const PlantLoading(),
+        isA<PlantLoaded>()
+            .having((s) => s.plants.length, 'page 1 length', kOnlineListPageSize)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', false)
+            .having((s) => s.nextCursor, 'nextCursor', 501),
+        isA<PlantLoaded>()
+            .having((s) => s.plants.length, 'appended length',
+                kOnlineListPageSize + 2)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', true)
+            .having((s) => s.nextCursor, 'nextCursor', 499),
+      ],
+      verify: (_) {
+        verify(
+          () => mockRepository.getPlants(
+            limit: any(named: 'limit'),
+            cursor: 501,
+          ),
+        ).called(1);
+      },
     );
   });
 }

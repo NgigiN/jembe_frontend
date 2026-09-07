@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:drift/native.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
@@ -17,12 +19,17 @@ class FakeCostCategoryRemoteDataSource implements CostCategoryRemoteDataSource {
   final List<Map<String, String?>> addCalls = [];
   final List<String> deleteCalls = [];
   List<CostCategoryModel> getCostCategoriesResult = [];
+  Exception? throwOnGet;
+  Exception? throwOnAdd;
 
   @override
   Future<List<CostCategoryModel>> getCostCategories({
     String? type,
     String? category,
-  }) async => getCostCategoriesResult;
+  }) async {
+    if (throwOnGet != null) throw throwOnGet!;
+    return getCostCategoriesResult;
+  }
 
   @override
   Future<bool> addCostCategory({
@@ -31,6 +38,7 @@ class FakeCostCategoryRemoteDataSource implements CostCategoryRemoteDataSource {
     required String category,
     String? clientUuid,
   }) async {
+    if (throwOnAdd != null) throw throwOnAdd!;
     addCalls.add({
       'name': name,
       'type': type,
@@ -167,6 +175,125 @@ void main() {
         );
       },
     );
+  });
+
+  group('flag OFF error mapping (R2-02 net)', () {
+    test(
+      'getCostCategories: a NetworkException maps to NetworkFailure',
+      () async {
+        final dataSource = FakeCostCategoryRemoteDataSource()
+          ..throwOnGet = NetworkException();
+        final repository = CostCategoryRepositoryImpl(
+          remoteDataSource: dataSource,
+        );
+
+        final result = await repository.getCostCategories();
+
+        result.fold(
+          (failure) => expect(failure, isA<NetworkFailure>()),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test(
+      'getCostCategories: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeCostCategoryRemoteDataSource()
+          ..throwOnGet = const ServerException('boom');
+        final repository = CostCategoryRepositoryImpl(
+          remoteDataSource: dataSource,
+        );
+
+        final result = await repository.getCostCategories();
+
+        result.fold(
+          (failure) => expect((failure as ServerFailure).message, 'boom'),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test(
+      'getCostCategories: an unexpected (non-Exceptions) error still maps to '
+      'ServerFailure (this repo has an extra catch-all layer)',
+      () async {
+        final dataSource = FakeCostCategoryRemoteDataSource()
+          ..throwOnGet = Exception('unexpected boom');
+        final repository = CostCategoryRepositoryImpl(
+          remoteDataSource: dataSource,
+        );
+
+        final result = await repository.getCostCategories();
+
+        result.fold(
+          (failure) => expect(failure, isA<ServerFailure>()),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('addCostCategory: a NetworkException maps to NetworkFailure', () async {
+      final dataSource = FakeCostCategoryRemoteDataSource()
+        ..throwOnAdd = NetworkException();
+      final repository = CostCategoryRepositoryImpl(
+        remoteDataSource: dataSource,
+      );
+
+      final result = await repository.addCostCategory(
+        name: 'Seeds',
+        type: 'plant',
+        category: 'input',
+      );
+
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'addCostCategory: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeCostCategoryRemoteDataSource()
+          ..throwOnAdd = const ServerException('name is required');
+        final repository = CostCategoryRepositoryImpl(
+          remoteDataSource: dataSource,
+        );
+
+        final result = await repository.addCostCategory(
+          name: 'Seeds',
+          type: 'plant',
+          category: 'input',
+        );
+
+        result.fold(
+          (failure) => expect(
+            (failure as ServerFailure).message,
+            'name is required',
+          ),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('a successful addCostCategory maps to Right(true)', () async {
+      final dataSource = FakeCostCategoryRemoteDataSource();
+      final repository = CostCategoryRepositoryImpl(
+        remoteDataSource: dataSource,
+      );
+
+      final result = await repository.addCostCategory(
+        name: 'Seeds',
+        type: 'plant',
+        category: 'input',
+      );
+
+      result.fold(
+        (failure) => fail('expected Right, got $failure'),
+        (success) => expect(success, isTrue),
+      );
+    });
   });
 
   group('flag ON (local-first read-through)', () {

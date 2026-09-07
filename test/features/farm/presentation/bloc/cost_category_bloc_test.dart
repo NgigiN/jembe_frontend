@@ -3,25 +3,20 @@ import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_cost_category.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_cost_category.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_cost_categories.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/cost_category_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockGetCostCategories extends Mock implements GetCostCategories {}
-
-class MockAddCostCategory extends Mock implements AddCostCategory {}
-
-class MockDeleteCostCategory extends Mock implements DeleteCostCategory {}
+class MockCostCategoryRepository extends Mock
+    implements CostCategoryRepository {}
 
 /// `CostCategoryBloc` itself never branches on `OfflineConfig` — the
-/// flag-on/off behavior lives entirely under the mocked use cases (in the
-/// repository, see `cost_category_repository_impl_test.dart`). This test
-/// exists to confirm the bloc's own event→state contract
+/// flag-on/off behavior lives entirely under the mocked repository (see
+/// `cost_category_repository_impl_test.dart`). This test exists to confirm
+/// the bloc's own event→state contract
 /// (`CostCategoryAdded`/`CostCategoryDeleted`, distinct states preserved —
 /// see the P3 offline rollout recipe's outlier note) is unaffected by
 /// toggling the flag around it either way.
@@ -34,33 +29,18 @@ void main() {
     isDefault: false,
   );
 
-  late MockGetCostCategories mockGetCostCategories;
-  late MockAddCostCategory mockAddCostCategory;
-  late MockDeleteCostCategory mockDeleteCostCategory;
-
-  setUpAll(() {
-    registerFallbackValue(const GetCostCategoriesParams());
-    registerFallbackValue(
-      const AddCostCategoryParams(name: 'X', type: 'plant', category: 'input'),
-    );
-    registerFallbackValue(DeleteCostCategoryParams(id: 'cc-1'));
-  });
+  late MockCostCategoryRepository mockRepository;
 
   setUp(() {
-    mockGetCostCategories = MockGetCostCategories();
-    mockAddCostCategory = MockAddCostCategory();
-    mockDeleteCostCategory = MockDeleteCostCategory();
+    mockRepository = MockCostCategoryRepository();
   });
 
   tearDown(() {
     OfflineConfig.enabled = false;
   });
 
-  CostCategoryBloc buildBloc() => CostCategoryBloc(
-    getCostCategories: mockGetCostCategories,
-    addCostCategory: mockAddCostCategory,
-    deleteCostCategory: mockDeleteCostCategory,
-  );
+  CostCategoryBloc buildBloc() =>
+      CostCategoryBloc(repository: mockRepository);
 
   for (final offlineFlag in [false, true]) {
     group(
@@ -75,7 +55,10 @@ void main() {
           'GetCostCategoriesEvent emits [Loading, Loaded]',
           build: () {
             when(
-              () => mockGetCostCategories(any()),
+              () => mockRepository.getCostCategories(
+                type: any(named: 'type'),
+                category: any(named: 'category'),
+              ),
             ).thenAnswer((_) async => const Right([category]));
             return buildBloc();
           },
@@ -87,8 +70,8 @@ void main() {
           ],
           verify: (_) {
             verify(
-              () => mockGetCostCategories(
-                const GetCostCategoriesParams(category: 'input'),
+              () => mockRepository.getCostCategories(
+                category: 'input',
               ),
             ).called(1);
           },
@@ -99,10 +82,17 @@ void main() {
           'reloads via GetCostCategoriesEvent',
           build: () {
             when(
-              () => mockAddCostCategory(any()),
+              () => mockRepository.addCostCategory(
+                name: any(named: 'name'),
+                type: any(named: 'type'),
+                category: any(named: 'category'),
+              ),
             ).thenAnswer((_) async => const Right(true));
             when(
-              () => mockGetCostCategories(any()),
+              () => mockRepository.getCostCategories(
+                type: any(named: 'type'),
+                category: any(named: 'category'),
+              ),
             ).thenAnswer((_) async => const Right([category]));
             return buildBloc();
           },
@@ -122,12 +112,10 @@ void main() {
           ],
           verify: (_) {
             verify(
-              () => mockAddCostCategory(
-                const AddCostCategoryParams(
-                  name: 'Seeds',
-                  type: 'plant',
-                  category: 'input',
-                ),
+              () => mockRepository.addCostCategory(
+                name: 'Seeds',
+                type: 'plant',
+                category: 'input',
               ),
             ).called(1);
           },
@@ -136,7 +124,13 @@ void main() {
         blocTest<CostCategoryBloc, CostCategoryState>(
           'AddCostCategoryEvent failure emits CostCategoryError (no reload)',
           build: () {
-            when(() => mockAddCostCategory(any())).thenAnswer(
+            when(
+              () => mockRepository.addCostCategory(
+                name: any(named: 'name'),
+                type: any(named: 'type'),
+                category: any(named: 'category'),
+              ),
+            ).thenAnswer(
               (_) async => const Left(ServerFailure('boom')),
             );
             return buildBloc();
@@ -153,7 +147,12 @@ void main() {
             isA<CostCategoryError>(),
           ],
           verify: (_) {
-            verifyNever(() => mockGetCostCategories(any()));
+            verifyNever(
+              () => mockRepository.getCostCategories(
+                type: any(named: 'type'),
+                category: any(named: 'category'),
+              ),
+            );
           },
         );
 
@@ -162,10 +161,13 @@ void main() {
           'reloads via GetCostCategoriesEvent',
           build: () {
             when(
-              () => mockDeleteCostCategory(any()),
+              () => mockRepository.deleteCostCategory(any()),
             ).thenAnswer((_) async => const Right(null));
             when(
-              () => mockGetCostCategories(any()),
+              () => mockRepository.getCostCategories(
+                type: any(named: 'type'),
+                category: any(named: 'category'),
+              ),
             ).thenAnswer((_) async => const Right(<CostCategory>[]));
             return buildBloc();
           },

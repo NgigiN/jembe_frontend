@@ -1,15 +1,11 @@
 import 'dart:async';
 
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_animal_types.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_animal_types.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/animal_type_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -46,14 +42,9 @@ class _AnimalTypesWatchFailed extends AnimalTypeEvent {
 }
 
 class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
-  AnimalTypeBloc({
-    required this.getAnimalTypes,
-    required this.addAnimalType,
-    required this.updateAnimalType,
-    required this.deleteAnimalType,
-    required this.watchAnimalTypes,
-  }) : super(AnimalTypeInitial()) {
+  AnimalTypeBloc({required this.repository}) : super(AnimalTypeInitial()) {
     on<GetAnimalTypesEvent>(_onGetAnimalTypes);
+    on<LoadMoreAnimalTypesEvent>(_onLoadMoreAnimalTypes);
     on<WatchAnimalTypesEvent>(_onWatchAnimalTypes);
     on<_AnimalTypesUpdated>((event, emit) {
       emit(AnimalTypeLoaded(event.animalTypes));
@@ -65,28 +56,95 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
     on<UpdateAnimalTypeEvent>(_onUpdateAnimalType);
     on<DeleteAnimalTypeEvent>(_onDeleteAnimalType);
   }
-  final GetAnimalTypes getAnimalTypes;
-  final AddAnimalType addAnimalType;
-  final UpdateAnimalType updateAnimalType;
-  final DeleteAnimalType deleteAnimalType;
-  final WatchAnimalTypes watchAnimalTypes;
+  final AnimalTypeRepository repository;
 
   StreamSubscription<List<AnimalType>>? _animalTypesSubscription;
   bool _watchStarted = false;
+
+  /// Concurrency latch for [LoadMoreAnimalTypesEvent]: guards against a
+  /// second page fetch starting while the first is still in flight.
+  bool _isLoadingMore = false;
 
   Future<void> _onGetAnimalTypes(
     GetAnimalTypesEvent event,
     Emitter<AnimalTypeState> emit,
   ) async {
     emit(const AnimalTypeLoading());
-    final result = await getAnimalTypes(NoParams());
+    final result = await repository.getAnimalTypes(
+      limit: kOnlineListPageSize,
+    );
     result.fold(
       (failure) => emit(AnimalTypeError(
         resolveFailureMessage(failure, 'Failed to load animal types'),
       )),
-      (animalTypes) => emit(AnimalTypeLoaded(animalTypes)),
+      (animalTypes) {
+        // Online (flag off): this was page 1 of a cursor-paged list.
+        // Offline returns the whole local mirror in one shot, so it always
+        // reaches max here and never pages.
+        final online = !OfflineConfig.enabled;
+        emit(AnimalTypeLoaded(
+          animalTypes,
+          hasReachedMax: !online || animalTypes.length < kOnlineListPageSize,
+          nextCursor: online ? _cursorOf(animalTypes) : null,
+        ));
+      },
     );
   }
+
+  /// Fetches and APPENDS the next online page. No-op when offline, when the
+  /// current loaded page already reached max, when there is no cursor to page
+  /// from, or when a load-more is already running.
+  Future<void> _onLoadMoreAnimalTypes(
+    LoadMoreAnimalTypesEvent event,
+    Emitter<AnimalTypeState> emit,
+  ) async {
+    if (OfflineConfig.enabled) return;
+    final current = state;
+    if (current is! AnimalTypeLoaded) return;
+    if (current.hasReachedMax ||
+        current.nextCursor == null ||
+        _isLoadingMore) {
+      return;
+    }
+    _isLoadingMore = true;
+    try {
+      final result = await repository.getAnimalTypes(
+        limit: kOnlineListPageSize,
+        cursor: current.nextCursor,
+      );
+      _isLoadingMore = false;
+      result.fold(
+        (failure) {
+          if (state != current) return;
+          emit(AnimalTypeError(
+            resolveFailureMessage(failure, 'Failed to load animal types'),
+            animalTypes: current.animalTypes,
+          ));
+        },
+        (more) {
+          // A concurrent Add/Update/Delete/refresh emitted a newer state
+          // while this fetch was in flight: drop this now-stale page rather
+          // than clobbering it — the user's next scroll re-triggers
+          // LoadMore against the fresh state.
+          if (state != current) return;
+          final combined = List<AnimalType>.from(current.animalTypes)
+            ..addAll(more);
+          emit(AnimalTypeLoaded(
+            combined,
+            hasReachedMax: more.length < kOnlineListPageSize,
+            nextCursor: _cursorOf(more),
+          ));
+        },
+      );
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
+
+  /// The next `?cursor=` value — the last (oldest, since the list is
+  /// newest-first) item's server id, or `null` when the page is empty.
+  int? _cursorOf(List<AnimalType> animalTypes) =>
+      animalTypes.isEmpty ? null : int.tryParse(animalTypes.last.id);
 
   void _onWatchAnimalTypes(
     WatchAnimalTypesEvent event,
@@ -99,7 +157,7 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
     // instead.
     if (_watchStarted) return;
     _watchStarted = true;
-    _animalTypesSubscription = watchAnimalTypes().listen(
+    _animalTypesSubscription = repository.watchAnimalTypes().listen(
       (animalTypes) => add(_AnimalTypesUpdated(animalTypes)),
       onError: (Object error, StackTrace stackTrace) {
         appLogger.logError('AnimalTypeBloc.watchAnimalTypes', error, stackTrace);
@@ -119,7 +177,7 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
     Emitter<AnimalTypeState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await addAnimalType(event.name, event.notes, event.userId);
+      final result = await repository.addAnimalType(event.name, event.notes, event.userId);
       result.fold(
         (failure) => emit(AnimalTypeError(
           resolveFailureMessage(failure, 'Failed to add animal type'),
@@ -135,7 +193,7 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
     final currentAnimalTypes = state.animalTypes;
 
     emit(AnimalTypeLoading(animalTypes: currentAnimalTypes));
-    final result = await addAnimalType(event.name, event.notes, event.userId);
+    final result = await repository.addAnimalType(event.name, event.notes, event.userId);
     result.fold(
       (failure) => emit(AnimalTypeError(
         resolveFailureMessage(failure, 'Failed to add animal type'),
@@ -154,7 +212,7 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
     Emitter<AnimalTypeState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await updateAnimalType(event.id, event.name, event.notes);
+      final result = await repository.updateAnimalType(event.id, event.name, event.notes);
       result.fold(
         (failure) => emit(AnimalTypeError(
           resolveFailureMessage(failure, 'Failed to update animal type'),
@@ -169,7 +227,7 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
 
     final currentAnimalTypes = state.animalTypes;
     emit(AnimalTypeLoading(animalTypes: currentAnimalTypes));
-    final result = await updateAnimalType(event.id, event.name, event.notes);
+    final result = await repository.updateAnimalType(event.id, event.name, event.notes);
     result.fold(
       (failure) => emit(AnimalTypeError(
         resolveFailureMessage(failure, 'Failed to update animal type'),
@@ -189,7 +247,7 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
     Emitter<AnimalTypeState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await deleteAnimalType(event.id);
+      final result = await repository.deleteAnimalType(event.id);
       result.fold(
         (failure) => emit(AnimalTypeError(
           resolveFailureMessage(failure, 'Failed to delete animal type'),
@@ -204,7 +262,7 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
 
     final currentAnimalTypes = state.animalTypes;
     emit(AnimalTypeLoading(animalTypes: currentAnimalTypes));
-    final result = await deleteAnimalType(event.id);
+    final result = await repository.deleteAnimalType(event.id);
     result.fold(
       (failure) => emit(AnimalTypeError(
         resolveFailureMessage(failure, 'Failed to delete animal type'),

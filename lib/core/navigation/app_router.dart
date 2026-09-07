@@ -24,6 +24,7 @@ import 'package:farm_tracker/features/farm/presentation/pages/plants_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/revenue_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/season_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/settings_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/trash_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -55,6 +56,7 @@ class AppRouteName {
   static const contentTips = 'content-tips';
   static const contentDetail = 'content-detail';
   static const askQuestion = 'ask-question';
+  static const trash = 'trash';
 }
 
 class AppRoutePath {
@@ -85,6 +87,7 @@ class AppRoutePath {
   static const contentTips = '/content';
   static const contentDetailTemplate = '/content/:id';
   static const askQuestion = '/ask-question';
+  static const trash = '/trash';
 
   static String inputsFor(String sourceType) => '/inputs/$sourceType';
   static String activitiesFor(String sourceType) => '/activities/$sourceType';
@@ -128,50 +131,62 @@ class AppRouter {
       GoRoute(
         name: AppRouteName.splash,
         path: AppRoutePath.splash,
+        caseSensitive: false,
         pageBuilder: (context, state) => _fadePage(const SplashPage(), state),
       ),
       GoRoute(
         name: AppRouteName.googleLogin,
         path: AppRoutePath.googleLogin,
+        caseSensitive: false,
         pageBuilder: (context, state) =>
             _fadePage(const GoogleLoginPage(), state),
       ),
       GoRoute(
         name: AppRouteName.onboarding,
         path: AppRoutePath.onboarding,
+        caseSensitive: false,
         pageBuilder: (context, state) =>
             _fadePage(const OnboardingPage(), state),
       ),
       ShellRoute(
+        // go_router 17 defaults ShellRoute-internal navigation changes to
+        // notifying the root GoRouter observers. Pinned to false to keep
+        // LoggingGoRouterObserver's pre-17 signal (root pushes/pops only).
+        notifyRootObserver: false,
         builder: (context, state, child) => LandingPage(child: child),
         routes: [
           GoRoute(
             name: AppRouteName.plantsDashboard,
             path: '/',
+            caseSensitive: false,
             pageBuilder: (context, state) =>
                 _fadeThroughPage(const PlantsPage(), state),
           ),
           GoRoute(
             name: AppRouteName.animalsDashboard,
             path: '/animals',
+            caseSensitive: false,
             pageBuilder: (context, state) =>
                 _fadeThroughPage(const AnimalsPage(), state),
           ),
           GoRoute(
             name: AppRouteName.revenue,
             path: '/revenue',
+            caseSensitive: false,
             pageBuilder: (context, state) =>
                 _fadeThroughPage(const RevenuePage(), state),
           ),
           GoRoute(
             name: AppRouteName.analytics,
             path: '/analytics',
+            caseSensitive: false,
             pageBuilder: (context, state) =>
                 _fadeThroughPage(const AnalysisPage(), state),
           ),
           GoRoute(
             name: AppRouteName.settings,
             path: '/settings',
+            caseSensitive: false,
             pageBuilder: (context, state) =>
                 _fadeThroughPage(const SettingsPage(), state),
           ),
@@ -180,37 +195,44 @@ class AppRouter {
       GoRoute(
         name: AppRouteName.lands,
         path: AppRoutePath.lands,
+        caseSensitive: false,
         pageBuilder: (context, state) => _slidePage(const LandPage(), state),
       ),
       GoRoute(
         name: AppRouteName.plants,
         path: AppRoutePath.plants,
+        caseSensitive: false,
         pageBuilder: (context, state) => _slidePage(const PlantPage(), state),
       ),
       GoRoute(
         name: AppRouteName.seasons,
         path: AppRoutePath.seasons,
+        caseSensitive: false,
         pageBuilder: (context, state) => _slidePage(const SeasonPage(), state),
       ),
       GoRoute(
         name: AppRouteName.animalTypes,
         path: AppRoutePath.animalTypes,
+        caseSensitive: false,
         pageBuilder: (context, state) =>
             _slidePage(const AnimalTypePage(), state),
       ),
       GoRoute(
         name: AppRouteName.herds,
         path: AppRoutePath.herds,
+        caseSensitive: false,
         pageBuilder: (context, state) => _slidePage(const HerdPage(), state),
       ),
       GoRoute(
         name: AppRouteName.animalsList,
         path: AppRoutePath.animalsList,
+        caseSensitive: false,
         pageBuilder: (context, state) => _slidePage(const AnimalPage(), state),
       ),
       GoRoute(
         name: AppRouteName.inputs,
         path: AppRoutePath.inputsTemplate,
+        caseSensitive: false,
         pageBuilder: (context, state) {
           final sourceType = state.pathParameters['sourceType'] ?? 'plant';
           return _slidePage(InputPage(sourceType: sourceType), state);
@@ -219,6 +241,7 @@ class AppRouter {
       GoRoute(
         name: AppRouteName.activities,
         path: AppRoutePath.activitiesTemplate,
+        caseSensitive: false,
         pageBuilder: (context, state) {
           final sourceType = state.pathParameters['sourceType'] ?? 'plant';
           return _slidePage(ActivityPage(sourceType: sourceType), state);
@@ -227,58 +250,68 @@ class AppRouter {
       GoRoute(
         name: AppRouteName.totalCosts,
         path: AppRoutePath.totalCosts,
+        caseSensitive: false,
         pageBuilder: (context, state) =>
             _slidePage(const TotalCostsBySeasonPage(), state),
       ),
       GoRoute(
         name: AppRouteName.costBreakdown,
         path: AppRoutePath.costBreakdown,
+        caseSensitive: false,
         pageBuilder: (context, state) =>
             _slidePage(const CostBreakdownPage(), state),
       ),
       GoRoute(
         name: AppRouteName.annualSummary,
         path: AppRoutePath.annualSummary,
+        caseSensitive: false,
         pageBuilder: (context, state) =>
             _slidePage(const AnnualSummaryPage(), state),
       ),
       GoRoute(
         name: AppRouteName.streak,
         path: AppRoutePath.streak,
+        caseSensitive: false,
         pageBuilder: (context, state) => _slidePage(const StreakPage(), state),
       ),
       GoRoute(
         name: AppRouteName.revenueAdd,
         path: AppRoutePath.revenueAdd,
+        caseSensitive: false,
         pageBuilder: (context, state) =>
             _slidePage(const AddRevenuePage(), state),
       ),
       GoRoute(
         name: AppRouteName.infrastructure,
         path: AppRoutePath.infrastructure,
+        caseSensitive: false,
         pageBuilder: (context, state) =>
             _slidePage(const InfrastructurePage(), state),
       ),
       GoRoute(
         name: AppRouteName.herdActivities,
         path: AppRoutePath.herdActivities,
+        caseSensitive: false,
         pageBuilder: (context, state) =>
             _slidePage(const HerdActivityPage(), state),
       ),
       GoRoute(
         name: AppRouteName.harvests,
         path: AppRoutePath.harvests,
+        caseSensitive: false,
         pageBuilder: (context, state) => _slidePage(const HarvestPage(), state),
       ),
       GoRoute(
         name: AppRouteName.contentTips,
         path: AppRoutePath.contentTips,
+        caseSensitive: false,
         pageBuilder: (context, state) =>
             _slidePage(const ContentListPage(), state),
       ),
       GoRoute(
         name: AppRouteName.contentDetail,
         path: AppRoutePath.contentDetailTemplate,
+        caseSensitive: false,
         pageBuilder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
           return _slidePage(ContentDetailPage(contentId: id), state);
@@ -287,8 +320,15 @@ class AppRouter {
       GoRoute(
         name: AppRouteName.askQuestion,
         path: AppRoutePath.askQuestion,
+        caseSensitive: false,
         pageBuilder: (context, state) =>
             _slidePage(const AskQuestionPage(), state),
+      ),
+      GoRoute(
+        name: AppRouteName.trash,
+        path: AppRoutePath.trash,
+        caseSensitive: false,
+        pageBuilder: (context, state) => _slidePage(const TrashPage(), state),
       ),
     ],
   );

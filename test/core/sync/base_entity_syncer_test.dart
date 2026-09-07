@@ -421,7 +421,16 @@ void main() {
 
         final cursor = await syncer.pull(null);
 
-        expect(remote.getSinceCalls, [null]);
+        // The drain loop always sends a non-null `since` (epoch on a first
+        // sync, so the backend's ASC drain path is always hit), then
+        // re-queries from the page's max `updatedAt`; this fake ignores its
+        // `since` argument and returns the same fixed row every time, so the
+        // second page's max doesn't advance past the cursor it was queried
+        // with and the loop stops there — two calls total.
+        expect(remote.getSinceCalls, [
+          DateTime.utc(1970),
+          DateTime.utc(2026, 5),
+        ]);
         expect(cursor!.isAtSameMomentAs(DateTime.utc(2026, 5)), isTrue);
         final row = local.byClientUuid['cu-1']!;
         expect(row.serverId, 'server-1');
@@ -435,11 +444,62 @@ void main() {
       expect(remote.getSinceCalls, [since]);
     });
 
-    test('returns null and touches nothing when nothing changed', () async {
-      final cursor = await syncer.pull(DateTime.utc(2026));
-      expect(cursor, isNull);
-      expect(local.byClientUuid, isEmpty);
-    });
+    test(
+      'returns the original since (unchanged) and touches nothing when '
+      'nothing changed',
+      () async {
+        // An empty first page (no forward progress) stops the drain loop
+        // immediately; with nothing ever observed, [pull] hands back the
+        // ORIGINAL `since` it was called with (not the epoch it internally
+        // substitutes for a null `since`) — the caller's cursor is left
+        // untouched rather than clobbered.
+        final since = DateTime.utc(2026);
+        final cursor = await syncer.pull(since);
+        expect(cursor, since);
+        expect(remote.getSinceCalls, [since]);
+        expect(local.byClientUuid, isEmpty);
+      },
+    );
+
+    test(
+      'drains multiple pages, re-querying from each page\'s max updatedAt, '
+      'until a page makes no forward progress',
+      () async {
+        final t1 = DateTime.utc(2026, 1);
+        final t2 = DateTime.utc(2026, 2);
+        final t3 = DateTime.utc(2026, 3);
+        var calls = 0;
+        remote.onGetSince = (since) {
+          calls++;
+          if (calls == 1) {
+            // Page 1: two rows, t1 < t2.
+            return [
+              _FakeModel(clientUuid: 'cu-1', serverId: 's-1', updatedAt: t1),
+              _FakeModel(clientUuid: 'cu-2', serverId: 's-2', updatedAt: t2),
+            ];
+          }
+          if (calls == 2) {
+            // Page 2: one more row, t3 — still forward progress past t2.
+            return [
+              _FakeModel(clientUuid: 'cu-3', serverId: 's-3', updatedAt: t3),
+            ];
+          }
+          // Page 3: empty — no forward progress past t3, so the loop must
+          // stop here rather than re-querying forever.
+          return const <_FakeModel>[];
+        };
+
+        final cursor = await syncer.pull(null);
+
+        // epoch (first sync) -> t2 (page 1's max) -> t3 (page 2's max), then
+        // stops: exactly 3 calls, not a 4th.
+        expect(remote.getSinceCalls, [DateTime.utc(1970), t2, t3]);
+        expect(cursor!.isAtSameMomentAs(t3), isTrue);
+        expect(local.byClientUuid['cu-1']!.serverId, 's-1');
+        expect(local.byClientUuid['cu-2']!.serverId, 's-2');
+        expect(local.byClientUuid['cu-3']!.serverId, 's-3');
+      },
+    );
 
     test('returns the MAX updatedAt across multiple server rows', () async {
       remote.onGetSince = (since) => [

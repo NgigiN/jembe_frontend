@@ -1,5 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
@@ -16,10 +18,18 @@ class FakeAnimalTypeRemoteDataSource implements AnimalTypeRemoteDataSource {
   AnimalTypeModel? lastUpdated;
   final List<String> deleteCalls = [];
   AnimalTypeModel? getAnimalTypeResult;
+  Exception? throwOnGet;
+  Exception? throwOnAdd;
 
   @override
-  Future<List<AnimalTypeModel>> getAnimalTypes({DateTime? updatedSince}) async =>
-      [];
+  Future<List<AnimalTypeModel>> getAnimalTypes({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  }) async {
+    if (throwOnGet != null) throw throwOnGet!;
+    return [];
+  }
 
   @override
   Future<AnimalTypeModel> getAnimalType(String id) async =>
@@ -27,6 +37,7 @@ class FakeAnimalTypeRemoteDataSource implements AnimalTypeRemoteDataSource {
 
   @override
   Future<AnimalTypeModel> addAnimalType(AnimalTypeModel animalType) async {
+    if (throwOnAdd != null) throw throwOnAdd!;
     lastAdded = animalType;
     return animalType;
   }
@@ -160,6 +171,117 @@ void main() {
         expect(emission, isEmpty);
       },
     );
+  });
+
+  group('flag OFF error mapping (R2-02 net)', () {
+    test('getAnimalTypes: a NetworkException maps to NetworkFailure', () async {
+      final dataSource = FakeAnimalTypeRemoteDataSource()
+        ..throwOnGet = NetworkException();
+      final repository = AnimalTypeRepositoryImpl(remoteDataSource: dataSource);
+
+      final result = await repository.getAnimalTypes();
+
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'getAnimalTypes: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeAnimalTypeRemoteDataSource()
+          ..throwOnGet = const ServerException('boom');
+        final repository = AnimalTypeRepositoryImpl(
+          remoteDataSource: dataSource,
+        );
+
+        final result = await repository.getAnimalTypes();
+
+        result.fold(
+          (failure) => expect((failure as ServerFailure).message, 'boom'),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('addAnimalType: a NetworkException maps to NetworkFailure', () async {
+      final dataSource = FakeAnimalTypeRemoteDataSource()
+        ..throwOnAdd = NetworkException();
+      final repository = AnimalTypeRepositoryImpl(remoteDataSource: dataSource);
+
+      final result = await repository.addAnimalType(
+        'Cattle',
+        'Dairy breed',
+        'user-1',
+      );
+
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'addAnimalType: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeAnimalTypeRemoteDataSource()
+          ..throwOnAdd = const ServerException('name is required');
+        final repository = AnimalTypeRepositoryImpl(
+          remoteDataSource: dataSource,
+        );
+
+        final result = await repository.addAnimalType(
+          'Cattle',
+          'Dairy breed',
+          'user-1',
+        );
+
+        result.fold(
+          (failure) => expect(
+            (failure as ServerFailure).message,
+            'name is required',
+          ),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test(
+      'addAnimalType: an unexpected (non-Exceptions) error still maps to '
+      'ServerFailure (this repo has an extra catch-all layer)',
+      () async {
+        final dataSource = FakeAnimalTypeRemoteDataSource()
+          ..throwOnAdd = Exception('unexpected boom');
+        final repository = AnimalTypeRepositoryImpl(
+          remoteDataSource: dataSource,
+        );
+
+        final result = await repository.addAnimalType(
+          'Cattle',
+          'Dairy breed',
+          'user-1',
+        );
+
+        result.fold(
+          (failure) => expect(failure, isA<ServerFailure>()),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('a successful addAnimalType maps to Right', () async {
+      final dataSource = FakeAnimalTypeRemoteDataSource();
+      final repository = AnimalTypeRepositoryImpl(remoteDataSource: dataSource);
+
+      final result = await repository.addAnimalType(
+        'Cattle',
+        'Dairy breed',
+        'user-1',
+      );
+
+      expect(result.isRight(), isTrue);
+    });
   });
 
   group('flag ON (local-first + outbox)', () {

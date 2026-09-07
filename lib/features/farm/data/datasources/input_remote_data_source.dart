@@ -10,9 +10,16 @@ abstract class InputRemoteDataSource {
   /// is given — only those the server has changed strictly after that
   /// instant (used by the sync pull phase, which passes ONLY [updatedSince],
   /// never [sourceType]). Existing callers are unaffected.
+  ///
+  /// [limit] caps the page size (server default & max is 500) and [cursor]
+  /// pages backward through the newest-first list — the server returns rows
+  /// with `id < cursor`. Both are used ONLY by the online infinite-scroll
+  /// list path (P3-02a); the sync pull passes neither.
   Future<List<InputModel>> getInputs({
     String? sourceType,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   });
   Future<InputModel> addInput(InputModel input);
   Future<InputModel> updateInput(InputModel input);
@@ -27,6 +34,8 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
   Future<List<InputModel>> getInputs({
     String? sourceType,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async {
     try {
       final queryParams = <String, dynamic>{
@@ -34,6 +43,8 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
           'source_type': sourceType,
         if (updatedSince != null)
           'updated_since': updatedSince.toUtc().toIso8601String(),
+        if (limit != null) 'limit': limit,
+        if (cursor != null) 'cursor': cursor,
       };
 
       final response = await dio.get<dynamic>(
@@ -66,10 +77,9 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
         return items
             .map((json) => InputModel.fromJson(json as Map<String, dynamic>))
             .toList();
-      } else {
-        final msg = extractServerErrorMessage(response.data);
-        throw ServerException(msg.isNotEmpty ? msg : null);
       }
+      final msg = extractServerErrorMessage(response.data);
+      throw ServerException(msg.isNotEmpty ? msg : null);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException', e);
       throw mapDioException(e);
@@ -104,10 +114,9 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
       if (response.statusCode == 201) {
         final data = response.data as Map<String, dynamic>;
         return InputModel.fromJson(data);
-      } else {
-        final msg = extractServerErrorMessage(response.data);
-        throw ServerException(msg.isNotEmpty ? msg : null);
       }
+      final msg = extractServerErrorMessage(response.data);
+      throw ServerException(msg.isNotEmpty ? msg : null);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException', e);
       throw mapDioException(e);
@@ -138,10 +147,9 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
         return InputModel.fromJson(data);
-      } else {
-        final msg = extractServerErrorMessage(response.data);
-        throw ServerException(msg.isNotEmpty ? msg : null);
       }
+      final msg = extractServerErrorMessage(response.data);
+      throw ServerException(msg.isNotEmpty ? msg : null);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException', e);
       throw mapDioException(e);

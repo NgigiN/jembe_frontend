@@ -14,6 +14,7 @@ import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/crud/paginated_list_view.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/features/auth/data/utils/user_utils.dart';
@@ -164,10 +165,19 @@ class _PlantPageState extends State<PlantPage> {
             );
           }
 
-          return ListView.builder(
+          final offline = OfflineConfig.enabled;
+          final hasReachedMax =
+              offline || state is! PlantLoaded || state.hasReachedMax;
+          return PaginatedListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: context.scrollListPadding(forFab: true),
             itemCount: plants.length,
+            hasReachedMax: hasReachedMax,
+            onEndReached: offline
+                ? () {}
+                : () => context.read<PlantBloc>().add(
+                      LoadMorePlantsEvent(),
+                    ),
             itemBuilder: (context, index) {
               final plant = plants[index];
                 return EntityCard(

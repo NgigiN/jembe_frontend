@@ -16,6 +16,7 @@ import 'package:farm_tracker/core/widgets/crud/entity_details_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
+import 'package:farm_tracker/core/widgets/crud/paginated_list_view.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
@@ -432,10 +433,19 @@ class _InputPageState extends State<InputPage> {
             );
           }
 
-          return ListView.builder(
+          final offline = OfflineConfig.enabled;
+          final hasReachedMax =
+              offline || state is! InputLoaded || state.hasReachedMax;
+          return PaginatedListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: context.scrollListPadding(forFab: true),
               itemCount: inputs.length,
+              hasReachedMax: hasReachedMax,
+              onEndReached: offline
+                  ? () {}
+                  : () => context.read<InputBloc>().add(
+                        LoadMoreInputsEvent(sourceType: widget.sourceType),
+                      ),
               itemBuilder: (context, index) {
                 final input = inputs[index];
                 final isPlant = input.sourceType == 'plant';

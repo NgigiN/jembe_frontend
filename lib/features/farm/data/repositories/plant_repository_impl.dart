@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/offline_repository.dart';
@@ -10,6 +9,7 @@ import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/outbox_coalescing.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/guard.dart';
 import 'package:farm_tracker/features/farm/data/datasources/plant_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/plant_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/plant_model.dart';
@@ -21,7 +21,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/plant_repository.
 ///
 /// ## Flag off (today's behavior — byte for byte)
 /// Every method talks straight to [remoteDataSource], mapping
-/// [NetworkException]/[ServerException] to [NetworkFailure]/[ServerFailure].
+/// `NetworkException`/`ServerException` to [NetworkFailure]/[ServerFailure].
 /// This is rule zero for the offline rollout: with
 /// `OfflineConfig.enabled == false`, this class behaves exactly as it did
 /// before the offline pipeline existed.
@@ -98,19 +98,19 @@ class PlantRepositoryImpl
   }
 
   @override
-  Future<Either<Failure, List<Plant>>> getPlants() async {
+  Future<Either<Failure, List<Plant>>> getPlants({
+    int? limit,
+    int? cursor,
+  }) async {
     if (_offlineFirst) {
+      // Offline mirror shows the whole local store — pagination
+      // ([limit]/[cursor]) is an online-only concern and is ignored here.
       final models = await local!.watchPlants().first;
       return Right(models.map(_toPlant).toList());
     }
-    try {
-      final plants = await remoteDataSource.getPlants();
-      return Right(plants);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(
+      () => remoteDataSource.getPlants(limit: limit, cursor: cursor),
+    );
   }
 
   @override
@@ -131,20 +131,15 @@ class PlantRepositoryImpl
       return Right(_toPlant(model));
     }
 
-    try {
+    return guard(() {
       final plantModel = PlantModel.create(
         userId: plant.userId,
         name: plant.name,
         variety: plant.variety,
       );
 
-      final result = await remoteDataSource.addPlant(plantModel);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+      return remoteDataSource.addPlant(plantModel);
+    });
   }
 
   @override
@@ -174,7 +169,7 @@ class PlantRepositoryImpl
       return Right(plant);
     }
 
-    try {
+    return guard(() {
       final plantModel = PlantModel(
         id: plant.id,
         userId: plant.userId,
@@ -183,13 +178,8 @@ class PlantRepositoryImpl
         createdAt: plant.createdAt,
         updatedAt: plant.updatedAt,
       );
-      final result = await remoteDataSource.updatePlant(plantModel);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+      return remoteDataSource.updatePlant(plantModel);
+    });
   }
 
   @override
@@ -200,13 +190,6 @@ class PlantRepositoryImpl
       return const Right(null);
     }
 
-    try {
-      await remoteDataSource.deletePlant(id);
-      return const Right(null);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.deletePlant(id));
   }
 }

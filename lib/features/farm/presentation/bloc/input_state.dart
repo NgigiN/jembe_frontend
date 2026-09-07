@@ -16,11 +16,26 @@ class InputLoading extends InputState {
 }
 
 class InputLoaded extends InputState {
-  const InputLoaded({required super.inputs, this.successMessage});
+  const InputLoaded({
+    required super.inputs,
+    this.successMessage,
+    this.hasReachedMax = true,
+    this.nextCursor,
+  });
   final String? successMessage;
 
+  /// Online infinite-scroll (P3-02a): `false` only when the last page came
+  /// back full (== `kOnlineListPageSize`), i.e. another page may exist.
+  /// Defaults to `true` so the offline stream path and the Add/Update/Delete
+  /// handlers (which don't page) never trigger a load-more.
+  final bool hasReachedMax;
+
+  /// The server id to page from next (`?cursor=`), i.e. the last item's id.
+  /// `null` once [hasReachedMax] or when the list is empty.
+  final int? nextCursor;
+
   @override
-  List<Object?> get props => [inputs, successMessage];
+  List<Object?> get props => [inputs, successMessage, hasReachedMax, nextCursor];
 }
 
 class InputError extends InputState {

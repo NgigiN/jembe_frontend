@@ -34,14 +34,10 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
         final result = FarmDetailedCostModel.fromJson(response.data as Map<String, dynamic>);
         appLogger.info(LogCategory.farm, 'Successfully fetched unified total costs');
         return result;
-      } else if (response.statusCode == 401 || response.statusCode == 403) {
-        appLogger.warning(LogCategory.auth, 'Authentication required for total costs by season');
-        throw const ServerException('Authentication required. Please log in again.');
-      } else {
-        final msg = extractServerErrorMessage(response.data);
-        appLogger.error(LogCategory.http, 'Failed to fetch total costs: status ${response.statusCode}');
-        throw ServerException(msg.isNotEmpty ? msg : null);
       }
+      final msg = extractServerErrorMessage(response.data);
+      appLogger.error(LogCategory.http, 'Failed to fetch total costs: status ${response.statusCode}');
+      throw ServerException(msg.isNotEmpty ? msg : null);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException in getTotalCostsBySeason', e);
       throw mapDioException(e);
@@ -74,14 +70,10 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
             .toList();
         appLogger.info(LogCategory.farm, 'Successfully fetched ${breakdowns.length} cost breakdowns');
         return breakdowns;
-      } else if (response.statusCode == 401 || response.statusCode == 403) {
-        appLogger.warning(LogCategory.auth, 'Authentication required for cost breakdown');
-        throw const ServerException('Authentication required. Please log in again.');
-      } else {
-        final msg = extractServerErrorMessage(response.data);
-        appLogger.error(LogCategory.http, 'Failed to fetch cost breakdown: status ${response.statusCode}');
-        throw ServerException(msg.isNotEmpty ? msg : null);
       }
+      final msg = extractServerErrorMessage(response.data);
+      appLogger.error(LogCategory.http, 'Failed to fetch cost breakdown: status ${response.statusCode}');
+      throw ServerException(msg.isNotEmpty ? msg : null);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException in getCostBreakdownByInputType', e);
       throw mapDioException(e);
@@ -126,14 +118,10 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
             .toList();
         appLogger.info(LogCategory.farm, 'Successfully fetched ${summaries.length} monthly summaries');
         return summaries;
-      } else if (response.statusCode == 401 || response.statusCode == 403) {
-        appLogger.warning(LogCategory.auth, 'Authentication required for annual cost summary');
-        throw const ServerException('Authentication required. Please log in again.');
-      } else {
-        final msg = extractServerErrorMessage(response.data);
-        appLogger.error(LogCategory.http, 'Failed to fetch annual cost summary: status ${response.statusCode}');
-        throw ServerException(msg.isNotEmpty ? msg : null);
       }
+      final msg = extractServerErrorMessage(response.data);
+      appLogger.error(LogCategory.http, 'Failed to fetch annual cost summary: status ${response.statusCode}');
+      throw ServerException(msg.isNotEmpty ? msg : null);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException in getAnnualCostSummary', e);
       throw mapDioException(e);

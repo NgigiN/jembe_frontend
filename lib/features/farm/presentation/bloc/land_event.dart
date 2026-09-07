@@ -14,6 +14,12 @@ class GetLandsEvent extends LandEvent {}
 /// `_LandsUpdated` event for how.
 class WatchLandsEvent extends LandEvent {}
 
+/// Flag-OFF (online) only: fetches the NEXT page of lands using the current
+/// `LandLoaded.nextCursor` and APPENDS it. Ignored when the loaded state has
+/// already reached max or a load-more is in flight. The offline
+/// (`watchLands`) path never dispatches this.
+class LoadMoreLandsEvent extends LandEvent {}
+
 class AddLandEvent extends LandEvent {
   AddLandEvent(this.land);
   final Land land;

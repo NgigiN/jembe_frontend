@@ -1,15 +1,11 @@
 import 'dart:async';
 
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_animals.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_animals.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/animal_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -45,23 +41,29 @@ class _AnimalsWatchFailed extends AnimalEvent {
 }
 
 class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
-  AnimalBloc({
-    required this.getAnimals,
-    required this.addAnimal,
-    required this.updateAnimal,
-    required this.deleteAnimal,
-    required this.watchAnimals,
-  }) : super(AnimalInitial()) {
+  AnimalBloc({required this.repository}) : super(AnimalInitial()) {
     on<GetAnimalsEvent>((event, emit) async {
       emit(const AnimalLoading());
-      final result = await getAnimals(NoParams());
+      final result = await repository.getAnimals(limit: kOnlineListPageSize);
       result.fold(
         (failure) => emit(
           AnimalError(resolveFailureMessage(failure, 'Failed to load animals')),
         ),
-        (animals) => emit(AnimalLoaded(animals: animals)),
+        (animals) {
+          // Online (flag off): this was page 1 of a cursor-paged list.
+          // Offline returns the whole local mirror in one shot, so it
+          // always reaches max here and never pages.
+          final online = !OfflineConfig.enabled;
+          emit(AnimalLoaded(
+            animals: animals,
+            hasReachedMax: !online || animals.length < kOnlineListPageSize,
+            nextCursor: online ? _cursorOf(animals) : null,
+          ));
+        },
       );
     });
+
+    on<LoadMoreAnimalsEvent>(_onLoadMoreAnimals);
 
     on<WatchAnimalsEvent>((event, emit) {
       // Synchronous handler, no `await` before the guard: dispatching
@@ -71,7 +73,7 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
       // no-op instead.
       if (_watchStarted) return;
       _watchStarted = true;
-      _animalsSubscription = watchAnimals().listen(
+      _animalsSubscription = repository.watchAnimals().listen(
         (animals) => add(_AnimalsUpdated(animals)),
         onError: (Object error, StackTrace stackTrace) {
           appLogger.logError('AnimalBloc.watchAnimals', error, stackTrace);
@@ -96,7 +98,7 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
 
     on<AddAnimalEvent>((event, emit) async {
       if (OfflineConfig.enabled) {
-        final result = await addAnimal(AddAnimalParams(animal: event.animal));
+        final result = await repository.addAnimal(event.animal);
         result.fold(
           (failure) => emit(
             AnimalError(
@@ -114,7 +116,7 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
       final currentAnimals = state.animals;
 
       emit(AnimalLoading(animals: currentAnimals));
-      final result = await addAnimal(AddAnimalParams(animal: event.animal));
+      final result = await repository.addAnimal(event.animal);
       result.fold(
         (failure) => emit(AnimalError(
           resolveFailureMessage(failure, 'Failed to add animal'),
@@ -129,7 +131,7 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
 
     on<UpdateAnimalEvent>((event, emit) async {
       if (OfflineConfig.enabled) {
-        final result = await updateAnimal(UpdateAnimalParams(animal: event.animal));
+        final result = await repository.updateAnimal(event.animal);
         result.fold(
           (failure) => emit(
             AnimalError(
@@ -147,7 +149,7 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
       final currentAnimals = state.animals;
 
       emit(AnimalLoading(animals: currentAnimals));
-      final result = await updateAnimal(UpdateAnimalParams(animal: event.animal));
+      final result = await repository.updateAnimal(event.animal);
       result.fold(
         (failure) => emit(AnimalError(
           resolveFailureMessage(failure, 'Failed to update animal'),
@@ -164,7 +166,7 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
 
     on<DeleteAnimalEvent>((event, emit) async {
       if (OfflineConfig.enabled) {
-        final result = await deleteAnimal(DeleteAnimalParams(id: event.id));
+        final result = await repository.deleteAnimal(event.id);
         result.fold(
           (failure) => emit(
             AnimalError(
@@ -182,7 +184,7 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
       final currentAnimals = state.animals;
 
       emit(AnimalLoading(animals: currentAnimals));
-      final result = await deleteAnimal(DeleteAnimalParams(id: event.id));
+      final result = await repository.deleteAnimal(event.id);
       result.fold(
         (failure) => emit(AnimalError(
           resolveFailureMessage(failure, 'Failed to delete animal'),
@@ -196,14 +198,68 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
       );
     });
   }
-  final GetAnimals getAnimals;
-  final AddAnimal addAnimal;
-  final UpdateAnimal updateAnimal;
-  final DeleteAnimal deleteAnimal;
-  final WatchAnimals watchAnimals;
+  final AnimalRepository repository;
 
   StreamSubscription<List<Animal>>? _animalsSubscription;
   bool _watchStarted = false;
+
+  /// Concurrency latch for [LoadMoreAnimalsEvent]: guards against a second
+  /// page fetch starting while the first is still in flight.
+  bool _isLoadingMore = false;
+
+  /// Fetches and APPENDS the next online page. No-op when offline, when the
+  /// current loaded page already reached max, when there is no cursor to page
+  /// from, or when a load-more is already running.
+  Future<void> _onLoadMoreAnimals(
+    LoadMoreAnimalsEvent event,
+    Emitter<AnimalState> emit,
+  ) async {
+    if (OfflineConfig.enabled) return;
+    final current = state;
+    if (current is! AnimalLoaded) return;
+    if (current.hasReachedMax ||
+        current.nextCursor == null ||
+        _isLoadingMore) {
+      return;
+    }
+    _isLoadingMore = true;
+    try {
+      final result = await repository.getAnimals(
+        limit: kOnlineListPageSize,
+        cursor: current.nextCursor,
+      );
+      _isLoadingMore = false;
+      result.fold(
+        (failure) {
+          if (state != current) return;
+          emit(AnimalError(
+            resolveFailureMessage(failure, 'Failed to load animals'),
+            animals: current.animals,
+          ));
+        },
+        (more) {
+          // A concurrent Add/Update/Delete/refresh emitted a newer state
+          // while this fetch was in flight: drop this now-stale page rather
+          // than clobbering it — the user's next scroll re-triggers
+          // LoadMore against the fresh state.
+          if (state != current) return;
+          final combined = List<Animal>.from(current.animals)..addAll(more);
+          emit(AnimalLoaded(
+            animals: combined,
+            hasReachedMax: more.length < kOnlineListPageSize,
+            nextCursor: _cursorOf(more),
+          ));
+        },
+      );
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
+
+  /// The next `?cursor=` value — the last (oldest, since the list is
+  /// newest-first) item's server id, or `null` when the page is empty.
+  int? _cursorOf(List<Animal> animals) =>
+      animals.isEmpty ? null : int.tryParse(animals.last.id);
 
   @override
   Future<void> close() async {

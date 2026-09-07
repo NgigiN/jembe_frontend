@@ -1,15 +1,11 @@
 import 'dart:async';
 
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/input.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_input.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_input.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_inputs.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_inputs_params.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_input.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_inputs.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/input_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -46,14 +42,9 @@ class _InputsWatchFailed extends InputEvent {
 }
 
 class InputBloc extends Bloc<InputEvent, InputState> {
-  InputBloc({
-    required this.getInputs,
-    required this.addInput,
-    required this.updateInput,
-    required this.deleteInput,
-    required this.watchInputs,
-  }) : super(InputInitial()) {
+  InputBloc({required this.repository}) : super(InputInitial()) {
     on<GetInputsEvent>(_onGetInputs);
+    on<LoadMoreInputsEvent>(_onLoadMoreInputs);
     on<WatchInputsEvent>(_onWatchInputs);
     on<_InputsUpdated>((event, emit) {
       emit(InputLoaded(inputs: event.inputs));
@@ -66,14 +57,14 @@ class InputBloc extends Bloc<InputEvent, InputState> {
     on<DeleteInputEvent>(_onDeleteInput);
   }
 
-  final GetInputs getInputs;
-  final AddInput addInput;
-  final UpdateInput updateInput;
-  final DeleteInput deleteInput;
-  final WatchInputs watchInputs;
+  final InputRepository repository;
 
   StreamSubscription<List<Input>>? _inputsSubscription;
   bool _watchStarted = false;
+
+  /// Concurrency latch for [LoadMoreInputsEvent]: guards against a second
+  /// page fetch starting while the first is still in flight.
+  bool _isLoadingMore = false;
 
   Future<void> _onGetInputs(
     GetInputsEvent event,
@@ -82,8 +73,9 @@ class InputBloc extends Bloc<InputEvent, InputState> {
     appLogger.debug(LogCategory.farm, 'GetInputsEvent triggered');
     emit(const InputLoading());
 
-    final result = await getInputs(
-      GetInputsParams(sourceType: event.sourceType),
+    final result = await repository.getInputs(
+      sourceType: event.sourceType,
+      limit: kOnlineListPageSize,
     );
     result.fold(
       (failure) {
@@ -92,10 +84,73 @@ class InputBloc extends Bloc<InputEvent, InputState> {
       },
       (inputs) {
         appLogger.info(LogCategory.farm, 'Loaded ${inputs.length} inputs');
-        emit(InputLoaded(inputs: inputs));
+        // Online (flag off): this was page 1 of a cursor-paged list. Offline
+        // returns the whole local mirror in one shot, so it always reaches
+        // max here and never pages.
+        final online = !OfflineConfig.enabled;
+        emit(InputLoaded(
+          inputs: inputs,
+          hasReachedMax: !online || inputs.length < kOnlineListPageSize,
+          nextCursor: online ? _cursorOf(inputs) : null,
+        ));
       },
     );
   }
+
+  /// Fetches and APPENDS the next online page. No-op when offline, when the
+  /// current loaded page already reached max, when there is no cursor to page
+  /// from, or when a load-more is already running.
+  Future<void> _onLoadMoreInputs(
+    LoadMoreInputsEvent event,
+    Emitter<InputState> emit,
+  ) async {
+    if (OfflineConfig.enabled) return;
+    final current = state;
+    if (current is! InputLoaded) return;
+    if (current.hasReachedMax ||
+        current.nextCursor == null ||
+        _isLoadingMore) {
+      return;
+    }
+    _isLoadingMore = true;
+    try {
+      final result = await repository.getInputs(
+        sourceType: event.sourceType,
+        limit: kOnlineListPageSize,
+        cursor: current.nextCursor,
+      );
+      _isLoadingMore = false;
+      result.fold(
+        (failure) {
+          if (state != current) return;
+          emit(InputError(
+            resolveFailureMessage(failure, 'Failed to load inputs'),
+            inputs: current.inputs,
+          ));
+        },
+        (more) {
+          // A concurrent Add/Update/Delete/refresh emitted a newer state
+          // while this fetch was in flight: drop this now-stale page rather
+          // than clobbering it — the user's next scroll re-triggers
+          // LoadMore against the fresh state.
+          if (state != current) return;
+          final combined = List<Input>.from(current.inputs)..addAll(more);
+          emit(InputLoaded(
+            inputs: combined,
+            hasReachedMax: more.length < kOnlineListPageSize,
+            nextCursor: _cursorOf(more),
+          ));
+        },
+      );
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
+
+  /// The next `?cursor=` value — the last (oldest, since the list is
+  /// newest-first) item's server id, or `null` when the page is empty.
+  int? _cursorOf(List<Input> inputs) =>
+      inputs.isEmpty ? null : int.tryParse(inputs.last.id);
 
   // Synchronous handler, no `await` before the guard: dispatching
   // WatchInputsEvent twice in quick succession (e.g. initState +
@@ -108,7 +163,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
   ) {
     if (_watchStarted) return;
     _watchStarted = true;
-    _inputsSubscription = watchInputs(sourceType: event.sourceType).listen(
+    _inputsSubscription = repository.watchInputs(sourceType: event.sourceType).listen(
       (inputs) => add(_InputsUpdated(inputs)),
       onError: (Object error, StackTrace stackTrace) {
         appLogger.logError('InputBloc.watchInputs', error, stackTrace);
@@ -128,7 +183,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
     Emitter<InputState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await addInput(AddInputParams(input: event.input));
+      final result = await repository.addInput(event.input);
       result.fold(
         (failure) => emit(InputError(
           resolveFailureMessage(failure, 'Failed to add input'),
@@ -143,7 +198,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
 
     final currentInputs = state.inputs;
     emit(InputLoading(inputs: currentInputs));
-    final result = await addInput(AddInputParams(input: event.input));
+    final result = await repository.addInput(event.input);
     result.fold(
       (failure) => emit(InputError(
         resolveFailureMessage(failure, 'Failed to add input'),
@@ -161,7 +216,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
     Emitter<InputState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await updateInput(UpdateInputParams(input: event.input));
+      final result = await repository.updateInput(event.input);
       result.fold(
         (failure) => emit(InputError(
           resolveFailureMessage(failure, 'Failed to update input'),
@@ -176,7 +231,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
 
     final currentInputs = state.inputs;
     emit(InputLoading(inputs: currentInputs));
-    final result = await updateInput(UpdateInputParams(input: event.input));
+    final result = await repository.updateInput(event.input);
     result.fold(
       (failure) => emit(InputError(
         resolveFailureMessage(failure, 'Failed to update input'),
@@ -196,7 +251,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
     Emitter<InputState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await deleteInput(DeleteInputParams(id: event.id));
+      final result = await repository.deleteInput(event.id);
       result.fold(
         (failure) => emit(InputError(
           resolveFailureMessage(failure, 'Failed to delete input'),
@@ -211,7 +266,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
 
     final currentInputs = state.inputs;
     emit(InputLoading(inputs: currentInputs));
-    final result = await deleteInput(DeleteInputParams(id: event.id));
+    final result = await repository.deleteInput(event.id);
     result.fold(
       (failure) => emit(InputError(
         resolveFailureMessage(failure, 'Failed to delete input'),

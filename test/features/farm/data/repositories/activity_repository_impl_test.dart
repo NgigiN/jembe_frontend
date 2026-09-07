@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:drift/native.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
@@ -18,19 +20,28 @@ class FakeActivityRemoteDataSource implements ActivityRemoteDataSource {
   ActivityModel? lastAdded;
   ActivityModel? lastUpdated;
   String? lastGetSourceType;
+  int? lastGetCursor;
+  List<ActivityModel> getResult = [];
   final List<String> deleteCalls = [];
+  Exception? throwOnGet;
+  Exception? throwOnAdd;
 
   @override
   Future<List<ActivityModel>> getActivities({
     String? sourceType,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async {
+    if (throwOnGet != null) throw throwOnGet!;
     lastGetSourceType = sourceType;
-    return [];
+    lastGetCursor = cursor;
+    return getResult;
   }
 
   @override
   Future<ActivityModel> addActivity(ActivityModel activity) async {
+    if (throwOnAdd != null) throw throwOnAdd!;
     lastAdded = activity;
     return activity;
   }
@@ -187,6 +198,21 @@ void main() {
     );
 
     test(
+      'getActivities threads the pagination cursor to the data source on the '
+      'online path (P3-02a)',
+      () async {
+        final dataSource = FakeActivityRemoteDataSource();
+        final repository = ActivityRepositoryImpl(
+          remoteDataSource: dataSource,
+        );
+
+        await repository.getActivities(cursor: 501);
+
+        expect(dataSource.lastGetCursor, 501);
+      },
+    );
+
+    test(
       'watchActivities does not crash and mirrors a single getActivities '
       'snapshot',
       () async {
@@ -200,6 +226,112 @@ void main() {
         expect(emission, isEmpty);
       },
     );
+  });
+
+  group('flag OFF error mapping (R2-02 net)', () {
+    test('getActivities: a NetworkException maps to NetworkFailure', () async {
+      final dataSource = FakeActivityRemoteDataSource()
+        ..throwOnGet = NetworkException();
+      final repository = ActivityRepositoryImpl(remoteDataSource: dataSource);
+
+      final result = await repository.getActivities();
+
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'getActivities: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeActivityRemoteDataSource()
+          ..throwOnGet = const ServerException('boom');
+        final repository = ActivityRepositoryImpl(remoteDataSource: dataSource);
+
+        final result = await repository.getActivities();
+
+        result.fold(
+          (failure) => expect((failure as ServerFailure).message, 'boom'),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('addActivity: a NetworkException maps to NetworkFailure', () async {
+      final dataSource = FakeActivityRemoteDataSource()
+        ..throwOnAdd = NetworkException();
+      final repository = ActivityRepositoryImpl(remoteDataSource: dataSource);
+      final now = DateTime.now();
+
+      final result = await repository.addActivity(
+        Activity(
+          id: '',
+          sourceType: 'plant',
+          sourceId: 'season-1',
+          type: 'Weeding',
+          cost: 100,
+          date: now,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'addActivity: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeActivityRemoteDataSource()
+          ..throwOnAdd = const ServerException('cost is required');
+        final repository = ActivityRepositoryImpl(remoteDataSource: dataSource);
+        final now = DateTime.now();
+
+        final result = await repository.addActivity(
+          Activity(
+            id: '',
+            sourceType: 'plant',
+            sourceId: 'season-1',
+            type: 'Weeding',
+            cost: 100,
+            date: now,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+
+        result.fold(
+          (failure) =>
+              expect((failure as ServerFailure).message, 'cost is required'),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('a successful addActivity maps to Right', () async {
+      final dataSource = FakeActivityRemoteDataSource();
+      final repository = ActivityRepositoryImpl(remoteDataSource: dataSource);
+      final now = DateTime.now();
+
+      final result = await repository.addActivity(
+        Activity(
+          id: '',
+          sourceType: 'plant',
+          sourceId: 'season-1',
+          type: 'Weeding',
+          cost: 100,
+          date: now,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      expect(result.isRight(), isTrue);
+    });
   });
 
   group('flag ON (local-first + outbox)', () {
