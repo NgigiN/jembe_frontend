@@ -24,6 +24,9 @@ String resolveFailureMessage(Failure failure, String fallback) {
   if (failure is NetworkFailure) {
     return 'No internet connection. Check your network and try again.';
   }
+  if (failure is UnauthorizedFailure) {
+    return failure.message;
+  }
   if (failure is ServerFailure && failure.errorMessage != null) {
     return failure.errorMessage!;
   }
