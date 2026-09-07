@@ -6,7 +6,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_linux
   dynamic_color
   flutter_secure_storage_linux
-  sqlcipher_flutter_libs
   url_launcher_linux
 )
 
