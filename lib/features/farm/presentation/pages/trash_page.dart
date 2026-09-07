@@ -78,7 +78,13 @@ class _TrashPageState extends State<TrashPage> {
           }
         },
         builder: (context, state) {
-          if (state is TrashLoading && state.items.isEmpty) {
+          final isLoading = state is TrashLoading;
+
+          // The skeleton only makes sense when there's nothing to show yet
+          // (first load). Once we have items — from a prior TrashLoaded, or
+          // carried through a refresh/error — keep rendering them instead
+          // of blanking the screen.
+          if (isLoading && state.items.isEmpty) {
             return const SkeletonEntityList(icon: Icons.delete_outline);
           }
 
@@ -92,11 +98,9 @@ class _TrashPageState extends State<TrashPage> {
             );
           }
 
-          final grouped = state is TrashLoaded
-              ? state.groupedByEntity
-              : <String, List<TrashItem>>{};
+          final grouped = state.groupedByEntity;
 
-          if (grouped.isEmpty) {
+          if (grouped.isEmpty && !isLoading) {
             return _scrollableCenter(
               const EntityEmptyView(
                 icon: Icons.delete_outline,

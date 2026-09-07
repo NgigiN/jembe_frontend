@@ -185,4 +185,70 @@ void main() {
       expect(find.text('Try Again'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'pull-to-refresh keeps the list visible without an empty-state flash',
+    (tester) async {
+      whenListen(
+        trashBloc,
+        Stream.fromIterable([
+          const TrashLoading(items: [_land, _season]),
+          const TrashLoaded(items: [_land, _season]),
+        ]),
+        initialState: const TrashLoaded(items: [_land, _season]),
+      );
+
+      await tester.pumpWidget(wrap());
+      await tester.pump();
+
+      // Loaded: list visible.
+      expect(find.text('North Field'), findsOneWidget);
+      expect(find.text('Long Rains'), findsOneWidget);
+      expect(find.text('Nothing in the trash'), findsNothing);
+
+      // TrashLoading(items: [...]) — a refresh in flight. The list must
+      // stay put; it must NOT fall back to the empty state.
+      await tester.pump();
+      expect(find.text('Nothing in the trash'), findsNothing);
+      expect(find.text('North Field'), findsOneWidget);
+      expect(find.text('Long Rains'), findsOneWidget);
+
+      // Refresh completes: still visible.
+      await tester.pumpAndSettle();
+      expect(find.text('Nothing in the trash'), findsNothing);
+      expect(find.text('North Field'), findsOneWidget);
+      expect(find.text('Long Rains'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'a non-409 restore failure keeps the list visible and shows the error',
+    (tester) async {
+      whenListen(
+        trashBloc,
+        Stream.fromIterable([
+          const TrashError('Failed to restore item', items: [_land, _season]),
+        ]),
+        initialState: const TrashLoaded(items: [_land, _season]),
+      );
+
+      await tester.pumpWidget(wrap());
+      await tester.pump();
+      await tester.pump();
+
+      // The error is surfaced (via the existing snackbar)...
+      expect(find.text('Failed to restore item'), findsOneWidget);
+      // ...but the list is NOT wiped: both items (and the empty view) stay
+      // exactly as they were.
+      expect(find.text('Nothing in the trash'), findsNothing);
+      expect(find.text('North Field'), findsOneWidget);
+      expect(find.text('Long Rains'), findsOneWidget);
+      // RefreshIndicator stays reachable for another attempt.
+      expect(find.byType(RefreshIndicator), findsOneWidget);
+
+      // Drain the SnackBar's display/dismiss timer so no timer is left
+      // pending when the test ends.
+      await tester.pumpAndSettle();
+    },
+  );
 }

@@ -5,6 +5,21 @@ abstract class TrashState extends Equatable {
   const TrashState({this.items = const []});
   final List<TrashItem> items;
 
+  /// [items], grouped by [TrashItem.entity] and re-keyed in
+  /// `trashEntities` order (`trash_item_model.dart`) — the section order
+  /// `TrashPage` renders. An entity with no tombstones is simply absent
+  /// (not an empty list) so the page can skip its header. Available on
+  /// every [TrashState] (not just [TrashLoaded]) so the page can keep
+  /// rendering the last-known list while loading or after a non-fatal
+  /// error.
+  Map<String, List<TrashItem>> get groupedByEntity {
+    final grouped = <String, List<TrashItem>>{};
+    for (final item in items) {
+      (grouped[item.entity] ??= []).add(item);
+    }
+    return grouped;
+  }
+
   @override
   List<Object?> get props => [items];
 }
@@ -35,18 +50,6 @@ class TrashLoaded extends TrashState {
   /// "couldn't restore" message. [items] is unchanged: the item stays in
   /// the trash list rather than being removed, since it was NOT restored.
   final String? conflictMessage;
-
-  /// [items], grouped by [TrashItem.entity] and re-keyed in
-  /// `trashEntities` order (`trash_item_model.dart`) — the section order
-  /// `TrashPage` renders. An entity with no tombstones is simply absent
-  /// (not an empty list) so the page can skip its header.
-  Map<String, List<TrashItem>> get groupedByEntity {
-    final grouped = <String, List<TrashItem>>{};
-    for (final item in items) {
-      (grouped[item.entity] ??= []).add(item);
-    }
-    return grouped;
-  }
 
   @override
   List<Object?> get props => [items, successMessage, conflictMessage];
