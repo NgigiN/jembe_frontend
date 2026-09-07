@@ -14,8 +14,6 @@ class ServerException extends Exceptions {
   List<Object?> get props => [message];
 }
 
-class CacheException extends Exceptions {}
-
 class NetworkException extends Exceptions {}
 
 /// Thrown by a syncer's push when a child record's FK still points at a

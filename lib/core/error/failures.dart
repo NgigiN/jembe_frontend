@@ -16,10 +16,6 @@ class NetworkFailure extends Failure {
   const NetworkFailure() : super('No internet connection');
 }
 
-class InvalidInputFailure extends Failure {
-  const InvalidInputFailure() : super('Invalid input provided');
-}
-
 class UnauthorizedFailure extends Failure {
   const UnauthorizedFailure() : super('Unauthorized access. Please log in again.');
 }
