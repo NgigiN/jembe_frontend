@@ -54,6 +54,7 @@ import 'package:farm_tracker/features/farm/data/datasources/revenue_local_data_s
 import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/season_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/season_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/trash_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/repositories/activity_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/analysis_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/animal_repository_impl.dart';
@@ -69,6 +70,7 @@ import 'package:farm_tracker/features/farm/data/repositories/land_repository_imp
 import 'package:farm_tracker/features/farm/data/repositories/plant_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/revenue_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/season_repository_impl.dart';
+import 'package:farm_tracker/features/farm/data/repositories/trash_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/sync/activity_syncer.dart';
 import 'package:farm_tracker/features/farm/data/sync/animal_syncer.dart';
 import 'package:farm_tracker/features/farm/data/sync/animal_type_syncer.dart';
@@ -97,6 +99,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/land_repository.d
 import 'package:farm_tracker/features/farm/domain/repositories/plant_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/revenue_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/season_repository.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/trash_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_bloc.dart';
@@ -112,6 +115,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/trash_bloc.dart';
 import 'package:farm_tracker/features/profile/data/datasources/profile_remote_data_source.dart';
 import 'package:farm_tracker/features/profile/data/repositories/profile_repository_impl.dart';
 import 'package:farm_tracker/features/profile/domain/repositories/profile_repository.dart';
@@ -173,6 +177,7 @@ Future<void> init({AppDatabase? database}) async {
     ..registerFactory(() => DashboardBloc(repository: sl()))
     ..registerFactory(() => RevenueBloc(repository: sl()))
     ..registerFactory(() => CostCategoryBloc(repository: sl()))
+    ..registerFactory(() => TrashBloc(repository: sl()))
     ..registerFactory(
       () => ProfileBloc(
         getProfile: sl(),
@@ -308,6 +313,9 @@ Future<void> init({AppDatabase? database}) async {
     ..registerLazySingleton<ProfileRepository>(
       () => ProfileRepositoryImpl(remoteDataSource: sl()),
     )
+    ..registerLazySingleton<TrashRepository>(
+      () => TrashRepositoryImpl(remoteDataSource: sl()),
+    )
     ..registerLazySingleton<ContentRepository>(
       () => ContentRepositoryImpl(localDataSource: sl()),
     )
@@ -365,6 +373,9 @@ Future<void> init({AppDatabase? database}) async {
     )
     ..registerLazySingleton<ProfileRemoteDataSource>(
       () => ProfileRemoteDataSourceImpl(dio: sl()),
+    )
+    ..registerLazySingleton<TrashRemoteDataSource>(
+      () => TrashRemoteDataSourceImpl(dio: sl()),
     )
     ..registerLazySingleton<ContentLocalDataSource>(
       ContentLocalDataSourceImpl.new,
