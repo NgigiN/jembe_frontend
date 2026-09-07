@@ -28,6 +28,8 @@ class FakeHarvestRemoteDataSource implements HarvestRemoteDataSource {
   Future<List<HarvestModel>> getHarvests({
     String? seasonId,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async {
     if (throwOnGet != null) throw throwOnGet!;
     lastGetSeasonId = seasonId;

@@ -212,6 +212,8 @@ class _FakeHarvestRemoteDataSource implements HarvestRemoteDataSource {
   Future<List<HarvestModel>> getHarvests({
     String? seasonId,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async => allRows;
 }
 
@@ -435,6 +437,8 @@ class _FakeInputRemoteDataSource implements InputRemoteDataSource {
   Future<List<InputModel>> getInputs({
     String? sourceType,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async => allRows;
 }
 

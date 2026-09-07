@@ -34,6 +34,21 @@ class WatchRevenuesEvent extends RevenueEvent {
 }
 
 
+/// Flag-OFF (online) only: fetches the NEXT page of revenues using the
+/// current `RevenueLoaded.nextCursor` and APPENDS it, re-applying the same
+/// [source]/[startDate]/[endDate] filter the current page was loaded with.
+/// Ignored when the loaded state has already reached max or a load-more is in
+/// flight. The offline (`watchRevenues`) path never dispatches this.
+class LoadMoreRevenuesEvent extends RevenueEvent {
+  LoadMoreRevenuesEvent({this.source, this.startDate, this.endDate});
+  final String? source;
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  @override
+  List<Object?> get props => [source, startDate, endDate];
+}
+
 class AddRevenueEvent extends RevenueEvent {
 
   AddRevenueEvent({
@@ -112,5 +127,3 @@ class DeleteRevenueEvent extends RevenueEvent {
   @override
   List<Object?> get props => [id];
 }
-
-

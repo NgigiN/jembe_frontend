@@ -20,6 +20,8 @@ class FakeActivityRemoteDataSource implements ActivityRemoteDataSource {
   ActivityModel? lastAdded;
   ActivityModel? lastUpdated;
   String? lastGetSourceType;
+  int? lastGetCursor;
+  List<ActivityModel> getResult = [];
   final List<String> deleteCalls = [];
   Exception? throwOnGet;
   Exception? throwOnAdd;
@@ -28,10 +30,13 @@ class FakeActivityRemoteDataSource implements ActivityRemoteDataSource {
   Future<List<ActivityModel>> getActivities({
     String? sourceType,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async {
     if (throwOnGet != null) throw throwOnGet!;
     lastGetSourceType = sourceType;
-    return [];
+    lastGetCursor = cursor;
+    return getResult;
   }
 
   @override
@@ -189,6 +194,21 @@ void main() {
         await repository.getActivities(sourceType: 'animal');
 
         expect(dataSource.lastGetSourceType, 'animal');
+      },
+    );
+
+    test(
+      'getActivities threads the pagination cursor to the data source on the '
+      'online path (P3-02a)',
+      () async {
+        final dataSource = FakeActivityRemoteDataSource();
+        final repository = ActivityRepositoryImpl(
+          remoteDataSource: dataSource,
+        );
+
+        await repository.getActivities(cursor: 501);
+
+        expect(dataSource.lastGetCursor, 501);
       },
     );
 

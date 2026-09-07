@@ -120,12 +120,22 @@ class HarvestRepositoryImpl
   @override
   Future<Either<Failure, List<Harvest>>> getHarvests({
     String? seasonId,
+    int? limit,
+    int? cursor,
   }) async {
     if (_offlineFirst) {
+      // Offline mirror shows the whole local store — pagination
+      // ([limit]/[cursor]) is an online-only concern and is ignored here.
       final models = await local!.watchHarvests(seasonId: seasonId).first;
       return Right(models.map(_toHarvest).toList());
     }
-    return guard(() => remoteDataSource.getHarvests(seasonId: seasonId));
+    return guard(
+      () => remoteDataSource.getHarvests(
+        seasonId: seasonId,
+        limit: limit,
+        cursor: cursor,
+      ),
+    );
   }
 
   @override

@@ -3,7 +3,14 @@ import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/features/farm/domain/entities/harvest.dart';
 
 abstract class HarvestRepository {
-  Future<Either<Failure, List<Harvest>>> getHarvests({String? seasonId});
+  /// [limit]/[cursor] drive the online infinite-scroll list path (P3-02a):
+  /// they are threaded through only when the offline flag is off. The offline
+  /// (`watchHarvests`) path ignores them — it mirrors the whole local store.
+  Future<Either<Failure, List<Harvest>>> getHarvests({
+    String? seasonId,
+    int? limit,
+    int? cursor,
+  });
 
   /// Reactive stream of harvests, optionally scoped to [seasonId] (mirrors
   /// the existing `getHarvests(seasonId:)` app-level filter).

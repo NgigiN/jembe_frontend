@@ -3,10 +3,15 @@ import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
 
 abstract class RevenueRepository {
+  /// [limit]/[cursor] drive the online infinite-scroll list path (P3-02a):
+  /// they are threaded through only when the offline flag is off. The offline
+  /// (`watchRevenues`) path ignores them — it mirrors the whole local store.
   Future<Either<Failure, List<Revenue>>> getRevenues({
     String? source,
     DateTime? startDate,
     DateTime? endDate,
+    int? limit,
+    int? cursor,
   });
 
   /// Reactive stream of ALL revenues, UNFILTERED (no `source`/date scoping

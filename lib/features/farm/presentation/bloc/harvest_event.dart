@@ -27,6 +27,18 @@ class WatchHarvestsEvent extends HarvestEvent {
   List<Object> get props => [seasonId ?? ''];
 }
 
+/// Flag-OFF (online) only: fetches the NEXT page of harvests using the
+/// current `HarvestLoaded.nextCursor` and APPENDS it. Ignored when the loaded
+/// state has already reached max or a load-more is in flight. The offline
+/// (`watchHarvests`) path never dispatches this.
+class LoadMoreHarvestsEvent extends HarvestEvent {
+  LoadMoreHarvestsEvent({this.seasonId});
+  final String? seasonId;
+
+  @override
+  List<Object> get props => [seasonId ?? ''];
+}
+
 class AddHarvestEvent extends HarvestEvent {
   AddHarvestEvent(this.harvest);
   final Harvest harvest;

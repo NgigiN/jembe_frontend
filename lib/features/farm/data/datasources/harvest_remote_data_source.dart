@@ -10,9 +10,16 @@ abstract class HarvestRemoteDataSource {
   /// is given — only those the server has changed strictly after that
   /// instant (used by the sync pull phase, which passes ONLY [updatedSince],
   /// never [seasonId]). Existing callers are unaffected.
+  ///
+  /// [limit] caps the page size (server default & max is 500) and [cursor]
+  /// pages backward through the newest-first list — the server returns rows
+  /// with `id < cursor`. Both are used ONLY by the online infinite-scroll
+  /// list path (P3-02a); the sync pull passes neither.
   Future<List<HarvestModel>> getHarvests({
     String? seasonId,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   });
   Future<HarvestModel> addHarvest(HarvestModel harvest);
   Future<HarvestModel> updateHarvest(HarvestModel harvest);
@@ -27,12 +34,16 @@ class HarvestRemoteDataSourceImpl implements HarvestRemoteDataSource {
   Future<List<HarvestModel>> getHarvests({
     String? seasonId,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async {
     try {
       final queryParams = <String, dynamic>{
         if (seasonId != null && seasonId.isNotEmpty) 'season_id': seasonId,
         if (updatedSince != null)
           'updated_since': updatedSince.toUtc().toIso8601String(),
+        if (limit != null) 'limit': limit,
+        if (cursor != null) 'cursor': cursor,
       };
 
       final response = await dio.get<dynamic>(

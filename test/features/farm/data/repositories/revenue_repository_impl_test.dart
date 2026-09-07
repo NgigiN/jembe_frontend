@@ -29,6 +29,8 @@ class FakeRevenueRemoteDataSource implements RevenueRemoteDataSource {
     DateTime? startDate,
     DateTime? endDate,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async {
     if (throwOnGet != null) throw throwOnGet!;
     return getRevenuesResult;

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
@@ -52,6 +53,7 @@ void main() {
         when(
           () => mockRepository.getActivities(
             sourceType: any(named: 'sourceType'),
+            limit: any(named: 'limit'),
           ),
         ).thenAnswer((_) async => Right([activity()]));
         return buildBloc();
@@ -64,7 +66,7 @@ void main() {
     );
 
     blocTest<ActivityBloc, ActivityState>(
-      "AddActivityEvent success appends the returned activity and sets "
+      'AddActivityEvent success appends the returned activity and sets '
       "successMessage 'Activity recorded'",
       build: () {
         when(
@@ -295,5 +297,196 @@ void main() {
       wait: const Duration(milliseconds: 50),
       expect: () => <ActivityState>[],
     );
+  });
+
+  group('online infinite scroll (P3-02a, flag off)', () {
+    blocTest<ActivityBloc, ActivityState>(
+      'GetActivitiesEvent under a full page sets hasReachedMax true and '
+      'derives nextCursor from the last id',
+      build: () {
+        when(
+          () => mockRepository.getActivities(
+            sourceType: any(named: 'sourceType'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (_) async => Right([activity(id: '3'), activity(id: '2')]),
+        );
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(GetActivitiesEvent()),
+      expect: () => [
+        const ActivityLoading(),
+        ActivityLoaded(
+          activities: [activity(id: '3'), activity(id: '2')],
+          nextCursor: 2,
+        ),
+      ],
+    );
+
+    blocTest<ActivityBloc, ActivityState>(
+      'LoadMoreActivitiesEvent is a no-op when hasReachedMax (a ≤500-row '
+      'account never issues a second fetch)',
+      build: buildBloc,
+      seed: () => ActivityLoaded(
+        activities: [activity(id: '2')],
+        nextCursor: 2,
+      ),
+      act: (bloc) => bloc.add(LoadMoreActivitiesEvent()),
+      wait: const Duration(milliseconds: 50),
+      expect: () => <ActivityState>[],
+      verify: (_) {
+        verifyNever(
+          () => mockRepository.getActivities(
+            sourceType: any(named: 'sourceType'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        );
+      },
+    );
+
+    blocTest<ActivityBloc, ActivityState>(
+      'a full first page sets hasReachedMax false; LoadMore fetches with the '
+      'cursor, APPENDS the next page and recomputes hasReachedMax/nextCursor',
+      build: () {
+        final page1 = List.generate(
+          kOnlineListPageSize,
+          (i) => activity(id: '${1000 - i}'),
+        );
+        final page2 = [activity(id: '500'), activity(id: '499')];
+        when(
+          () => mockRepository.getActivities(
+            sourceType: any(named: 'sourceType'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((invocation) async {
+          final cursor = invocation.namedArguments[#cursor] as int?;
+          return Right(cursor == null ? page1 : page2);
+        });
+        return buildBloc();
+      },
+      act: (bloc) async {
+        bloc.add(GetActivitiesEvent());
+        await bloc.stream.firstWhere((s) => s is ActivityLoaded);
+        bloc.add(LoadMoreActivitiesEvent());
+      },
+      wait: const Duration(milliseconds: 100),
+      expect: () => [
+        const ActivityLoading(),
+        isA<ActivityLoaded>()
+            .having((s) => s.activities.length, 'page 1 length',
+                kOnlineListPageSize)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', false)
+            .having((s) => s.nextCursor, 'nextCursor', 501),
+        isA<ActivityLoaded>()
+            .having((s) => s.activities.length, 'appended length',
+                kOnlineListPageSize + 2)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', true)
+            .having((s) => s.nextCursor, 'nextCursor', 499),
+      ],
+      verify: (_) {
+        verify(
+          () => mockRepository.getActivities(
+            sourceType: any(named: 'sourceType'),
+            limit: any(named: 'limit'),
+            cursor: 501,
+          ),
+        ).called(1);
+      },
+    );
+
+    group('F2: stale LoadMore result is dropped, not clobbered', () {
+      late Completer<Either<Failure, List<Activity>>> loadMoreCompleter;
+
+      blocTest<ActivityBloc, ActivityState>(
+        'a concurrent Add lands while LoadMore is in flight; when the '
+        'LoadMore fetch later resolves its page is silently dropped '
+        'instead of clobbering the newer (Add-driven) state',
+        build: () {
+          loadMoreCompleter = Completer<Either<Failure, List<Activity>>>();
+          when(
+            () => mockRepository.getActivities(
+              sourceType: any(named: 'sourceType'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer((_) => loadMoreCompleter.future);
+          when(
+            () => mockRepository.addActivity(any()),
+          ).thenAnswer((_) async => Right(activity(id: 'activity-new')));
+          return buildBloc();
+        },
+        seed: () => ActivityLoaded(
+          activities: [activity(id: '2')],
+          hasReachedMax: false,
+          nextCursor: 2,
+        ),
+        act: (bloc) async {
+          bloc.add(LoadMoreActivitiesEvent());
+          // Let LoadMore's handler start and begin awaiting the
+          // (still-uncompleted) fetch.
+          await Future<void>.delayed(Duration.zero);
+          // A concurrent Add is dispatched and resolves entirely while
+          // LoadMore is still in flight — this is the newer state LoadMore
+          // must not clobber.
+          bloc.add(AddActivityEvent(activity(id: 'activity-new')));
+          await Future<void>.delayed(Duration.zero);
+          // Now the stale LoadMore fetch resolves. Its page (id '1') must
+          // NOT appear in any emitted state.
+          loadMoreCompleter.complete(Right([activity(id: '1')]));
+        },
+        wait: const Duration(milliseconds: 100),
+        expect: () => [
+          isA<ActivityLoading>(),
+          ActivityLoaded(
+            activities: [activity(id: '2'), activity(id: 'activity-new')],
+            successMessage: 'Activity recorded',
+          ),
+        ],
+      );
+
+      blocTest<ActivityBloc, ActivityState>(
+        'a concurrent Add lands while LoadMore is in flight; when the '
+        'LoadMore fetch later FAILS, no error is emitted over the newer '
+        '(Add-driven) state',
+        build: () {
+          loadMoreCompleter = Completer<Either<Failure, List<Activity>>>();
+          when(
+            () => mockRepository.getActivities(
+              sourceType: any(named: 'sourceType'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer((_) => loadMoreCompleter.future);
+          when(
+            () => mockRepository.addActivity(any()),
+          ).thenAnswer((_) async => Right(activity(id: 'activity-new')));
+          return buildBloc();
+        },
+        seed: () => ActivityLoaded(
+          activities: [activity(id: '2')],
+          hasReachedMax: false,
+          nextCursor: 2,
+        ),
+        act: (bloc) async {
+          bloc.add(LoadMoreActivitiesEvent());
+          await Future<void>.delayed(Duration.zero);
+          bloc.add(AddActivityEvent(activity(id: 'activity-new')));
+          await Future<void>.delayed(Duration.zero);
+          loadMoreCompleter.complete(const Left(ServerFailure('boom')));
+        },
+        wait: const Duration(milliseconds: 100),
+        expect: () => [
+          isA<ActivityLoading>(),
+          ActivityLoaded(
+            activities: [activity(id: '2'), activity(id: 'activity-new')],
+            successMessage: 'Activity recorded',
+          ),
+        ],
+      );
+    });
   });
 }

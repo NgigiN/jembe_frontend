@@ -127,6 +127,42 @@ void main() {
       expect(adapter.lastOptions!.uri.queryParameters['source_type'], 'plant');
     });
 
+    test('sends limit and cursor as query params when given (P3-02a)',
+        () async {
+      final adapter = _FakeAdapter(body: '[]');
+      final source = InputRemoteDataSourceImpl(dio: _dioWith(adapter));
+
+      await source.getInputs(limit: 500, cursor: 42);
+
+      final params = adapter.lastOptions!.uri.queryParameters;
+      expect(params['limit'], '500');
+      expect(params['cursor'], '42');
+    });
+
+    test(
+        'the initial fetch sends limit=500 but omits cursor '
+        '(P3-02a, F3)', () async {
+      final adapter = _FakeAdapter(body: '[]');
+      final source = InputRemoteDataSourceImpl(dio: _dioWith(adapter));
+
+      await source.getInputs(limit: 500);
+
+      final params = adapter.lastOptions!.uri.queryParameters;
+      expect(params['limit'], '500');
+      expect(params.containsKey('cursor'), isFalse);
+    });
+
+    test('omits limit/cursor when neither is given', () async {
+      final adapter = _FakeAdapter(body: '[]');
+      final source = InputRemoteDataSourceImpl(dio: _dioWith(adapter));
+
+      await source.getInputs();
+
+      final params = adapter.lastOptions!.uri.queryParameters;
+      expect(params.containsKey('limit'), isFalse);
+      expect(params.containsKey('cursor'), isFalse);
+    });
+
     test('a null response body (missing List) parses as an empty list', () async {
       final adapter = _FakeAdapter(body: 'null');
       final source = InputRemoteDataSourceImpl(dio: _dioWith(adapter));
