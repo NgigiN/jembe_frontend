@@ -35,6 +35,7 @@ import 'package:farm_tracker/features/farm/data/datasources/animal_type_local_da
 import 'package:farm_tracker/features/farm/data/datasources/animal_type_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/cost_category_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/cost_category_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/dashboard_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/harvest_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/harvest_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_activity_local_data_source.dart';
@@ -58,6 +59,7 @@ import 'package:farm_tracker/features/farm/data/repositories/analysis_repository
 import 'package:farm_tracker/features/farm/data/repositories/animal_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/animal_type_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/cost_category_repository_impl.dart';
+import 'package:farm_tracker/features/farm/data/repositories/dashboard_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/harvest_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/herd_activity_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/herd_repository_impl.dart';
@@ -85,6 +87,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/analysis_reposito
 import 'package:farm_tracker/features/farm/domain/repositories/animal_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/animal_type_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/cost_category_repository.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/dashboard_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/harvest_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/herd_activity_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/herd_repository.dart';
@@ -99,6 +102,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart'
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/dashboard_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
@@ -166,6 +170,7 @@ Future<void> init({AppDatabase? database}) async {
     ..registerFactory(() => HerdActivityBloc(repository: sl()))
     ..registerFactory(() => InfrastructureBloc(repository: sl()))
     ..registerFactory(() => AnalysisBloc(repository: sl()))
+    ..registerFactory(() => DashboardBloc(repository: sl()))
     ..registerFactory(() => RevenueBloc(repository: sl()))
     ..registerFactory(() => CostCategoryBloc(repository: sl()))
     ..registerFactory(
@@ -281,6 +286,9 @@ Future<void> init({AppDatabase? database}) async {
     ..registerLazySingleton<AnalysisRepository>(
       () => AnalysisRepositoryImpl(remoteDataSource: sl()),
     )
+    ..registerLazySingleton<DashboardRepository>(
+      () => DashboardRepositoryImpl(remoteDataSource: sl()),
+    )
     ..registerLazySingleton<RevenueRepository>(
       () => RevenueRepositoryImpl(
         remoteDataSource: sl(),
@@ -345,6 +353,9 @@ Future<void> init({AppDatabase? database}) async {
     )
     ..registerLazySingleton<AnalysisRemoteDataSource>(
       () => AnalysisRemoteDataSourceImpl(dio: sl()),
+    )
+    ..registerLazySingleton<DashboardRemoteDataSource>(
+      () => DashboardRemoteDataSourceImpl(dio: sl()),
     )
     ..registerLazySingleton<RevenueRemoteDataSource>(
       () => RevenueRemoteDataSourceImpl(dio: sl()),

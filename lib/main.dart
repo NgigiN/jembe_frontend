@@ -22,6 +22,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart'
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/cost_category_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/dashboard_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/harvest_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
@@ -157,6 +158,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           create: (_) => di.sl<InfrastructureBloc>(),
         ),
         BlocProvider<AnalysisBloc>(create: (_) => di.sl<AnalysisBloc>()),
+        BlocProvider<DashboardBloc>(create: (_) => di.sl<DashboardBloc>()),
         BlocProvider<RevenueBloc>(create: (_) => di.sl<RevenueBloc>()),
         BlocProvider<CostCategoryBloc>(
           create: (_) => di.sl<CostCategoryBloc>(),
