@@ -71,21 +71,54 @@ class SeasonLocalDataSource implements LocalSyncStore<SeasonModel> {
 
   /// Reconciles the row for [clientUuid] after a create/update syncs: sets
   /// [serverId] and [updatedAt], and clears `pending`.
+  ///
+  /// Also cascades one step of FK reconciliation (P5): any local harvest row
+  /// still carrying this season's `clientUuid` in its `seasonId` FK is
+  /// rewritten to the new [serverId], in the SAME transaction as the season's
+  /// own reconcile. A harvest created offline under a not-yet-synced season
+  /// stores the season's `client_uuid` as its local `seasonId`;
+  /// `HarvestLocalDataSource.watchHarvests(seasonId:)` is the one place in the
+  /// app that filters rows by that FK. Unless the child row is flipped to the
+  /// server-id the instant the season gains one, a
+  /// `watchHarvests(seasonId: <season server-id>)` would miss the harvest
+  /// until the harvest's OWN push + pull-back happened to reconcile the row —
+  /// and that window stays open across a partial sync (e.g. the season pushes,
+  /// then a transient failure skips the pull phase, or the harvest is still
+  /// queued). Rewriting here closes it at the moment the parent syncs,
+  /// independent of the child's push state.
+  ///
+  /// The cascade is pure FK reconciliation: it leaves the harvest's
+  /// `pending`/`updatedAt` untouched, so it enqueues no spurious push and
+  /// never disturbs last-writer-wins. It is idempotent — a numeric `seasonId`
+  /// can never equal a uuid `clientUuid`, so re-running on an
+  /// already-reconciled child matches nothing. Sharing one transaction keeps
+  /// the two tables consistent: a reader can never observe the season bearing
+  /// its server-id while a child harvest still points at the stale
+  /// client_uuid. (Harvest is the ONLY entity with a local FK-equality filter,
+  /// so no other child table needs this.)
   @override
   Future<void> setServerId(
     String clientUuid,
     String serverId,
     DateTime updatedAt,
   ) {
-    return (_db.update(
-      _db.seasons,
-    )..where((row) => row.clientUuid.equals(clientUuid))).write(
-      SeasonsCompanion(
-        serverId: Value(serverId),
-        updatedAt: Value(updatedAt),
-        pending: const Value(false),
-      ),
-    );
+    return _db.transaction(() async {
+      await (_db.update(
+        _db.seasons,
+      )..where((row) => row.clientUuid.equals(clientUuid))).write(
+        SeasonsCompanion(
+          serverId: Value(serverId),
+          updatedAt: Value(updatedAt),
+          pending: const Value(false),
+        ),
+      );
+
+      await (_db.update(
+        _db.harvests,
+      )..where((row) => row.seasonId.equals(clientUuid))).write(
+        HarvestsCompanion(seasonId: Value(serverId)),
+      );
+    });
   }
 
   /// The season with the given [clientUuid], or `null` if no such row

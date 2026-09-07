@@ -48,6 +48,8 @@ import 'package:farm_tracker/features/farm/data/datasources/animal_local_data_so
 import 'package:farm_tracker/features/farm/data/datasources/animal_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/animal_type_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/animal_type_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/harvest_local_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/harvest_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_activity_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_local_data_source.dart';
@@ -60,6 +62,7 @@ import 'package:farm_tracker/features/farm/data/datasources/season_local_data_so
 import 'package:farm_tracker/features/farm/data/datasources/season_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/animal_model.dart';
 import 'package:farm_tracker/features/farm/data/models/animal_type_model.dart';
+import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_activity_model.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
 import 'package:farm_tracker/features/farm/data/models/input_model.dart';
@@ -67,6 +70,7 @@ import 'package:farm_tracker/features/farm/data/models/plant_model.dart';
 import 'package:farm_tracker/features/farm/data/models/season_model.dart';
 import 'package:farm_tracker/features/farm/data/sync/animal_syncer.dart';
 import 'package:farm_tracker/features/farm/data/sync/animal_type_syncer.dart';
+import 'package:farm_tracker/features/farm/data/sync/harvest_syncer.dart';
 import 'package:farm_tracker/features/farm/data/sync/herd_activity_syncer.dart';
 import 'package:farm_tracker/features/farm/data/sync/herd_syncer.dart';
 import 'package:farm_tracker/features/farm/data/sync/input_syncer.dart';
@@ -163,6 +167,52 @@ class _FakeSeasonRemoteDataSource implements SeasonRemoteDataSource {
   @override
   Future<List<SeasonModel>> getSeasons({DateTime? updatedSince}) async =>
       allRows;
+}
+
+class _FakeHarvestRemoteDataSource implements HarvestRemoteDataSource {
+  _FakeHarvestRemoteDataSource(this._log);
+  final List<String> _log;
+  final Map<String, HarvestModel> _byServerId = {};
+  final Map<String, String> _serverIdByClientUuid = {};
+  int _nextId = 800;
+
+  List<HarvestModel> get allRows => List.unmodifiable(_byServerId.values);
+  String? serverIdFor(String clientUuid) => _serverIdByClientUuid[clientUuid];
+
+  @override
+  Future<HarvestModel> addHarvest(HarvestModel harvest) async {
+    _log.add('harvest:${harvest.clientUuid}');
+    final existing = _serverIdByClientUuid[harvest.clientUuid];
+    if (existing != null) return _byServerId[existing]!;
+    final serverId = '${_nextId++}';
+    final stored = HarvestModel(
+      id: serverId,
+      clientUuid: harvest.clientUuid,
+      seasonId: harvest.seasonId,
+      quantity: harvest.quantity,
+      unit: harvest.unit,
+      date: harvest.date,
+      notes: harvest.notes,
+      revenueId: harvest.revenueId,
+      createdAt: harvest.createdAt,
+      updatedAt: harvest.updatedAt,
+    );
+    _byServerId[serverId] = stored;
+    _serverIdByClientUuid[harvest.clientUuid] = serverId;
+    return stored;
+  }
+
+  @override
+  Future<HarvestModel> updateHarvest(HarvestModel harvest) async => harvest;
+
+  @override
+  Future<void> deleteHarvest(String id) async {}
+
+  @override
+  Future<List<HarvestModel>> getHarvests({
+    String? seasonId,
+    DateTime? updatedSince,
+  }) async => allRows;
 }
 
 class _FakeAnimalTypeRemoteDataSource implements AnimalTypeRemoteDataSource {
@@ -411,6 +461,7 @@ class _Harness {
   _Harness() : db = AppDatabase.forTesting(NativeDatabase.memory()) {
     plantLocal = PlantLocalDataSource(db);
     seasonLocal = SeasonLocalDataSource(db);
+    harvestLocal = HarvestLocalDataSource(db);
     animalTypeLocal = AnimalTypeLocalDataSource(db);
     herdLocal = HerdLocalDataSource(db);
     animalLocal = AnimalLocalDataSource(db);
@@ -423,6 +474,7 @@ class _Harness {
 
     plantRemote = _FakePlantRemoteDataSource(serverCalls);
     seasonRemote = _FakeSeasonRemoteDataSource(serverCalls);
+    harvestRemote = _FakeHarvestRemoteDataSource(serverCalls);
     animalTypeRemote = _FakeAnimalTypeRemoteDataSource(serverCalls);
     herdRemote = _FakeHerdRemoteDataSource(serverCalls);
     animalRemote = _FakeAnimalRemoteDataSource(serverCalls);
@@ -432,6 +484,7 @@ class _Harness {
     final fkStores = <String, LocalSyncStore<SyncableModel>>{
       'plant': plantLocal,
       'season': seasonLocal,
+      'harvest': harvestLocal,
       'animal_type': animalTypeLocal,
       'herd': herdLocal,
       'animal': animalLocal,
@@ -444,6 +497,7 @@ class _Harness {
       syncers: [
         PlantSyncer(remote: plantRemote, local: plantLocal),
         SeasonSyncer(remote: seasonRemote, local: seasonLocal),
+        HarvestSyncer(remote: harvestRemote, local: harvestLocal),
         AnimalTypeSyncer(remote: animalTypeRemote, local: animalTypeLocal),
         HerdSyncer(remote: herdRemote, local: herdLocal),
         AnimalSyncer(remote: animalRemote, local: animalLocal),
@@ -467,6 +521,7 @@ class _Harness {
 
   late final PlantLocalDataSource plantLocal;
   late final SeasonLocalDataSource seasonLocal;
+  late final HarvestLocalDataSource harvestLocal;
   late final AnimalTypeLocalDataSource animalTypeLocal;
   late final HerdLocalDataSource herdLocal;
   late final AnimalLocalDataSource animalLocal;
@@ -479,6 +534,7 @@ class _Harness {
 
   late final _FakePlantRemoteDataSource plantRemote;
   late final _FakeSeasonRemoteDataSource seasonRemote;
+  late final _FakeHarvestRemoteDataSource harvestRemote;
   late final _FakeAnimalTypeRemoteDataSource animalTypeRemote;
   late final _FakeHerdRemoteDataSource herdRemote;
   late final _FakeAnimalRemoteDataSource animalRemote;
@@ -512,6 +568,18 @@ SeasonModel _season(
   plantId: plantId,
   landId: landId,
   startDate: DateTime.utc(2026),
+  clientUuid: clientUuid,
+);
+
+HarvestModel _harvest(
+  String clientUuid, {
+  required String seasonId,
+  double quantity = 12,
+}) => HarvestModel.create(
+  seasonId: seasonId,
+  quantity: quantity,
+  unit: 'kg',
+  date: DateTime.utc(2026),
   clientUuid: clientUuid,
 );
 
@@ -867,6 +935,103 @@ void main() {
       expect(seasonFinal!.id, isNotEmpty);
       expect(seasonFinal.pending, isFalse);
       expect(await h.outbox.peekAll(), isEmpty);
+    },
+  );
+
+  test(
+    'Step 6: season -> harvest LOCAL FK reconcile (P5) — after the season '
+    "syncs, the local harvest row carries the season's SERVER id (not its "
+    'client uuid), so watchHarvests(seasonId: <server-id>) matches; the wire '
+    'also carries the resolved server id',
+    () async {
+      // plantId '501' is an already-synced numeric parent, out of scope
+      // here — the season's OWN FK chain is Step 1's concern.
+      final season = _season('season-S6', plantId: '501');
+      await _stage(h, h.seasonLocal, 'season', season, season.toJson());
+
+      final harvest = _harvest('harvest-H6', seasonId: season.clientUuid);
+      await _stage(h, h.harvestLocal, 'harvest', harvest, harvest.toJson());
+
+      await h.engine.syncNow();
+
+      // FIFO: season posted before harvest.
+      expect(h.serverCalls, ['season:season-S6', 'harvest:harvest-H6']);
+
+      final seasonServerId = h.seasonRemote.serverIdFor('season-S6');
+      expect(seasonServerId, '600');
+
+      // The wire body carries the RESOLVED numeric season id, not the uuid.
+      final pushedHarvest = h.harvestRemote.allRows.single;
+      expect(pushedHarvest.seasonId, seasonServerId);
+      expect(
+        int.tryParse(pushedHarvest.seasonId),
+        isNotNull,
+        reason: 'the wire carries the resolved server id, not the uuid',
+      );
+
+      // The crux (P5): the LOCAL harvest row now carries the season's SERVER
+      // id in its `seasonId` FK — no longer the season's client_uuid.
+      final localHarvest = await h.harvestLocal.getByClientUuid('harvest-H6');
+      expect(localHarvest, isNotNull);
+      expect(localHarvest!.seasonId, seasonServerId);
+      expect(localHarvest.id, isNotEmpty, reason: 'own serverId reconciled');
+      expect(localHarvest.pending, isFalse);
+
+      // A filter by the season's SERVER id includes the harvest...
+      final byServerId = await h.harvestLocal
+          .watchHarvests(seasonId: seasonServerId)
+          .first;
+      expect(byServerId.map((m) => m.clientUuid), ['harvest-H6']);
+
+      // ...and the stale client_uuid no longer matches anything.
+      final byClientUuid = await h.harvestLocal
+          .watchHarvests(seasonId: season.clientUuid)
+          .first;
+      expect(byClientUuid, isEmpty);
+
+      expect(await h.outbox.peekAll(), isEmpty);
+    },
+  );
+
+  test(
+    'Step 6b: the local harvest FK is reconciled the instant the SEASON '
+    'syncs — even when the harvest itself never pushed (not enqueued) and no '
+    'pull ran to bring it back; this is the window (A) at harvest-push time '
+    'cannot close',
+    () async {
+      // A harvest staged into the local mirror ONLY (pending), referencing
+      // the season's client_uuid — deliberately NOT enqueued on the outbox,
+      // so it never pushes and is never pulled back. The ONLY thing that can
+      // reconcile its FK is the season's push-ack cascade.
+      final season = _season('season-S6b', plantId: '501');
+      final harvest = _harvest('harvest-H6b', seasonId: season.clientUuid);
+      await h.harvestLocal.upsert(harvest, pending: true);
+
+      // Only the season is staged + synced.
+      await _stage(h, h.seasonLocal, 'season', season, season.toJson());
+      await h.engine.syncNow();
+
+      final seasonServerId = h.seasonRemote.serverIdFor('season-S6b');
+      expect(seasonServerId, isNotNull);
+
+      // The harvest never reached the server this pass.
+      expect(h.harvestRemote.allRows, isEmpty);
+      expect(h.serverCalls, ['season:season-S6b']);
+
+      // Yet its local FK was rewritten to the season's server id the instant
+      // the season's setServerId ran (the cascade) — so the filter matches
+      // without waiting on the harvest's own push or a pull-back.
+      final localHarvest = await h.harvestLocal.getByClientUuid('harvest-H6b');
+      expect(localHarvest, isNotNull);
+      expect(localHarvest!.seasonId, seasonServerId);
+      // Pure FK reconcile: the harvest's own sync state is left untouched.
+      expect(localHarvest.pending, isTrue);
+      expect(localHarvest.id, isEmpty, reason: 'harvest itself still unsynced');
+
+      final byServerId = await h.harvestLocal
+          .watchHarvests(seasonId: seasonServerId)
+          .first;
+      expect(byServerId.map((m) => m.clientUuid), ['harvest-H6b']);
     },
   );
 }
