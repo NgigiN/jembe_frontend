@@ -3,13 +3,8 @@ import 'dart:async';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_animals.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_animals.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/animal_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -45,16 +40,10 @@ class _AnimalsWatchFailed extends AnimalEvent {
 }
 
 class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
-  AnimalBloc({
-    required this.getAnimals,
-    required this.addAnimal,
-    required this.updateAnimal,
-    required this.deleteAnimal,
-    required this.watchAnimals,
-  }) : super(AnimalInitial()) {
+  AnimalBloc({required this.repository}) : super(AnimalInitial()) {
     on<GetAnimalsEvent>((event, emit) async {
       emit(const AnimalLoading());
-      final result = await getAnimals(NoParams());
+      final result = await repository.getAnimals();
       result.fold(
         (failure) => emit(
           AnimalError(resolveFailureMessage(failure, 'Failed to load animals')),
@@ -71,7 +60,7 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
       // no-op instead.
       if (_watchStarted) return;
       _watchStarted = true;
-      _animalsSubscription = watchAnimals().listen(
+      _animalsSubscription = repository.watchAnimals().listen(
         (animals) => add(_AnimalsUpdated(animals)),
         onError: (Object error, StackTrace stackTrace) {
           appLogger.logError('AnimalBloc.watchAnimals', error, stackTrace);
@@ -96,7 +85,7 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
 
     on<AddAnimalEvent>((event, emit) async {
       if (OfflineConfig.enabled) {
-        final result = await addAnimal(AddAnimalParams(animal: event.animal));
+        final result = await repository.addAnimal(event.animal);
         result.fold(
           (failure) => emit(
             AnimalError(
@@ -114,7 +103,7 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
       final currentAnimals = state.animals;
 
       emit(AnimalLoading(animals: currentAnimals));
-      final result = await addAnimal(AddAnimalParams(animal: event.animal));
+      final result = await repository.addAnimal(event.animal);
       result.fold(
         (failure) => emit(AnimalError(
           resolveFailureMessage(failure, 'Failed to add animal'),
@@ -129,7 +118,7 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
 
     on<UpdateAnimalEvent>((event, emit) async {
       if (OfflineConfig.enabled) {
-        final result = await updateAnimal(UpdateAnimalParams(animal: event.animal));
+        final result = await repository.updateAnimal(event.animal);
         result.fold(
           (failure) => emit(
             AnimalError(
@@ -147,7 +136,7 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
       final currentAnimals = state.animals;
 
       emit(AnimalLoading(animals: currentAnimals));
-      final result = await updateAnimal(UpdateAnimalParams(animal: event.animal));
+      final result = await repository.updateAnimal(event.animal);
       result.fold(
         (failure) => emit(AnimalError(
           resolveFailureMessage(failure, 'Failed to update animal'),
@@ -164,7 +153,7 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
 
     on<DeleteAnimalEvent>((event, emit) async {
       if (OfflineConfig.enabled) {
-        final result = await deleteAnimal(DeleteAnimalParams(id: event.id));
+        final result = await repository.deleteAnimal(event.id);
         result.fold(
           (failure) => emit(
             AnimalError(
@@ -182,7 +171,7 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
       final currentAnimals = state.animals;
 
       emit(AnimalLoading(animals: currentAnimals));
-      final result = await deleteAnimal(DeleteAnimalParams(id: event.id));
+      final result = await repository.deleteAnimal(event.id);
       result.fold(
         (failure) => emit(AnimalError(
           resolveFailureMessage(failure, 'Failed to delete animal'),
@@ -196,11 +185,7 @@ class AnimalBloc extends Bloc<AnimalEvent, AnimalState> {
       );
     });
   }
-  final GetAnimals getAnimals;
-  final AddAnimal addAnimal;
-  final UpdateAnimal updateAnimal;
-  final DeleteAnimal deleteAnimal;
-  final WatchAnimals watchAnimals;
+  final AnimalRepository repository;
 
   StreamSubscription<List<Animal>>? _animalsSubscription;
   bool _watchStarted = false;

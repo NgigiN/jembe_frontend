@@ -94,69 +94,6 @@ import 'package:farm_tracker/features/farm/domain/repositories/land_repository.d
 import 'package:farm_tracker/features/farm/domain/repositories/plant_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/revenue_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/season_repository.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_activity.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_cost_category.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_harvest.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_herd.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_herd_activity.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_input.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_land.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_revenue.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_season.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_activity.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_cost_category.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_harvest.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_herd.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_input.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_land.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_revenue.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_season.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_activities.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_animal_types.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_animals.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_annual_cost_summary.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_cost_breakdown.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_cost_categories.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_harvests.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_herds.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_inputs.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_lands.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_plants.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_revenue_by_id.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_revenues.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_seasons.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_total_costs_by_season.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_activity.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_harvest.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_herd.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_input.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_land.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_revenue.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_season.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_activities.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_animal_types.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_animals.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_harvests.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_herds.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_inputs.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_lands.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_plants.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_revenues.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_seasons.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_bloc.dart';
@@ -217,121 +154,20 @@ Future<void> init({AppDatabase? database}) async {
     // the UI never sees.
     ..registerLazySingleton(() => AuthBloc(googleSignInUseCase: sl()))
     // Feature-specific blocs (preferred)
-    ..registerFactory(
-      () => LandBloc(
-        getLands: sl(),
-        addLand: sl(),
-        updateLand: sl(),
-        deleteLand: sl(),
-        watchLands: sl(),
-      ),
-    )
-    ..registerFactory(
-      () => PlantBloc(
-        getPlants: sl(),
-        addPlant: sl(),
-        updatePlant: sl(),
-        deletePlant: sl(),
-        watchPlants: sl(),
-      ),
-    )
-    ..registerFactory(
-      () => SeasonBloc(
-        getSeasons: sl(),
-        addSeason: sl(),
-        updateSeason: sl(),
-        deleteSeason: sl(),
-        watchSeasons: sl(),
-      ),
-    )
-    ..registerFactory(
-      () => ActivityBloc(
-        getActivities: sl(),
-        addActivity: sl(),
-        updateActivity: sl(),
-        deleteActivity: sl(),
-        watchActivities: sl(),
-      ),
-    )
-    ..registerFactory(
-      () => InputBloc(
-        getInputs: sl(),
-        addInput: sl(),
-        updateInput: sl(),
-        deleteInput: sl(),
-        watchInputs: sl(),
-      ),
-    )
-    ..registerFactory(
-      () => HarvestBloc(
-        getHarvests: sl(),
-        addHarvest: sl(),
-        updateHarvest: sl(),
-        deleteHarvest: sl(),
-        watchHarvests: sl(),
-      ),
-    )
-    ..registerFactory(
-      () => AnimalTypeBloc(
-        getAnimalTypes: sl(),
-        addAnimalType: sl(),
-        updateAnimalType: sl(),
-        deleteAnimalType: sl(),
-        watchAnimalTypes: sl(),
-      ),
-    )
-    ..registerFactory(
-      () => HerdBloc(
-        getHerds: sl(),
-        addHerd: sl(),
-        updateHerd: sl(),
-        deleteHerd: sl(),
-        watchHerds: sl(),
-      ),
-    )
-    ..registerFactory(
-      () => AnimalBloc(
-        getAnimals: sl(),
-        addAnimal: sl(),
-        updateAnimal: sl(),
-        deleteAnimal: sl(),
-        watchAnimals: sl(),
-      ),
-    )
-    ..registerFactory(() => HerdActivityBloc(addHerdActivity: sl()))
-    ..registerFactory(
-      () => InfrastructureBloc(
-        getInfrastructure: sl(),
-        addInfrastructure: sl(),
-        updateInfrastructure: sl(),
-        deleteInfrastructure: sl(),
-        watchInfrastructure: sl(),
-      ),
-    )
-    ..registerFactory(
-      () => AnalysisBloc(
-        getTotalCostsBySeason: sl(),
-        getCostBreakdown: sl(),
-        getAnnualCostSummary: sl(),
-      ),
-    )
-    ..registerFactory(
-      () => RevenueBloc(
-        getRevenues: sl(),
-        getRevenueById: sl(),
-        addRevenue: sl(),
-        updateRevenue: sl(),
-        deleteRevenue: sl(),
-        watchRevenues: sl(),
-      ),
-    )
-    ..registerFactory(
-      () => CostCategoryBloc(
-        getCostCategories: sl(),
-        addCostCategory: sl(),
-        deleteCostCategory: sl(),
-      ),
-    )
+    ..registerFactory(() => LandBloc(repository: sl()))
+    ..registerFactory(() => PlantBloc(repository: sl()))
+    ..registerFactory(() => SeasonBloc(repository: sl()))
+    ..registerFactory(() => ActivityBloc(repository: sl()))
+    ..registerFactory(() => InputBloc(repository: sl()))
+    ..registerFactory(() => HarvestBloc(repository: sl()))
+    ..registerFactory(() => AnimalTypeBloc(repository: sl()))
+    ..registerFactory(() => HerdBloc(repository: sl()))
+    ..registerFactory(() => AnimalBloc(repository: sl()))
+    ..registerFactory(() => HerdActivityBloc(repository: sl()))
+    ..registerFactory(() => InfrastructureBloc(repository: sl()))
+    ..registerFactory(() => AnalysisBloc(repository: sl()))
+    ..registerFactory(() => RevenueBloc(repository: sl()))
+    ..registerFactory(() => CostCategoryBloc(repository: sl()))
     ..registerFactory(
       () => ProfileBloc(
         getProfile: sl(),
@@ -343,69 +179,6 @@ Future<void> init({AppDatabase? database}) async {
     ..registerFactory(() => QuestionBloc(repository: sl()))
     // Use Cases
     ..registerLazySingleton(() => GoogleSignInUseCase(sl()))
-    ..registerLazySingleton(() => GetLands(sl()))
-    ..registerLazySingleton(() => AddLand(sl()))
-    ..registerLazySingleton(() => UpdateLand(sl()))
-    ..registerLazySingleton(() => DeleteLand(sl()))
-    ..registerLazySingleton(() => WatchLands(sl()))
-    ..registerLazySingleton(() => GetPlants(sl()))
-    ..registerLazySingleton(() => AddPlant(sl()))
-    ..registerLazySingleton(() => UpdatePlant(sl()))
-    ..registerLazySingleton(() => DeletePlant(sl()))
-    ..registerLazySingleton(() => WatchPlants(sl()))
-    ..registerLazySingleton(() => GetSeasons(sl()))
-    ..registerLazySingleton(() => AddSeason(sl()))
-    ..registerLazySingleton(() => UpdateSeason(sl()))
-    ..registerLazySingleton(() => DeleteSeason(sl()))
-    ..registerLazySingleton(() => WatchSeasons(sl()))
-    ..registerLazySingleton(() => GetActivities(sl()))
-    ..registerLazySingleton(() => AddActivity(sl()))
-    ..registerLazySingleton(() => UpdateActivity(sl()))
-    ..registerLazySingleton(() => DeleteActivity(sl()))
-    ..registerLazySingleton(() => WatchActivities(sl()))
-    ..registerLazySingleton(() => GetInputs(sl()))
-    ..registerLazySingleton(() => AddInput(sl()))
-    ..registerLazySingleton(() => UpdateInput(sl()))
-    ..registerLazySingleton(() => DeleteInput(sl()))
-    ..registerLazySingleton(() => WatchInputs(sl()))
-    ..registerLazySingleton(() => GetHarvests(sl()))
-    ..registerLazySingleton(() => AddHarvest(sl()))
-    ..registerLazySingleton(() => UpdateHarvest(sl()))
-    ..registerLazySingleton(() => DeleteHarvest(sl()))
-    ..registerLazySingleton(() => WatchHarvests(sl()))
-    ..registerLazySingleton(() => GetAnimals(sl()))
-    ..registerLazySingleton(() => AddAnimal(sl()))
-    ..registerLazySingleton(() => UpdateAnimal(sl()))
-    ..registerLazySingleton(() => DeleteAnimal(sl()))
-    ..registerLazySingleton(() => WatchAnimals(sl()))
-    ..registerLazySingleton(() => GetAnimalTypes(sl()))
-    ..registerLazySingleton(() => AddAnimalType(sl()))
-    ..registerLazySingleton(() => UpdateAnimalType(sl()))
-    ..registerLazySingleton(() => DeleteAnimalType(sl()))
-    ..registerLazySingleton(() => WatchAnimalTypes(sl()))
-    ..registerLazySingleton(() => GetHerds(sl()))
-    ..registerLazySingleton(() => AddHerd(sl()))
-    ..registerLazySingleton(() => UpdateHerd(sl()))
-    ..registerLazySingleton(() => DeleteHerd(sl()))
-    ..registerLazySingleton(() => WatchHerds(sl()))
-    ..registerLazySingleton(() => AddHerdActivity(sl()))
-    ..registerLazySingleton(() => GetInfrastructure(sl()))
-    ..registerLazySingleton(() => AddInfrastructure(sl()))
-    ..registerLazySingleton(() => UpdateInfrastructure(sl()))
-    ..registerLazySingleton(() => DeleteInfrastructure(sl()))
-    ..registerLazySingleton(() => WatchInfrastructure(sl()))
-    ..registerLazySingleton(() => GetTotalCostsBySeason(sl()))
-    ..registerLazySingleton(() => GetCostBreakdown(sl()))
-    ..registerLazySingleton(() => GetAnnualCostSummary(sl()))
-    ..registerLazySingleton(() => GetRevenues(sl()))
-    ..registerLazySingleton(() => GetRevenueById(sl()))
-    ..registerLazySingleton(() => AddRevenue(sl()))
-    ..registerLazySingleton(() => UpdateRevenue(sl()))
-    ..registerLazySingleton(() => DeleteRevenue(sl()))
-    ..registerLazySingleton(() => WatchRevenues(sl()))
-    ..registerLazySingleton(() => GetCostCategories(sl()))
-    ..registerLazySingleton(() => AddCostCategory(sl()))
-    ..registerLazySingleton(() => DeleteCostCategory(sl()))
     ..registerLazySingleton(() => GetProfile(sl()))
     ..registerLazySingleton(() => UpdateProfile(sl()))
     ..registerLazySingleton(() => DeleteAccount(sl()))

@@ -4,13 +4,7 @@ import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_revenue.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_revenue.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_revenue_by_id.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_revenues.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_revenues_params.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_revenue.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_revenues.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/revenue_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -49,14 +43,7 @@ class _RevenuesWatchFailed extends RevenueEvent {
 
 class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
-  RevenueBloc({
-    required this.getRevenues,
-    required this.getRevenueById,
-    required this.addRevenue,
-    required this.updateRevenue,
-    required this.deleteRevenue,
-    required this.watchRevenues,
-  }) : super(RevenueInitial()) {
+  RevenueBloc({required this.repository}) : super(RevenueInitial()) {
     on<LoadRevenues>(_onLoadRevenues);
     on<WatchRevenuesEvent>(_onWatchRevenues);
     on<_RevenuesUpdated>((event, emit) {
@@ -72,12 +59,7 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     on<UpdateRevenueEvent>(_onUpdateRevenue);
     on<DeleteRevenueEvent>(_onDeleteRevenue);
   }
-  final GetRevenues getRevenues;
-  final GetRevenueById getRevenueById;
-  final AddRevenue addRevenue;
-  final UpdateRevenue updateRevenue;
-  final DeleteRevenue deleteRevenue;
-  final WatchRevenues watchRevenues;
+  final RevenueRepository repository;
 
   StreamSubscription<List<Revenue>>? _revenuesSubscription;
   bool _watchStarted = false;
@@ -113,13 +95,11 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
   ) async {
     emit(RevenueLoading(revenues: state.revenues));
 
-    final params = GetRevenuesParams(
+    final result = await repository.getRevenues(
       source: event.source,
       startDate: event.startDate,
       endDate: event.endDate,
     );
-
-    final result = await getRevenues(params);
 
     result.fold(
       (failure) {
@@ -153,7 +133,7 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     }
 
     _watchStarted = true;
-    _revenuesSubscription = watchRevenues().listen(
+    _revenuesSubscription = repository.watchRevenues().listen(
       (revenues) => add(_RevenuesUpdated(revenues)),
       onError: (Object error, StackTrace stackTrace) {
         appLogger.logError('RevenueBloc.watchRevenues', error, stackTrace);
@@ -173,7 +153,7 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     Emitter<RevenueState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final params = AddRevenueParams(
+      final result = await repository.addRevenue(
         source: event.source,
         sourceId: event.sourceId,
         type: event.type,
@@ -183,8 +163,6 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
         date: event.date,
         notes: event.notes,
       );
-
-      final result = await addRevenue(params);
 
       result.fold(
         (failure) {
@@ -207,7 +185,7 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     final currentRevenues = state.revenues;
     emit(RevenueLoading(revenues: currentRevenues));
 
-    final params = AddRevenueParams(
+    final result = await repository.addRevenue(
       source: event.source,
       sourceId: event.sourceId,
       type: event.type,
@@ -217,8 +195,6 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
       date: event.date,
       notes: event.notes,
     );
-
-    final result = await addRevenue(params);
 
     result.fold(
       (failure) {
@@ -239,7 +215,7 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     Emitter<RevenueState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final params = UpdateRevenueParams(
+      final result = await repository.updateRevenue(
         id: event.id,
         source: event.source,
         sourceId: event.sourceId,
@@ -250,8 +226,6 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
         date: event.date,
         notes: event.notes,
       );
-
-      final result = await updateRevenue(params);
 
       result.fold(
         (failure) {
@@ -272,7 +246,7 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     final currentRevenues = state.revenues;
     emit(RevenueLoading(revenues: currentRevenues));
 
-    final params = UpdateRevenueParams(
+    final result = await repository.updateRevenue(
       id: event.id,
       source: event.source,
       sourceId: event.sourceId,
@@ -283,8 +257,6 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
       date: event.date,
       notes: event.notes,
     );
-
-    final result = await updateRevenue(params);
 
     result.fold(
       (failure) {
@@ -309,7 +281,7 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     Emitter<RevenueState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await deleteRevenue(event.id);
+      final result = await repository.deleteRevenue(event.id);
 
       result.fold(
         (failure) {
@@ -330,7 +302,7 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     final currentRevenues = state.revenues;
     emit(RevenueLoading(revenues: currentRevenues));
 
-    final result = await deleteRevenue(event.id);
+    final result = await repository.deleteRevenue(event.id);
 
     result.fold(
       (failure) {

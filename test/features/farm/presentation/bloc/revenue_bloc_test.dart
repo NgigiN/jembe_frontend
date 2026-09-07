@@ -5,30 +5,14 @@ import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_revenue.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_revenue.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_revenue_by_id.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_revenues.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_revenues_params.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_revenue.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_revenues.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/revenue_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockGetRevenues extends Mock implements GetRevenues {}
-
-class MockGetRevenueById extends Mock implements GetRevenueById {}
-
-class MockAddRevenue extends Mock implements AddRevenue {}
-
-class MockUpdateRevenue extends Mock implements UpdateRevenue {}
-
-class MockDeleteRevenue extends Mock implements DeleteRevenue {}
-
-class MockWatchRevenues extends Mock implements WatchRevenues {}
+class MockRevenueRepository extends Mock implements RevenueRepository {}
 
 void main() {
   final now = DateTime.now();
@@ -50,67 +34,29 @@ void main() {
     updatedAt: now,
   );
 
-  late MockGetRevenues mockGetRevenues;
-  late MockGetRevenueById mockGetRevenueById;
-  late MockAddRevenue mockAddRevenue;
-  late MockUpdateRevenue mockUpdateRevenue;
-  late MockDeleteRevenue mockDeleteRevenue;
-  late MockWatchRevenues mockWatchRevenues;
-
-  setUpAll(() {
-    registerFallbackValue(const GetRevenuesParams());
-    registerFallbackValue(
-      AddRevenueParams(
-        source: 'plant',
-        sourceId: 'server-season-1',
-        type: 'X',
-        quantity: 1,
-        unitPrice: 1,
-        date: now,
-      ),
-    );
-    registerFallbackValue(
-      UpdateRevenueParams(
-        id: 'revenue-1',
-        source: 'plant',
-        sourceId: 'server-season-1',
-        type: 'X',
-        quantity: 1,
-        unitPrice: 1,
-        total: 1,
-        date: now,
-      ),
-    );
-  });
+  late MockRevenueRepository mockRepository;
 
   setUp(() {
-    mockGetRevenues = MockGetRevenues();
-    mockGetRevenueById = MockGetRevenueById();
-    mockAddRevenue = MockAddRevenue();
-    mockUpdateRevenue = MockUpdateRevenue();
-    mockDeleteRevenue = MockDeleteRevenue();
-    mockWatchRevenues = MockWatchRevenues();
+    mockRepository = MockRevenueRepository();
   });
 
   tearDown(() {
     OfflineConfig.enabled = false;
   });
 
-  RevenueBloc buildBloc() => RevenueBloc(
-    getRevenues: mockGetRevenues,
-    getRevenueById: mockGetRevenueById,
-    addRevenue: mockAddRevenue,
-    updateRevenue: mockUpdateRevenue,
-    deleteRevenue: mockDeleteRevenue,
-    watchRevenues: mockWatchRevenues,
-  );
+  RevenueBloc buildBloc() => RevenueBloc(repository: mockRepository);
 
   group("flag OFF (today's one-shot behavior, unchanged)", () {
     blocTest<RevenueBloc, RevenueState>(
-      'LoadRevenues emits [RevenueLoading, RevenueLoaded] from the use case',
+      'LoadRevenues emits [RevenueLoading, RevenueLoaded] from the '
+      'repository',
       build: () {
         when(
-          () => mockGetRevenues(any()),
+          () => mockRepository.getRevenues(
+            source: any(named: 'source'),
+            startDate: any(named: 'startDate'),
+            endDate: any(named: 'endDate'),
+          ),
         ).thenAnswer((_) async => Right([revenue()]));
         return buildBloc();
       },
@@ -126,7 +72,16 @@ void main() {
       'RevenueAdded',
       build: () {
         when(
-          () => mockAddRevenue(any()),
+          () => mockRepository.addRevenue(
+            source: any(named: 'source'),
+            sourceId: any(named: 'sourceId'),
+            type: any(named: 'type'),
+            quantity: any(named: 'quantity'),
+            unitPrice: any(named: 'unitPrice'),
+            total: any(named: 'total'),
+            date: any(named: 'date'),
+            notes: any(named: 'notes'),
+          ),
         ).thenAnswer((_) async => Right(revenue(id: 'revenue-2')));
         return buildBloc();
       },
@@ -160,7 +115,7 @@ void main() {
       'emits RevenueLoaded filtered by source',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchRevenues()).thenAnswer(
+        when(() => mockRepository.watchRevenues()).thenAnswer(
           (_) => Stream.value([
             revenue(id: 'r-plant', source: 'plant'),
             revenue(id: 'r-animal', source: 'animal'),
@@ -181,7 +136,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchRevenues(),
+          () => mockRepository.watchRevenues(),
         ).thenAnswer((_) => Stream.value([revenue()]));
         return buildBloc();
       },
@@ -194,7 +149,7 @@ void main() {
       verify: (_) {
         // If the guard didn't prevent a second subscribe, watchRevenues()
         // (the repository stream factory) would have been invoked twice.
-        verify(() => mockWatchRevenues()).called(1);
+        verify(() => mockRepository.watchRevenues()).called(1);
       },
     );
 
@@ -203,7 +158,7 @@ void main() {
       'from the cached list WITHOUT re-subscribing',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchRevenues()).thenAnswer(
+        when(() => mockRepository.watchRevenues()).thenAnswer(
           (_) => Stream.value([
             revenue(id: 'r-plant', source: 'plant'),
             revenue(id: 'r-animal', source: 'animal'),
@@ -222,7 +177,7 @@ void main() {
         RevenueLoaded(revenues: [revenue(id: 'r-animal', source: 'animal')]),
       ],
       verify: (_) {
-        verify(() => mockWatchRevenues()).called(1);
+        verify(() => mockRepository.watchRevenues()).called(1);
       },
     );
 
@@ -233,7 +188,16 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddRevenue(any()),
+          () => mockRepository.addRevenue(
+            source: any(named: 'source'),
+            sourceId: any(named: 'sourceId'),
+            type: any(named: 'type'),
+            quantity: any(named: 'quantity'),
+            unitPrice: any(named: 'unitPrice'),
+            total: any(named: 'total'),
+            date: any(named: 'date'),
+            notes: any(named: 'notes'),
+          ),
         ).thenAnswer((_) async => Right(revenue(id: 'revenue-2')));
         return buildBloc();
       },
@@ -261,7 +225,17 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockUpdateRevenue(any()),
+          () => mockRepository.updateRevenue(
+            id: any(named: 'id'),
+            source: any(named: 'source'),
+            sourceId: any(named: 'sourceId'),
+            type: any(named: 'type'),
+            quantity: any(named: 'quantity'),
+            unitPrice: any(named: 'unitPrice'),
+            total: any(named: 'total'),
+            date: any(named: 'date'),
+            notes: any(named: 'notes'),
+          ),
         ).thenAnswer((_) async => Right(revenue()));
         return buildBloc();
       },
@@ -291,7 +265,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockDeleteRevenue(any()),
+          () => mockRepository.deleteRevenue(any()),
         ).thenAnswer((_) async => const Right<Failure, void>(null));
         return buildBloc();
       },
@@ -308,7 +282,16 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddRevenue(any()),
+          () => mockRepository.addRevenue(
+            source: any(named: 'source'),
+            sourceId: any(named: 'sourceId'),
+            type: any(named: 'type'),
+            quantity: any(named: 'quantity'),
+            unitPrice: any(named: 'unitPrice'),
+            total: any(named: 'total'),
+            date: any(named: 'date'),
+            notes: any(named: 'notes'),
+          ),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -346,7 +329,8 @@ void main() {
       'stays alive for a later emission',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchRevenues()).thenAnswer((_) => controller.stream);
+        when(() => mockRepository.watchRevenues())
+            .thenAnswer((_) => controller.stream);
         return buildBloc();
       },
       seed: () => RevenueLoaded(revenues: [revenue()]),

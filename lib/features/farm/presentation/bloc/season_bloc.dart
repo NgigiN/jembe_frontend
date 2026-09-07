@@ -3,13 +3,8 @@ import 'dart:async';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_season.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_season.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_seasons.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_season.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_seasons.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/season_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -46,18 +41,12 @@ class _SeasonsWatchFailed extends SeasonEvent {
 }
 
 class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
-  SeasonBloc({
-    required this.getSeasons,
-    required this.addSeason,
-    required this.updateSeason,
-    required this.deleteSeason,
-    required this.watchSeasons,
-  }) : super(SeasonInitial()) {
+  SeasonBloc({required this.repository}) : super(SeasonInitial()) {
     on<GetSeasonsEvent>((event, emit) async {
       appLogger.debug(LogCategory.farm, 'GetSeasonsEvent triggered');
       emit(const SeasonLoading());
 
-      final result = await getSeasons(NoParams());
+      final result = await repository.getSeasons();
       result.fold(
         (failure) {
           appLogger.warning(LogCategory.farm, 'GetSeasons failed: $failure');
@@ -78,7 +67,7 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
       // no-op instead.
       if (_watchStarted) return;
       _watchStarted = true;
-      _seasonsSubscription = watchSeasons().listen(
+      _seasonsSubscription = repository.watchSeasons().listen(
         (seasons) => add(_SeasonsUpdated(seasons)),
         onError: (Object error, StackTrace stackTrace) {
           appLogger.logError('SeasonBloc.watchSeasons', error, stackTrace);
@@ -103,7 +92,7 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
 
     on<AddSeasonEvent>((event, emit) async {
       if (OfflineConfig.enabled) {
-        final result = await addSeason(AddSeasonParams(season: event.season));
+        final result = await repository.addSeason(event.season);
         result.fold(
           (failure) => emit(
             SeasonError(
@@ -124,7 +113,7 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
       final currentSeasons = state.seasons;
 
       emit(SeasonLoading(seasons: currentSeasons));
-      final result = await addSeason(AddSeasonParams(season: event.season));
+      final result = await repository.addSeason(event.season);
       result.fold(
         (failure) => emit(SeasonError(
           resolveFailureMessage(failure, 'Failed to add season'),
@@ -139,9 +128,7 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
 
     on<UpdateSeasonEvent>((event, emit) async {
       if (OfflineConfig.enabled) {
-        final result = await updateSeason(
-          UpdateSeasonParams(season: event.season),
-        );
+        final result = await repository.updateSeason(event.season);
         result.fold(
           (failure) => emit(
             SeasonError(
@@ -162,9 +149,7 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
       final currentSeasons = state.seasons;
 
       emit(SeasonLoading(seasons: currentSeasons));
-      final result = await updateSeason(
-        UpdateSeasonParams(season: event.season),
-      );
+      final result = await repository.updateSeason(event.season);
       result.fold(
         (failure) => emit(SeasonError(
           resolveFailureMessage(failure, 'Failed to update season'),
@@ -181,7 +166,7 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
 
     on<DeleteSeasonEvent>((event, emit) async {
       if (OfflineConfig.enabled) {
-        final result = await deleteSeason(DeleteSeasonParams(id: event.id));
+        final result = await repository.deleteSeason(event.id);
         result.fold(
           (failure) => emit(
             SeasonError(
@@ -202,7 +187,7 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
       final currentSeasons = state.seasons;
 
       emit(SeasonLoading(seasons: currentSeasons));
-      final result = await deleteSeason(DeleteSeasonParams(id: event.id));
+      final result = await repository.deleteSeason(event.id);
       result.fold(
         (failure) => emit(SeasonError(
           resolveFailureMessage(failure, 'Failed to delete season'),
@@ -217,11 +202,7 @@ class SeasonBloc extends Bloc<SeasonEvent, SeasonState> {
       );
     });
   }
-  final GetSeasons getSeasons;
-  final AddSeason addSeason;
-  final UpdateSeason updateSeason;
-  final DeleteSeason deleteSeason;
-  final WatchSeasons watchSeasons;
+  final SeasonRepository repository;
 
   StreamSubscription<List<Season>>? _seasonsSubscription;
   bool _watchStarted = false;

@@ -4,9 +4,6 @@ import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
 import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/analysis_repository.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_annual_cost_summary.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_cost_breakdown.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_total_costs_by_season.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -78,11 +75,7 @@ void main() {
           breakdownResult: const Right(breakdowns),
         );
 
-        final bloc = AnalysisBloc(
-          getTotalCostsBySeason: GetTotalCostsBySeason(repository),
-          getCostBreakdown: GetCostBreakdown(repository),
-          getAnnualCostSummary: GetAnnualCostSummary(repository),
-        );
+        final bloc = AnalysisBloc(repository: repository);
         addTearDown(bloc.close);
 
         bloc.add(LoadTotalCostsBySeason());

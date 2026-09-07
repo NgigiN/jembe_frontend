@@ -4,28 +4,15 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_herd.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_herd.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_herds.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_herd.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_herds.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/herd_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockGetHerds extends Mock implements GetHerds {}
-
-class MockAddHerd extends Mock implements AddHerd {}
-
-class MockUpdateHerd extends Mock implements UpdateHerd {}
-
-class MockDeleteHerd extends Mock implements DeleteHerd {}
-
-class MockWatchHerds extends Mock implements WatchHerds {}
+class MockHerdRepository extends Mock implements HerdRepository {}
 
 void main() {
   final now = DateTime.now();
@@ -42,41 +29,24 @@ void main() {
     updatedAt: now,
   );
 
-  late MockGetHerds mockGetHerds;
-  late MockAddHerd mockAddHerd;
-  late MockUpdateHerd mockUpdateHerd;
-  late MockDeleteHerd mockDeleteHerd;
-  late MockWatchHerds mockWatchHerds;
-
-  setUpAll(() {
-    registerFallbackValue(NoParams());
-  });
+  late MockHerdRepository mockRepository;
 
   setUp(() {
-    mockGetHerds = MockGetHerds();
-    mockAddHerd = MockAddHerd();
-    mockUpdateHerd = MockUpdateHerd();
-    mockDeleteHerd = MockDeleteHerd();
-    mockWatchHerds = MockWatchHerds();
+    mockRepository = MockHerdRepository();
   });
 
   tearDown(() {
     OfflineConfig.enabled = false;
   });
 
-  HerdBloc buildBloc() => HerdBloc(
-    getHerds: mockGetHerds,
-    addHerd: mockAddHerd,
-    updateHerd: mockUpdateHerd,
-    deleteHerd: mockDeleteHerd,
-    watchHerds: mockWatchHerds,
-  );
+  HerdBloc buildBloc() => HerdBloc(repository: mockRepository);
 
   group("flag OFF (today's one-shot behavior, unchanged)", () {
     blocTest<HerdBloc, HerdState>(
-      'GetHerdsEvent emits [HerdLoading, HerdLoaded] from the use case',
+      'GetHerdsEvent emits [HerdLoading, HerdLoaded] from the repository',
       build: () {
-        when(() => mockGetHerds(any())).thenAnswer((_) async => Right([herd()]));
+        when(() => mockRepository.getHerds())
+            .thenAnswer((_) async => Right([herd()]));
         return buildBloc();
       },
       act: (bloc) => bloc.add(GetHerdsEvent()),
@@ -91,7 +61,7 @@ void main() {
       "successMessage 'Herd created'",
       build: () {
         when(
-          () => mockAddHerd(
+          () => mockRepository.addHerd(
             any(),
             any(),
             any(),
@@ -127,7 +97,7 @@ void main() {
       'AddHerdEvent failure emits HerdError preserving current herds',
       build: () {
         when(
-          () => mockAddHerd(
+          () => mockRepository.addHerd(
             any(),
             any(),
             any(),
@@ -163,7 +133,8 @@ void main() {
       'HerdLoaded per emission',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchHerds()).thenAnswer((_) => Stream.value([herd()]));
+        when(() => mockRepository.watchHerds())
+            .thenAnswer((_) => Stream.value([herd()]));
         return buildBloc();
       },
       act: (bloc) => bloc.add(WatchHerdsEvent()),
@@ -178,7 +149,8 @@ void main() {
       'subscription (idempotent guard, no race/leak)',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchHerds()).thenAnswer((_) => Stream.value([herd()]));
+        when(() => mockRepository.watchHerds())
+            .thenAnswer((_) => Stream.value([herd()]));
         return buildBloc();
       },
       act: (bloc) {
@@ -188,7 +160,7 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       verify: (_) {
-        verify(() => mockWatchHerds()).called(1);
+        verify(() => mockRepository.watchHerds()).called(1);
       },
     );
 
@@ -198,7 +170,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddHerd(
+          () => mockRepository.addHerd(
             any(),
             any(),
             any(),
@@ -232,7 +204,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockUpdateHerd(
+          () => mockRepository.updateHerd(
             any(),
             any(),
             any(),
@@ -266,7 +238,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockDeleteHerd(any()),
+          () => mockRepository.deleteHerd(any()),
         ).thenAnswer((_) async => const Right<Failure, void>(null));
         return buildBloc();
       },
@@ -295,7 +267,8 @@ void main() {
       'for a later emission',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchHerds()).thenAnswer((_) => controller.stream);
+        when(() => mockRepository.watchHerds())
+            .thenAnswer((_) => controller.stream);
         return buildBloc();
       },
       seed: () => HerdLoaded([herd()]),

@@ -3,13 +3,8 @@ import 'dart:async';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_plants.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_plants.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/plant_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -45,16 +40,10 @@ class _PlantsWatchFailed extends PlantEvent {
 }
 
 class PlantBloc extends Bloc<PlantEvent, PlantState> {
-  PlantBloc({
-    required this.getPlants,
-    required this.addPlant,
-    required this.updatePlant,
-    required this.deletePlant,
-    required this.watchPlants,
-  }) : super(PlantInitial()) {
+  PlantBloc({required this.repository}) : super(PlantInitial()) {
     on<GetPlantsEvent>((event, emit) async {
       emit(const PlantLoading());
-      final result = await getPlants(NoParams());
+      final result = await repository.getPlants();
       result.fold(
         (failure) => emit(
           PlantError(resolveFailureMessage(failure, 'Failed to load crops')),
@@ -71,7 +60,7 @@ class PlantBloc extends Bloc<PlantEvent, PlantState> {
       // no-op instead.
       if (_watchStarted) return;
       _watchStarted = true;
-      _plantsSubscription = watchPlants().listen(
+      _plantsSubscription = repository.watchPlants().listen(
         (plants) => add(_PlantsUpdated(plants)),
         onError: (Object error, StackTrace stackTrace) {
           appLogger.logError('PlantBloc.watchPlants', error, stackTrace);
@@ -96,7 +85,7 @@ class PlantBloc extends Bloc<PlantEvent, PlantState> {
 
     on<AddPlantEvent>((event, emit) async {
       if (OfflineConfig.enabled) {
-        final result = await addPlant(AddPlantParams(plant: event.plant));
+        final result = await repository.addPlant(event.plant);
         result.fold(
           (failure) => emit(
             PlantError(
@@ -114,7 +103,7 @@ class PlantBloc extends Bloc<PlantEvent, PlantState> {
       final currentPlants = state.plants;
 
       emit(PlantLoading(plants: currentPlants));
-      final result = await addPlant(AddPlantParams(plant: event.plant));
+      final result = await repository.addPlant(event.plant);
       result.fold(
         (failure) => emit(PlantError(
           resolveFailureMessage(failure, 'Failed to add crop'),
@@ -129,7 +118,7 @@ class PlantBloc extends Bloc<PlantEvent, PlantState> {
 
     on<UpdatePlantEvent>((event, emit) async {
       if (OfflineConfig.enabled) {
-        final result = await updatePlant(UpdatePlantParams(plant: event.plant));
+        final result = await repository.updatePlant(event.plant);
         result.fold(
           (failure) => emit(
             PlantError(
@@ -147,7 +136,7 @@ class PlantBloc extends Bloc<PlantEvent, PlantState> {
       final currentPlants = state.plants;
 
       emit(PlantLoading(plants: currentPlants));
-      final result = await updatePlant(UpdatePlantParams(plant: event.plant));
+      final result = await repository.updatePlant(event.plant);
       result.fold(
         (failure) => emit(PlantError(
           resolveFailureMessage(failure, 'Failed to update crop'),
@@ -164,7 +153,7 @@ class PlantBloc extends Bloc<PlantEvent, PlantState> {
 
     on<DeletePlantEvent>((event, emit) async {
       if (OfflineConfig.enabled) {
-        final result = await deletePlant(DeletePlantParams(id: event.id));
+        final result = await repository.deletePlant(event.id);
         result.fold(
           (failure) => emit(
             PlantError(
@@ -182,7 +171,7 @@ class PlantBloc extends Bloc<PlantEvent, PlantState> {
       final currentPlants = state.plants;
 
       emit(PlantLoading(plants: currentPlants));
-      final result = await deletePlant(DeletePlantParams(id: event.id));
+      final result = await repository.deletePlant(event.id);
       result.fold(
         (failure) => emit(PlantError(
           resolveFailureMessage(failure, 'Failed to delete crop'),
@@ -196,11 +185,7 @@ class PlantBloc extends Bloc<PlantEvent, PlantState> {
       );
     });
   }
-  final GetPlants getPlants;
-  final AddPlant addPlant;
-  final UpdatePlant updatePlant;
-  final DeletePlant deletePlant;
-  final WatchPlants watchPlants;
+  final PlantRepository repository;
 
   StreamSubscription<List<Plant>>? _plantsSubscription;
   bool _watchStarted = false;
