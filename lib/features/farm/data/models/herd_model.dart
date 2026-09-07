@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/json_parsing.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 
 class HerdModel extends Herd implements SyncableModel {
@@ -63,14 +64,18 @@ class HerdModel extends Herd implements SyncableModel {
       animalTypeId: (json['animal_type_id'] ?? json['AnimalTypeID'] ?? '')
           .toString(),
       location: (json['location'] ?? json['Location'] ?? '').toString(),
-      initialHeadCount: _parseInt(json['initial_head_count'] ?? json['InitialHeadCount']),
-      currentHeadCount: _parseInt(json['current_head_count'] ?? json['CurrentHeadCount']),
-      startDate: _parseDate(json['start_date'] ?? json['StartDate']),
+      initialHeadCount: parseInt(
+        json['initial_head_count'] ?? json['InitialHeadCount'],
+      ),
+      currentHeadCount: parseInt(
+        json['current_head_count'] ?? json['CurrentHeadCount'],
+      ),
+      startDate: parseDate(json['start_date'] ?? json['StartDate']),
       endDate: endDateValue != null && endDateValue.toString().isNotEmpty
-          ? _parseDate(endDateValue)
+          ? parseDate(endDateValue)
           : null,
-      createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
-      updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
+      createdAt: parseDate(dualKey(json, 'created_at')),
+      updatedAt: parseDate(dualKey(json, 'updated_at')),
     );
   }
 
@@ -99,21 +104,6 @@ class HerdModel extends Herd implements SyncableModel {
       pending: row.pending,
       deletedLocally: row.deletedLocally,
     );
-  }
-
-  static int _parseInt(dynamic value) {
-    if (value == null) return 0;
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return int.tryParse(value.toString()) ?? 0;
-  }
-
-  static DateTime _parseDate(dynamic dateValue) {
-    if (dateValue == null) return DateTime.now();
-    if (dateValue is String) {
-      return DateTime.parse(dateValue);
-    }
-    return DateTime.now();
   }
 
   /// Local-only identity used by the offline outbox/pull pipeline to

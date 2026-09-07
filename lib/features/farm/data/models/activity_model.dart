@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/json_parsing.dart';
 import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
 
 class ActivityModel extends Activity implements SyncableModel {
@@ -76,10 +77,10 @@ class ActivityModel extends Activity implements SyncableModel {
       type: (json['Type'] ?? json['type'] ?? '').toString(),
       details: detailsValue?.toString(),
       cost: costValue != null ? (costValue as num).toDouble() : 0.0,
-      date: _parseDate(json['Date'] ?? json['date']),
+      date: parseDate(json['Date'] ?? json['date']),
       notes: notesValue?.toString(),
-      createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
-      updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
+      createdAt: parseDate(dualKey(json, 'created_at')),
+      updatedAt: parseDate(dualKey(json, 'updated_at')),
     );
   }
 
@@ -217,14 +218,6 @@ class ActivityModel extends Activity implements SyncableModel {
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
-  }
-
-  static DateTime _parseDate(dynamic dateValue) {
-    if (dateValue == null) return DateTime.now();
-    if (dateValue is String) {
-      return DateTime.parse(dateValue);
-    }
-    return DateTime.now();
   }
 
   /// Returns a copy with [sourceId] overridden (a `null` arg keeps the

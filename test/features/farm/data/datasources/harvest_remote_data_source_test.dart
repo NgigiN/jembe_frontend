@@ -9,13 +9,12 @@ import 'package:flutter_test/flutter_test.dart';
 /// Pins the wire contract [HarvestRemoteDataSourceImpl] sends/expects
 /// today — the R2-01 prerequisite.
 ///
-/// IMPORTANT quirk pinned here (see the "a connection failure" tests
-/// below): unlike every other farm datasource, this one does NOT route
-/// through `mapDioException` — its `on DioException catch (e)` always
-/// throws [ServerException], even for a connection/timeout error. A
-/// generic `CrudDataSource` must either preserve this (byte for byte) or
-/// treat it as a deliberate bugfix — flagged for the R2-01 author to decide,
-/// not silently "fixed" by the refactor.
+/// R2-01 (F1-08 finding #6) fixed the quirk previously pinned here: this
+/// datasource used to convert every `DioException` straight to
+/// [ServerException], even a connection/timeout error — unlike every other
+/// farm datasource, which routes through `mapDioException`. It now routes
+/// through `mapDioException` too, so a connection failure surfaces as
+/// [NetworkException] (see the "a connection failure" tests below).
 class _FakeAdapter implements HttpClientAdapter {
   _FakeAdapter({required this.body, this.statusCode = 200});
   final String body;
@@ -141,8 +140,8 @@ void main() {
     });
 
     test(
-      'a connection failure throws ServerException, NOT NetworkException '
-      '(pinned quirk — see class docs)',
+      'a connection failure throws NetworkException (routes through '
+      'mapDioException — R2-01 fix, see class docs)',
       () async {
         final source = HarvestRemoteDataSourceImpl(
           dio: _dioWith(_ThrowingAdapter()),
@@ -150,7 +149,7 @@ void main() {
 
         await expectLater(
           source.getHarvests(),
-          throwsA(isA<ServerException>()),
+          throwsA(isA<NetworkException>()),
         );
       },
     );
@@ -206,8 +205,8 @@ void main() {
     });
 
     test(
-      'a connection failure throws ServerException, NOT NetworkException '
-      '(pinned quirk)',
+      'a connection failure throws NetworkException (routes through '
+      'mapDioException — R2-01 fix)',
       () async {
         final source = HarvestRemoteDataSourceImpl(
           dio: _dioWith(_ThrowingAdapter()),
@@ -215,7 +214,7 @@ void main() {
 
         await expectLater(
           source.addHarvest(_harvest()),
-          throwsA(isA<ServerException>()),
+          throwsA(isA<NetworkException>()),
         );
       },
     );

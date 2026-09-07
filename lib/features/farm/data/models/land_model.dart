@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/json_parsing.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 
 class LandModel extends Land implements SyncableModel {
@@ -61,8 +62,8 @@ class LandModel extends Land implements SyncableModel {
       location: locationValue?.toString(),
       soilType: soilTypeValue?.toString(),
       tenureType: tenureTypeValue?.toString(),
-      createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
-      updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
+      createdAt: parseDate(dualKey(json, 'created_at')),
+      updatedAt: parseDate(dualKey(json, 'updated_at')),
     );
   }
 
@@ -109,14 +110,6 @@ class LandModel extends Land implements SyncableModel {
   /// `LandLocalDataSource.markDeleted`). Always `false` on a model built
   /// from a server response (`fromJson`) or `create`.
   final bool deletedLocally;
-
-  static DateTime _parseDate(dynamic dateValue) {
-    if (dateValue == null) return DateTime.now();
-    if (dateValue is String) {
-      return DateTime.parse(dateValue);
-    }
-    return DateTime.now();
-  }
 
   Map<String, dynamic> toJson() {
     return {

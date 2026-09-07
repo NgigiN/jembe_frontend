@@ -66,10 +66,9 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
         return items
             .map((json) => InputModel.fromJson(json as Map<String, dynamic>))
             .toList();
-      } else {
-        final msg = extractServerErrorMessage(response.data);
-        throw ServerException(msg.isNotEmpty ? msg : null);
       }
+      final msg = extractServerErrorMessage(response.data);
+      throw ServerException(msg.isNotEmpty ? msg : null);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException', e);
       throw mapDioException(e);
@@ -104,10 +103,9 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
       if (response.statusCode == 201) {
         final data = response.data as Map<String, dynamic>;
         return InputModel.fromJson(data);
-      } else {
-        final msg = extractServerErrorMessage(response.data);
-        throw ServerException(msg.isNotEmpty ? msg : null);
       }
+      final msg = extractServerErrorMessage(response.data);
+      throw ServerException(msg.isNotEmpty ? msg : null);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException', e);
       throw mapDioException(e);
@@ -138,10 +136,9 @@ class InputRemoteDataSourceImpl implements InputRemoteDataSource {
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
         return InputModel.fromJson(data);
-      } else {
-        final msg = extractServerErrorMessage(response.data);
-        throw ServerException(msg.isNotEmpty ? msg : null);
       }
+      final msg = extractServerErrorMessage(response.data);
+      throw ServerException(msg.isNotEmpty ? msg : null);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException', e);
       throw mapDioException(e);

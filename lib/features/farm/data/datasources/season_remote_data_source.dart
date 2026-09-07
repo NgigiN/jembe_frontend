@@ -46,17 +46,15 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
               .toList();
         }
         return [];
-      } else {
-        var errorMsg =
-            'Failed to load seasons (Status: ${response.statusCode})';
-        try {
-          final errorData = response.data as Map<String, dynamic>?;
-          if (errorData != null && errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-        throw ServerException(errorMsg);
       }
+      var errorMsg = 'Failed to load seasons (Status: ${response.statusCode})';
+      try {
+        final errorData = response.data as Map<String, dynamic>?;
+        if (errorData != null && errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
+        }
+      } catch (_) {}
+      throw ServerException(errorMsg);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException', e);
       throw mapDioException(e);
@@ -92,10 +90,9 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
       if (response.statusCode == 201) {
         final data = response.data as Map<String, dynamic>;
         return SeasonModel.fromJson(data);
-      } else {
-        final msg = extractServerErrorMessage(response.data);
-        throw ServerException(msg.isNotEmpty ? msg : null);
       }
+      final msg = extractServerErrorMessage(response.data);
+      throw ServerException(msg.isNotEmpty ? msg : null);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException', e);
       throw mapDioException(e);
@@ -119,10 +116,9 @@ class SeasonRemoteDataSourceImpl implements SeasonRemoteDataSource {
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
         return SeasonModel.fromJson(data);
-      } else {
-        final msg = extractServerErrorMessage(response.data);
-        throw ServerException(msg.isNotEmpty ? msg : null);
       }
+      final msg = extractServerErrorMessage(response.data);
+      throw ServerException(msg.isNotEmpty ? msg : null);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException', e);
       throw mapDioException(e);

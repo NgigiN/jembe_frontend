@@ -66,19 +66,18 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
         return items
             .map((json) => ActivityModel.fromJson(json as Map<String, dynamic>))
             .toList();
-      } else {
-        var errorMsg =
-            'Failed to load activities (Status: ${response.statusCode})';
-        try {
-          final errorData = response.data;
-          if (errorData != null &&
-              errorData is Map<String, dynamic> &&
-              errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-        throw ServerException(errorMsg);
       }
+      var errorMsg =
+          'Failed to load activities (Status: ${response.statusCode})';
+      try {
+        final errorData = response.data;
+        if (errorData != null &&
+            errorData is Map<String, dynamic> &&
+            errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
+        }
+      } catch (_) {}
+      throw ServerException(errorMsg);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException', e);
       throw mapDioException(e);
@@ -116,16 +115,15 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       if (response.statusCode == 201) {
         final data = response.data!;
         return ActivityModel.fromJson(data);
-      } else {
-        var errorMsg = 'Failed to add activity';
-        try {
-          final errorData = response.data;
-          if (errorData != null && errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-        throw ServerException(errorMsg);
       }
+      var errorMsg = 'Failed to add activity';
+      try {
+        final errorData = response.data;
+        if (errorData != null && errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
+        }
+      } catch (_) {}
+      throw ServerException(errorMsg);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException', e);
       throw mapDioException(e);
@@ -156,16 +154,15 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       if (response.statusCode == 200) {
         final data = response.data!;
         return ActivityModel.fromJson(data);
-      } else {
-        var errorMsg = 'Failed to update activity';
-        try {
-          final errorData = response.data;
-          if (errorData != null && errorData['error'] != null) {
-            errorMsg = errorData['error'].toString();
-          }
-        } catch (_) {}
-        throw ServerException(errorMsg);
       }
+      var errorMsg = 'Failed to update activity';
+      try {
+        final errorData = response.data;
+        if (errorData != null && errorData['error'] != null) {
+          errorMsg = errorData['error'].toString();
+        }
+      } catch (_) {}
+      throw ServerException(errorMsg);
     } on DioException catch (e) {
       appLogger.error(LogCategory.http, 'DioException', e);
       throw mapDioException(e);

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/json_parsing.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 
 class SeasonModel extends Season implements SyncableModel {
@@ -58,12 +59,12 @@ class SeasonModel extends Season implements SyncableModel {
       name: (json['Name'] ?? json['name'] ?? '').toString(),
       plantId: (json['PlantID'] ?? json['plant_id'] ?? '').toString(),
       landId: (json['LandID'] ?? json['land_id'] ?? '').toString(),
-      startDate: _parseDate(json['StartDate'] ?? json['start_date']),
+      startDate: parseDate(json['StartDate'] ?? json['start_date']),
       endDate: endDateValue != null && endDateValue.toString().isNotEmpty
-          ? _parseDate(endDateValue)
+          ? parseDate(endDateValue)
           : null,
-      createdAt: _parseDate(json['CreatedAt'] ?? json['created_at']),
-      updatedAt: _parseDate(json['UpdatedAt'] ?? json['updated_at']),
+      createdAt: parseDate(dualKey(json, 'created_at')),
+      updatedAt: parseDate(dualKey(json, 'updated_at')),
     );
   }
 
@@ -110,14 +111,6 @@ class SeasonModel extends Season implements SyncableModel {
   /// `SeasonLocalDataSource.markDeleted`). Always `false` on a model built
   /// from a server response (`fromJson`) or `create`.
   final bool deletedLocally;
-
-  static DateTime _parseDate(dynamic dateValue) {
-    if (dateValue == null) return DateTime.now();
-    if (dateValue is String) {
-      return DateTime.parse(dateValue);
-    }
-    return DateTime.now();
-  }
 
   Map<String, dynamic> toJson() {
     return {
