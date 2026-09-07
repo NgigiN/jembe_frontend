@@ -41,7 +41,7 @@ dependencies:
   # change than this offline DB encryption task calls for.
   drift: ">=2.20.0 <2.32.0"
   flutter_secure_storage: ^9.2.2
-  flutter_bloc: ^8.1.3
+  flutter_bloc: ^9.1.1
   equatable: ^2.0.5
   go_router: ^18.0.0
   path: ^1.9.0
@@ -70,7 +70,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  bloc_test: ^9.1.7
+  bloc_test: ^10.0.0
   build_runner: ^2.4.9
   dependency_validator: ^3.2.3
   drift_dev: ">=2.20.0 <2.32.0"
