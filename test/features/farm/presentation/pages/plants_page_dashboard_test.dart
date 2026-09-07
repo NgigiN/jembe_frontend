@@ -190,14 +190,61 @@ void main() {
       },
     );
 
-    testWidgets('plant count/names still come from PlantBloc', (
-      tester,
-    ) async {
-      await tester.pumpWidget(wrap());
-      await tester.pump();
+    testWidgets(
+      'plant count comes from the dashboard (not the capped PlantBloc '
+      'list); plant NAMES still come from PlantBloc (PR B review fix 2)',
+      (tester) async {
+        // PlantBloc only carries 1 plant (e.g. capped by B3's
+        // kOnlineListPageSize), but the dashboard says there are 5 — the
+        // displayed count must be the dashboard's, not PlantBloc's length.
+        whenListen(
+          dashboardBloc,
+          const Stream<DashboardState>.empty(),
+          initialState: const DashboardLoaded(
+            counts: DashboardCounts(
+              lands: 2,
+              plants: 5,
+              seasons: 3,
+              harvests: 4,
+              animalTypes: 0,
+              herds: 0,
+            ),
+            totals: DashboardTotals.zero(),
+          ),
+        );
 
-      expect(find.text('1 plants registered'), findsOneWidget);
-    });
+        await tester.pumpWidget(wrap());
+        await tester.pump();
+
+        expect(find.text('5 plants registered'), findsOneWidget);
+        expect(find.text('1 plants registered'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'a DashboardError degrades gracefully: the checklist and plant '
+      'names still render, counts fall back to 0 (PR B review fix 3)',
+      (tester) async {
+        whenListen(
+          dashboardBloc,
+          const Stream<DashboardState>.empty(),
+          initialState: const DashboardError('network down'),
+        );
+
+        await tester.pumpWidget(wrap());
+        await tester.pump();
+
+        // No hard-block "Could not load data" full-screen error.
+        expect(find.text('Could not load data'), findsNothing);
+        // The checklist still renders, with counts falling back to 0/hidden
+        // (no "lands registered" summary line for a 0 count).
+        expect(find.text('Add Land'), findsOneWidget);
+        expect(find.text('Add Plant'), findsOneWidget);
+        // Plant step still shows its PlantBloc-backed content — the
+        // dashboard failure doesn't hide it.
+        expect(find.text('Plant Management'), findsOneWidget);
+      },
+    );
   });
 
   group('offline (OfflineConfig.enabled == true) - unchanged', () {

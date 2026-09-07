@@ -22,10 +22,25 @@ class DashboardModel extends Dashboard {
       totals: DashboardTotalsModel.fromJson(
         json['totals'] as Map<String, dynamic>? ?? const {},
       ),
-      recent: DashboardRecentModel.fromJson(
-        json['recent'] as Map<String, dynamic>? ?? const {},
-      ),
+      recent: _parseRecentBestEffort(json['recent']),
     );
+  }
+}
+
+/// Parses `recent` best-effort: B1 only consumes `counts`/`totals` (see
+/// `DashboardRecent`'s class docs), so a malformed `recent` slice — an
+/// unexpected shape, or a row that doesn't match its entity model — must
+/// never fail the whole dashboard fetch and block the plants/animals
+/// landing screens. Any parse failure (a bad top-level shape, or a bad
+/// row within it — see `DashboardRecentModel.fromJson`) yields
+/// [DashboardRecent.empty], never an exception.
+DashboardRecent _parseRecentBestEffort(dynamic raw) {
+  try {
+    return DashboardRecentModel.fromJson(
+      raw is Map<String, dynamic> ? raw : const {},
+    );
+  } catch (_) {
+    return const DashboardRecent.empty();
   }
 }
 
@@ -77,18 +92,44 @@ class DashboardRecentModel extends DashboardRecent {
 
   factory DashboardRecentModel.fromJson(Map<String, dynamic> json) {
     return DashboardRecentModel(
-      activities: ((json['activities'] as List<dynamic>?) ?? const [])
-          .map((e) => ActivityModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      harvests: ((json['harvests'] as List<dynamic>?) ?? const [])
-          .map((e) => HarvestModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      inputs: ((json['inputs'] as List<dynamic>?) ?? const [])
-          .map((e) => InputModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      revenues: ((json['revenues'] as List<dynamic>?) ?? const [])
-          .map((e) => RevenueModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      activities: _parseRowsBestEffort(
+        json['activities'],
+        ActivityModel.fromJson,
+      ),
+      harvests: _parseRowsBestEffort(
+        json['harvests'],
+        HarvestModel.fromJson,
+      ),
+      inputs: _parseRowsBestEffort(
+        json['inputs'],
+        InputModel.fromJson,
+      ),
+      revenues: _parseRowsBestEffort(
+        json['revenues'],
+        RevenueModel.fromJson,
+      ),
     );
   }
+}
+
+/// Parses a raw JSON list with [parseRow], skipping (not throwing on) any
+/// row that isn't a JSON object or that fails to parse — a single
+/// malformed `recent` row must not take down the rest of the slice. See
+/// [_parseRecentBestEffort] for the outer safety net around the whole
+/// `recent` block.
+List<T> _parseRowsBestEffort<T>(
+  dynamic rawList,
+  T Function(Map<String, dynamic>) parseRow,
+) {
+  if (rawList is! List) return const [];
+  final result = <T>[];
+  for (final row in rawList) {
+    if (row is! Map<String, dynamic>) continue;
+    try {
+      result.add(parseRow(row));
+    } catch (_) {
+      // Skip this row — best-effort.
+    }
+  }
+  return result;
 }

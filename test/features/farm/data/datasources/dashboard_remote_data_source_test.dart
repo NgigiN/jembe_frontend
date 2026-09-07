@@ -159,6 +159,68 @@ void main() {
       expect(result.recent.revenues.single.total, 50.0);
     });
 
+    test(
+      'a malformed row in recent is skipped, not fatal — counts/totals and '
+      'the other well-formed rows still parse (PR B review fix 3)',
+      () async {
+        const body = '''
+{
+  "counts": { "lands": 3, "plants": 5 },
+  "totals": { "total_costs": 1500.5 },
+  "recent": {
+    "activities": [
+      { "id": "bad", "cost": {"not": "a number"} },
+      {
+        "id": "1",
+        "source_type": "plant",
+        "source_id": "10",
+        "type": "watering",
+        "cost": 20.0,
+        "date": "2026-09-01",
+        "created_at": "2026-09-01T08:00:00Z",
+        "updated_at": "2026-09-01T08:00:00Z"
+      }
+    ],
+    "harvests": "not even a list"
+  }
+}
+''';
+        final adapter = _FakeAdapter(body: body);
+        final source = DashboardRemoteDataSourceImpl(dio: _dioWith(adapter));
+
+        final result = await source.getDashboard();
+
+        // counts/totals parsed strictly, unaffected by the bad recent data.
+        expect(result.counts.lands, 3);
+        expect(result.counts.plants, 5);
+        expect(result.totals.totalCosts, 1500.5);
+
+        // The malformed activity row is skipped; the well-formed one after
+        // it still parses.
+        expect(result.recent.activities, hasLength(1));
+        expect(result.recent.activities.single.type, 'watering');
+        // A `recent.harvests` of the wrong shape (a String, not a List)
+        // degrades to empty rather than throwing.
+        expect(result.recent.harvests, isEmpty);
+      },
+    );
+
+    test('an entirely non-object recent payload degrades to empty, never '
+        'throws (PR B review fix 3)', () async {
+      final adapter = _FakeAdapter(
+        body: '{"counts": {"lands": 1}, "recent": ["not", "an", "object"]}',
+      );
+      final source = DashboardRemoteDataSourceImpl(dio: _dioWith(adapter));
+
+      final result = await source.getDashboard();
+
+      expect(result.counts.lands, 1);
+      expect(result.recent.activities, isEmpty);
+      expect(result.recent.harvests, isEmpty);
+      expect(result.recent.inputs, isEmpty);
+      expect(result.recent.revenues, isEmpty);
+    });
+
     test('missing counts/totals/recent keys fall back to zeroed/empty data', () async {
       final adapter = _FakeAdapter(body: '{}');
       final source = DashboardRemoteDataSourceImpl(dio: _dioWith(adapter));

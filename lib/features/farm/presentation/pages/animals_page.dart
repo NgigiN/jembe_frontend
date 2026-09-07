@@ -87,9 +87,6 @@ class _AnimalsPageState extends State<AnimalsPage> {
           builder: (context, animalTypeState) {
             final hasAnimalType = animalTypeState is AnimalTypeLoaded &&
                 animalTypeState.animalTypes.isNotEmpty;
-            final animalTypeCount = animalTypeState is AnimalTypeLoaded
-                ? animalTypeState.animalTypes.length
-                : 0;
             final animalTypeNames = animalTypeState is AnimalTypeLoaded
                 ? animalTypeState.animalTypes.map((t) => t.name).toList()
                 : const <String>[];
@@ -110,10 +107,13 @@ class _AnimalsPageState extends State<AnimalsPage> {
               );
             }
 
-            // Flag ON: herd count sourced from HerdBloc, exactly as before
-            // the dashboard existed. Flag OFF (online): sourced from the
-            // dashboard instead of a second list GET fired purely for a
-            // count.
+            // Flag ON: herd count AND animal-type count sourced from their
+            // own blocs, exactly as before the dashboard existed. Flag OFF
+            // (online): both counts sourced from the dashboard instead of
+            // list GETs fired purely for a count — the dashboard fetch
+            // failing degrades gracefully (counts fall back to 0) rather
+            // than hard-blocking the screen, since animal-type NAMES /
+            // related content already loaded fine from AnimalTypeBloc.
             return OfflineConfig.enabled
                 ? BlocBuilder<HerdBloc, HerdState>(
                     builder: (context, herdState) {
@@ -121,6 +121,9 @@ class _AnimalsPageState extends State<AnimalsPage> {
                           herdState.herds.isNotEmpty;
                       final herdCount = herdState is HerdLoaded
                           ? herdState.herds.length
+                          : 0;
+                      final animalTypeCount = animalTypeState is AnimalTypeLoaded
+                          ? animalTypeState.animalTypes.length
                           : 0;
 
                       return _buildSteps(
@@ -135,9 +138,11 @@ class _AnimalsPageState extends State<AnimalsPage> {
                   )
                 : BlocBuilder<DashboardBloc, DashboardState>(
                     builder: (context, dashboardState) {
-                      final herdCount = dashboardState is DashboardLoaded
-                          ? dashboardState.counts.herds
-                          : 0;
+                      final counts = dashboardState is DashboardLoaded
+                          ? dashboardState.counts
+                          : null;
+                      final herdCount = counts?.herds ?? 0;
+                      final animalTypeCount = counts?.animalTypes ?? 0;
 
                       return _buildSteps(
                         context,

@@ -207,30 +207,19 @@ class _PlantsPageState extends State<PlantsPage> {
     );
   }
 
-  /// Flag OFF (online): land/season/harvest counts sourced from the
-  /// dashboard; plant names still come from `PlantBloc` (Phase 8 B1 — the
-  /// dashboard returns counts only, never names).
+  /// Flag OFF (online): land/season/plant/harvest counts sourced from the
+  /// dashboard (Phase 8 B3 capped `PlantBloc`'s list fetch at
+  /// `kOnlineListPageSize`, so the plant COUNT can no longer come from it
+  /// for a >500-plant account — only the dashboard's `counts.plants` is
+  /// accurate); plant NAMES still come from `PlantBloc` (Phase 8 B1 — the
+  /// dashboard returns counts only, never names). A dashboard fetch
+  /// failure degrades gracefully (mirrors `AnimalsPage`'s herd/animal-type
+  /// count handling) — counts simply fall back to 0 rather than
+  /// hard-blocking the whole screen, so plant names / related content
+  /// stay visible even when the dashboard call fails.
   Widget _buildOnlineBody(BuildContext context) {
     return BlocBuilder<DashboardBloc, DashboardState>(
       builder: (context, dashboardState) {
-        final dashboardLoaded = dashboardState is DashboardLoaded;
-
-        if (!dashboardLoaded && dashboardState is DashboardLoading) {
-          return _scrollableEmptyState(
-            const Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (dashboardState is DashboardError) {
-          return _scrollableEmptyState(
-            const EntityEmptyView(
-              icon: Icons.error_outline,
-              title: 'Could not load data',
-              subtitle: 'Pull down to retry',
-            ),
-          );
-        }
-
         final counts = dashboardState is DashboardLoaded
             ? dashboardState.counts
             : null;
@@ -238,24 +227,23 @@ class _PlantsPageState extends State<PlantsPage> {
         return BlocSelector<
           PlantBloc,
           PlantState,
-          (bool hasPlant, int plantCount, List<String> plantNames)
+          (bool hasPlant, List<String> plantNames)
         >(
           selector: (state) => (
             state is PlantLoaded && state.plants.isNotEmpty,
-            state is PlantLoaded ? state.plants.length : 0,
             state is PlantLoaded
                 ? state.plants.map((p) => p.name).toList()
                 : const <String>[],
           ),
           builder: (context, plantInfo) {
-            final (hasPlant, plantCount, plantNames) = plantInfo;
+            final (hasPlant, plantNames) = plantInfo;
 
             return _buildSteps(
               context,
               hasLand: (counts?.lands ?? 0) > 0,
               landCount: counts?.lands ?? 0,
               hasPlant: hasPlant,
-              plantCount: plantCount,
+              plantCount: counts?.plants ?? 0,
               plantNames: plantNames,
               hasSeason: (counts?.seasons ?? 0) > 0,
               seasonCount: counts?.seasons ?? 0,

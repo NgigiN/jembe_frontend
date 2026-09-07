@@ -10,6 +10,7 @@ import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_event.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_state.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/entities/dashboard.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
@@ -135,6 +136,77 @@ void main() {
 
       expect(find.text('9 herds registered'), findsOneWidget);
     });
+
+    testWidgets(
+      'renders the animal-type count from the dashboard, not '
+      'AnimalTypeBloc (PR B review fix 2)',
+      (tester) async {
+        // AnimalTypeBloc only carries 2 types (e.g. capped by B3's
+        // kOnlineListPageSize), but the dashboard says there are 7 — the
+        // displayed count must be the dashboard's.
+        whenListen(
+          animalTypeBloc,
+          const Stream<AnimalTypeState>.empty(),
+          initialState: AnimalTypeLoaded([
+            AnimalType(
+              id: '1',
+              userId: '1',
+              name: 'Cow',
+              createdAt: DateTime(2026),
+              updatedAt: DateTime(2026),
+            ),
+            AnimalType(
+              id: '2',
+              userId: '1',
+              name: 'Goat',
+              createdAt: DateTime(2026),
+              updatedAt: DateTime(2026),
+            ),
+          ]),
+        );
+        whenListen(
+          dashboardBloc,
+          const Stream<DashboardState>.empty(),
+          initialState: const DashboardLoaded(
+            counts: DashboardCounts(
+              lands: 0,
+              plants: 0,
+              seasons: 0,
+              harvests: 0,
+              animalTypes: 7,
+              herds: 9,
+            ),
+            totals: DashboardTotals.zero(),
+          ),
+        );
+
+        await tester.pumpWidget(wrap());
+        await tester.pump();
+
+        expect(find.text('7 types added'), findsOneWidget);
+        expect(find.text('2 types added'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'a DashboardError degrades gracefully: the checklist and '
+      'animal-type names still render, counts fall back to 0 (PR B '
+      'review fix 3 parity)',
+      (tester) async {
+        whenListen(
+          dashboardBloc,
+          const Stream<DashboardState>.empty(),
+          initialState: const DashboardError('network down'),
+        );
+
+        await tester.pumpWidget(wrap());
+        await tester.pump();
+
+        expect(find.text('Could not load data'), findsNothing);
+        expect(find.text('Add Animal Types'), findsOneWidget);
+        expect(find.text('Animal Management'), findsOneWidget);
+      },
+    );
   });
 
   group('offline (OfflineConfig.enabled == true) - unchanged', () {
