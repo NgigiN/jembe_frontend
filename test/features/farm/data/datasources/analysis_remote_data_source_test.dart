@@ -83,17 +83,16 @@ void main() {
     });
 
     test(
-      'a 401 throws ServerException via the generic DioException branch '
-      '(the now-removed dead 401/403 branch never fired)',
+      'a 401 throws UnauthorizedException via the generic DioException '
+      'branch (the now-removed dead 401/403 branch never fired) - '
+      'mapDioException maps 401 -> UnauthorizedException (F1-05/S4-C1)',
       () async {
         final adapter = _FakeAdapter(body: '{}', statusCode: 401);
         final source = AnalysisRemoteDataSourceImpl(dio: _dioWith(adapter));
 
         await expectLater(
           source.getTotalCostsBySeason(),
-          throwsA(
-            isA<ServerException>().having((e) => e.message, 'message', isNull),
-          ),
+          throwsA(isA<UnauthorizedException>()),
         );
       },
     );

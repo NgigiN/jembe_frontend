@@ -16,6 +16,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
       return Right(userModel);
     } on NetworkException catch (_) {
       return const Left(NetworkFailure());
+    } on UnauthorizedException catch (_) {
+      return const Left(UnauthorizedFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -42,6 +44,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
       return const Right(null);
     } on NetworkException catch (_) {
       return const Left(NetworkFailure());
+    } on UnauthorizedException catch (_) {
+      return const Left(UnauthorizedFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
@@ -56,6 +60,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
       return const Right(null);
     } on NetworkException catch (_) {
       return const Left(NetworkFailure());
+    } on UnauthorizedException catch (_) {
+      return const Left(UnauthorizedFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {

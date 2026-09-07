@@ -42,6 +42,20 @@ void main() {
     });
 
     test(
+      'maps an UnauthorizedException to Left(UnauthorizedFailure) '
+      '(F1-05/S4-C1)',
+      () async {
+        final result =
+            await guard<int>(() async => throw UnauthorizedException());
+
+        result.fold(
+          (failure) => expect(failure, isA<UnauthorizedFailure>()),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test(
       'rethrows an unexpected (non-Exceptions) error when onUnexpected is '
       'not supplied — matching the repos with only the two standard catches',
       () async {

@@ -16,6 +16,8 @@ class QuestionRepositoryImpl implements QuestionRepository {
       return Right(result);
     } on NetworkException catch (_) {
       return const Left(NetworkFailure());
+    } on UnauthorizedException catch (_) {
+      return const Left(UnauthorizedFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -28,6 +30,8 @@ class QuestionRepositoryImpl implements QuestionRepository {
       return Right(result);
     } on NetworkException catch (_) {
       return const Left(NetworkFailure());
+    } on UnauthorizedException catch (_) {
+      return const Left(UnauthorizedFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

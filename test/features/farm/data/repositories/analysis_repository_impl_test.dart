@@ -95,6 +95,23 @@ void main() {
     );
 
     test(
+      'getCostBreakdownByInputType: an UnauthorizedException maps to '
+      'UnauthorizedFailure (F1-05/S4-C1)',
+      () async {
+        final dataSource = FakeAnalysisRemoteDataSource()
+          ..throwOnCostBreakdown = UnauthorizedException();
+        final repository = AnalysisRepositoryImpl(remoteDataSource: dataSource);
+
+        final result = await repository.getCostBreakdownByInputType();
+
+        result.fold(
+          (failure) => expect(failure, isA<UnauthorizedFailure>()),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test(
       'getTotalCostsBySeason: a NetworkException maps to NetworkFailure',
       () async {
         final dataSource = FakeAnalysisRemoteDataSource()
@@ -122,6 +139,23 @@ void main() {
 
         result.fold(
           (failure) => expect((failure as ServerFailure).message, 'boom'),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test(
+      'getTotalCostsBySeason: an UnauthorizedException maps to '
+      'UnauthorizedFailure (F1-05/S4-C1)',
+      () async {
+        final dataSource = FakeAnalysisRemoteDataSource()
+          ..throwOnTotalCosts = UnauthorizedException();
+        final repository = AnalysisRepositoryImpl(remoteDataSource: dataSource);
+
+        final result = await repository.getTotalCostsBySeason();
+
+        result.fold(
+          (failure) => expect(failure, isA<UnauthorizedFailure>()),
           (_) => fail('expected Left'),
         );
       },
