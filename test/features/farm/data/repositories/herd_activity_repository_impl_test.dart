@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/native.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
@@ -112,8 +113,38 @@ void main() {
         null,
       );
 
-      expect(result.isLeft(), isTrue);
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
     });
+
+    test(
+      'a ServerException(msg) from the data source maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeHerdActivityRemoteDataSource()
+          ..throwOnAdd = const ServerException('herd not found');
+        final repository = HerdActivityRepositoryImpl(
+          remoteDataSource: dataSource,
+        );
+
+        final result = await repository.addHerdActivity(
+          'herd-1',
+          'birth',
+          1,
+          DateTime.utc(2026, 9),
+          null,
+        );
+
+        result.fold(
+          (failure) => expect(
+            (failure as ServerFailure).message,
+            'herd not found',
+          ),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
   });
 
   group('flag ON (local-first + outbox)', () {

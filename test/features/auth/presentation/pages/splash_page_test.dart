@@ -57,12 +57,26 @@ class _SpySyncEngine extends SyncEngine {
 void main() {
   setUpAll(() => registerFallbackValue(CheckExistingLoginEvent()));
 
+  late MockDio mockDio;
+
   // SplashPage.initState reads AnalyticsService from the service locator
   // before the login-check delay, so it must be registered for the page
   // to build at all.
   setUp(() {
+    mockDio = MockDio();
+    // A proper no-op stub: previously this registered a bare, unstubbed
+    // MockDio, so flush()'s internal try/catch silently swallowed the
+    // resulting mocktail error and this test never actually exercised (or
+    // asserted on) real analytics behavior. Stubbing a success response
+    // lets the test verify the real POST instead.
+    when(
+      () => mockDio.post<void>(any(), data: any(named: 'data')),
+    ).thenAnswer(
+      (_) async =>
+          Response<void>(requestOptions: RequestOptions(), statusCode: 201),
+    );
     sl.registerLazySingleton<AnalyticsService>(
-      () => AnalyticsService(dio: MockDio()),
+      () => AnalyticsService(dio: mockDio),
     );
   });
 
@@ -85,11 +99,19 @@ void main() {
     // SplashPage.initState() calls AnalyticsService.track(), which schedules
     // a real 30s flush Timer. flutter_test's AutomatedTestWidgetsFlutterBinding
     // asserts no Timer is left pending when a test ends, so drain it
-    // explicitly here rather than waiting. flush() cancels its own timer
-    // first, then (since the buffer isn't empty) attempts a POST via the
-    // unstubbed MockDio - that failure is caught and logged inside
-    // AnalyticsService.flush() itself, so it doesn't propagate here.
+    // explicitly here rather than waiting.
     await sl<AnalyticsService>().flush();
+
+    final captured = verify(
+      () => mockDio.post<void>(
+        '/api/v1/events',
+        data: captureAny(named: 'data'),
+      ),
+    ).captured;
+    final body = captured.single as Map<String, dynamic>;
+    final events = body['events'] as List;
+    expect(events, hasLength(1));
+    expect(events.single['name'], 'app_open');
   });
 
   group('decideOfflineFlagChange', () {

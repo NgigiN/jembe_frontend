@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:drift/native.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
@@ -18,12 +20,18 @@ class FakeAnimalRemoteDataSource implements AnimalRemoteDataSource {
   AnimalModel? lastAdded;
   AnimalModel? lastUpdated;
   final List<String> deleteCalls = [];
+  Exception? throwOnGet;
+  Exception? throwOnAdd;
 
   @override
-  Future<List<AnimalModel>> getAnimals({DateTime? updatedSince}) async => [];
+  Future<List<AnimalModel>> getAnimals({DateTime? updatedSince}) async {
+    if (throwOnGet != null) throw throwOnGet!;
+    return [];
+  }
 
   @override
   Future<AnimalModel> addAnimal(AnimalModel animal) async {
+    if (throwOnAdd != null) throw throwOnAdd!;
     lastAdded = animal;
     return animal;
   }
@@ -167,6 +175,114 @@ void main() {
         expect(emission, isEmpty);
       },
     );
+  });
+
+  group('flag OFF error mapping (R2-02 net)', () {
+    test('getAnimals: a NetworkException maps to NetworkFailure', () async {
+      final dataSource = FakeAnimalRemoteDataSource()
+        ..throwOnGet = NetworkException();
+      final repository = AnimalRepositoryImpl(remoteDataSource: dataSource);
+
+      final result = await repository.getAnimals();
+
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'getAnimals: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeAnimalRemoteDataSource()
+          ..throwOnGet = const ServerException('boom');
+        final repository = AnimalRepositoryImpl(remoteDataSource: dataSource);
+
+        final result = await repository.getAnimals();
+
+        result.fold(
+          (failure) => expect((failure as ServerFailure).message, 'boom'),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('addAnimal: a NetworkException maps to NetworkFailure', () async {
+      final dataSource = FakeAnimalRemoteDataSource()
+        ..throwOnAdd = NetworkException();
+      final repository = AnimalRepositoryImpl(remoteDataSource: dataSource);
+      final now = DateTime.now();
+
+      final result = await repository.addAnimal(
+        Animal(
+          id: '',
+          userId: 'user-1',
+          name: 'Bessie',
+          animalTypeId: 'type-1',
+          herdId: 'herd-1',
+          birthDate: birthDate,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'addAnimal: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeAnimalRemoteDataSource()
+          ..throwOnAdd = const ServerException('name is required');
+        final repository = AnimalRepositoryImpl(remoteDataSource: dataSource);
+        final now = DateTime.now();
+
+        final result = await repository.addAnimal(
+          Animal(
+            id: '',
+            userId: 'user-1',
+            name: 'Bessie',
+            animalTypeId: 'type-1',
+            herdId: 'herd-1',
+            birthDate: birthDate,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+
+        result.fold(
+          (failure) => expect(
+            (failure as ServerFailure).message,
+            'name is required',
+          ),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('a successful addAnimal maps to Right', () async {
+      final dataSource = FakeAnimalRemoteDataSource();
+      final repository = AnimalRepositoryImpl(remoteDataSource: dataSource);
+      final now = DateTime.now();
+
+      final result = await repository.addAnimal(
+        Animal(
+          id: '',
+          userId: 'user-1',
+          name: 'Bessie',
+          animalTypeId: 'type-1',
+          herdId: 'herd-1',
+          birthDate: birthDate,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      expect(result.isRight(), isTrue);
+    });
   });
 
   group('flag ON (local-first + outbox)', () {

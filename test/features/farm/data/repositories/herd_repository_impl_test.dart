@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:drift/native.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
@@ -18,13 +20,18 @@ class FakeHerdRemoteDataSource implements HerdRemoteDataSource {
   HerdModel? lastUpdated;
   final List<String> deleteCalls = [];
   List<HerdModel> getHerdsResult = [];
+  Exception? throwOnGet;
+  Exception? throwOnAdd;
 
   @override
-  Future<List<HerdModel>> getHerds({DateTime? updatedSince}) async =>
-      getHerdsResult;
+  Future<List<HerdModel>> getHerds({DateTime? updatedSince}) async {
+    if (throwOnGet != null) throw throwOnGet!;
+    return getHerdsResult;
+  }
 
   @override
   Future<HerdModel> addHerd(HerdModel herd) async {
+    if (throwOnAdd != null) throw throwOnAdd!;
     lastAdded = herd;
     return herd;
   }
@@ -179,6 +186,102 @@ void main() {
         expect(emission, isEmpty);
       },
     );
+  });
+
+  group('flag OFF error mapping (R2-02 net)', () {
+    test('getHerds: a NetworkException maps to NetworkFailure', () async {
+      final dataSource = FakeHerdRemoteDataSource()
+        ..throwOnGet = NetworkException();
+      final repository = HerdRepositoryImpl(remoteDataSource: dataSource);
+
+      final result = await repository.getHerds();
+
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'getHerds: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeHerdRemoteDataSource()
+          ..throwOnGet = const ServerException('boom');
+        final repository = HerdRepositoryImpl(remoteDataSource: dataSource);
+
+        final result = await repository.getHerds();
+
+        result.fold(
+          (failure) => expect((failure as ServerFailure).message, 'boom'),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('addHerd: a NetworkException maps to NetworkFailure', () async {
+      final dataSource = FakeHerdRemoteDataSource()
+        ..throwOnAdd = NetworkException();
+      final repository = HerdRepositoryImpl(remoteDataSource: dataSource);
+      final startDate = DateTime.utc(2026, 3);
+
+      final result = await repository.addHerd(
+        'North Herd',
+        'server-type-1',
+        'North Field',
+        'user-1',
+        10,
+        startDate: startDate,
+      );
+
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'addHerd: a ServerException(msg) maps to ServerFailure(msg)',
+      () async {
+        final dataSource = FakeHerdRemoteDataSource()
+          ..throwOnAdd = const ServerException('name is required');
+        final repository = HerdRepositoryImpl(remoteDataSource: dataSource);
+        final startDate = DateTime.utc(2026, 3);
+
+        final result = await repository.addHerd(
+          'North Herd',
+          'server-type-1',
+          'North Field',
+          'user-1',
+          10,
+          startDate: startDate,
+        );
+
+        result.fold(
+          (failure) => expect(
+            (failure as ServerFailure).message,
+            'name is required',
+          ),
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test('a successful addHerd maps to Right', () async {
+      final dataSource = FakeHerdRemoteDataSource();
+      final repository = HerdRepositoryImpl(remoteDataSource: dataSource);
+      final startDate = DateTime.utc(2026, 3);
+
+      final result = await repository.addHerd(
+        'North Herd',
+        'server-type-1',
+        'North Field',
+        'user-1',
+        10,
+        startDate: startDate,
+      );
+
+      expect(result.isRight(), isTrue);
+    });
   });
 
   group('flag ON (local-first + outbox)', () {

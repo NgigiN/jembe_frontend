@@ -25,18 +25,50 @@ void main() {
     registerFallbackValue(GetQuestionsEvent());
   });
 
+  late MockDio mockDio;
+
   // A successful submit is never reached in these tests, but AskQuestionPage
   // reads AnalyticsService from the service locator before dispatching the
   // submit event, so it must be registered for the page to build at all.
   setUp(() {
+    mockDio = MockDio();
+    // A proper no-op stub: previously this registered a bare, unstubbed
+    // MockDio, so flush()'s internal try/catch silently swallowed the
+    // resulting mocktail error and these tests never actually exercised (or
+    // asserted on) real analytics behavior. Stubbing a success response lets
+    // each test verify the real POST instead.
+    when(
+      () => mockDio.post<void>(any(), data: any(named: 'data')),
+    ).thenAnswer(
+      (_) async =>
+          Response<void>(requestOptions: RequestOptions(), statusCode: 201),
+    );
     sl.registerLazySingleton<AnalyticsService>(
-      () => AnalyticsService(dio: MockDio()),
+      () => AnalyticsService(dio: mockDio),
     );
   });
 
   tearDown(() {
     sl.unregister<AnalyticsService>();
   });
+
+  /// Flushes the buffered analytics event and asserts the real POST that
+  /// `AskQuestionPage._submit()` fires on a successful dispatch: exactly one
+  /// request to `/api/v1/events` carrying a `question_submitted` event.
+  Future<void> flushAndVerifyAnalytics() async {
+    await sl<AnalyticsService>().flush();
+
+    final captured = verify(
+      () => mockDio.post<void>(
+        '/api/v1/events',
+        data: captureAny(named: 'data'),
+      ),
+    ).captured;
+    final body = captured.single as Map<String, dynamic>;
+    final events = body['events'] as List;
+    expect(events, hasLength(1));
+    expect(events.single['name'], 'question_submitted');
+  }
 
   Widget pageUnder(QuestionBloc bloc) => MaterialApp(
     home: BlocProvider<QuestionBloc>.value(
@@ -111,7 +143,7 @@ void main() {
 
     verify(() => bloc.add(any(that: isA<SubmitQuestionEvent>()))).called(1);
 
-    await sl<AnalyticsService>().flush();
+    await flushAndVerifyAnalytics();
   });
 
   testWidgets(
@@ -171,7 +203,7 @@ void main() {
       // schedules a real 30s flush Timer. flutter_test's
       // AutomatedTestWidgetsFlutterBinding asserts no Timer is left pending
       // when a test ends, so drain it explicitly here rather than waiting.
-      await sl<AnalyticsService>().flush();
+      await flushAndVerifyAnalytics();
     },
   );
 
@@ -287,7 +319,7 @@ void main() {
       // on its own reliable feedback for an action the user just took.
       expect(snackBarText('Failed to submit question'), findsOneWidget);
 
-      await sl<AnalyticsService>().flush();
+      await flushAndVerifyAnalytics();
     },
   );
 
