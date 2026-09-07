@@ -9,7 +9,16 @@ abstract class InfrastructureRemoteDataSource {
   /// only those the server has changed strictly after that instant (used by
   /// the sync pull phase). Existing no-arg callers (the flag-off repo path)
   /// are unaffected.
-  Future<List<InfrastructureModel>> getInfrastructures({DateTime? updatedSince});
+  ///
+  /// [limit] caps the page size (server default & max is 500) and [cursor]
+  /// pages backward through the newest-first list — the server returns rows
+  /// with `id < cursor`. Both are used ONLY by the online infinite-scroll
+  /// list path (P3-02a); the sync pull passes neither.
+  Future<List<InfrastructureModel>> getInfrastructures({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  });
   Future<InfrastructureModel> addInfrastructure(InfrastructureModel infrastructure);
   Future<InfrastructureModel> updateInfrastructure(InfrastructureModel infrastructure);
   Future<void> deleteInfrastructure(String id);
@@ -22,15 +31,20 @@ class InfrastructureRemoteDataSourceImpl implements InfrastructureRemoteDataSour
   @override
   Future<List<InfrastructureModel>> getInfrastructures({
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async {
     try {
-      final queryParams = updatedSince != null
-          ? {'updated_since': updatedSince.toUtc().toIso8601String()}
-          : null;
+      final queryParams = <String, dynamic>{
+        if (updatedSince != null)
+          'updated_since': updatedSince.toUtc().toIso8601String(),
+        if (limit != null) 'limit': limit,
+        if (cursor != null) 'cursor': cursor,
+      };
 
       final response = await dio.get<dynamic>(
         '/api/v1/infrastructure',
-        queryParameters: queryParams,
+        queryParameters: queryParams.isEmpty ? null : queryParams,
       );
 
       if (response.statusCode == 200) {

@@ -42,7 +42,11 @@ class _FakeLandRemoteDataSource implements LandRemoteDataSource {
   }
 
   @override
-  Future<List<LandModel>> getLands({DateTime? updatedSince}) async {
+  Future<List<LandModel>> getLands({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  }) async {
     getLandsCalls.add(updatedSince);
     if (throwOnGetLands != null) throw throwOnGetLands!;
     return (onGetLands ?? (_) => const <LandModel>[])(updatedSince);

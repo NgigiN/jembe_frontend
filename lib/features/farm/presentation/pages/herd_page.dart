@@ -15,6 +15,7 @@ import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_form_sheet.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
+import 'package:farm_tracker/core/widgets/crud/paginated_list_view.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
@@ -342,10 +343,19 @@ class _HerdPageState extends State<HerdPage> {
                   }
                 }
 
-                return ListView.builder(
+                final offline = OfflineConfig.enabled;
+                final hasReachedMax =
+                    offline || state is! HerdLoaded || state.hasReachedMax;
+                return PaginatedListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: context.scrollListPadding(forFab: true),
                   itemCount: herds.length,
+                  hasReachedMax: hasReachedMax,
+                  onEndReached: offline
+                      ? () {}
+                      : () => context.read<HerdBloc>().add(
+                            LoadMoreHerdsEvent(),
+                          ),
                   itemBuilder: (context, index) {
                     final herd = herds[index];
                     final animalTypeName =

@@ -103,13 +103,19 @@ class InfrastructureRepositoryImpl
   }
 
   @override
-  Future<Either<Failure, List<Infrastructure>>> getInfrastructures() async {
+  Future<Either<Failure, List<Infrastructure>>> getInfrastructures({
+    int? limit,
+    int? cursor,
+  }) async {
     if (_offlineFirst) {
+      // Offline mirror shows the whole local store — pagination
+      // ([limit]/[cursor]) is an online-only concern and is ignored here.
       final models = await local!.watchInfrastructures().first;
       return Right(models.map(_toInfrastructure).toList());
     }
     return guard(
-      remoteDataSource.getInfrastructures,
+      () =>
+          remoteDataSource.getInfrastructures(limit: limit, cursor: cursor),
       onUnexpected: (e) => 'Unexpected error: $e',
     );
   }

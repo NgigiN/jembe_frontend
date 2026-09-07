@@ -14,6 +14,12 @@ class GetSeasonsEvent extends SeasonEvent {}
 /// `_SeasonsUpdated` event for how.
 class WatchSeasonsEvent extends SeasonEvent {}
 
+/// Flag-OFF (online) only: fetches the NEXT page of seasons using the
+/// current `SeasonLoaded.nextCursor` and APPENDS it. Ignored when the loaded
+/// state has already reached max or a load-more is in flight. The offline
+/// (`watchSeasons`) path never dispatches this.
+class LoadMoreSeasonsEvent extends SeasonEvent {}
+
 class AddSeasonEvent extends SeasonEvent {
   AddSeasonEvent(this.season);
   final Season season;

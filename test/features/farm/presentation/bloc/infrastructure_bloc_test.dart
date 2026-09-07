@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/infrastructure.dart';
@@ -50,7 +51,7 @@ void main() {
       'InfrastructureLoaded] from the repository',
       build: () {
         when(
-          () => mockRepository.getInfrastructures(),
+          () => mockRepository.getInfrastructures(limit: any(named: 'limit')),
         ).thenAnswer((_) async => Right([infrastructure()]));
         return buildBloc();
       },
@@ -278,6 +279,102 @@ void main() {
         ),
         InfrastructureLoaded([infrastructure(id: 'infra-2')]),
       ],
+    );
+  });
+
+  group('online infinite scroll (P3-02a, flag off)', () {
+    blocTest<InfrastructureBloc, InfrastructureState>(
+      'GetInfrastructuresEvent under a full page sets hasReachedMax true '
+      'and derives nextCursor from the last id',
+      build: () {
+        when(
+          () => mockRepository.getInfrastructures(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              Right([infrastructure(id: '3'), infrastructure(id: '2')]),
+        );
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(GetInfrastructuresEvent()),
+      expect: () => [
+        const InfrastructureLoading(),
+        InfrastructureLoaded(
+          [infrastructure(id: '3'), infrastructure(id: '2')],
+          nextCursor: 2,
+        ),
+      ],
+    );
+
+    blocTest<InfrastructureBloc, InfrastructureState>(
+      'LoadMoreInfrastructuresEvent is a no-op when hasReachedMax (a '
+      '≤500-row account never issues a second fetch)',
+      build: buildBloc,
+      seed: () =>
+          InfrastructureLoaded([infrastructure(id: '2')], nextCursor: 2),
+      act: (bloc) => bloc.add(LoadMoreInfrastructuresEvent()),
+      wait: const Duration(milliseconds: 50),
+      expect: () => <InfrastructureState>[],
+      verify: (_) {
+        verifyNever(
+          () => mockRepository.getInfrastructures(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        );
+      },
+    );
+
+    blocTest<InfrastructureBloc, InfrastructureState>(
+      'a full first page sets hasReachedMax false; LoadMore fetches with '
+      'the cursor, APPENDS the next page and recomputes '
+      'hasReachedMax/nextCursor',
+      build: () {
+        final page1 = List.generate(
+          kOnlineListPageSize,
+          (i) => infrastructure(id: '${1000 - i}'),
+        );
+        final page2 = [infrastructure(id: '500'), infrastructure(id: '499')];
+        when(
+          () => mockRepository.getInfrastructures(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((invocation) async {
+          final cursor = invocation.namedArguments[#cursor] as int?;
+          return Right(cursor == null ? page1 : page2);
+        });
+        return buildBloc();
+      },
+      act: (bloc) async {
+        bloc.add(GetInfrastructuresEvent());
+        await bloc.stream.firstWhere((s) => s is InfrastructureLoaded);
+        bloc.add(LoadMoreInfrastructuresEvent());
+      },
+      wait: const Duration(milliseconds: 100),
+      expect: () => [
+        const InfrastructureLoading(),
+        isA<InfrastructureLoaded>()
+            .having((s) => s.infrastructures.length, 'page 1 length',
+                kOnlineListPageSize)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', false)
+            .having((s) => s.nextCursor, 'nextCursor', 501),
+        isA<InfrastructureLoaded>()
+            .having((s) => s.infrastructures.length, 'appended length',
+                kOnlineListPageSize + 2)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', true)
+            .having((s) => s.nextCursor, 'nextCursor', 499),
+      ],
+      verify: (_) {
+        verify(
+          () => mockRepository.getInfrastructures(
+            limit: any(named: 'limit'),
+            cursor: 501,
+          ),
+        ).called(1);
+      },
     );
   });
 }

@@ -102,12 +102,19 @@ class AnimalRepositoryImpl
   }
 
   @override
-  Future<Either<Failure, List<Animal>>> getAnimals() async {
+  Future<Either<Failure, List<Animal>>> getAnimals({
+    int? limit,
+    int? cursor,
+  }) async {
     if (_offlineFirst) {
+      // Offline mirror shows the whole local store — pagination
+      // ([limit]/[cursor]) is an online-only concern and is ignored here.
       final models = await local!.watchAnimals().first;
       return Right(models.map(_toAnimal).toList());
     }
-    return guard(remoteDataSource.getAnimals);
+    return guard(
+      () => remoteDataSource.getAnimals(limit: limit, cursor: cursor),
+    );
   }
 
   @override

@@ -24,7 +24,11 @@ class FakePlantRemoteDataSource implements PlantRemoteDataSource {
   Exception? throwOnAdd;
 
   @override
-  Future<List<PlantModel>> getPlants({DateTime? updatedSince}) async {
+  Future<List<PlantModel>> getPlants({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  }) async {
     if (throwOnGet != null) throw throwOnGet!;
     return [];
   }

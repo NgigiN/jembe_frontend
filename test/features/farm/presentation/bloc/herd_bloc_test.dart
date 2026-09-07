@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
@@ -45,7 +46,7 @@ void main() {
     blocTest<HerdBloc, HerdState>(
       'GetHerdsEvent emits [HerdLoading, HerdLoaded] from the repository',
       build: () {
-        when(() => mockRepository.getHerds())
+        when(() => mockRepository.getHerds(limit: any(named: 'limit')))
             .thenAnswer((_) async => Right([herd()]));
         return buildBloc();
       },
@@ -284,6 +285,96 @@ void main() {
         HerdError('Live sync interrupted. Pull to refresh.', herds: [herd()]),
         HerdLoaded([herd(id: 'herd-2')]),
       ],
+    );
+  });
+
+  group('online infinite scroll (P3-02a, flag off)', () {
+    blocTest<HerdBloc, HerdState>(
+      'GetHerdsEvent under a full page sets hasReachedMax true and derives '
+      'nextCursor from the last id',
+      build: () {
+        when(
+          () => mockRepository.getHerds(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (_) async => Right([herd(id: '3'), herd(id: '2')]),
+        );
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(GetHerdsEvent()),
+      expect: () => [
+        const HerdLoading(),
+        HerdLoaded([herd(id: '3'), herd(id: '2')], nextCursor: 2),
+      ],
+    );
+
+    blocTest<HerdBloc, HerdState>(
+      'LoadMoreHerdsEvent is a no-op when hasReachedMax (a ≤500-row '
+      'account never issues a second fetch)',
+      build: buildBloc,
+      seed: () => HerdLoaded([herd(id: '2')], nextCursor: 2),
+      act: (bloc) => bloc.add(LoadMoreHerdsEvent()),
+      wait: const Duration(milliseconds: 50),
+      expect: () => <HerdState>[],
+      verify: (_) {
+        verifyNever(
+          () => mockRepository.getHerds(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        );
+      },
+    );
+
+    blocTest<HerdBloc, HerdState>(
+      'a full first page sets hasReachedMax false; LoadMore fetches with '
+      'the cursor, APPENDS the next page and recomputes '
+      'hasReachedMax/nextCursor',
+      build: () {
+        final page1 = List.generate(
+          kOnlineListPageSize,
+          (i) => herd(id: '${1000 - i}'),
+        );
+        final page2 = [herd(id: '500'), herd(id: '499')];
+        when(
+          () => mockRepository.getHerds(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((invocation) async {
+          final cursor = invocation.namedArguments[#cursor] as int?;
+          return Right(cursor == null ? page1 : page2);
+        });
+        return buildBloc();
+      },
+      act: (bloc) async {
+        bloc.add(GetHerdsEvent());
+        await bloc.stream.firstWhere((s) => s is HerdLoaded);
+        bloc.add(LoadMoreHerdsEvent());
+      },
+      wait: const Duration(milliseconds: 100),
+      expect: () => [
+        const HerdLoading(),
+        isA<HerdLoaded>()
+            .having((s) => s.herds.length, 'page 1 length', kOnlineListPageSize)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', false)
+            .having((s) => s.nextCursor, 'nextCursor', 501),
+        isA<HerdLoaded>()
+            .having((s) => s.herds.length, 'appended length',
+                kOnlineListPageSize + 2)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', true)
+            .having((s) => s.nextCursor, 'nextCursor', 499),
+      ],
+      verify: (_) {
+        verify(
+          () => mockRepository.getHerds(
+            limit: any(named: 'limit'),
+            cursor: 501,
+          ),
+        ).called(1);
+      },
     );
   });
 }

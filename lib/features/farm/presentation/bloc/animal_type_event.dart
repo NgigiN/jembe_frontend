@@ -15,6 +15,12 @@ class GetAnimalTypesEvent extends AnimalTypeEvent {}
 /// internal `_AnimalTypesUpdated` event for how.
 class WatchAnimalTypesEvent extends AnimalTypeEvent {}
 
+/// Flag-OFF (online) only: fetches the NEXT page of animal types using the
+/// current `AnimalTypeLoaded.nextCursor` and APPENDS it. Ignored when the
+/// loaded state has already reached max or a load-more is in flight. The
+/// offline (`watchAnimalTypes`) path never dispatches this.
+class LoadMoreAnimalTypesEvent extends AnimalTypeEvent {}
+
 class AddAnimalTypeEvent extends AnimalTypeEvent {
   const AddAnimalTypeEvent(this.name, this.notes, this.userId);
   final String name;

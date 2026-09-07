@@ -106,13 +106,18 @@ class HerdRepositoryImpl with OfflineRepositoryMixin implements HerdRepository {
   }
 
   @override
-  Future<Either<Failure, List<Herd>>> getHerds() async {
+  Future<Either<Failure, List<Herd>>> getHerds({
+    int? limit,
+    int? cursor,
+  }) async {
     if (_offlineFirst) {
+      // Offline mirror shows the whole local store — pagination
+      // ([limit]/[cursor]) is an online-only concern and is ignored here.
       final models = await local!.watchHerds().first;
       return Right(models.map(_toHerd).toList());
     }
     return guard(
-      remoteDataSource.getHerds,
+      () => remoteDataSource.getHerds(limit: limit, cursor: cursor),
       onUnexpected: (e) => 'Unexpected error: $e',
     );
   }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
@@ -49,7 +50,7 @@ void main() {
       'GetAnimalsEvent emits [AnimalLoading, AnimalLoaded] from the repository',
       build: () {
         when(
-          () => mockRepository.getAnimals(),
+          () => mockRepository.getAnimals(limit: any(named: 'limit')),
         ).thenAnswer((_) async => Right([animal()]));
         return buildBloc();
       },
@@ -260,6 +261,100 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       expect: () => <AnimalState>[],
+    );
+  });
+
+  group('online infinite scroll (P3-02a, flag off)', () {
+    blocTest<AnimalBloc, AnimalState>(
+      'GetAnimalsEvent under a full page sets hasReachedMax true and '
+      'derives nextCursor from the last id',
+      build: () {
+        when(
+          () => mockRepository.getAnimals(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (_) async => Right([animal(id: '3'), animal(id: '2')]),
+        );
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(GetAnimalsEvent()),
+      expect: () => [
+        const AnimalLoading(),
+        AnimalLoaded(
+          animals: [animal(id: '3'), animal(id: '2')],
+          nextCursor: 2,
+        ),
+      ],
+    );
+
+    blocTest<AnimalBloc, AnimalState>(
+      'LoadMoreAnimalsEvent is a no-op when hasReachedMax (a ≤500-row '
+      'account never issues a second fetch)',
+      build: buildBloc,
+      seed: () => AnimalLoaded(animals: [animal(id: '2')], nextCursor: 2),
+      act: (bloc) => bloc.add(LoadMoreAnimalsEvent()),
+      wait: const Duration(milliseconds: 50),
+      expect: () => <AnimalState>[],
+      verify: (_) {
+        verifyNever(
+          () => mockRepository.getAnimals(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        );
+      },
+    );
+
+    blocTest<AnimalBloc, AnimalState>(
+      'a full first page sets hasReachedMax false; LoadMore fetches with '
+      'the cursor, APPENDS the next page and recomputes '
+      'hasReachedMax/nextCursor',
+      build: () {
+        final page1 = List.generate(
+          kOnlineListPageSize,
+          (i) => animal(id: '${1000 - i}'),
+        );
+        final page2 = [animal(id: '500'), animal(id: '499')];
+        when(
+          () => mockRepository.getAnimals(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((invocation) async {
+          final cursor = invocation.namedArguments[#cursor] as int?;
+          return Right(cursor == null ? page1 : page2);
+        });
+        return buildBloc();
+      },
+      act: (bloc) async {
+        bloc.add(GetAnimalsEvent());
+        await bloc.stream.firstWhere((s) => s is AnimalLoaded);
+        bloc.add(LoadMoreAnimalsEvent());
+      },
+      wait: const Duration(milliseconds: 100),
+      expect: () => [
+        const AnimalLoading(),
+        isA<AnimalLoaded>()
+            .having((s) => s.animals.length, 'page 1 length',
+                kOnlineListPageSize)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', false)
+            .having((s) => s.nextCursor, 'nextCursor', 501),
+        isA<AnimalLoaded>()
+            .having((s) => s.animals.length, 'appended length',
+                kOnlineListPageSize + 2)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', true)
+            .having((s) => s.nextCursor, 'nextCursor', 499),
+      ],
+      verify: (_) {
+        verify(
+          () => mockRepository.getAnimals(
+            limit: any(named: 'limit'),
+            cursor: 501,
+          ),
+        ).called(1);
+      },
     );
   });
 }

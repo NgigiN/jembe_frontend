@@ -9,7 +9,16 @@ abstract class AnimalTypeRemoteDataSource {
   /// those the server has changed strictly after that instant (used by the
   /// sync pull phase). Existing no-arg callers (the flag-off repo path) are
   /// unaffected.
-  Future<List<AnimalTypeModel>> getAnimalTypes({DateTime? updatedSince});
+  ///
+  /// [limit] caps the page size (server default & max is 500) and [cursor]
+  /// pages backward through the newest-first list — the server returns rows
+  /// with `id < cursor`. Both are used ONLY by the online infinite-scroll
+  /// list path (P3-02a); the sync pull passes neither.
+  Future<List<AnimalTypeModel>> getAnimalTypes({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  });
   Future<AnimalTypeModel> getAnimalType(String id);
   Future<AnimalTypeModel> addAnimalType(AnimalTypeModel animalType);
   Future<AnimalTypeModel> updateAnimalType(AnimalTypeModel animalType);
@@ -21,15 +30,22 @@ class AnimalTypeRemoteDataSourceImpl implements AnimalTypeRemoteDataSource {
   final Dio dio;
 
   @override
-  Future<List<AnimalTypeModel>> getAnimalTypes({DateTime? updatedSince}) async {
+  Future<List<AnimalTypeModel>> getAnimalTypes({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  }) async {
     try {
-      final queryParams = updatedSince != null
-          ? {'updated_since': updatedSince.toUtc().toIso8601String()}
-          : null;
+      final queryParams = <String, dynamic>{
+        if (updatedSince != null)
+          'updated_since': updatedSince.toUtc().toIso8601String(),
+        if (limit != null) 'limit': limit,
+        if (cursor != null) 'cursor': cursor,
+      };
 
       final response = await dio.get<dynamic>(
         '/api/v1/animal-types',
-        queryParameters: queryParams,
+        queryParameters: queryParams.isEmpty ? null : queryParams,
       );
 
       if (response.statusCode == 200) {

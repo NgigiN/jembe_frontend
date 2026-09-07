@@ -109,12 +109,19 @@ class SeasonRepositoryImpl
   }
 
   @override
-  Future<Either<Failure, List<Season>>> getSeasons() async {
+  Future<Either<Failure, List<Season>>> getSeasons({
+    int? limit,
+    int? cursor,
+  }) async {
     if (_offlineFirst) {
+      // Offline mirror shows the whole local store — pagination
+      // ([limit]/[cursor]) is an online-only concern and is ignored here.
       final models = await local!.watchSeasons().first;
       return Right(models.map(_toSeason).toList());
     }
-    return guard(remoteDataSource.getSeasons);
+    return guard(
+      () => remoteDataSource.getSeasons(limit: limit, cursor: cursor),
+    );
   }
 
   @override

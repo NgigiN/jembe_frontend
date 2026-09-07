@@ -24,7 +24,11 @@ class FakeHerdRemoteDataSource implements HerdRemoteDataSource {
   Exception? throwOnAdd;
 
   @override
-  Future<List<HerdModel>> getHerds({DateTime? updatedSince}) async {
+  Future<List<HerdModel>> getHerds({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  }) async {
     if (throwOnGet != null) throw throwOnGet!;
     return getHerdsResult;
   }

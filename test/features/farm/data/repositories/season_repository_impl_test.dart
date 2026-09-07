@@ -24,7 +24,11 @@ class FakeSeasonRemoteDataSource implements SeasonRemoteDataSource {
   Exception? throwOnAdd;
 
   @override
-  Future<List<SeasonModel>> getSeasons({DateTime? updatedSince}) async {
+  Future<List<SeasonModel>> getSeasons({
+    DateTime? updatedSince,
+    int? limit,
+    int? cursor,
+  }) async {
     if (throwOnGet != null) throw throwOnGet!;
     return [];
   }

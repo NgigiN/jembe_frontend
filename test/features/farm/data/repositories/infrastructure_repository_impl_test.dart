@@ -27,6 +27,8 @@ class FakeInfrastructureRemoteDataSource
   @override
   Future<List<InfrastructureModel>> getInfrastructures({
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async {
     if (throwOnGet != null) throw throwOnGet!;
     return getInfrastructuresResult;

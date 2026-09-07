@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
@@ -43,6 +44,7 @@ class _AnimalTypesWatchFailed extends AnimalTypeEvent {
 class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
   AnimalTypeBloc({required this.repository}) : super(AnimalTypeInitial()) {
     on<GetAnimalTypesEvent>(_onGetAnimalTypes);
+    on<LoadMoreAnimalTypesEvent>(_onLoadMoreAnimalTypes);
     on<WatchAnimalTypesEvent>(_onWatchAnimalTypes);
     on<_AnimalTypesUpdated>((event, emit) {
       emit(AnimalTypeLoaded(event.animalTypes));
@@ -59,19 +61,90 @@ class AnimalTypeBloc extends Bloc<AnimalTypeEvent, AnimalTypeState> {
   StreamSubscription<List<AnimalType>>? _animalTypesSubscription;
   bool _watchStarted = false;
 
+  /// Concurrency latch for [LoadMoreAnimalTypesEvent]: guards against a
+  /// second page fetch starting while the first is still in flight.
+  bool _isLoadingMore = false;
+
   Future<void> _onGetAnimalTypes(
     GetAnimalTypesEvent event,
     Emitter<AnimalTypeState> emit,
   ) async {
     emit(const AnimalTypeLoading());
-    final result = await repository.getAnimalTypes();
+    final result = await repository.getAnimalTypes(
+      limit: kOnlineListPageSize,
+    );
     result.fold(
       (failure) => emit(AnimalTypeError(
         resolveFailureMessage(failure, 'Failed to load animal types'),
       )),
-      (animalTypes) => emit(AnimalTypeLoaded(animalTypes)),
+      (animalTypes) {
+        // Online (flag off): this was page 1 of a cursor-paged list.
+        // Offline returns the whole local mirror in one shot, so it always
+        // reaches max here and never pages.
+        final online = !OfflineConfig.enabled;
+        emit(AnimalTypeLoaded(
+          animalTypes,
+          hasReachedMax: !online || animalTypes.length < kOnlineListPageSize,
+          nextCursor: online ? _cursorOf(animalTypes) : null,
+        ));
+      },
     );
   }
+
+  /// Fetches and APPENDS the next online page. No-op when offline, when the
+  /// current loaded page already reached max, when there is no cursor to page
+  /// from, or when a load-more is already running.
+  Future<void> _onLoadMoreAnimalTypes(
+    LoadMoreAnimalTypesEvent event,
+    Emitter<AnimalTypeState> emit,
+  ) async {
+    if (OfflineConfig.enabled) return;
+    final current = state;
+    if (current is! AnimalTypeLoaded) return;
+    if (current.hasReachedMax ||
+        current.nextCursor == null ||
+        _isLoadingMore) {
+      return;
+    }
+    _isLoadingMore = true;
+    try {
+      final result = await repository.getAnimalTypes(
+        limit: kOnlineListPageSize,
+        cursor: current.nextCursor,
+      );
+      _isLoadingMore = false;
+      result.fold(
+        (failure) {
+          if (state != current) return;
+          emit(AnimalTypeError(
+            resolveFailureMessage(failure, 'Failed to load animal types'),
+            animalTypes: current.animalTypes,
+          ));
+        },
+        (more) {
+          // A concurrent Add/Update/Delete/refresh emitted a newer state
+          // while this fetch was in flight: drop this now-stale page rather
+          // than clobbering it — the user's next scroll re-triggers
+          // LoadMore against the fresh state.
+          if (state != current) return;
+          final combined = List<AnimalType>.from(current.animalTypes)
+            ..addAll(more);
+          emit(AnimalTypeLoaded(
+            combined,
+            hasReachedMax: more.length < kOnlineListPageSize,
+            nextCursor: _cursorOf(more),
+          ));
+        },
+      );
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
+
+  /// The next `?cursor=` value — the last (oldest, since the list is
+  /// newest-first) item's server id, or `null` when the page is empty.
+  int? _cursorOf(List<AnimalType> animalTypes) =>
+      animalTypes.isEmpty ? null : int.tryParse(animalTypes.last.id);
 
   void _onWatchAnimalTypes(
     WatchAnimalTypesEvent event,

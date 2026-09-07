@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
@@ -43,14 +44,26 @@ class PlantBloc extends Bloc<PlantEvent, PlantState> {
   PlantBloc({required this.repository}) : super(PlantInitial()) {
     on<GetPlantsEvent>((event, emit) async {
       emit(const PlantLoading());
-      final result = await repository.getPlants();
+      final result = await repository.getPlants(limit: kOnlineListPageSize);
       result.fold(
         (failure) => emit(
           PlantError(resolveFailureMessage(failure, 'Failed to load crops')),
         ),
-        (plants) => emit(PlantLoaded(plants: plants)),
+        (plants) {
+          // Online (flag off): this was page 1 of a cursor-paged list.
+          // Offline returns the whole local mirror in one shot, so it
+          // always reaches max here and never pages.
+          final online = !OfflineConfig.enabled;
+          emit(PlantLoaded(
+            plants: plants,
+            hasReachedMax: !online || plants.length < kOnlineListPageSize,
+            nextCursor: online ? _cursorOf(plants) : null,
+          ));
+        },
       );
     });
+
+    on<LoadMorePlantsEvent>(_onLoadMorePlants);
 
     on<WatchPlantsEvent>((event, emit) {
       // Synchronous handler, no `await` before the guard: dispatching
@@ -189,6 +202,64 @@ class PlantBloc extends Bloc<PlantEvent, PlantState> {
 
   StreamSubscription<List<Plant>>? _plantsSubscription;
   bool _watchStarted = false;
+
+  /// Concurrency latch for [LoadMorePlantsEvent]: guards against a second
+  /// page fetch starting while the first is still in flight.
+  bool _isLoadingMore = false;
+
+  /// Fetches and APPENDS the next online page. No-op when offline, when the
+  /// current loaded page already reached max, when there is no cursor to page
+  /// from, or when a load-more is already running.
+  Future<void> _onLoadMorePlants(
+    LoadMorePlantsEvent event,
+    Emitter<PlantState> emit,
+  ) async {
+    if (OfflineConfig.enabled) return;
+    final current = state;
+    if (current is! PlantLoaded) return;
+    if (current.hasReachedMax ||
+        current.nextCursor == null ||
+        _isLoadingMore) {
+      return;
+    }
+    _isLoadingMore = true;
+    try {
+      final result = await repository.getPlants(
+        limit: kOnlineListPageSize,
+        cursor: current.nextCursor,
+      );
+      _isLoadingMore = false;
+      result.fold(
+        (failure) {
+          if (state != current) return;
+          emit(PlantError(
+            resolveFailureMessage(failure, 'Failed to load crops'),
+            plants: current.plants,
+          ));
+        },
+        (more) {
+          // A concurrent Add/Update/Delete/refresh emitted a newer state
+          // while this fetch was in flight: drop this now-stale page rather
+          // than clobbering it — the user's next scroll re-triggers
+          // LoadMore against the fresh state.
+          if (state != current) return;
+          final combined = List<Plant>.from(current.plants)..addAll(more);
+          emit(PlantLoaded(
+            plants: combined,
+            hasReachedMax: more.length < kOnlineListPageSize,
+            nextCursor: _cursorOf(more),
+          ));
+        },
+      );
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
+
+  /// The next `?cursor=` value — the last (oldest, since the list is
+  /// newest-first) item's server id, or `null` when the page is empty.
+  int? _cursorOf(List<Plant> plants) =>
+      plants.isEmpty ? null : int.tryParse(plants.last.id);
 
   @override
   Future<void> close() async {

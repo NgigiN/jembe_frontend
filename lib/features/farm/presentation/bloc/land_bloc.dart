@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
@@ -42,14 +43,26 @@ class LandBloc extends Bloc<LandEvent, LandState> {
   LandBloc({required this.repository}) : super(LandInitial()) {
     on<GetLandsEvent>((event, emit) async {
       emit(const LandLoading());
-      final result = await repository.getLands();
+      final result = await repository.getLands(limit: kOnlineListPageSize);
       result.fold(
         (failure) => emit(
           LandError(resolveFailureMessage(failure, 'Failed to load lands')),
         ),
-        (lands) => emit(LandLoaded(lands: lands)),
+        (lands) {
+          // Online (flag off): this was page 1 of a cursor-paged list.
+          // Offline returns the whole local mirror in one shot, so it
+          // always reaches max here and never pages.
+          final online = !OfflineConfig.enabled;
+          emit(LandLoaded(
+            lands: lands,
+            hasReachedMax: !online || lands.length < kOnlineListPageSize,
+            nextCursor: online ? _cursorOf(lands) : null,
+          ));
+        },
       );
     });
+
+    on<LoadMoreLandsEvent>(_onLoadMoreLands);
 
     on<WatchLandsEvent>((event, emit) {
       // Synchronous handler, no `await` before the guard: dispatching
@@ -205,6 +218,64 @@ class LandBloc extends Bloc<LandEvent, LandState> {
 
   StreamSubscription<List<Land>>? _landsSubscription;
   bool _watchStarted = false;
+
+  /// Concurrency latch for [LoadMoreLandsEvent]: guards against a second
+  /// page fetch starting while the first is still in flight.
+  bool _isLoadingMore = false;
+
+  /// Fetches and APPENDS the next online page. No-op when offline, when the
+  /// current loaded page already reached max, when there is no cursor to page
+  /// from, or when a load-more is already running.
+  Future<void> _onLoadMoreLands(
+    LoadMoreLandsEvent event,
+    Emitter<LandState> emit,
+  ) async {
+    if (OfflineConfig.enabled) return;
+    final current = state;
+    if (current is! LandLoaded) return;
+    if (current.hasReachedMax ||
+        current.nextCursor == null ||
+        _isLoadingMore) {
+      return;
+    }
+    _isLoadingMore = true;
+    try {
+      final result = await repository.getLands(
+        limit: kOnlineListPageSize,
+        cursor: current.nextCursor,
+      );
+      _isLoadingMore = false;
+      result.fold(
+        (failure) {
+          if (state != current) return;
+          emit(LandError(
+            resolveFailureMessage(failure, 'Failed to load lands'),
+            lands: current.lands,
+          ));
+        },
+        (more) {
+          // A concurrent Add/Update/Delete/refresh emitted a newer state
+          // while this fetch was in flight: drop this now-stale page rather
+          // than clobbering it — the user's next scroll re-triggers
+          // LoadMore against the fresh state.
+          if (state != current) return;
+          final combined = List<Land>.from(current.lands)..addAll(more);
+          emit(LandLoaded(
+            lands: combined,
+            hasReachedMax: more.length < kOnlineListPageSize,
+            nextCursor: _cursorOf(more),
+          ));
+        },
+      );
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
+
+  /// The next `?cursor=` value — the last (oldest, since the list is
+  /// newest-first) item's server id, or `null` when the page is empty.
+  int? _cursorOf(List<Land> lands) =>
+      lands.isEmpty ? null : int.tryParse(lands.last.id);
 
   @override
   Future<void> close() async {
