@@ -14,9 +14,15 @@ class ServerException extends Exceptions {
   List<Object?> get props => [message];
 }
 
-class CacheException extends Exceptions {}
-
 class NetworkException extends Exceptions {}
+
+/// Thrown by [mapDioException] (core/network/dio_client.dart) for a 401
+/// response. Distinct from [ServerException] so the repository layer can
+/// map it to `UnauthorizedFailure` instead of a generic `ServerFailure`
+/// (F1-05/S4-C1). The 401 also independently triggers a forced logout via
+/// the Dio error interceptor + `SessionExpiryNotifier` — this exception only
+/// carries the failure signal back to whichever screen made the call.
+class UnauthorizedException extends Exceptions {}
 
 /// Thrown by a syncer's push when a child record's FK still points at a
 /// parent that has not synced (no server id yet). It is NOT a failure: the

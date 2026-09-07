@@ -7,9 +7,10 @@ import 'package:farm_tracker/core/error/failures.dart';
 /// single call.
 ///
 /// Mapping — identical to the hand-written branches it replaces:
-/// - success            -> `Right(result)`
-/// - [NetworkException] -> `Left(NetworkFailure())`
-/// - [ServerException]  -> `Left(ServerFailure(e.message))`
+/// - success                -> `Right(result)`
+/// - [NetworkException]     -> `Left(NetworkFailure())`
+/// - [UnauthorizedException] -> `Left(UnauthorizedFailure())` (F1-05/S4-C1)
+/// - [ServerException]      -> `Left(ServerFailure(e.message))`
 ///
 /// By default any OTHER error is rethrown, matching the repositories that only
 /// ever carried the two `on ...Exception` catches — their behaviour stays
@@ -28,6 +29,8 @@ Future<Either<Failure, T>> guard<T>(
     return Right(await body());
   } on NetworkException {
     return const Left(NetworkFailure());
+  } on UnauthorizedException {
+    return const Left(UnauthorizedFailure());
   } on ServerException catch (e) {
     return Left(ServerFailure(e.message));
   } catch (e) {

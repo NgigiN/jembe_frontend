@@ -19,6 +19,8 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
       return Right(model);
     } on NetworkException catch (_) {
       return const Left(NetworkFailure());
+    } on UnauthorizedException catch (_) {
+      return const Left(UnauthorizedFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -45,6 +47,8 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
       return Right(breakdowns);
     } on NetworkException catch (_) {
       return const Left(NetworkFailure());
+    } on UnauthorizedException catch (_) {
+      return const Left(UnauthorizedFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }
@@ -63,6 +67,8 @@ class AnalysisRepositoryImpl implements AnalysisRepository {
       return Right(summaryModels);
     } on NetworkException catch (_) {
       return const Left(NetworkFailure());
+    } on UnauthorizedException catch (_) {
+      return const Left(UnauthorizedFailure());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     }

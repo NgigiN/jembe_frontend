@@ -35,10 +35,6 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
         appLogger.info(LogCategory.farm, 'Successfully fetched unified total costs');
         return result;
       }
-      if (response.statusCode == 401 || response.statusCode == 403) {
-        appLogger.warning(LogCategory.auth, 'Authentication required for total costs by season');
-        throw const ServerException('Authentication required. Please log in again.');
-      }
       final msg = extractServerErrorMessage(response.data);
       appLogger.error(LogCategory.http, 'Failed to fetch total costs: status ${response.statusCode}');
       throw ServerException(msg.isNotEmpty ? msg : null);
@@ -74,10 +70,6 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
             .toList();
         appLogger.info(LogCategory.farm, 'Successfully fetched ${breakdowns.length} cost breakdowns');
         return breakdowns;
-      }
-      if (response.statusCode == 401 || response.statusCode == 403) {
-        appLogger.warning(LogCategory.auth, 'Authentication required for cost breakdown');
-        throw const ServerException('Authentication required. Please log in again.');
       }
       final msg = extractServerErrorMessage(response.data);
       appLogger.error(LogCategory.http, 'Failed to fetch cost breakdown: status ${response.statusCode}');
@@ -126,10 +118,6 @@ class AnalysisRemoteDataSourceImpl implements AnalysisRemoteDataSource {
             .toList();
         appLogger.info(LogCategory.farm, 'Successfully fetched ${summaries.length} monthly summaries');
         return summaries;
-      }
-      if (response.statusCode == 401 || response.statusCode == 403) {
-        appLogger.warning(LogCategory.auth, 'Authentication required for annual cost summary');
-        throw const ServerException('Authentication required. Please log in again.');
       }
       final msg = extractServerErrorMessage(response.data);
       appLogger.error(LogCategory.http, 'Failed to fetch annual cost summary: status ${response.statusCode}');

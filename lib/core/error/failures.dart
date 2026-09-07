@@ -16,10 +16,6 @@ class NetworkFailure extends Failure {
   const NetworkFailure() : super('No internet connection');
 }
 
-class InvalidInputFailure extends Failure {
-  const InvalidInputFailure() : super('Invalid input provided');
-}
-
 class UnauthorizedFailure extends Failure {
   const UnauthorizedFailure() : super('Unauthorized access. Please log in again.');
 }
@@ -27,6 +23,9 @@ class UnauthorizedFailure extends Failure {
 String resolveFailureMessage(Failure failure, String fallback) {
   if (failure is NetworkFailure) {
     return 'No internet connection. Check your network and try again.';
+  }
+  if (failure is UnauthorizedFailure) {
+    return failure.message;
   }
   if (failure is ServerFailure && failure.errorMessage != null) {
     return failure.errorMessage!;

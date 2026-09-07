@@ -141,6 +141,9 @@ class _AuthInterceptor extends Interceptor {
 
 /// Maps a [DioException] to the appropriate application exception.
 /// Connection / timeout errors become [NetworkException].
+/// A 401 response becomes [UnauthorizedException] (F1-05/S4-C1) — the
+/// interceptor above independently forces a logout for protected paths;
+/// this is only the signal that reaches the repository/UI layer.
 /// All other errors (4xx, 5xx) become [ServerException] with a human message.
 Exceptions mapDioException(DioException e) {
   switch (e.type) {
@@ -150,6 +153,9 @@ Exceptions mapDioException(DioException e) {
     case DioExceptionType.connectionError:
       return NetworkException();
     default:
+      if (e.response?.statusCode == 401) {
+        return UnauthorizedException();
+      }
       final msg = extractServerErrorMessage(e.response?.data);
       return ServerException(msg.isNotEmpty ? msg : null);
   }

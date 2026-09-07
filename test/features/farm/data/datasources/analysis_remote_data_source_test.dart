@@ -7,10 +7,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Pins the wire contract [AnalysisRemoteDataSourceImpl] sends/expects
 /// today — the R2-01 prerequisite. Unlike every other farm datasource,
-/// this one is READ-ONLY (no create/update/delete) and its source carries
-/// an extra 401/403 branch meant to throw a canned "Authentication
-/// required..." [ServerException] — but see the 401 test below: that
-/// branch is actually unreachable dead code today.
+/// this one is READ-ONLY (no create/update/delete). It used to carry an
+/// extra 401/403 branch meant to throw a canned "Authentication
+/// required..." [ServerException], but that branch was unreachable dead
+/// code (Dio's default validateStatus rejects any non-2xx before the
+/// if/else chain that checked response.statusCode ever ran, so
+/// `on DioException catch (e)` always won first) and was removed in F1-05.
 class _FakeAdapter implements HttpClientAdapter {
   _FakeAdapter({required this.body, this.statusCode = 200});
   final String body;
@@ -81,23 +83,16 @@ void main() {
     });
 
     test(
-      'a 401 throws ServerException via the generic DioException branch — '
-      "the method's own 401/403 'Authentication required' text is "
-      "UNREACHABLE dead code: Dio's default validateStatus rejects any "
-      'non-2xx before the if/else chain that checks response.statusCode '
-      'ever runs, so `on DioException catch (e)` always wins first. '
-      'Pinned here so R2-01 either preserves this (as dead code) or '
-      'flags it as a real bugfix rather than silently dropping the '
-      'intended-but-never-firing friendly message.',
+      'a 401 throws UnauthorizedException via the generic DioException '
+      'branch (the now-removed dead 401/403 branch never fired) - '
+      'mapDioException maps 401 -> UnauthorizedException (F1-05/S4-C1)',
       () async {
         final adapter = _FakeAdapter(body: '{}', statusCode: 401);
         final source = AnalysisRemoteDataSourceImpl(dio: _dioWith(adapter));
 
         await expectLater(
           source.getTotalCostsBySeason(),
-          throwsA(
-            isA<ServerException>().having((e) => e.message, 'message', isNull),
-          ),
+          throwsA(isA<UnauthorizedException>()),
         );
       },
     );
