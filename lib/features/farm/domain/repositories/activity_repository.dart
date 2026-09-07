@@ -3,7 +3,14 @@ import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
 
 abstract class ActivityRepository {
-  Future<Either<Failure, List<Activity>>> getActivities({String? sourceType});
+  /// [limit]/[cursor] drive the online infinite-scroll list path (P3-02a):
+  /// they are threaded through only when the offline flag is off. The offline
+  /// (`watchActivities`) path ignores them — it mirrors the whole local store.
+  Future<Either<Failure, List<Activity>>> getActivities({
+    String? sourceType,
+    int? limit,
+    int? cursor,
+  });
 
   /// Reactive stream of activities, optionally scoped to [sourceType]
   /// (mirrors the existing `getActivities(sourceType:)` app-level filter).

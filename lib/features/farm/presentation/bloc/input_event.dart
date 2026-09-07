@@ -27,6 +27,18 @@ class WatchInputsEvent extends InputEvent {
   List<Object> get props => [sourceType ?? ''];
 }
 
+/// Flag-OFF (online) only: fetches the NEXT page of inputs using the current
+/// `InputLoaded.nextCursor` and APPENDS it. Ignored when the loaded state has
+/// already reached max or a load-more is in flight. The offline
+/// (`watchInputs`) path never dispatches this.
+class LoadMoreInputsEvent extends InputEvent {
+  LoadMoreInputsEvent({this.sourceType});
+  final String? sourceType;
+
+  @override
+  List<Object> get props => [sourceType ?? ''];
+}
+
 class AddInputEvent extends InputEvent {
   AddInputEvent(this.input);
   final Input input;

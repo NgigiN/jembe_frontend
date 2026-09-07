@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
@@ -43,6 +44,7 @@ class _HarvestsWatchFailed extends HarvestEvent {
 class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
   HarvestBloc({required this.repository}) : super(HarvestInitial()) {
     on<GetHarvestsEvent>(_onGetHarvests);
+    on<LoadMoreHarvestsEvent>(_onLoadMoreHarvests);
     on<WatchHarvestsEvent>(_onWatchHarvests);
     on<_HarvestsUpdated>((event, emit) {
       emit(HarvestLoaded(harvests: event.harvests));
@@ -60,6 +62,10 @@ class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
   StreamSubscription<List<Harvest>>? _harvestsSubscription;
   bool _watchStarted = false;
 
+  /// Concurrency latch for [LoadMoreHarvestsEvent]: guards against a second
+  /// page fetch starting while the first is still in flight.
+  bool _isLoadingMore = false;
+
   Future<void> _onGetHarvests(
     GetHarvestsEvent event,
     Emitter<HarvestState> emit,
@@ -71,9 +77,65 @@ class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
         resolveFailureMessage(failure, 'Failed to load harvests'),
         harvests: state.harvests,
       )),
-      (harvests) => emit(HarvestLoaded(harvests: harvests)),
+      (harvests) {
+        // Online (flag off): this was page 1 of a cursor-paged list. Offline
+        // returns the whole local mirror in one shot, so it always reaches
+        // max here and never pages.
+        final online = !OfflineConfig.enabled;
+        emit(HarvestLoaded(
+          harvests: harvests,
+          hasReachedMax:
+              !online || harvests.length < kOnlineListPageSize,
+          nextCursor: online ? _cursorOf(harvests) : null,
+        ));
+      },
     );
   }
+
+  /// Fetches and APPENDS the next online page. No-op when offline, when the
+  /// current loaded page already reached max, when there is no cursor to page
+  /// from, or when a load-more is already running.
+  Future<void> _onLoadMoreHarvests(
+    LoadMoreHarvestsEvent event,
+    Emitter<HarvestState> emit,
+  ) async {
+    if (OfflineConfig.enabled) return;
+    final current = state;
+    if (current is! HarvestLoaded) return;
+    if (current.hasReachedMax ||
+        current.nextCursor == null ||
+        _isLoadingMore) {
+      return;
+    }
+    _isLoadingMore = true;
+    try {
+      final result = await repository.getHarvests(
+        seasonId: event.seasonId,
+        cursor: current.nextCursor,
+      );
+      result.fold(
+        (failure) => emit(HarvestError(
+          resolveFailureMessage(failure, 'Failed to load harvests'),
+          harvests: current.harvests,
+        )),
+        (more) {
+          final combined = List<Harvest>.from(current.harvests)..addAll(more);
+          emit(HarvestLoaded(
+            harvests: combined,
+            hasReachedMax: more.length < kOnlineListPageSize,
+            nextCursor: _cursorOf(more),
+          ));
+        },
+      );
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
+
+  /// The next `?cursor=` value — the last (oldest, since the list is
+  /// newest-first) item's server id, or `null` when the page is empty.
+  int? _cursorOf(List<Harvest> harvests) =>
+      harvests.isEmpty ? null : int.tryParse(harvests.last.id);
 
   // Synchronous handler, no `await` before the guard: dispatching
   // WatchHarvestsEvent twice in quick succession (e.g. initState +

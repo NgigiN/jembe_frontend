@@ -123,6 +123,8 @@ class _FakeRevenueRemoteDataSource implements RevenueRemoteDataSource {
     DateTime? startDate,
     DateTime? endDate,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async {
     Iterable<RevenueModel> rows = _byServerId.values;
     if (source != null && source.isNotEmpty) {

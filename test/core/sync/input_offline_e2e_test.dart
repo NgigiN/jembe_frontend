@@ -115,6 +115,8 @@ class _FakeInputRemoteDataSource implements InputRemoteDataSource {
   Future<List<InputModel>> getInputs({
     String? sourceType,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async {
     Iterable<InputModel> rows = _byServerId.values;
     if (sourceType != null && sourceType.isNotEmpty) {

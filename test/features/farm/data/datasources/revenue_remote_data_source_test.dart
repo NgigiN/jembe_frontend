@@ -131,6 +131,30 @@ void main() {
       expect(params['updated_since'], '2026-03-04T00:00:00.000Z');
     });
 
+    test('sends limit and cursor as query params when given (P3-02a)',
+        () async {
+      final adapter = _FakeAdapter(body: '[]');
+      final source = RevenueRemoteDataSourceImpl(dio: _dioWith(adapter));
+
+      await source.getRevenues(limit: 500, cursor: 42);
+
+      final params = adapter.lastOptions!.uri.queryParameters;
+      expect(params['limit'], '500');
+      expect(params['cursor'], '42');
+    });
+
+    test('omits limit/cursor when not given (unchanged one-shot request)',
+        () async {
+      final adapter = _FakeAdapter(body: '[]');
+      final source = RevenueRemoteDataSourceImpl(dio: _dioWith(adapter));
+
+      await source.getRevenues();
+
+      final params = adapter.lastOptions!.uri.queryParameters;
+      expect(params.containsKey('limit'), isFalse);
+      expect(params.containsKey('cursor'), isFalse);
+    });
+
     test('a connection failure throws NetworkException', () async {
       final source = RevenueRemoteDataSourceImpl(
         dio: _dioWith(_ThrowingAdapter()),

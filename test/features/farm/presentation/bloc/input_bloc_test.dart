@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/input.dart';
@@ -268,6 +269,98 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       expect: () => <InputState>[],
+    );
+  });
+
+  group('online infinite scroll (P3-02a, flag off)', () {
+    blocTest<InputBloc, InputState>(
+      'GetInputsEvent under a full page sets hasReachedMax true and derives '
+      'nextCursor from the last id',
+      build: () {
+        when(
+          () => mockRepository.getInputs(
+            sourceType: any(named: 'sourceType'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((_) async => Right([input(id: '3'), input(id: '2')]));
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(GetInputsEvent()),
+      expect: () => [
+        const InputLoading(),
+        InputLoaded(inputs: [input(id: '3'), input(id: '2')], nextCursor: 2),
+      ],
+    );
+
+    blocTest<InputBloc, InputState>(
+      'LoadMoreInputsEvent is a no-op when hasReachedMax (a ≤500-row account '
+      'never issues a second fetch)',
+      build: buildBloc,
+      seed: () => InputLoaded(inputs: [input(id: '2')], nextCursor: 2),
+      act: (bloc) => bloc.add(LoadMoreInputsEvent()),
+      wait: const Duration(milliseconds: 50),
+      expect: () => <InputState>[],
+      verify: (_) {
+        verifyNever(
+          () => mockRepository.getInputs(
+            sourceType: any(named: 'sourceType'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        );
+      },
+    );
+
+    blocTest<InputBloc, InputState>(
+      'a full first page sets hasReachedMax false; LoadMore fetches with the '
+      'cursor, APPENDS the next page and recomputes hasReachedMax/nextCursor',
+      build: () {
+        final page1 = List.generate(
+          kOnlineListPageSize,
+          (i) => input(id: '${1000 - i}'),
+        );
+        final page2 = [input(id: '500'), input(id: '499')];
+        when(
+          () => mockRepository.getInputs(
+            sourceType: any(named: 'sourceType'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((invocation) async {
+          final cursor = invocation.namedArguments[#cursor] as int?;
+          return Right(cursor == null ? page1 : page2);
+        });
+        return buildBloc();
+      },
+      act: (bloc) async {
+        bloc.add(GetInputsEvent());
+        await bloc.stream.firstWhere((s) => s is InputLoaded);
+        bloc.add(LoadMoreInputsEvent());
+      },
+      wait: const Duration(milliseconds: 100),
+      expect: () => [
+        const InputLoading(),
+        isA<InputLoaded>()
+            .having((s) => s.inputs.length, 'page 1 length',
+                kOnlineListPageSize)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', false)
+            .having((s) => s.nextCursor, 'nextCursor', 501),
+        isA<InputLoaded>()
+            .having((s) => s.inputs.length, 'appended length',
+                kOnlineListPageSize + 2)
+            .having((s) => s.hasReachedMax, 'hasReachedMax', true)
+            .having((s) => s.nextCursor, 'nextCursor', 499),
+      ],
+      verify: (_) {
+        verify(
+          () => mockRepository.getInputs(
+            sourceType: any(named: 'sourceType'),
+            limit: any(named: 'limit'),
+            cursor: 501,
+          ),
+        ).called(1);
+      },
     );
   });
 }

@@ -10,11 +10,18 @@ abstract class RevenueRemoteDataSource {
   /// instant (used by the sync pull phase, which passes ONLY
   /// [updatedSince], never [source]/[startDate]/[endDate]). Existing
   /// filtered callers (the flag-off repo path) are unaffected.
+  ///
+  /// [limit] caps the page size (server default & max is 500) and [cursor]
+  /// pages backward through the newest-first list — the server returns rows
+  /// with `id < cursor`. Both are used ONLY by the online infinite-scroll
+  /// list path (P3-02a); the sync pull passes neither.
   Future<List<RevenueModel>> getRevenues({
     String? source,
     DateTime? startDate,
     DateTime? endDate,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   });
   Future<RevenueModel> getRevenueById(String id);
   Future<RevenueModel> addRevenue(RevenueModel revenue);
@@ -32,6 +39,8 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
     DateTime? startDate,
     DateTime? endDate,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async {
     try {
       final queryParams = <String, dynamic>{};
@@ -46,6 +55,12 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
       }
       if (updatedSince != null) {
         queryParams['updated_since'] = updatedSince.toUtc().toIso8601String();
+      }
+      if (limit != null) {
+        queryParams['limit'] = limit;
+      }
+      if (cursor != null) {
+        queryParams['cursor'] = cursor;
       }
 
       final response = await dio.get<dynamic>(

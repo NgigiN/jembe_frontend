@@ -28,6 +28,8 @@ class FakeInputRemoteDataSource implements InputRemoteDataSource {
   Future<List<InputModel>> getInputs({
     String? sourceType,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async {
     if (throwOnGet != null) throw throwOnGet!;
     lastGetSourceType = sourceType;

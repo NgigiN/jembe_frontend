@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
@@ -45,6 +46,7 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
   RevenueBloc({required this.repository}) : super(RevenueInitial()) {
     on<LoadRevenues>(_onLoadRevenues);
+    on<LoadMoreRevenuesEvent>(_onLoadMoreRevenues);
     on<WatchRevenuesEvent>(_onWatchRevenues);
     on<_RevenuesUpdated>((event, emit) {
       _allRevenues = event.revenues;
@@ -63,6 +65,10 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
   StreamSubscription<List<Revenue>>? _revenuesSubscription;
   bool _watchStarted = false;
+
+  /// Concurrency latch for [LoadMoreRevenuesEvent]: guards against a second
+  /// page fetch starting while the first is still in flight.
+  bool _isLoadingMore = false;
 
   /// The full, UNFILTERED list from the last `watchRevenues()` emission —
   /// see R1: `RevenueBloc` is a singleton with a user-changeable filter, so
@@ -108,9 +114,68 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
           revenues: state.revenues,
         ));
       },
-      (revenues) => emit(RevenueLoaded(revenues: revenues)),
+      (revenues) {
+        // Online (flag off): this was page 1 of a cursor-paged list. Offline
+        // returns the whole (filtered) local mirror in one shot, so it always
+        // reaches max here and never pages.
+        final online = !OfflineConfig.enabled;
+        emit(RevenueLoaded(
+          revenues: revenues,
+          hasReachedMax:
+              !online || revenues.length < kOnlineListPageSize,
+          nextCursor: online ? _cursorOf(revenues) : null,
+        ));
+      },
     );
   }
+
+  /// Fetches and APPENDS the next online page, re-applying the same
+  /// source/date filter the current page was loaded with. No-op when offline,
+  /// when the current loaded page already reached max, when there is no cursor
+  /// to page from, or when a load-more is already running.
+  Future<void> _onLoadMoreRevenues(
+    LoadMoreRevenuesEvent event,
+    Emitter<RevenueState> emit,
+  ) async {
+    if (OfflineConfig.enabled) return;
+    final current = state;
+    if (current is! RevenueLoaded) return;
+    if (current.hasReachedMax ||
+        current.nextCursor == null ||
+        _isLoadingMore) {
+      return;
+    }
+    _isLoadingMore = true;
+    try {
+      final result = await repository.getRevenues(
+        source: event.source,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        cursor: current.nextCursor,
+      );
+      result.fold(
+        (failure) => emit(RevenueError(
+          resolveFailureMessage(failure, 'Failed to load revenues'),
+          revenues: current.revenues,
+        )),
+        (more) {
+          final combined = List<Revenue>.from(current.revenues)..addAll(more);
+          emit(RevenueLoaded(
+            revenues: combined,
+            hasReachedMax: more.length < kOnlineListPageSize,
+            nextCursor: _cursorOf(more),
+          ));
+        },
+      );
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
+
+  /// The next `?cursor=` value — the last (oldest, since the list is
+  /// newest-first) item's server id, or `null` when the page is empty.
+  int? _cursorOf(List<Revenue> revenues) =>
+      revenues.isEmpty ? null : int.tryParse(revenues.last.id);
 
   // Synchronous handler, no `await` before the guard: dispatching
   // WatchRevenuesEvent twice in quick succession (e.g. initState + a

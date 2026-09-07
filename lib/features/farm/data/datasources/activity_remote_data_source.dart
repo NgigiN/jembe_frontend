@@ -10,9 +10,16 @@ abstract class ActivityRemoteDataSource {
   /// is given — only those the server has changed strictly after that
   /// instant (used by the sync pull phase, which passes ONLY [updatedSince],
   /// never [sourceType]). Existing callers are unaffected.
+  ///
+  /// [limit] caps the page size (server default & max is 500) and [cursor]
+  /// pages backward through the newest-first list — the server returns rows
+  /// with `id < cursor`. Both are used ONLY by the online infinite-scroll
+  /// list path (P3-02a); the sync pull passes neither.
   Future<List<ActivityModel>> getActivities({
     String? sourceType,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   });
   Future<ActivityModel> addActivity(ActivityModel activity);
   Future<ActivityModel> updateActivity(ActivityModel activity);
@@ -27,6 +34,8 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
   Future<List<ActivityModel>> getActivities({
     String? sourceType,
     DateTime? updatedSince,
+    int? limit,
+    int? cursor,
   }) async {
     try {
       final queryParams = <String, dynamic>{
@@ -34,6 +43,8 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
           'source_type': sourceType,
         if (updatedSince != null)
           'updated_since': updatedSince.toUtc().toIso8601String(),
+        if (limit != null) 'limit': limit,
+        if (cursor != null) 'cursor': cursor,
       };
 
       final response = await dio.get<dynamic>(

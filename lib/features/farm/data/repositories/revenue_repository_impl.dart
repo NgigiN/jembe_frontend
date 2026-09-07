@@ -130,8 +130,12 @@ class RevenueRepositoryImpl
     String? source,
     DateTime? startDate,
     DateTime? endDate,
+    int? limit,
+    int? cursor,
   }) async {
     if (_offlineFirst) {
+      // Offline mirror shows the whole (filtered) local store — pagination
+      // ([limit]/[cursor]) is an online-only concern and is ignored here.
       final models = await local!.watchRevenues().first;
       final revenues = models
           .map(_toRevenue)
@@ -151,6 +155,8 @@ class RevenueRepositoryImpl
         source: source,
         startDate: startDate,
         endDate: endDate,
+        limit: limit,
+        cursor: cursor,
       ),
     );
   }
