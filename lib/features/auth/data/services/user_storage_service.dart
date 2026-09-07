@@ -12,8 +12,23 @@ class UserStorageService {
   static const String _userKey = 'user_data';
   static const String _tokenKey = 'auth_token';
   static const String _userIdKey = 'user_id';
+  // flutter_secure_storage 9->11 (R2-06): `AndroidOptions.encryptedSharedPreferences`
+  // was removed in v11 — the Jetpack Security (EncryptedSharedPreferences)
+  // backend it selected is gone. v10 shipped a one-time reader that detected
+  // pre-v10 EncryptedSharedPreferences data and migrated it into the new
+  // custom-cipher store when `migrateOnAlgorithmChange` was true (the v10/v11
+  // default); that reader was itself removed in v11. Since this app never
+  // shipped a v10 build, that migration step never ran on any device, so
+  // upgrading straight from 9.x to 11.x does NOT carry forward tokens written
+  // under the old `encryptedSharedPreferences: true` scheme — existing
+  // logged-in users are forced to log in again after this update.
+  // No `aOptions` override: v11's `AndroidOptions` default already carries
+  // `migrateOnAlgorithmChange: true` and `resetOnError: true`, so future
+  // internal cipher-algorithm changes on THIS store keep migrating forward
+  // automatically. (Spelling either out explicitly would just reproduce
+  // `AndroidOptions.defaultOptions` and trip
+  // `avoid_redundant_argument_values`/`use_named_constants`.)
   static const _secureStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 

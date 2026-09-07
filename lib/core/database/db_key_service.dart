@@ -28,11 +28,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// visible: a `secure_storage_fallback` analytics event fires and a warning
 /// is logged, mirroring `UserStorageService._writeString`.
 class DbKeyService {
+  // flutter_secure_storage 9->11 (R2-06): see the identical note in
+  // `UserStorageService` — `encryptedSharedPreferences` was removed in v11,
+  // and this offline path is still DARK (never run in prod), so there is no
+  // live device data to carry forward here either way. No `aOptions`
+  // override: v11's default already carries `migrateOnAlgorithmChange: true`
+  // and `resetOnError: true` (left implicit — see `UserStorageService`).
   DbKeyService({FlutterSecureStorage? secureStorage})
     : _secureStorage =
           secureStorage ??
           const FlutterSecureStorage(
-            aOptions: AndroidOptions(encryptedSharedPreferences: true),
             iOptions: IOSOptions(
               accessibility: KeychainAccessibility.first_unlock,
             ),
