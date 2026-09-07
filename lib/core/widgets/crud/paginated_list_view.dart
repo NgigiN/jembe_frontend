@@ -20,12 +20,22 @@ const double kPaginatedListEndReachedThreshold = 300;
 /// EXACTLY like the plain `ListView.builder` it replaced: no footer row, and
 /// [onEndReached] never fires.
 ///
+/// ## PrimaryScrollController inheritance (F1)
+/// This widget does NOT own a [ScrollController]. Its inner
+/// `ListView.builder` is built with no `controller:`, so — like any plain
+/// vertical `ListView.builder` — it attaches to the ambient
+/// [PrimaryScrollController] (e.g. the one `Scaffold` establishes for its
+/// body). That restores iOS "tap the status bar to scroll to top" parity,
+/// which a privately-owned controller would otherwise detach. End-of-scroll
+/// detection instead reads the [ScrollMetrics] carried by the
+/// [ScrollNotification]s that bubble up through a wrapping
+/// [NotificationListener] — no controller needed.
+///
 /// ## Debounce
-/// The widget owns (and disposes) its own [ScrollController]. [onEndReached]
-/// is latched so a single crossing of the threshold fires it at most once; it
-/// re-arms only after the viewport leaves the threshold — which happens
-/// naturally once an appended page grows the scroll extent and the user
-/// scrolls on toward the new bottom.
+/// [onEndReached] is latched so a single crossing of the threshold fires it
+/// at most once; it re-arms only after the viewport leaves the threshold —
+/// which happens naturally once an appended page grows the scroll extent and
+/// the user scrolls on toward the new bottom.
 class PaginatedListView extends StatefulWidget {
   const PaginatedListView({
     required this.itemCount,
@@ -67,42 +77,31 @@ class PaginatedListView extends StatefulWidget {
 }
 
 class _PaginatedListViewState extends State<PaginatedListView> {
-  final ScrollController _controller = ScrollController();
-
   /// Debounce latch: `true` while the viewport is inside the bottom threshold
   /// AND [PaginatedListView.onEndReached] has already fired for this crossing.
   /// Reset once the viewport leaves the threshold, so each fresh approach
   /// fires exactly once.
   bool _endReachedFired = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _controller.addListener(_onScroll);
-  }
-
-  @override
-  void dispose() {
-    _controller
-      ..removeListener(_onScroll)
-      ..dispose();
-    super.dispose();
-  }
-
-  void _onScroll() {
-    if (!_controller.hasClients) return;
-    final position = _controller.position;
-    final atThreshold = position.pixels >=
-        position.maxScrollExtent - kPaginatedListEndReachedThreshold;
+  bool _onScrollNotification(ScrollNotification notification) {
+    final metrics = notification.metrics;
+    if (!metrics.hasPixels || !metrics.hasContentDimensions) {
+      // Extent not laid out yet (e.g. the very first frame) — nothing to
+      // evaluate.
+      return false;
+    }
+    final atThreshold =
+        metrics.pixels >= metrics.maxScrollExtent - kPaginatedListEndReachedThreshold;
     if (!atThreshold) {
       // Re-arm: the user has scrolled back out of the threshold (or an
       // appended page grew the extent beneath them).
       _endReachedFired = false;
-      return;
+      return false;
     }
-    if (widget.hasReachedMax || _endReachedFired) return;
+    if (widget.hasReachedMax || _endReachedFired) return false;
     _endReachedFired = true;
     widget.onEndReached();
+    return false;
   }
 
   @override
@@ -111,26 +110,28 @@ class _PaginatedListViewState extends State<PaginatedListView> {
     final showFooter = !widget.hasReachedMax;
     final rowCount = widget.itemCount + (showFooter ? 1 : 0);
 
-    return ListView.builder(
-      controller: _controller,
-      physics: widget.physics,
-      padding: widget.padding,
-      itemCount: rowCount,
-      itemBuilder: (context, index) {
-        if (index >= widget.itemCount) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(
-              child: SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
+    return NotificationListener<ScrollNotification>(
+      onNotification: _onScrollNotification,
+      child: ListView.builder(
+        physics: widget.physics,
+        padding: widget.padding,
+        itemCount: rowCount,
+        itemBuilder: (context, index) {
+          if (index >= widget.itemCount) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(
+                child: SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
               ),
-            ),
-          );
-        }
-        return widget.itemBuilder(context, index);
-      },
+            );
+          }
+          return widget.itemBuilder(context, index);
+        },
+      ),
     );
   }
 }

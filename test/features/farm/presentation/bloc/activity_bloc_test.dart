@@ -53,6 +53,7 @@ void main() {
         when(
           () => mockRepository.getActivities(
             sourceType: any(named: 'sourceType'),
+            limit: any(named: 'limit'),
           ),
         ).thenAnswer((_) async => Right([activity()]));
         return buildBloc();
@@ -65,7 +66,7 @@ void main() {
     );
 
     blocTest<ActivityBloc, ActivityState>(
-      "AddActivityEvent success appends the returned activity and sets "
+      'AddActivityEvent success appends the returned activity and sets '
       "successMessage 'Activity recorded'",
       build: () {
         when(
@@ -396,5 +397,96 @@ void main() {
         ).called(1);
       },
     );
+
+    group('F2: stale LoadMore result is dropped, not clobbered', () {
+      late Completer<Either<Failure, List<Activity>>> loadMoreCompleter;
+
+      blocTest<ActivityBloc, ActivityState>(
+        'a concurrent Add lands while LoadMore is in flight; when the '
+        'LoadMore fetch later resolves its page is silently dropped '
+        'instead of clobbering the newer (Add-driven) state',
+        build: () {
+          loadMoreCompleter = Completer<Either<Failure, List<Activity>>>();
+          when(
+            () => mockRepository.getActivities(
+              sourceType: any(named: 'sourceType'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer((_) => loadMoreCompleter.future);
+          when(
+            () => mockRepository.addActivity(any()),
+          ).thenAnswer((_) async => Right(activity(id: 'activity-new')));
+          return buildBloc();
+        },
+        seed: () => ActivityLoaded(
+          activities: [activity(id: '2')],
+          hasReachedMax: false,
+          nextCursor: 2,
+        ),
+        act: (bloc) async {
+          bloc.add(LoadMoreActivitiesEvent());
+          // Let LoadMore's handler start and begin awaiting the
+          // (still-uncompleted) fetch.
+          await Future<void>.delayed(Duration.zero);
+          // A concurrent Add is dispatched and resolves entirely while
+          // LoadMore is still in flight — this is the newer state LoadMore
+          // must not clobber.
+          bloc.add(AddActivityEvent(activity(id: 'activity-new')));
+          await Future<void>.delayed(Duration.zero);
+          // Now the stale LoadMore fetch resolves. Its page (id '1') must
+          // NOT appear in any emitted state.
+          loadMoreCompleter.complete(Right([activity(id: '1')]));
+        },
+        wait: const Duration(milliseconds: 100),
+        expect: () => [
+          isA<ActivityLoading>(),
+          ActivityLoaded(
+            activities: [activity(id: '2'), activity(id: 'activity-new')],
+            successMessage: 'Activity recorded',
+          ),
+        ],
+      );
+
+      blocTest<ActivityBloc, ActivityState>(
+        'a concurrent Add lands while LoadMore is in flight; when the '
+        'LoadMore fetch later FAILS, no error is emitted over the newer '
+        '(Add-driven) state',
+        build: () {
+          loadMoreCompleter = Completer<Either<Failure, List<Activity>>>();
+          when(
+            () => mockRepository.getActivities(
+              sourceType: any(named: 'sourceType'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer((_) => loadMoreCompleter.future);
+          when(
+            () => mockRepository.addActivity(any()),
+          ).thenAnswer((_) async => Right(activity(id: 'activity-new')));
+          return buildBloc();
+        },
+        seed: () => ActivityLoaded(
+          activities: [activity(id: '2')],
+          hasReachedMax: false,
+          nextCursor: 2,
+        ),
+        act: (bloc) async {
+          bloc.add(LoadMoreActivitiesEvent());
+          await Future<void>.delayed(Duration.zero);
+          bloc.add(AddActivityEvent(activity(id: 'activity-new')));
+          await Future<void>.delayed(Duration.zero);
+          loadMoreCompleter.complete(const Left(ServerFailure('boom')));
+        },
+        wait: const Duration(milliseconds: 100),
+        expect: () => [
+          isA<ActivityLoading>(),
+          ActivityLoaded(
+            activities: [activity(id: '2'), activity(id: 'activity-new')],
+            successMessage: 'Activity recorded',
+          ),
+        ],
+      );
+    });
   });
 }

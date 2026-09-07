@@ -143,8 +143,20 @@ void main() {
       expect(params['cursor'], '42');
     });
 
-    test('omits limit/cursor when not given (unchanged one-shot request)',
-        () async {
+    test(
+        'the initial fetch sends limit=500 but omits cursor '
+        '(P3-02a, F3)', () async {
+      final adapter = _FakeAdapter(body: '[]');
+      final source = RevenueRemoteDataSourceImpl(dio: _dioWith(adapter));
+
+      await source.getRevenues(limit: 500);
+
+      final params = adapter.lastOptions!.uri.queryParameters;
+      expect(params['limit'], '500');
+      expect(params.containsKey('cursor'), isFalse);
+    });
+
+    test('omits limit/cursor when neither is given', () async {
       final adapter = _FakeAdapter(body: '[]');
       final source = RevenueRemoteDataSourceImpl(dio: _dioWith(adapter));
 

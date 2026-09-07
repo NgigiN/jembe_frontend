@@ -73,7 +73,10 @@ class InputBloc extends Bloc<InputEvent, InputState> {
     appLogger.debug(LogCategory.farm, 'GetInputsEvent triggered');
     emit(const InputLoading());
 
-    final result = await repository.getInputs(sourceType: event.sourceType);
+    final result = await repository.getInputs(
+      sourceType: event.sourceType,
+      limit: kOnlineListPageSize,
+    );
     result.fold(
       (failure) {
         appLogger.warning(LogCategory.farm, 'GetInputs failed: $failure');
@@ -113,14 +116,24 @@ class InputBloc extends Bloc<InputEvent, InputState> {
     try {
       final result = await repository.getInputs(
         sourceType: event.sourceType,
+        limit: kOnlineListPageSize,
         cursor: current.nextCursor,
       );
+      _isLoadingMore = false;
       result.fold(
-        (failure) => emit(InputError(
-          resolveFailureMessage(failure, 'Failed to load inputs'),
-          inputs: current.inputs,
-        )),
+        (failure) {
+          if (state != current) return;
+          emit(InputError(
+            resolveFailureMessage(failure, 'Failed to load inputs'),
+            inputs: current.inputs,
+          ));
+        },
         (more) {
+          // A concurrent Add/Update/Delete/refresh emitted a newer state
+          // while this fetch was in flight: drop this now-stale page rather
+          // than clobbering it — the user's next scroll re-triggers
+          // LoadMore against the fresh state.
+          if (state != current) return;
           final combined = List<Input>.from(current.inputs)..addAll(more);
           emit(InputLoaded(
             inputs: combined,

@@ -71,7 +71,10 @@ class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
     Emitter<HarvestState> emit,
   ) async {
     emit(HarvestLoading(harvests: state.harvests));
-    final result = await repository.getHarvests(seasonId: event.seasonId);
+    final result = await repository.getHarvests(
+      seasonId: event.seasonId,
+      limit: kOnlineListPageSize,
+    );
     result.fold(
       (failure) => emit(HarvestError(
         resolveFailureMessage(failure, 'Failed to load harvests'),
@@ -111,14 +114,24 @@ class HarvestBloc extends Bloc<HarvestEvent, HarvestState> {
     try {
       final result = await repository.getHarvests(
         seasonId: event.seasonId,
+        limit: kOnlineListPageSize,
         cursor: current.nextCursor,
       );
+      _isLoadingMore = false;
       result.fold(
-        (failure) => emit(HarvestError(
-          resolveFailureMessage(failure, 'Failed to load harvests'),
-          harvests: current.harvests,
-        )),
+        (failure) {
+          if (state != current) return;
+          emit(HarvestError(
+            resolveFailureMessage(failure, 'Failed to load harvests'),
+            harvests: current.harvests,
+          ));
+        },
         (more) {
+          // A concurrent Add/Update/Delete/refresh emitted a newer state
+          // while this fetch was in flight: drop this now-stale page rather
+          // than clobbering it — the user's next scroll re-triggers
+          // LoadMore against the fresh state.
+          if (state != current) return;
           final combined = List<Harvest>.from(current.harvests)..addAll(more);
           emit(HarvestLoaded(
             harvests: combined,

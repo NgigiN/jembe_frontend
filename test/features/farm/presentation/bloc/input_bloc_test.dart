@@ -49,7 +49,10 @@ void main() {
       'GetInputsEvent emits [InputLoading, InputLoaded] from the repository',
       build: () {
         when(
-          () => mockRepository.getInputs(sourceType: any(named: 'sourceType')),
+          () => mockRepository.getInputs(
+            sourceType: any(named: 'sourceType'),
+            limit: any(named: 'limit'),
+          ),
         ).thenAnswer((_) async => Right([input()]));
         return buildBloc();
       },
@@ -61,7 +64,7 @@ void main() {
     );
 
     blocTest<InputBloc, InputState>(
-      "AddInputEvent success appends the returned input and sets "
+      'AddInputEvent success appends the returned input and sets '
       "successMessage 'Input added'",
       build: () {
         when(

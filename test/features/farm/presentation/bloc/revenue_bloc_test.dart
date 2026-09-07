@@ -57,6 +57,7 @@ void main() {
             source: any(named: 'source'),
             startDate: any(named: 'startDate'),
             endDate: any(named: 'endDate'),
+            limit: any(named: 'limit'),
           ),
         ).thenAnswer((_) async => Right([revenue()]));
         return buildBloc();
@@ -69,7 +70,7 @@ void main() {
     );
 
     blocTest<RevenueBloc, RevenueState>(
-      "AddRevenueEvent success appends the returned revenue and emits "
+      'AddRevenueEvent success appends the returned revenue and emits '
       'RevenueAdded',
       build: () {
         when(
@@ -118,7 +119,7 @@ void main() {
       build: () {
         when(() => mockRepository.watchRevenues()).thenAnswer(
           (_) => Stream.value([
-            revenue(id: 'r-plant', source: 'plant'),
+            revenue(id: 'r-plant'),
             revenue(id: 'r-animal', source: 'animal'),
           ]),
         );
@@ -127,7 +128,7 @@ void main() {
       act: (bloc) => bloc.add(WatchRevenuesEvent(source: 'plant')),
       wait: const Duration(milliseconds: 50),
       expect: () => [
-        RevenueLoaded(revenues: [revenue(id: 'r-plant', source: 'plant')]),
+        RevenueLoaded(revenues: [revenue(id: 'r-plant')]),
       ],
     );
 
@@ -161,7 +162,7 @@ void main() {
       build: () {
         when(() => mockRepository.watchRevenues()).thenAnswer(
           (_) => Stream.value([
-            revenue(id: 'r-plant', source: 'plant'),
+            revenue(id: 'r-plant'),
             revenue(id: 'r-animal', source: 'animal'),
           ]),
         );
@@ -174,7 +175,7 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       expect: () => [
-        RevenueLoaded(revenues: [revenue(id: 'r-plant', source: 'plant')]),
+        RevenueLoaded(revenues: [revenue(id: 'r-plant')]),
         RevenueLoaded(revenues: [revenue(id: 'r-animal', source: 'animal')]),
       ],
       verify: (_) {

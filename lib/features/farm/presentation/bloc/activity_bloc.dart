@@ -73,7 +73,10 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     appLogger.debug(LogCategory.farm, 'GetActivitiesEvent triggered');
     emit(const ActivityLoading());
 
-    final result = await repository.getActivities(sourceType: event.sourceType);
+    final result = await repository.getActivities(
+      sourceType: event.sourceType,
+      limit: kOnlineListPageSize,
+    );
     result.fold(
       (failure) {
         appLogger.warning(LogCategory.farm, 'GetActivities failed: $failure');
@@ -114,14 +117,24 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     try {
       final result = await repository.getActivities(
         sourceType: event.sourceType,
+        limit: kOnlineListPageSize,
         cursor: current.nextCursor,
       );
+      _isLoadingMore = false;
       result.fold(
-        (failure) => emit(ActivityError(
-          resolveFailureMessage(failure, 'Failed to load activities'),
-          activities: current.activities,
-        )),
+        (failure) {
+          if (state != current) return;
+          emit(ActivityError(
+            resolveFailureMessage(failure, 'Failed to load activities'),
+            activities: current.activities,
+          ));
+        },
         (more) {
+          // A concurrent Add/Update/Delete/refresh emitted a newer state
+          // while this fetch was in flight: drop this now-stale page rather
+          // than clobbering it — the user's next scroll re-triggers
+          // LoadMore against the fresh state.
+          if (state != current) return;
           final combined = List<Activity>.from(current.activities)
             ..addAll(more);
           emit(ActivityLoaded(

@@ -105,6 +105,7 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
       source: event.source,
       startDate: event.startDate,
       endDate: event.endDate,
+      limit: kOnlineListPageSize,
     );
 
     result.fold(
@@ -151,14 +152,24 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
         source: event.source,
         startDate: event.startDate,
         endDate: event.endDate,
+        limit: kOnlineListPageSize,
         cursor: current.nextCursor,
       );
+      _isLoadingMore = false;
       result.fold(
-        (failure) => emit(RevenueError(
-          resolveFailureMessage(failure, 'Failed to load revenues'),
-          revenues: current.revenues,
-        )),
+        (failure) {
+          if (state != current) return;
+          emit(RevenueError(
+            resolveFailureMessage(failure, 'Failed to load revenues'),
+            revenues: current.revenues,
+          ));
+        },
         (more) {
+          // A concurrent Add/Update/Delete/refresh emitted a newer state
+          // while this fetch was in flight: drop this now-stale page rather
+          // than clobbering it — the user's next scroll re-triggers
+          // LoadMore against the fresh state.
+          if (state != current) return;
           final combined = List<Revenue>.from(current.revenues)..addAll(more);
           emit(RevenueLoaded(
             revenues: combined,

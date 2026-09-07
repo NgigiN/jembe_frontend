@@ -49,7 +49,10 @@ void main() {
       'repository',
       build: () {
         when(
-          () => mockRepository.getHarvests(seasonId: any(named: 'seasonId')),
+          () => mockRepository.getHarvests(
+            seasonId: any(named: 'seasonId'),
+            limit: any(named: 'limit'),
+          ),
         ).thenAnswer((_) async => Right([harvest()]));
         return buildBloc();
       },
@@ -61,7 +64,7 @@ void main() {
     );
 
     blocTest<HarvestBloc, HarvestState>(
-      "AddHarvestEvent success appends the returned harvest and sets "
+      'AddHarvestEvent success appends the returned harvest and sets '
       "successMessage 'Harvest recorded'",
       build: () {
         when(

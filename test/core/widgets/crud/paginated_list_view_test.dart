@@ -98,12 +98,91 @@ void main() {
     },
   );
 
-  testWidgets('disposes its ScrollController without error', (tester) async {
+  testWidgets('disposes cleanly when removed from the tree', (tester) async {
     await tester.pumpWidget(
       buildHarness(itemCount: 20, hasReachedMax: false, onEndReached: () {}),
     );
-    // Replacing the widget triggers State.dispose on PaginatedListView.
+    // Replacing the widget triggers State.dispose on PaginatedListView. It
+    // owns no ScrollController of its own (F1), so there is nothing for it
+    // to dispose — this just guards against a regression that reintroduces
+    // one.
     await tester.pumpWidget(const MaterialApp(home: Scaffold()));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'attaches to the ambient PrimaryScrollController instead of owning its '
+    'own controller (F1: restores iOS "tap status bar to scroll to top" '
+    'parity)',
+    (tester) async {
+      final primaryController = ScrollController();
+      addTearDown(primaryController.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: PrimaryScrollController(
+              controller: primaryController,
+              child: PaginatedListView(
+                itemCount: 20,
+                hasReachedMax: true,
+                onEndReached: () {},
+                physics: const AlwaysScrollableScrollPhysics(),
+                itemBuilder: (context, index) =>
+                    SizedBox(height: 100, child: Text('item $index')),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // The externally-supplied PrimaryScrollController is already attached
+      // on first build — proof the inner ListView has no `controller:` of
+      // its own and picked up the ambient one instead.
+      expect(primaryController.hasClients, isTrue);
+      expect(primaryController.offset, 0);
+
+      await tester.drag(find.byType(Scrollable), const Offset(0, -500));
+      await tester.pump();
+
+      // Scrolling the list moves the ambient controller's own offset —
+      // it IS the list's controller, not a detached private one.
+      expect(primaryController.offset, greaterThan(0));
+    },
+  );
+
+  testWidgets(
+    'end-of-scroll detection also fires from a directly-dispatched '
+    'ScrollNotification (not just a real drag gesture)',
+    (tester) async {
+      var calls = 0;
+      await tester.pumpWidget(
+        buildHarness(
+          itemCount: 20,
+          hasReachedMax: false,
+          onEndReached: () => calls++,
+        ),
+      );
+
+      final scrollableState =
+          tester.state<ScrollableState>(find.byType(Scrollable));
+      final metrics = FixedScrollMetrics(
+        minScrollExtent: 0,
+        maxScrollExtent: 1000,
+        pixels: 1000 - kPaginatedListEndReachedThreshold,
+        viewportDimension: 600,
+        axisDirection: AxisDirection.down,
+        devicePixelRatio: tester.view.devicePixelRatio,
+      );
+
+      ScrollUpdateNotification(
+        metrics: metrics,
+        context: tester.element(find.byType(Scrollable)),
+        scrollDelta: 0,
+      ).dispatch(scrollableState.context);
+      await tester.pump();
+
+      expect(calls, 1);
+    },
+  );
 }
