@@ -56,6 +56,29 @@ void main() {
     );
 
     test(
+      'maps a ConflictException(message) to Left(ConflictFailure(message)) '
+      '— checked before the ServerException branch since ConflictException '
+      'extends it (Phase 8 A3/B2, future-proofing: no datasource routes a '
+      'conflict through guard() today)',
+      () async {
+        final result = await guard<int>(
+          () async => throw const ConflictException('still deleted'),
+        );
+
+        result.fold(
+          (failure) {
+            expect(failure, isA<ConflictFailure>());
+            expect(
+              (failure as ConflictFailure).errorMessage,
+              'still deleted',
+            );
+          },
+          (_) => fail('expected Left'),
+        );
+      },
+    );
+
+    test(
       'rethrows an unexpected (non-Exceptions) error when onUnexpected is '
       'not supplied — matching the repos with only the two standard catches',
       () async {
