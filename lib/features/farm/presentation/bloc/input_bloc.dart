@@ -4,12 +4,7 @@ import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/input.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_input.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_input.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_inputs.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_inputs_params.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_input.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_inputs.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/input_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/input_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -46,13 +41,7 @@ class _InputsWatchFailed extends InputEvent {
 }
 
 class InputBloc extends Bloc<InputEvent, InputState> {
-  InputBloc({
-    required this.getInputs,
-    required this.addInput,
-    required this.updateInput,
-    required this.deleteInput,
-    required this.watchInputs,
-  }) : super(InputInitial()) {
+  InputBloc({required this.repository}) : super(InputInitial()) {
     on<GetInputsEvent>(_onGetInputs);
     on<WatchInputsEvent>(_onWatchInputs);
     on<_InputsUpdated>((event, emit) {
@@ -66,11 +55,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
     on<DeleteInputEvent>(_onDeleteInput);
   }
 
-  final GetInputs getInputs;
-  final AddInput addInput;
-  final UpdateInput updateInput;
-  final DeleteInput deleteInput;
-  final WatchInputs watchInputs;
+  final InputRepository repository;
 
   StreamSubscription<List<Input>>? _inputsSubscription;
   bool _watchStarted = false;
@@ -82,9 +67,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
     appLogger.debug(LogCategory.farm, 'GetInputsEvent triggered');
     emit(const InputLoading());
 
-    final result = await getInputs(
-      GetInputsParams(sourceType: event.sourceType),
-    );
+    final result = await repository.getInputs(sourceType: event.sourceType);
     result.fold(
       (failure) {
         appLogger.warning(LogCategory.farm, 'GetInputs failed: $failure');
@@ -108,7 +91,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
   ) {
     if (_watchStarted) return;
     _watchStarted = true;
-    _inputsSubscription = watchInputs(sourceType: event.sourceType).listen(
+    _inputsSubscription = repository.watchInputs(sourceType: event.sourceType).listen(
       (inputs) => add(_InputsUpdated(inputs)),
       onError: (Object error, StackTrace stackTrace) {
         appLogger.logError('InputBloc.watchInputs', error, stackTrace);
@@ -128,7 +111,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
     Emitter<InputState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await addInput(AddInputParams(input: event.input));
+      final result = await repository.addInput(event.input);
       result.fold(
         (failure) => emit(InputError(
           resolveFailureMessage(failure, 'Failed to add input'),
@@ -143,7 +126,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
 
     final currentInputs = state.inputs;
     emit(InputLoading(inputs: currentInputs));
-    final result = await addInput(AddInputParams(input: event.input));
+    final result = await repository.addInput(event.input);
     result.fold(
       (failure) => emit(InputError(
         resolveFailureMessage(failure, 'Failed to add input'),
@@ -161,7 +144,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
     Emitter<InputState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await updateInput(UpdateInputParams(input: event.input));
+      final result = await repository.updateInput(event.input);
       result.fold(
         (failure) => emit(InputError(
           resolveFailureMessage(failure, 'Failed to update input'),
@@ -176,7 +159,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
 
     final currentInputs = state.inputs;
     emit(InputLoading(inputs: currentInputs));
-    final result = await updateInput(UpdateInputParams(input: event.input));
+    final result = await repository.updateInput(event.input);
     result.fold(
       (failure) => emit(InputError(
         resolveFailureMessage(failure, 'Failed to update input'),
@@ -196,7 +179,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
     Emitter<InputState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await deleteInput(DeleteInputParams(id: event.id));
+      final result = await repository.deleteInput(event.id);
       result.fold(
         (failure) => emit(InputError(
           resolveFailureMessage(failure, 'Failed to delete input'),
@@ -211,7 +194,7 @@ class InputBloc extends Bloc<InputEvent, InputState> {
 
     final currentInputs = state.inputs;
     emit(InputLoading(inputs: currentInputs));
-    final result = await deleteInput(DeleteInputParams(id: event.id));
+    final result = await repository.deleteInput(event.id);
     result.fold(
       (failure) => emit(InputError(
         resolveFailureMessage(failure, 'Failed to delete input'),

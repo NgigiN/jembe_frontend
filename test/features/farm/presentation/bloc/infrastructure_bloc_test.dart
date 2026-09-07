@@ -4,28 +4,16 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_infrastructure.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/infrastructure_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockGetInfrastructure extends Mock implements GetInfrastructure {}
-
-class MockAddInfrastructure extends Mock implements AddInfrastructure {}
-
-class MockUpdateInfrastructure extends Mock implements UpdateInfrastructure {}
-
-class MockDeleteInfrastructure extends Mock implements DeleteInfrastructure {}
-
-class MockWatchInfrastructure extends Mock implements WatchInfrastructure {}
+class MockInfrastructureRepository extends Mock
+    implements InfrastructureRepository {}
 
 void main() {
   final now = DateTime.now();
@@ -43,43 +31,26 @@ void main() {
         updatedAt: now,
       );
 
-  late MockGetInfrastructure mockGetInfrastructure;
-  late MockAddInfrastructure mockAddInfrastructure;
-  late MockUpdateInfrastructure mockUpdateInfrastructure;
-  late MockDeleteInfrastructure mockDeleteInfrastructure;
-  late MockWatchInfrastructure mockWatchInfrastructure;
-
-  setUpAll(() {
-    registerFallbackValue(NoParams());
-  });
+  late MockInfrastructureRepository mockRepository;
 
   setUp(() {
-    mockGetInfrastructure = MockGetInfrastructure();
-    mockAddInfrastructure = MockAddInfrastructure();
-    mockUpdateInfrastructure = MockUpdateInfrastructure();
-    mockDeleteInfrastructure = MockDeleteInfrastructure();
-    mockWatchInfrastructure = MockWatchInfrastructure();
+    mockRepository = MockInfrastructureRepository();
   });
 
   tearDown(() {
     OfflineConfig.enabled = false;
   });
 
-  InfrastructureBloc buildBloc() => InfrastructureBloc(
-    getInfrastructure: mockGetInfrastructure,
-    addInfrastructure: mockAddInfrastructure,
-    updateInfrastructure: mockUpdateInfrastructure,
-    deleteInfrastructure: mockDeleteInfrastructure,
-    watchInfrastructure: mockWatchInfrastructure,
-  );
+  InfrastructureBloc buildBloc() =>
+      InfrastructureBloc(repository: mockRepository);
 
   group("flag OFF (today's one-shot behavior, unchanged)", () {
     blocTest<InfrastructureBloc, InfrastructureState>(
       'GetInfrastructuresEvent emits [InfrastructureLoading, '
-      'InfrastructureLoaded] from the use case',
+      'InfrastructureLoaded] from the repository',
       build: () {
         when(
-          () => mockGetInfrastructure(any()),
+          () => mockRepository.getInfrastructures(),
         ).thenAnswer((_) async => Right([infrastructure()]));
         return buildBloc();
       },
@@ -95,7 +66,8 @@ void main() {
       "successMessage 'Infrastructure added'",
       build: () {
         when(
-          () => mockAddInfrastructure(any(), any(), any(), any(), any(), any(), any()),
+          () => mockRepository.addInfrastructure(
+            any(), any(), any(), any(), any(), any(), any()),
         ).thenAnswer((_) async => Right(infrastructure(id: 'infra-2')));
         return buildBloc();
       },
@@ -124,7 +96,8 @@ void main() {
       'current infrastructures',
       build: () {
         when(
-          () => mockAddInfrastructure(any(), any(), any(), any(), any(), any(), any()),
+          () => mockRepository.addInfrastructure(
+            any(), any(), any(), any(), any(), any(), any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -154,7 +127,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchInfrastructure(),
+          () => mockRepository.watchInfrastructures(),
         ).thenAnswer((_) => Stream.value([infrastructure()]));
         return buildBloc();
       },
@@ -171,7 +144,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchInfrastructure(),
+          () => mockRepository.watchInfrastructures(),
         ).thenAnswer((_) => Stream.value([infrastructure()]));
         return buildBloc();
       },
@@ -182,7 +155,7 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       verify: (_) {
-        verify(() => mockWatchInfrastructure()).called(1);
+        verify(() => mockRepository.watchInfrastructures()).called(1);
       },
     );
 
@@ -192,7 +165,8 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddInfrastructure(any(), any(), any(), any(), any(), any(), any()),
+          () => mockRepository.addInfrastructure(
+            any(), any(), any(), any(), any(), any(), any()),
         ).thenAnswer((_) async => Right(infrastructure(id: 'infra-2')));
         return buildBloc();
       },
@@ -221,7 +195,8 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockUpdateInfrastructure(any(), any(), any(), any(), any(), any(), any()),
+          () => mockRepository.updateInfrastructure(
+            any(), any(), any(), any(), any(), any(), any()),
         ).thenAnswer((_) async => Right(infrastructure(name: 'Renamed')));
         return buildBloc();
       },
@@ -250,7 +225,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockDeleteInfrastructure(any()),
+          () => mockRepository.deleteInfrastructure(any()),
         ).thenAnswer((_) async => const Right<Failure, void>(null));
         return buildBloc();
       },
@@ -283,7 +258,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchInfrastructure(),
+          () => mockRepository.watchInfrastructures(),
         ).thenAnswer((_) => controller.stream);
         return buildBloc();
       },

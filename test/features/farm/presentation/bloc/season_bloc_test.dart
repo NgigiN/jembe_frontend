@@ -4,28 +4,15 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_season.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_season.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_seasons.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_season.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_seasons.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/season_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockGetSeasons extends Mock implements GetSeasons {}
-
-class MockAddSeason extends Mock implements AddSeason {}
-
-class MockUpdateSeason extends Mock implements UpdateSeason {}
-
-class MockDeleteSeason extends Mock implements DeleteSeason {}
-
-class MockWatchSeasons extends Mock implements WatchSeasons {}
+class MockSeasonRepository extends Mock implements SeasonRepository {}
 
 void main() {
   final now = DateTime.now();
@@ -41,46 +28,29 @@ void main() {
         updatedAt: now,
       );
 
-  late MockGetSeasons mockGetSeasons;
-  late MockAddSeason mockAddSeason;
-  late MockUpdateSeason mockUpdateSeason;
-  late MockDeleteSeason mockDeleteSeason;
-  late MockWatchSeasons mockWatchSeasons;
+  late MockSeasonRepository mockRepository;
 
   setUpAll(() {
-    registerFallbackValue(NoParams());
-    registerFallbackValue(AddSeasonParams(season: season()));
-    registerFallbackValue(UpdateSeasonParams(season: season()));
-    registerFallbackValue(DeleteSeasonParams(id: 'season-1'));
+    registerFallbackValue(season());
   });
 
   setUp(() {
-    mockGetSeasons = MockGetSeasons();
-    mockAddSeason = MockAddSeason();
-    mockUpdateSeason = MockUpdateSeason();
-    mockDeleteSeason = MockDeleteSeason();
-    mockWatchSeasons = MockWatchSeasons();
+    mockRepository = MockSeasonRepository();
   });
 
   tearDown(() {
     OfflineConfig.enabled = false;
   });
 
-  SeasonBloc buildBloc() => SeasonBloc(
-    getSeasons: mockGetSeasons,
-    addSeason: mockAddSeason,
-    updateSeason: mockUpdateSeason,
-    deleteSeason: mockDeleteSeason,
-    watchSeasons: mockWatchSeasons,
-  );
+  SeasonBloc buildBloc() => SeasonBloc(repository: mockRepository);
 
   group("flag OFF (today's one-shot behavior, unchanged)", () {
     blocTest<SeasonBloc, SeasonState>(
-      'GetSeasonsEvent emits [SeasonLoading, SeasonLoaded] from the use '
-      'case',
+      'GetSeasonsEvent emits [SeasonLoading, SeasonLoaded] from the '
+      'repository',
       build: () {
         when(
-          () => mockGetSeasons(any()),
+          () => mockRepository.getSeasons(),
         ).thenAnswer((_) async => Right([season()]));
         return buildBloc();
       },
@@ -96,7 +66,7 @@ void main() {
       "successMessage 'Season created'",
       build: () {
         when(
-          () => mockAddSeason(any()),
+          () => mockRepository.addSeason(any()),
         ).thenAnswer((_) async => Right(season(id: 'season-2')));
         return buildBloc();
       },
@@ -115,7 +85,7 @@ void main() {
       'AddSeasonEvent failure emits SeasonError preserving current seasons',
       build: () {
         when(
-          () => mockAddSeason(any()),
+          () => mockRepository.addSeason(any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -135,7 +105,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchSeasons(),
+          () => mockRepository.watchSeasons(),
         ).thenAnswer((_) => Stream.value([season()]));
         return buildBloc();
       },
@@ -152,7 +122,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchSeasons(),
+          () => mockRepository.watchSeasons(),
         ).thenAnswer((_) => Stream.value([season()]));
         return buildBloc();
       },
@@ -163,7 +133,7 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       verify: (_) {
-        verify(() => mockWatchSeasons()).called(1);
+        verify(() => mockRepository.watchSeasons()).called(1);
       },
     );
 
@@ -173,7 +143,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddSeason(any()),
+          () => mockRepository.addSeason(any()),
         ).thenAnswer((_) async => Right(season(id: 'season-2')));
         return buildBloc();
       },
@@ -190,7 +160,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockUpdateSeason(any()),
+          () => mockRepository.updateSeason(any()),
         ).thenAnswer((_) async => Right(season(name: 'Renamed')));
         return buildBloc();
       },
@@ -207,7 +177,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockDeleteSeason(any()),
+          () => mockRepository.deleteSeason(any()),
         ).thenAnswer((_) async => const Right<Failure, void>(null));
         return buildBloc();
       },
@@ -223,7 +193,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddSeason(any()),
+          () => mockRepository.addSeason(any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -252,7 +222,8 @@ void main() {
       'for a later emission',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchSeasons()).thenAnswer((_) => controller.stream);
+        when(() => mockRepository.watchSeasons())
+            .thenAnswer((_) => controller.stream);
         return buildBloc();
       },
       seed: () => SeasonLoaded(seasons: [season()]),
@@ -278,7 +249,8 @@ void main() {
       'bloc',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchSeasons()).thenAnswer((_) => controller.stream);
+        when(() => mockRepository.watchSeasons())
+            .thenAnswer((_) => controller.stream);
         return buildBloc();
       },
       seed: () => SeasonLoaded(seasons: [season()]),

@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/offline_repository.dart';
@@ -9,6 +8,7 @@ import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/outbox_coalescing.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/guard.dart';
 import 'package:farm_tracker/features/farm/data/datasources/revenue_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/revenue_model.dart';
@@ -20,7 +20,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/revenue_repositor
 ///
 /// ## Flag off (today's behavior — byte for byte)
 /// Every method talks straight to [remoteDataSource], mapping
-/// [NetworkException]/[ServerException] to [NetworkFailure]/[ServerFailure].
+/// `NetworkException`/`ServerException` to [NetworkFailure]/[ServerFailure].
 /// This is rule zero for the offline rollout: with
 /// `OfflineConfig.enabled == false`, this class behaves exactly as it did
 /// before the offline pipeline existed.
@@ -146,18 +146,13 @@ class RevenueRepositoryImpl
           .toList();
       return Right(revenues);
     }
-    try {
-      final revenues = await remoteDataSource.getRevenues(
+    return guard(
+      () => remoteDataSource.getRevenues(
         source: source,
         startDate: startDate,
         endDate: endDate,
-      );
-      return Right(revenues);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+      ),
+    );
   }
 
   @override
@@ -170,14 +165,7 @@ class RevenueRepositoryImpl
       }
       return Right(_toRevenue(model));
     }
-    try {
-      final revenue = await remoteDataSource.getRevenueById(id);
-      return Right(revenue);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.getRevenueById(id));
   }
 
   @override
@@ -212,7 +200,7 @@ class RevenueRepositoryImpl
       return Right(_toRevenue(model));
     }
 
-    try {
+    return guard(() {
       final revenueModel = RevenueModel.create(
         source: source,
         sourceId: sourceId,
@@ -223,13 +211,8 @@ class RevenueRepositoryImpl
         date: date,
         notes: notes,
       );
-      final revenue = await remoteDataSource.addRevenue(revenueModel);
-      return Right(revenue);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+      return remoteDataSource.addRevenue(revenueModel);
+    });
   }
 
   @override
@@ -275,7 +258,7 @@ class RevenueRepositoryImpl
       return Right(_toRevenue(updated));
     }
 
-    try {
+    return guard(() {
       final revenueModel = RevenueModel(
         id: id,
         userId: '',
@@ -290,13 +273,8 @@ class RevenueRepositoryImpl
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      final revenue = await remoteDataSource.updateRevenue(revenueModel);
-      return Right(revenue);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+      return remoteDataSource.updateRevenue(revenueModel);
+    });
   }
 
   @override
@@ -307,13 +285,6 @@ class RevenueRepositoryImpl
       return const Right(null);
     }
 
-    try {
-      await remoteDataSource.deleteRevenue(id);
-      return const Right(null);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    }
+    return guard(() => remoteDataSource.deleteRevenue(id));
   }
 }

@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/offline_repository.dart';
@@ -9,6 +8,7 @@ import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/outbox_coalescing.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/guard.dart';
 import 'package:farm_tracker/features/farm/data/datasources/animal_type_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/animal_type_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/animal_type_model.dart';
@@ -20,7 +20,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/animal_type_repos
 ///
 /// ## Flag off (today's behavior — byte for byte)
 /// Every method talks straight to [remoteDataSource], mapping
-/// [NetworkException]/[ServerException] to [NetworkFailure]/[ServerFailure].
+/// `NetworkException`/`ServerException` to [NetworkFailure]/[ServerFailure].
 /// This is rule zero for the offline rollout: with
 /// `OfflineConfig.enabled == false`, this class behaves exactly as it did
 /// before the offline pipeline existed.
@@ -102,30 +102,18 @@ class AnimalTypeRepositoryImpl
       final models = await local!.watchAnimalTypes().first;
       return Right(models.map(_toAnimalType).toList());
     }
-    try {
-      final animalTypes = await remoteDataSource.getAnimalTypes();
-      return Right(animalTypes);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Unexpected error: $e'));
-    }
+    return guard(
+      remoteDataSource.getAnimalTypes,
+      onUnexpected: (e) => 'Unexpected error: $e',
+    );
   }
 
   @override
   Future<Either<Failure, AnimalType>> getAnimalType(String id) async {
-    try {
-      final animalType = await remoteDataSource.getAnimalType(id);
-      return Right(animalType);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Unexpected error: $e'));
-    }
+    return guard(
+      () => remoteDataSource.getAnimalType(id),
+      onUnexpected: (e) => 'Unexpected error: $e',
+    );
   }
 
   @override
@@ -150,21 +138,14 @@ class AnimalTypeRepositoryImpl
       return Right(_toAnimalType(model));
     }
 
-    try {
+    return guard(() {
       final animalTypeModel = AnimalTypeModel.create(
         userId: userId,
         name: name,
         notes: notes,
       );
-      final result = await remoteDataSource.addAnimalType(animalTypeModel);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Unexpected error: $e'));
-    }
+      return remoteDataSource.addAnimalType(animalTypeModel);
+    }, onUnexpected: (e) => 'Unexpected error: $e');
   }
 
   @override
@@ -198,7 +179,7 @@ class AnimalTypeRepositoryImpl
       return Right(_toAnimalType(updated));
     }
 
-    try {
+    return guard(() async {
       final animalTypeModel = await remoteDataSource.getAnimalType(id);
       final updatedModel = AnimalTypeModel(
         id: animalTypeModel.id,
@@ -208,15 +189,8 @@ class AnimalTypeRepositoryImpl
         createdAt: animalTypeModel.createdAt,
         updatedAt: DateTime.now(),
       );
-      final result = await remoteDataSource.updateAnimalType(updatedModel);
-      return Right(result);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Unexpected error: $e'));
-    }
+      return remoteDataSource.updateAnimalType(updatedModel);
+    }, onUnexpected: (e) => 'Unexpected error: $e');
   }
 
   @override
@@ -227,15 +201,9 @@ class AnimalTypeRepositoryImpl
       return const Right(null);
     }
 
-    try {
-      await remoteDataSource.deleteAnimalType(id);
-      return const Right(null);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Unexpected error: $e'));
-    }
+    return guard(
+      () => remoteDataSource.deleteAnimalType(id),
+      onUnexpected: (e) => 'Unexpected error: $e',
+    );
   }
 }

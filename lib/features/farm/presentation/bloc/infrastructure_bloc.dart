@@ -3,13 +3,8 @@ import 'dart:async';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_infrastructure.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_infrastructure.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/infrastructure_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/infrastructure_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -46,13 +41,7 @@ class _InfrastructuresWatchFailed extends InfrastructureEvent {
 }
 
 class InfrastructureBloc extends Bloc<InfrastructureEvent, InfrastructureState> {
-  InfrastructureBloc({
-    required this.getInfrastructure,
-    required this.addInfrastructure,
-    required this.updateInfrastructure,
-    required this.deleteInfrastructure,
-    required this.watchInfrastructure,
-  }) : super(InfrastructureInitial()) {
+  InfrastructureBloc({required this.repository}) : super(InfrastructureInitial()) {
     on<GetInfrastructuresEvent>(_onGetInfrastructures);
     on<WatchInfrastructureEvent>(_onWatchInfrastructures);
     on<_InfrastructuresUpdated>((event, emit) {
@@ -68,11 +57,7 @@ class InfrastructureBloc extends Bloc<InfrastructureEvent, InfrastructureState> 
     on<DeleteInfrastructureEvent>(_onDeleteInfrastructure);
   }
 
-  final GetInfrastructure getInfrastructure;
-  final AddInfrastructure addInfrastructure;
-  final UpdateInfrastructure updateInfrastructure;
-  final DeleteInfrastructure deleteInfrastructure;
-  final WatchInfrastructure watchInfrastructure;
+  final InfrastructureRepository repository;
 
   StreamSubscription<List<Infrastructure>>? _infrastructuresSubscription;
   bool _watchStarted = false;
@@ -82,7 +67,7 @@ class InfrastructureBloc extends Bloc<InfrastructureEvent, InfrastructureState> 
     Emitter<InfrastructureState> emit,
   ) async {
     emit(const InfrastructureLoading());
-    final result = await getInfrastructure(NoParams());
+    final result = await repository.getInfrastructures();
     result.fold(
       (failure) => emit(InfrastructureError(
         resolveFailureMessage(failure, 'Failed to load infrastructure'),
@@ -102,7 +87,7 @@ class InfrastructureBloc extends Bloc<InfrastructureEvent, InfrastructureState> 
     // instead.
     if (_watchStarted) return;
     _watchStarted = true;
-    _infrastructuresSubscription = watchInfrastructure().listen(
+    _infrastructuresSubscription = repository.watchInfrastructures().listen(
       (infrastructures) => add(_InfrastructuresUpdated(infrastructures)),
       onError: (Object error, StackTrace stackTrace) {
         appLogger.logError(
@@ -128,7 +113,7 @@ class InfrastructureBloc extends Bloc<InfrastructureEvent, InfrastructureState> 
     Emitter<InfrastructureState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await addInfrastructure(
+      final result = await repository.addInfrastructure(
         event.type,
         event.name,
         event.location,
@@ -154,7 +139,7 @@ class InfrastructureBloc extends Bloc<InfrastructureEvent, InfrastructureState> 
 
     final currentList = state.infrastructures;
     emit(InfrastructureLoading(infrastructures: currentList));
-    final result = await addInfrastructure(
+    final result = await repository.addInfrastructure(
       event.type,
       event.name,
       event.location,
@@ -180,7 +165,7 @@ class InfrastructureBloc extends Bloc<InfrastructureEvent, InfrastructureState> 
     Emitter<InfrastructureState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await updateInfrastructure(
+      final result = await repository.updateInfrastructure(
         event.id,
         event.type,
         event.name,
@@ -206,7 +191,7 @@ class InfrastructureBloc extends Bloc<InfrastructureEvent, InfrastructureState> 
 
     final currentList = state.infrastructures;
     emit(InfrastructureLoading(infrastructures: currentList));
-    final result = await updateInfrastructure(
+    final result = await repository.updateInfrastructure(
       event.id,
       event.type,
       event.name,
@@ -234,7 +219,7 @@ class InfrastructureBloc extends Bloc<InfrastructureEvent, InfrastructureState> 
     Emitter<InfrastructureState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await deleteInfrastructure(event.id);
+      final result = await repository.deleteInfrastructure(event.id);
       result.fold(
         (failure) => emit(InfrastructureError(
           resolveFailureMessage(failure, 'Failed to delete infrastructure'),
@@ -252,7 +237,7 @@ class InfrastructureBloc extends Bloc<InfrastructureEvent, InfrastructureState> 
 
     final currentList = state.infrastructures;
     emit(InfrastructureLoading(infrastructures: currentList));
-    final result = await deleteInfrastructure(event.id);
+    final result = await repository.deleteInfrastructure(event.id);
     result.fold(
       (failure) => emit(InfrastructureError(
         resolveFailureMessage(failure, 'Failed to delete infrastructure'),

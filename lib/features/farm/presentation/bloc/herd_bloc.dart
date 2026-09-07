@@ -3,13 +3,8 @@ import 'dart:async';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_herd.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_herd.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_herds.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_herd.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_herds.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/herd_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -44,13 +39,7 @@ class _HerdsWatchFailed extends HerdEvent {
 }
 
 class HerdBloc extends Bloc<HerdEvent, HerdState> {
-  HerdBloc({
-    required this.getHerds,
-    required this.addHerd,
-    required this.updateHerd,
-    required this.deleteHerd,
-    required this.watchHerds,
-  }) : super(HerdInitial()) {
+  HerdBloc({required this.repository}) : super(HerdInitial()) {
     on<GetHerdsEvent>(_onGetHerds);
     on<WatchHerdsEvent>(_onWatchHerds);
     on<_HerdsUpdated>((event, emit) {
@@ -63,11 +52,7 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
     on<UpdateHerdEvent>(_onUpdateHerd);
     on<DeleteHerdEvent>(_onDeleteHerd);
   }
-  final GetHerds getHerds;
-  final AddHerd addHerd;
-  final UpdateHerd updateHerd;
-  final DeleteHerd deleteHerd;
-  final WatchHerds watchHerds;
+  final HerdRepository repository;
 
   StreamSubscription<List<Herd>>? _herdsSubscription;
   bool _watchStarted = false;
@@ -77,7 +62,7 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
     Emitter<HerdState> emit,
   ) async {
     emit(const HerdLoading());
-    final result = await getHerds(NoParams());
+    final result = await repository.getHerds();
     result.fold(
       (failure) => emit(HerdError(resolveFailureMessage(failure, 'Failed to load herds'))),
       (herds) => emit(HerdLoaded(herds)),
@@ -92,7 +77,7 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
     // instead.
     if (_watchStarted) return;
     _watchStarted = true;
-    _herdsSubscription = watchHerds().listen(
+    _herdsSubscription = repository.watchHerds().listen(
       (herds) => add(_HerdsUpdated(herds)),
       onError: (Object error, StackTrace stackTrace) {
         appLogger.logError('HerdBloc.watchHerds', error, stackTrace);
@@ -112,7 +97,7 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
     Emitter<HerdState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await addHerd(
+      final result = await repository.addHerd(
         event.name,
         event.animalTypeId,
         event.location,
@@ -134,7 +119,7 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
     final currentHerds = state.herds;
 
     emit(HerdLoading(herds: currentHerds));
-    final result = await addHerd(
+    final result = await repository.addHerd(
       event.name,
       event.animalTypeId,
       event.location,
@@ -160,7 +145,7 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
     Emitter<HerdState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await updateHerd(
+      final result = await repository.updateHerd(
         event.id,
         event.name,
         event.animalTypeId,
@@ -181,7 +166,7 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
 
     final currentHerds = state.herds;
     emit(HerdLoading(herds: currentHerds));
-    final result = await updateHerd(
+    final result = await repository.updateHerd(
       event.id,
       event.name,
       event.animalTypeId,
@@ -209,7 +194,7 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
     Emitter<HerdState> emit,
   ) async {
     if (OfflineConfig.enabled) {
-      final result = await deleteHerd(event.id);
+      final result = await repository.deleteHerd(event.id);
       result.fold(
         (failure) => emit(HerdError(
           resolveFailureMessage(failure, 'Failed to delete herd'),
@@ -222,7 +207,7 @@ class HerdBloc extends Bloc<HerdEvent, HerdState> {
 
     final currentHerds = state.herds;
     emit(HerdLoading(herds: currentHerds));
-    final result = await deleteHerd(event.id);
+    final result = await repository.deleteHerd(event.id);
     result.fold(
       (failure) => emit(HerdError(
         resolveFailureMessage(failure, 'Failed to delete herd'),

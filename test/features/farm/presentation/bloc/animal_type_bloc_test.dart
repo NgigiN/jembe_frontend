@@ -4,71 +4,40 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_animal_types.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_animal_type.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_animal_types.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/animal_type_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_type_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockGetAnimalTypes extends Mock implements GetAnimalTypes {}
-
-class MockAddAnimalType extends Mock implements AddAnimalType {}
-
-class MockUpdateAnimalType extends Mock implements UpdateAnimalType {}
-
-class MockDeleteAnimalType extends Mock implements DeleteAnimalType {}
-
-class MockWatchAnimalTypes extends Mock implements WatchAnimalTypes {}
+class MockAnimalTypeRepository extends Mock implements AnimalTypeRepository {}
 
 void main() {
   final now = DateTime.now();
   AnimalType animalType({String id = 'type-1', String name = 'Cattle'}) =>
       AnimalType(id: id, userId: 'user-1', name: name, createdAt: now, updatedAt: now);
 
-  late MockGetAnimalTypes mockGetAnimalTypes;
-  late MockAddAnimalType mockAddAnimalType;
-  late MockUpdateAnimalType mockUpdateAnimalType;
-  late MockDeleteAnimalType mockDeleteAnimalType;
-  late MockWatchAnimalTypes mockWatchAnimalTypes;
-
-  setUpAll(() {
-    registerFallbackValue(NoParams());
-  });
+  late MockAnimalTypeRepository mockRepository;
 
   setUp(() {
-    mockGetAnimalTypes = MockGetAnimalTypes();
-    mockAddAnimalType = MockAddAnimalType();
-    mockUpdateAnimalType = MockUpdateAnimalType();
-    mockDeleteAnimalType = MockDeleteAnimalType();
-    mockWatchAnimalTypes = MockWatchAnimalTypes();
+    mockRepository = MockAnimalTypeRepository();
   });
 
   tearDown(() {
     OfflineConfig.enabled = false;
   });
 
-  AnimalTypeBloc buildBloc() => AnimalTypeBloc(
-    getAnimalTypes: mockGetAnimalTypes,
-    addAnimalType: mockAddAnimalType,
-    updateAnimalType: mockUpdateAnimalType,
-    deleteAnimalType: mockDeleteAnimalType,
-    watchAnimalTypes: mockWatchAnimalTypes,
-  );
+  AnimalTypeBloc buildBloc() => AnimalTypeBloc(repository: mockRepository);
 
   group("flag OFF (today's one-shot behavior, unchanged)", () {
     blocTest<AnimalTypeBloc, AnimalTypeState>(
       'GetAnimalTypesEvent emits [AnimalTypeLoading, AnimalTypeLoaded] from '
-      'the use case',
+      'the repository',
       build: () {
         when(
-          () => mockGetAnimalTypes(any()),
+          () => mockRepository.getAnimalTypes(),
         ).thenAnswer((_) async => Right([animalType()]));
         return buildBloc();
       },
@@ -84,7 +53,7 @@ void main() {
       "successMessage 'Animal type added'",
       build: () {
         when(
-          () => mockAddAnimalType(any(), any(), any()),
+          () => mockRepository.addAnimalType(any(), any(), any()),
         ).thenAnswer((_) async => Right(animalType(id: 'type-2')));
         return buildBloc();
       },
@@ -106,7 +75,7 @@ void main() {
       'animalTypes',
       build: () {
         when(
-          () => mockAddAnimalType(any(), any(), any()),
+          () => mockRepository.addAnimalType(any(), any(), any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -128,7 +97,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchAnimalTypes(),
+          () => mockRepository.watchAnimalTypes(),
         ).thenAnswer((_) => Stream.value([animalType()]));
         return buildBloc();
       },
@@ -145,7 +114,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchAnimalTypes(),
+          () => mockRepository.watchAnimalTypes(),
         ).thenAnswer((_) => Stream.value([animalType()]));
         return buildBloc();
       },
@@ -156,7 +125,7 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       verify: (_) {
-        verify(() => mockWatchAnimalTypes()).called(1);
+        verify(() => mockRepository.watchAnimalTypes()).called(1);
       },
     );
 
@@ -166,7 +135,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddAnimalType(any(), any(), any()),
+          () => mockRepository.addAnimalType(any(), any(), any()),
         ).thenAnswer((_) async => Right(animalType(id: 'type-2')));
         return buildBloc();
       },
@@ -188,7 +157,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockUpdateAnimalType(any(), any(), any()),
+          () => mockRepository.updateAnimalType(any(), any(), any()),
         ).thenAnswer((_) async => Right(animalType(name: 'Renamed')));
         return buildBloc();
       },
@@ -210,7 +179,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockDeleteAnimalType(any()),
+          () => mockRepository.deleteAnimalType(any()),
         ).thenAnswer((_) async => const Right<Failure, void>(null));
         return buildBloc();
       },
@@ -242,7 +211,8 @@ void main() {
       'stays alive for a later emission',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchAnimalTypes()).thenAnswer((_) => controller.stream);
+        when(() => mockRepository.watchAnimalTypes())
+            .thenAnswer((_) => controller.stream);
         return buildBloc();
       },
       seed: () => AnimalTypeLoaded([animalType()]),

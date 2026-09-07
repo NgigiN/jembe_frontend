@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/offline_repository.dart';
@@ -9,6 +8,7 @@ import 'package:farm_tracker/core/sync/outbox.dart';
 import 'package:farm_tracker/core/sync/outbox_coalescing.dart';
 import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
+import 'package:farm_tracker/core/utils/guard.dart';
 import 'package:farm_tracker/features/farm/data/datasources/cost_category_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/cost_category_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/cost_category_model.dart';
@@ -28,7 +28,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/cost_category_rep
 ///
 /// ## Flag off (today's behavior — byte for byte)
 /// Every method talks straight to [remoteDataSource], mapping
-/// [NetworkException]/[ServerException] to [NetworkFailure]/[ServerFailure].
+/// `NetworkException`/`ServerException` to [NetworkFailure]/[ServerFailure].
 /// This is rule zero for the offline rollout: with
 /// `OfflineConfig.enabled == false`, this class behaves exactly as it did
 /// before the offline pipeline existed.
@@ -90,19 +90,10 @@ class CostCategoryRepositoryImpl
       );
       return Right(models.map(_toCostCategory).toList());
     }
-    try {
-      final remoteCategories = await remoteDataSource.getCostCategories(
-        type: type,
-        category: category,
-      );
-      return Right(remoteCategories);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+    return guard(
+      () => remoteDataSource.getCostCategories(type: type, category: category),
+      onUnexpected: (e) => e.toString(),
+    );
   }
 
   @override
@@ -126,20 +117,14 @@ class CostCategoryRepositoryImpl
       );
       return const Right(true);
     }
-    try {
-      final success = await remoteDataSource.addCostCategory(
+    return guard(
+      () => remoteDataSource.addCostCategory(
         name: name,
         type: type,
         category: category,
-      );
-      return Right(success);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+      ),
+      onUnexpected: (e) => e.toString(),
+    );
   }
 
   @override
@@ -149,15 +134,9 @@ class CostCategoryRepositoryImpl
       await stageDelete(local!, id);
       return const Right(null);
     }
-    try {
-      await remoteDataSource.deleteCostCategory(id);
-      return const Right(null);
-    } on NetworkException catch (_) {
-      return const Left(NetworkFailure());
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+    return guard(
+      () => remoteDataSource.deleteCostCategory(id),
+      onUnexpected: (e) => e.toString(),
+    );
   }
 }

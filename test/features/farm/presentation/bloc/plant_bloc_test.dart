@@ -4,28 +4,15 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_plants.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_plant.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_plants.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/plant_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/plant_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockGetPlants extends Mock implements GetPlants {}
-
-class MockAddPlant extends Mock implements AddPlant {}
-
-class MockUpdatePlant extends Mock implements UpdatePlant {}
-
-class MockDeletePlant extends Mock implements DeletePlant {}
-
-class MockWatchPlants extends Mock implements WatchPlants {}
+class MockPlantRepository extends Mock implements PlantRepository {}
 
 void main() {
   final now = DateTime.now();
@@ -37,45 +24,28 @@ void main() {
     updatedAt: now,
   );
 
-  late MockGetPlants mockGetPlants;
-  late MockAddPlant mockAddPlant;
-  late MockUpdatePlant mockUpdatePlant;
-  late MockDeletePlant mockDeletePlant;
-  late MockWatchPlants mockWatchPlants;
+  late MockPlantRepository mockRepository;
 
   setUpAll(() {
-    registerFallbackValue(NoParams());
-    registerFallbackValue(AddPlantParams(plant: plant()));
-    registerFallbackValue(UpdatePlantParams(plant: plant()));
-    registerFallbackValue(DeletePlantParams(id: 'plant-1'));
+    registerFallbackValue(plant());
   });
 
   setUp(() {
-    mockGetPlants = MockGetPlants();
-    mockAddPlant = MockAddPlant();
-    mockUpdatePlant = MockUpdatePlant();
-    mockDeletePlant = MockDeletePlant();
-    mockWatchPlants = MockWatchPlants();
+    mockRepository = MockPlantRepository();
   });
 
   tearDown(() {
     OfflineConfig.enabled = false;
   });
 
-  PlantBloc buildBloc() => PlantBloc(
-    getPlants: mockGetPlants,
-    addPlant: mockAddPlant,
-    updatePlant: mockUpdatePlant,
-    deletePlant: mockDeletePlant,
-    watchPlants: mockWatchPlants,
-  );
+  PlantBloc buildBloc() => PlantBloc(repository: mockRepository);
 
   group("flag OFF (today's one-shot behavior, unchanged)", () {
     blocTest<PlantBloc, PlantState>(
-      'GetPlantsEvent emits [PlantLoading, PlantLoaded] from the use case',
+      'GetPlantsEvent emits [PlantLoading, PlantLoaded] from the repository',
       build: () {
         when(
-          () => mockGetPlants(any()),
+          () => mockRepository.getPlants(),
         ).thenAnswer((_) async => Right([plant()]));
         return buildBloc();
       },
@@ -91,7 +61,7 @@ void main() {
       "successMessage 'Crop added'",
       build: () {
         when(
-          () => mockAddPlant(any()),
+          () => mockRepository.addPlant(any()),
         ).thenAnswer((_) async => Right(plant(id: 'plant-2')));
         return buildBloc();
       },
@@ -110,7 +80,7 @@ void main() {
       'AddPlantEvent failure emits PlantError preserving current plants',
       build: () {
         when(
-          () => mockAddPlant(any()),
+          () => mockRepository.addPlant(any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -130,7 +100,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchPlants(),
+          () => mockRepository.watchPlants(),
         ).thenAnswer((_) => Stream.value([plant()]));
         return buildBloc();
       },
@@ -147,7 +117,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchPlants(),
+          () => mockRepository.watchPlants(),
         ).thenAnswer((_) => Stream.value([plant()]));
         return buildBloc();
       },
@@ -158,7 +128,7 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       verify: (_) {
-        verify(() => mockWatchPlants()).called(1);
+        verify(() => mockRepository.watchPlants()).called(1);
       },
     );
 
@@ -168,7 +138,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddPlant(any()),
+          () => mockRepository.addPlant(any()),
         ).thenAnswer((_) async => Right(plant(id: 'plant-2')));
         return buildBloc();
       },
@@ -185,7 +155,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockUpdatePlant(any()),
+          () => mockRepository.updatePlant(any()),
         ).thenAnswer((_) async => Right(plant(name: 'Renamed')));
         return buildBloc();
       },
@@ -202,7 +172,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockDeletePlant(any()),
+          () => mockRepository.deletePlant(any()),
         ).thenAnswer((_) async => const Right<Failure, void>(null));
         return buildBloc();
       },
@@ -218,7 +188,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddPlant(any()),
+          () => mockRepository.addPlant(any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -247,7 +217,8 @@ void main() {
       'for a later emission',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchPlants()).thenAnswer((_) => controller.stream);
+        when(() => mockRepository.watchPlants())
+            .thenAnswer((_) => controller.stream);
         return buildBloc();
       },
       seed: () => PlantLoaded(plants: [plant()]),
@@ -270,7 +241,8 @@ void main() {
       'bloc',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchPlants()).thenAnswer((_) => controller.stream);
+        when(() => mockRepository.watchPlants())
+            .thenAnswer((_) => controller.stream);
         return buildBloc();
       },
       seed: () => PlantLoaded(plants: [plant()]),

@@ -1,22 +1,22 @@
 import 'package:farm_tracker/core/error/failures.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_herd_activity.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/herd_activity_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_activity_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class HerdActivityBloc extends Bloc<HerdActivityEvent, HerdActivityState> {
-  HerdActivityBloc({required this.addHerdActivity}) : super(HerdActivityInitial()) {
+  HerdActivityBloc({required this.repository}) : super(HerdActivityInitial()) {
     on<AddHerdActivityEvent>(_onAddHerdActivity);
   }
 
-  final AddHerdActivity addHerdActivity;
+  final HerdActivityRepository repository;
 
   Future<void> _onAddHerdActivity(
     AddHerdActivityEvent event,
     Emitter<HerdActivityState> emit,
   ) async {
     emit(HerdActivityLoading());
-    final result = await addHerdActivity(
+    final result = await repository.addHerdActivity(
       event.herdId,
       event.activityType,
       event.count,

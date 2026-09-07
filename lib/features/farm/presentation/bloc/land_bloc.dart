@@ -3,13 +3,8 @@ import 'dart:async';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_land.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_land.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_lands.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_land.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_lands.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/land_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -44,16 +39,10 @@ class _LandsWatchFailed extends LandEvent {
 }
 
 class LandBloc extends Bloc<LandEvent, LandState> {
-  LandBloc({
-    required this.getLands,
-    required this.addLand,
-    required this.updateLand,
-    required this.deleteLand,
-    required this.watchLands,
-  }) : super(LandInitial()) {
+  LandBloc({required this.repository}) : super(LandInitial()) {
     on<GetLandsEvent>((event, emit) async {
       emit(const LandLoading());
-      final result = await getLands(NoParams());
+      final result = await repository.getLands();
       result.fold(
         (failure) => emit(
           LandError(resolveFailureMessage(failure, 'Failed to load lands')),
@@ -70,7 +59,7 @@ class LandBloc extends Bloc<LandEvent, LandState> {
       // pure no-op instead.
       if (_watchStarted) return;
       _watchStarted = true;
-      _landsSubscription = watchLands().listen(
+      _landsSubscription = repository.watchLands().listen(
         (lands) => add(_LandsUpdated(lands)),
         onError: (Object error, StackTrace stackTrace) {
           appLogger.logError('LandBloc.watchLands', error, stackTrace);
@@ -95,7 +84,7 @@ class LandBloc extends Bloc<LandEvent, LandState> {
 
     on<AddLandEvent>((event, emit) async {
       if (OfflineConfig.enabled) {
-        final result = await addLand(AddLandParams(land: event.land));
+        final result = await repository.addLand(event.land);
         result.fold(
           (failure) => emit(
             LandError(
@@ -117,7 +106,7 @@ class LandBloc extends Bloc<LandEvent, LandState> {
       final currentLands = state.lands;
 
       emit(LandLoading(lands: currentLands));
-      final result = await addLand(AddLandParams(land: event.land));
+      final result = await repository.addLand(event.land);
       result.fold(
         (failure) => emit(
           LandError(
@@ -140,7 +129,7 @@ class LandBloc extends Bloc<LandEvent, LandState> {
 
     on<UpdateLandEvent>((event, emit) async {
       if (OfflineConfig.enabled) {
-        final result = await updateLand(UpdateLandParams(land: event.land));
+        final result = await repository.updateLand(event.land);
         result.fold(
           (failure) => emit(
             LandError(
@@ -158,7 +147,7 @@ class LandBloc extends Bloc<LandEvent, LandState> {
       final currentLands = state.lands;
 
       emit(LandLoading(lands: currentLands));
-      final result = await updateLand(UpdateLandParams(land: event.land));
+      final result = await repository.updateLand(event.land);
       result.fold(
         (failure) => emit(
           LandError(
@@ -177,7 +166,7 @@ class LandBloc extends Bloc<LandEvent, LandState> {
 
     on<DeleteLandEvent>((event, emit) async {
       if (OfflineConfig.enabled) {
-        final result = await deleteLand(DeleteLandParams(id: event.id));
+        final result = await repository.deleteLand(event.id);
         result.fold(
           (failure) => emit(
             LandError(
@@ -195,7 +184,7 @@ class LandBloc extends Bloc<LandEvent, LandState> {
       final currentLands = state.lands;
 
       emit(LandLoading(lands: currentLands));
-      final result = await deleteLand(DeleteLandParams(id: event.id));
+      final result = await repository.deleteLand(event.id);
       result.fold(
         (failure) => emit(
           LandError(
@@ -212,11 +201,7 @@ class LandBloc extends Bloc<LandEvent, LandState> {
       );
     });
   }
-  final GetLands getLands;
-  final AddLand addLand;
-  final UpdateLand updateLand;
-  final DeleteLand deleteLand;
-  final WatchLands watchLands;
+  final LandRepository repository;
 
   StreamSubscription<List<Land>>? _landsSubscription;
   bool _watchStarted = false;

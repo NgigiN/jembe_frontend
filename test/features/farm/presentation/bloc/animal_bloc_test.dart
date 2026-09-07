@@ -4,28 +4,15 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
-import 'package:farm_tracker/core/usecases/usecase.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_animals.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_animal.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_animals.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/animal_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/animal_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockGetAnimals extends Mock implements GetAnimals {}
-
-class MockAddAnimal extends Mock implements AddAnimal {}
-
-class MockUpdateAnimal extends Mock implements UpdateAnimal {}
-
-class MockDeleteAnimal extends Mock implements DeleteAnimal {}
-
-class MockWatchAnimals extends Mock implements WatchAnimals {}
+class MockAnimalRepository extends Mock implements AnimalRepository {}
 
 void main() {
   final now = DateTime.now();
@@ -41,45 +28,28 @@ void main() {
     updatedAt: now,
   );
 
-  late MockGetAnimals mockGetAnimals;
-  late MockAddAnimal mockAddAnimal;
-  late MockUpdateAnimal mockUpdateAnimal;
-  late MockDeleteAnimal mockDeleteAnimal;
-  late MockWatchAnimals mockWatchAnimals;
+  late MockAnimalRepository mockRepository;
 
   setUpAll(() {
-    registerFallbackValue(NoParams());
-    registerFallbackValue(AddAnimalParams(animal: animal()));
-    registerFallbackValue(UpdateAnimalParams(animal: animal()));
-    registerFallbackValue(DeleteAnimalParams(id: 'animal-1'));
+    registerFallbackValue(animal());
   });
 
   setUp(() {
-    mockGetAnimals = MockGetAnimals();
-    mockAddAnimal = MockAddAnimal();
-    mockUpdateAnimal = MockUpdateAnimal();
-    mockDeleteAnimal = MockDeleteAnimal();
-    mockWatchAnimals = MockWatchAnimals();
+    mockRepository = MockAnimalRepository();
   });
 
   tearDown(() {
     OfflineConfig.enabled = false;
   });
 
-  AnimalBloc buildBloc() => AnimalBloc(
-    getAnimals: mockGetAnimals,
-    addAnimal: mockAddAnimal,
-    updateAnimal: mockUpdateAnimal,
-    deleteAnimal: mockDeleteAnimal,
-    watchAnimals: mockWatchAnimals,
-  );
+  AnimalBloc buildBloc() => AnimalBloc(repository: mockRepository);
 
   group("flag OFF (today's one-shot behavior, unchanged)", () {
     blocTest<AnimalBloc, AnimalState>(
-      'GetAnimalsEvent emits [AnimalLoading, AnimalLoaded] from the use case',
+      'GetAnimalsEvent emits [AnimalLoading, AnimalLoaded] from the repository',
       build: () {
         when(
-          () => mockGetAnimals(any()),
+          () => mockRepository.getAnimals(),
         ).thenAnswer((_) async => Right([animal()]));
         return buildBloc();
       },
@@ -95,7 +65,7 @@ void main() {
       "successMessage 'Animal added'",
       build: () {
         when(
-          () => mockAddAnimal(any()),
+          () => mockRepository.addAnimal(any()),
         ).thenAnswer((_) async => Right(animal(id: 'animal-2')));
         return buildBloc();
       },
@@ -114,7 +84,7 @@ void main() {
       'AddAnimalEvent failure emits AnimalError preserving current animals',
       build: () {
         when(
-          () => mockAddAnimal(any()),
+          () => mockRepository.addAnimal(any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -134,7 +104,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchAnimals(),
+          () => mockRepository.watchAnimals(),
         ).thenAnswer((_) => Stream.value([animal()]));
         return buildBloc();
       },
@@ -151,7 +121,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchAnimals(),
+          () => mockRepository.watchAnimals(),
         ).thenAnswer((_) => Stream.value([animal()]));
         return buildBloc();
       },
@@ -162,7 +132,7 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       verify: (_) {
-        verify(() => mockWatchAnimals()).called(1);
+        verify(() => mockRepository.watchAnimals()).called(1);
       },
     );
 
@@ -172,7 +142,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddAnimal(any()),
+          () => mockRepository.addAnimal(any()),
         ).thenAnswer((_) async => Right(animal(id: 'animal-2')));
         return buildBloc();
       },
@@ -189,7 +159,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockUpdateAnimal(any()),
+          () => mockRepository.updateAnimal(any()),
         ).thenAnswer((_) async => Right(animal(name: 'Renamed')));
         return buildBloc();
       },
@@ -206,7 +176,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockDeleteAnimal(any()),
+          () => mockRepository.deleteAnimal(any()),
         ).thenAnswer((_) async => const Right<Failure, void>(null));
         return buildBloc();
       },
@@ -222,7 +192,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddAnimal(any()),
+          () => mockRepository.addAnimal(any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -251,7 +221,8 @@ void main() {
       'for a later emission',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchAnimals()).thenAnswer((_) => controller.stream);
+        when(() => mockRepository.watchAnimals())
+            .thenAnswer((_) => controller.stream);
         return buildBloc();
       },
       seed: () => AnimalLoaded(animals: [animal()]),
@@ -277,7 +248,8 @@ void main() {
       'bloc',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockWatchAnimals()).thenAnswer((_) => controller.stream);
+        when(() => mockRepository.watchAnimals())
+            .thenAnswer((_) => controller.stream);
         return buildBloc();
       },
       seed: () => AnimalLoaded(animals: [animal()]),

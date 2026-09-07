@@ -5,27 +5,14 @@ import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/add_activity.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/delete_activity.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_activities.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/get_activities_params.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/update_activity.dart';
-import 'package:farm_tracker/features/farm/domain/usecases/watch_activities.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/activity_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockGetActivities extends Mock implements GetActivities {}
-
-class MockAddActivity extends Mock implements AddActivity {}
-
-class MockUpdateActivity extends Mock implements UpdateActivity {}
-
-class MockDeleteActivity extends Mock implements DeleteActivity {}
-
-class MockWatchActivities extends Mock implements WatchActivities {}
+class MockActivityRepository extends Mock implements ActivityRepository {}
 
 void main() {
   final now = DateTime.now();
@@ -41,46 +28,31 @@ void main() {
         updatedAt: now,
       );
 
-  late MockGetActivities mockGetActivities;
-  late MockAddActivity mockAddActivity;
-  late MockUpdateActivity mockUpdateActivity;
-  late MockDeleteActivity mockDeleteActivity;
-  late MockWatchActivities mockWatchActivities;
+  late MockActivityRepository mockRepository;
 
   setUpAll(() {
-    registerFallbackValue(GetActivitiesParams());
-    registerFallbackValue(AddActivityParams(activity: activity()));
-    registerFallbackValue(UpdateActivityParams(activity: activity()));
-    registerFallbackValue(DeleteActivityParams(id: 'activity-1'));
+    registerFallbackValue(activity());
   });
 
   setUp(() {
-    mockGetActivities = MockGetActivities();
-    mockAddActivity = MockAddActivity();
-    mockUpdateActivity = MockUpdateActivity();
-    mockDeleteActivity = MockDeleteActivity();
-    mockWatchActivities = MockWatchActivities();
+    mockRepository = MockActivityRepository();
   });
 
   tearDown(() {
     OfflineConfig.enabled = false;
   });
 
-  ActivityBloc buildBloc() => ActivityBloc(
-    getActivities: mockGetActivities,
-    addActivity: mockAddActivity,
-    updateActivity: mockUpdateActivity,
-    deleteActivity: mockDeleteActivity,
-    watchActivities: mockWatchActivities,
-  );
+  ActivityBloc buildBloc() => ActivityBloc(repository: mockRepository);
 
   group("flag OFF (today's one-shot behavior, unchanged)", () {
     blocTest<ActivityBloc, ActivityState>(
       'GetActivitiesEvent emits [ActivityLoading, ActivityLoaded] from the '
-      'use case',
+      'repository',
       build: () {
         when(
-          () => mockGetActivities(any()),
+          () => mockRepository.getActivities(
+            sourceType: any(named: 'sourceType'),
+          ),
         ).thenAnswer((_) async => Right([activity()]));
         return buildBloc();
       },
@@ -96,7 +68,7 @@ void main() {
       "successMessage 'Activity recorded'",
       build: () {
         when(
-          () => mockAddActivity(any()),
+          () => mockRepository.addActivity(any()),
         ).thenAnswer((_) async => Right(activity(id: 'activity-2')));
         return buildBloc();
       },
@@ -116,7 +88,7 @@ void main() {
       'activities',
       build: () {
         when(
-          () => mockAddActivity(any()),
+          () => mockRepository.addActivity(any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -137,7 +109,9 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchActivities(sourceType: any(named: 'sourceType')),
+          () => mockRepository.watchActivities(
+            sourceType: any(named: 'sourceType'),
+          ),
         ).thenAnswer((_) => Stream.value([activity()]));
         return buildBloc();
       },
@@ -148,7 +122,7 @@ void main() {
       ],
       verify: (_) {
         verify(
-          () => mockWatchActivities(sourceType: 'plant'),
+          () => mockRepository.watchActivities(sourceType: 'plant'),
         ).called(1);
       },
     );
@@ -159,7 +133,9 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchActivities(sourceType: any(named: 'sourceType')),
+          () => mockRepository.watchActivities(
+            sourceType: any(named: 'sourceType'),
+          ),
         ).thenAnswer((_) => Stream.value([activity()]));
         return buildBloc();
       },
@@ -171,7 +147,9 @@ void main() {
       wait: const Duration(milliseconds: 50),
       verify: (_) {
         verify(
-          () => mockWatchActivities(sourceType: any(named: 'sourceType')),
+          () => mockRepository.watchActivities(
+            sourceType: any(named: 'sourceType'),
+          ),
         ).called(1);
       },
     );
@@ -182,7 +160,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddActivity(any()),
+          () => mockRepository.addActivity(any()),
         ).thenAnswer((_) async => Right(activity(id: 'activity-2')));
         return buildBloc();
       },
@@ -202,7 +180,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockUpdateActivity(any()),
+          () => mockRepository.updateActivity(any()),
         ).thenAnswer((_) async => Right(activity(cost: 999)));
         return buildBloc();
       },
@@ -222,7 +200,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockDeleteActivity(any()),
+          () => mockRepository.deleteActivity(any()),
         ).thenAnswer((_) async => const Right<Failure, void>(null));
         return buildBloc();
       },
@@ -242,7 +220,7 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockAddActivity(any()),
+          () => mockRepository.addActivity(any()),
         ).thenAnswer((_) async => const Left(ServerFailure('boom')));
         return buildBloc();
       },
@@ -272,7 +250,9 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchActivities(sourceType: any(named: 'sourceType')),
+          () => mockRepository.watchActivities(
+            sourceType: any(named: 'sourceType'),
+          ),
         ).thenAnswer((_) => controller.stream);
         return buildBloc();
       },
@@ -300,7 +280,9 @@ void main() {
       setUp: () => OfflineConfig.enabled = true,
       build: () {
         when(
-          () => mockWatchActivities(sourceType: any(named: 'sourceType')),
+          () => mockRepository.watchActivities(
+            sourceType: any(named: 'sourceType'),
+          ),
         ).thenAnswer((_) => controller.stream);
         return buildBloc();
       },
