@@ -1,8 +1,15 @@
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
 import 'package:farm_tracker/core/theme/status_colors.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/widgets/filters/scope_chips.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_year.dart';
 import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_event.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_state.dart';
@@ -19,6 +26,18 @@ class AnnualSummaryPage extends StatefulWidget {
 class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
   FarmYear? _farmYear;
   bool _requested = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (OfflineConfig.enabled) {
+      context.read<LandBloc>().add(WatchLandsEvent());
+      context.read<HerdBloc>().add(WatchHerdsEvent());
+    } else {
+      context.read<LandBloc>().add(GetLandsEvent());
+      context.read<HerdBloc>().add(GetHerdsEvent());
+    }
+  }
 
   void _requestFarmYear(FarmYear farmYear) {
     setState(() => _farmYear = farmYear);
@@ -58,130 +77,154 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
 
           final farmYear = _farmYear!;
 
-          return BlocBuilder<AnalysisBloc, AnalysisState>(
+          return BlocConsumer<AnalysisBloc, AnalysisState>(
+            listenWhen: (previous, current) =>
+                current.summaries.error != null &&
+                current.summaries.data != null &&
+                previous.summaries.error != current.summaries.error,
+            listener: (context, state) => ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(AppSnackBar.error(context, state.summaries.error!)),
             builder: (context, state) {
-              if (state.summaries.isLoading) {
-                return const Center(child: CircularProgressIndicator());
-              } else if (state.summaries.error != null) {
-                // Keep the year switcher live even on error - the request
-                // that failed is scoped to farmYear, so the user can still
-                // page to a different year instead of getting stuck on a
-                // dead-end screen.
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    context.read<AnalysisBloc>().add(
-                      LoadAnnualCostSummary(farmYear.start, farmYear.end),
-                    );
-                  },
-                  child: ListView(
-                    children: [
-                      Container(
-                        margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Theme.of(context).colorScheme.primary,
-                              Theme.of(context).colorScheme.secondary,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        child: _buildYearSwitcherRow(farmYear),
+              final slice = state.summaries;
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: ScopeChips(
+                      scope: state.scope,
+                      lands: context.watch<LandBloc>().state.lands,
+                      herds: context.watch<HerdBloc>().state.herds,
+                      onChanged: (scope) => context.read<AnalysisBloc>().add(
+                        AnalysisScopeChanged(scope),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              size: 48,
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              state.summaries.error!,
-                              style: Theme.of(context).textTheme.bodyLarge,
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: () {
-                                context.read<AnalysisBloc>().add(
-                                  LoadAnnualCostSummary(
-                                    farmYear.start,
-                                    farmYear.end,
-                                  ),
-                                );
-                              },
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                );
-              } else if (state.summaries.data != null) {
-                // Sort summaries by month string (e.g. "2026-01")
-                final sortedSummaries = List<MonthlySummary>.from(
-                  state.summaries.data!,
-                )..sort((a, b) => a.month.compareTo(b.month));
-
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    context.read<AnalysisBloc>().add(
-                      LoadAnnualCostSummary(farmYear.start, farmYear.end),
-                    );
-                  },
-                  child: CustomScrollView(
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: _buildAnnualOverview(
-                          context,
-                          farmYear,
-                          sortedSummaries,
-                        ),
-                      ),
-                      if (sortedSummaries.isEmpty)
-                        const SliverToBoxAdapter(
-                          child: Padding(
-                            padding: EdgeInsets.all(32),
-                            child: Center(
-                              child: Text(
-                                'No performance data available for this farm year',
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        SliverPadding(
-                          padding: const EdgeInsets.all(16),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate((
-                              context,
-                              index,
-                            ) {
-                              final summary = sortedSummaries[index];
-                              return _buildMonthlyPerformanceCard(
-                                context,
-                                summary,
-                              );
-                            }, childCount: sortedSummaries.length),
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              }
-              return const Center(child: Text('No data loaded'));
+                  if (slice.isLoading && slice.data != null)
+                    const LinearProgressIndicator(minHeight: 2),
+                  Expanded(child: _content(context, state, farmYear)),
+                ],
+              );
             },
           );
         },
       ),
     );
+  }
+
+  Future<void> _refresh(FarmYear farmYear) async {
+    final bloc = context.read<AnalysisBloc>()
+      ..add(
+        LoadAnnualCostSummary(farmYear.start, farmYear.end, forceRefresh: true),
+      );
+    await bloc.stream.firstWhere(
+      (s) => !s.summaries.isLoading,
+      orElse: () => bloc.state,
+    );
+  }
+
+  Widget _content(
+    BuildContext context,
+    AnalysisState state,
+    FarmYear farmYear,
+  ) {
+    final slice = state.summaries;
+    final showInfra = !state.scope.hasEnterprise;
+    if (slice.data == null && slice.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    } else if (slice.data == null && slice.error != null) {
+      // Keep the year switcher live even on error - the request
+      // that failed is scoped to farmYear, so the user can still
+      // page to a different year instead of getting stuck on a
+      // dead-end screen.
+      return RefreshIndicator(
+        onRefresh: () => _refresh(farmYear),
+        child: ListView(
+          children: [
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.primary,
+                    Theme.of(context).colorScheme.secondary,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: _buildYearSwitcherRow(farmYear),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    slice.error!,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => _refresh(farmYear),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (slice.data != null) {
+      // Sort summaries by month string (e.g. "2026-01")
+      final sortedSummaries = List<MonthlySummary>.from(slice.data!)
+        ..sort((a, b) => a.month.compareTo(b.month));
+
+      return RefreshIndicator(
+        onRefresh: () => _refresh(farmYear),
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: _buildAnnualOverview(context, farmYear, sortedSummaries),
+            ),
+            if (sortedSummaries.isEmpty)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(
+                    child: Text(
+                      'No performance data available for this farm year',
+                    ),
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.all(16),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final summary = sortedSummaries[index];
+                    return _buildMonthlyPerformanceCard(
+                      context,
+                      summary,
+                      showInfra: showInfra,
+                    );
+                  }, childCount: sortedSummaries.length),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+    return const Center(child: Text('No data loaded'));
   }
 
   Widget _buildAnnualOverview(
@@ -331,8 +374,9 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
 
   Widget _buildMonthlyPerformanceCard(
     BuildContext context,
-    MonthlySummary summary,
-  ) {
+    MonthlySummary summary, {
+    required bool showInfra,
+  }) {
     final date = DateTime.tryParse('${summary.month}-01') ?? DateTime.now();
     final monthName = _getMonthName(date.month);
     final isProfit = summary.profit >= 0;
@@ -428,7 +472,7 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
                   ],
                 ),
                 const Divider(height: 32),
-                _buildBreakdownSection(context, summary),
+                _buildBreakdownSection(context, summary, showInfra: showInfra),
               ],
             ),
           ),
@@ -460,7 +504,11 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
     );
   }
 
-  Widget _buildBreakdownSection(BuildContext context, MonthlySummary summary) {
+  Widget _buildBreakdownSection(
+    BuildContext context,
+    MonthlySummary summary, {
+    required bool showInfra,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -487,11 +535,14 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
                     summary.breakdown.costs.animal,
                     AppColors.animalCategory,
                   ),
-                  _buildMiniBreakdownRow(
-                    'Infra',
-                    summary.breakdown.costs.infrastructure,
-                    Theme.of(context).colorScheme.tertiary,
-                  ),
+                  // Infrastructure has no land/herd link (spec D6): always 0 under a
+                  // land or herd scope, so the line is hidden there instead of showing 0.
+                  if (showInfra)
+                    _buildMiniBreakdownRow(
+                      'Infra',
+                      summary.breakdown.costs.infrastructure,
+                      Theme.of(context).colorScheme.tertiary,
+                    ),
                 ],
               ),
             ),

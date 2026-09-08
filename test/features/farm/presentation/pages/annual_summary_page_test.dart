@@ -1,7 +1,15 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:farm_tracker/features/auth/domain/entities/user.dart';
+import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/analytics/annual_summary_page.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_event.dart';
@@ -16,6 +24,70 @@ class MockAnalysisBloc extends MockBloc<AnalysisEvent, AnalysisState>
 
 class MockProfileBloc extends MockBloc<ProfileEvent, ProfileState>
     implements ProfileBloc {}
+
+class MockLandBloc extends MockBloc<LandEvent, LandState> implements LandBloc {}
+
+class MockHerdBloc extends MockBloc<HerdEvent, HerdState> implements HerdBloc {}
+
+MockLandBloc _landBloc() {
+  final bloc = MockLandBloc();
+  final land = Land(
+    id: 'l1',
+    userId: 'u',
+    name: 'Shamba A',
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+  );
+  whenListen(
+    bloc,
+    Stream<LandState>.value(LandLoaded(lands: [land])),
+    initialState: LandLoaded(lands: [land]),
+  );
+  return bloc;
+}
+
+MockHerdBloc _herdBloc() {
+  final bloc = MockHerdBloc();
+  whenListen(
+    bloc,
+    Stream<HerdState>.value(const HerdLoaded([])),
+    initialState: const HerdLoaded([]),
+  );
+  return bloc;
+}
+
+MockProfileBloc _profileBloc({int fiscalYearStartMonth = 7}) {
+  final bloc = MockProfileBloc();
+  final user = User(
+    id: '1',
+    email: 'a@example.com',
+    firstName: 'A',
+    lastName: 'B',
+    farmName: 'Green Acres',
+    location: 'Nakuru',
+    pictureUrl: '',
+    fiscalYearStartMonth: fiscalYearStartMonth,
+  );
+  whenListen(
+    bloc,
+    Stream<ProfileState>.value(ProfileLoaded(user: user)),
+    initialState: ProfileLoaded(user: user),
+  );
+  return bloc;
+}
+
+Widget _wrap({required AnalysisBloc analysis, required ProfileBloc profile}) =>
+    MaterialApp(
+      home: MultiBlocProvider(
+        providers: [
+          BlocProvider<AnalysisBloc>.value(value: analysis),
+          BlocProvider<ProfileBloc>.value(value: profile),
+          BlocProvider<LandBloc>.value(value: _landBloc()),
+          BlocProvider<HerdBloc>.value(value: _herdBloc()),
+        ],
+        child: const AnnualSummaryPage(),
+      ),
+    );
 
 MonthlySummary _summary(String month, double revenue, double costs) {
   return MonthlySummary(
@@ -33,6 +105,8 @@ MonthlySummary _summary(String month, double revenue, double costs) {
 void main() {
   setUpAll(() {
     registerFallbackValue(const LoadTotalCostsBySeason());
+    registerFallbackValue(GetLandsEvent());
+    registerFallbackValue(GetHerdsEvent());
   });
 
   testWidgets(
@@ -75,6 +149,8 @@ void main() {
             providers: [
               BlocProvider<AnalysisBloc>.value(value: analysisBloc),
               BlocProvider<ProfileBloc>.value(value: profileBloc),
+              BlocProvider<LandBloc>.value(value: _landBloc()),
+              BlocProvider<HerdBloc>.value(value: _herdBloc()),
             ],
             child: const AnnualSummaryPage(),
           ),
@@ -147,6 +223,8 @@ void main() {
             providers: [
               BlocProvider<AnalysisBloc>.value(value: analysisBloc),
               BlocProvider<ProfileBloc>.value(value: profileBloc),
+              BlocProvider<LandBloc>.value(value: _landBloc()),
+              BlocProvider<HerdBloc>.value(value: _herdBloc()),
             ],
             child: const AnnualSummaryPage(),
           ),
@@ -177,4 +255,64 @@ void main() {
       ).called(1);
     },
   );
+
+  testWidgets(
+    'tapping Plants dispatches AnalysisScopeChanged and keeps the farm year',
+    (tester) async {
+      final analysisBloc = MockAnalysisBloc();
+      final summary = _summary('2025-12', 300, 100);
+      final state = AnalysisState(summaries: AnalysisSlice(data: [summary]));
+      whenListen(
+        analysisBloc,
+        Stream<AnalysisState>.value(state),
+        initialState: state,
+      );
+
+      await tester.pumpWidget(
+        _wrap(analysis: analysisBloc, profile: _profileBloc()),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Plants'));
+      verify(
+        () => analysisBloc.add(
+          const AnalysisScopeChanged(AnalyticsScope.source(ScopeSource.plant)),
+        ),
+      ).called(1);
+      expect(find.textContaining('Farm Year 20'), findsOneWidget);
+    },
+  );
+
+  testWidgets('Infra row hidden under a land scope, shown farm-wide', (
+    tester,
+  ) async {
+    final summary = _summary('2025-12', 300, 100);
+    final farmWide = AnalysisState(summaries: AnalysisSlice(data: [summary]));
+    final landScoped = farmWide.copyWith(
+      scope: const AnalyticsScope.land('l1'),
+    );
+
+    final farmWideBloc = MockAnalysisBloc();
+    whenListen(
+      farmWideBloc,
+      Stream<AnalysisState>.value(farmWide),
+      initialState: farmWide,
+    );
+    await tester.pumpWidget(
+      _wrap(analysis: farmWideBloc, profile: _profileBloc()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Infra'), findsOneWidget);
+
+    final landBloc = MockAnalysisBloc();
+    whenListen(
+      landBloc,
+      Stream<AnalysisState>.value(landScoped),
+      initialState: landScoped,
+    );
+    await tester.pumpWidget(_wrap(analysis: landBloc, profile: _profileBloc()));
+    await tester.pumpAndSettle();
+    expect(find.text('Infra'), findsNothing);
+    expect(find.text('Shamba A'), findsOneWidget, reason: 'land chip shown');
+  });
 }
