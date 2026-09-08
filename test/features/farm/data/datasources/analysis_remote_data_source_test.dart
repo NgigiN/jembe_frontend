@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/features/farm/data/datasources/analysis_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Pins the wire contract [AnalysisRemoteDataSourceImpl] sends/expects
@@ -63,24 +64,29 @@ Dio _dioWith(HttpClientAdapter adapter) {
 
 void main() {
   group('getTotalCostsBySeason', () {
-    test('GETs /api/v1/analytics/total-costs and parses the response', () async {
-      final adapter = _FakeAdapter(
-        body:
-            '{"details":[{"type":"season","id":1,"name":"Long Rains", '
-            '"category":"plant","location":"North Field", '
-            '"start_date":"2026-01-01T00:00:00Z","input_cost":100,'
-            '"activity_cost":50,"total_cost":150}]}',
-      );
-      final source = AnalysisRemoteDataSourceImpl(dio: _dioWith(adapter));
+    test(
+      'GETs /api/v1/analytics/total-costs and parses the response',
+      () async {
+        final adapter = _FakeAdapter(
+          body:
+              '{"details":[{"type":"season","id":1,"name":"Long Rains", '
+              '"category":"plant","location":"North Field", '
+              '"start_date":"2026-01-01T00:00:00Z","input_cost":100,'
+              '"activity_cost":50,"total_cost":150}]}',
+        );
+        final source = AnalysisRemoteDataSourceImpl(dio: _dioWith(adapter));
 
-      final result = await source.getTotalCostsBySeason();
+        final result = await source.getTotalCostsBySeason(
+          const AnalyticsScope.all(),
+        );
 
-      expect(adapter.lastOptions!.method, 'GET');
-      expect(adapter.lastOptions!.path, '/api/v1/analytics/total-costs');
-      expect(result.details, hasLength(1));
-      expect(result.details.single.totalCost, 150);
-      expect(result.details.single.endDate, isNull);
-    });
+        expect(adapter.lastOptions!.method, 'GET');
+        expect(adapter.lastOptions!.path, '/api/v1/analytics/total-costs');
+        expect(result.details, hasLength(1));
+        expect(result.details.single.totalCost, 150);
+        expect(result.details.single.endDate, isNull);
+      },
+    );
 
     test(
       'a 401 throws UnauthorizedException via the generic DioException '
@@ -91,7 +97,7 @@ void main() {
         final source = AnalysisRemoteDataSourceImpl(dio: _dioWith(adapter));
 
         await expectLater(
-          source.getTotalCostsBySeason(),
+          source.getTotalCostsBySeason(const AnalyticsScope.all()),
           throwsA(isA<UnauthorizedException>()),
         );
       },
@@ -103,22 +109,25 @@ void main() {
       );
 
       await expectLater(
-        source.getTotalCostsBySeason(),
+        source.getTotalCostsBySeason(const AnalyticsScope.all()),
         throwsA(isA<NetworkException>()),
       );
     });
 
-    test('a non-200/401/403 response throws ServerException with the server message', () async {
-      final adapter = _FakeAdapter(body: '{"error":"boom"}', statusCode: 500);
-      final source = AnalysisRemoteDataSourceImpl(dio: _dioWith(adapter));
+    test(
+      'a non-200/401/403 response throws ServerException with the server message',
+      () async {
+        final adapter = _FakeAdapter(body: '{"error":"boom"}', statusCode: 500);
+        final source = AnalysisRemoteDataSourceImpl(dio: _dioWith(adapter));
 
-      await expectLater(
-        source.getTotalCostsBySeason(),
-        throwsA(
-          isA<ServerException>().having((e) => e.message, 'message', 'boom'),
-        ),
-      );
-    });
+        await expectLater(
+          source.getTotalCostsBySeason(const AnalyticsScope.all()),
+          throwsA(
+            isA<ServerException>().having((e) => e.message, 'message', 'boom'),
+          ),
+        );
+      },
+    );
   });
 
   group('getCostBreakdownByInputType', () {
@@ -131,7 +140,9 @@ void main() {
       );
       final source = AnalysisRemoteDataSourceImpl(dio: _dioWith(adapter));
 
-      final result = await source.getCostBreakdownByInputType();
+      final result = await source.getCostBreakdownByInputType(
+        const AnalyticsScope.all(),
+      );
 
       expect(adapter.lastOptions!.method, 'GET');
       expect(adapter.lastOptions!.path, '/api/v1/analytics/cost-breakdown');
@@ -143,7 +154,10 @@ void main() {
       final adapter = _FakeAdapter(body: 'null');
       final source = AnalysisRemoteDataSourceImpl(dio: _dioWith(adapter));
 
-      expect(await source.getCostBreakdownByInputType(), isEmpty);
+      expect(
+        await source.getCostBreakdownByInputType(const AnalyticsScope.all()),
+        isEmpty,
+      );
     });
 
     test('a connection failure throws NetworkException', () async {
@@ -152,42 +166,37 @@ void main() {
       );
 
       await expectLater(
-        source.getCostBreakdownByInputType(),
+        source.getCostBreakdownByInputType(const AnalyticsScope.all()),
         throwsA(isA<NetworkException>()),
       );
     });
   });
 
   group('getAnnualCostSummary', () {
-    test(
-      'GETs /api/v1/analytics/monthly-summary with date-only start/end '
-      'query params and parses each row',
-      () async {
-        final adapter = _FakeAdapter(
-          body:
-              '[{"month":"2026-01","total_costs":100,"total_revenue":200,'
-              '"profit":100,"breakdown":{"costs":{"plant":50,"animal":50,'
-              '"infrastructure":0},"revenue":{"plant":150,"animal":50}}}]',
-        );
-        final source = AnalysisRemoteDataSourceImpl(dio: _dioWith(adapter));
+    test('GETs /api/v1/analytics/monthly-summary with date-only start/end '
+        'query params and parses each row', () async {
+      final adapter = _FakeAdapter(
+        body:
+            '[{"month":"2026-01","total_costs":100,"total_revenue":200,'
+            '"profit":100,"breakdown":{"costs":{"plant":50,"animal":50,'
+            '"infrastructure":0},"revenue":{"plant":150,"animal":50}}}]',
+      );
+      final source = AnalysisRemoteDataSourceImpl(dio: _dioWith(adapter));
 
-        final result = await source.getAnnualCostSummary(
-          DateTime.utc(2026),
-          DateTime.utc(2026, 12, 31),
-        );
+      final result = await source.getAnnualCostSummary(
+        DateTime.utc(2026),
+        DateTime.utc(2026, 12, 31),
+        const AnalyticsScope.all(),
+      );
 
-        expect(adapter.lastOptions!.method, 'GET');
-        expect(
-          adapter.lastOptions!.path,
-          '/api/v1/analytics/monthly-summary',
-        );
-        final params = adapter.lastOptions!.uri.queryParameters;
-        expect(params['start_date'], '2026-01-01');
-        expect(params['end_date'], '2026-12-31');
-        expect(result.single.profit, 100);
-        expect(result.single.breakdown.costs.plant, 50);
-      },
-    );
+      expect(adapter.lastOptions!.method, 'GET');
+      expect(adapter.lastOptions!.path, '/api/v1/analytics/monthly-summary');
+      final params = adapter.lastOptions!.uri.queryParameters;
+      expect(params['start_date'], '2026-01-01');
+      expect(params['end_date'], '2026-12-31');
+      expect(result.single.profit, 100);
+      expect(result.single.breakdown.costs.plant, 50);
+    });
 
     test(
       'a missing breakdown falls back to zeroed cost/revenue breakdowns',
@@ -202,6 +211,7 @@ void main() {
         final result = await source.getAnnualCostSummary(
           DateTime.utc(2026),
           DateTime.utc(2026, 1, 31),
+          const AnalyticsScope.all(),
         );
 
         expect(result.single.breakdown.costs.plant, 0);
@@ -215,9 +225,65 @@ void main() {
       );
 
       await expectLater(
-        source.getAnnualCostSummary(DateTime.utc(2026), DateTime.utc(2026, 2)),
+        source.getAnnualCostSummary(
+          DateTime.utc(2026),
+          DateTime.utc(2026, 2),
+          const AnalyticsScope.all(),
+        ),
         throwsA(isA<NetworkException>()),
       );
+    });
+  });
+
+  group('scope query params (spec 2026-09-08 §3.1)', () {
+    test('total-costs sends a land scope as source+land_id', () async {
+      final adapter = _FakeAdapter(body: '{"details":[]}');
+      final source = AnalysisRemoteDataSourceImpl(dio: _dioWith(adapter));
+
+      await source.getTotalCostsBySeason(const AnalyticsScope.land('7'));
+
+      expect(adapter.lastOptions!.uri.queryParameters, {
+        'source': 'plant',
+        'land_id': '7',
+      });
+    });
+
+    test('a farm-wide scope sends no query params at all', () async {
+      final adapter = _FakeAdapter(body: '{"details":[]}');
+      final source = AnalysisRemoteDataSourceImpl(dio: _dioWith(adapter));
+
+      await source.getTotalCostsBySeason(const AnalyticsScope.all());
+
+      expect(adapter.lastOptions!.uri.queryParameters, isEmpty);
+    });
+
+    test('cost-breakdown sends a herd scope as source+herd_id', () async {
+      final adapter = _FakeAdapter(body: '[]');
+      final source = AnalysisRemoteDataSourceImpl(dio: _dioWith(adapter));
+
+      await source.getCostBreakdownByInputType(const AnalyticsScope.herd('3'));
+
+      expect(adapter.lastOptions!.uri.queryParameters, {
+        'source': 'animal',
+        'herd_id': '3',
+      });
+    });
+
+    test('monthly-summary sends dates AND scope together', () async {
+      final adapter = _FakeAdapter(body: '[]');
+      final source = AnalysisRemoteDataSourceImpl(dio: _dioWith(adapter));
+
+      await source.getAnnualCostSummary(
+        DateTime(2026),
+        DateTime(2027),
+        const AnalyticsScope.source(ScopeSource.animal),
+      );
+
+      expect(adapter.lastOptions!.uri.queryParameters, {
+        'start_date': '2026-01-01',
+        'end_date': '2027-01-01',
+        'source': 'animal',
+      });
     });
   });
 }

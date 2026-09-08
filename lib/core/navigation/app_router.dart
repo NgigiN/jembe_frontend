@@ -9,6 +9,10 @@ import 'package:farm_tracker/features/content/presentation/pages/content_detail_
 import 'package:farm_tracker/features/content/presentation/pages/content_list_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/activity_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/analysis_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/analytics/annual_summary_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/analytics/cost_breakdown_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/analytics/streak_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/analytics/total_costs_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animal_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animal_type_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animals_page.dart';
@@ -342,11 +346,11 @@ class AppRouter {
       child: child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) =>
           sharedAxisTransition(
-        context: context,
-        animation: animation,
-        secondaryAnimation: secondaryAnimation,
-        child: child,
-      ),
+            context: context,
+            animation: animation,
+            secondaryAnimation: secondaryAnimation,
+            child: child,
+          ),
     );
   }
 
@@ -381,11 +385,11 @@ class AppRouter {
       child: child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) =>
           fadeThroughTransitionBuilder(
-        context: context,
-        animation: animation,
-        secondaryAnimation: secondaryAnimation,
-        child: child,
-      ),
+            context: context,
+            animation: animation,
+            secondaryAnimation: secondaryAnimation,
+            child: child,
+          ),
     );
   }
 
@@ -422,4 +426,3 @@ class AppRouter {
     );
   }
 }
-

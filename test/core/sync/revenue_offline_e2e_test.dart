@@ -30,6 +30,7 @@ import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_
 import 'package:farm_tracker/features/farm/data/models/revenue_model.dart';
 import 'package:farm_tracker/features/farm/data/repositories/revenue_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/sync/revenue_syncer.dart';
+import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -119,7 +120,7 @@ class _FakeRevenueRemoteDataSource implements RevenueRemoteDataSource {
 
   @override
   Future<List<RevenueModel>> getRevenues({
-    String? source,
+    AnalyticsScope scope = const AnalyticsScope.all(),
     DateTime? startDate,
     DateTime? endDate,
     DateTime? updatedSince,
@@ -127,7 +128,10 @@ class _FakeRevenueRemoteDataSource implements RevenueRemoteDataSource {
     int? cursor,
   }) async {
     Iterable<RevenueModel> rows = _byServerId.values;
-    if (source != null && source.isNotEmpty) {
+    // The sync pull never scopes; a source-only scope is honoured for parity
+    // with the real endpoint (land/herd are not modelled by this fake).
+    final source = scope.sourceParam;
+    if (source != null) {
       rows = rows.where((row) => row.source == source);
     }
     if (updatedSince != null) {
@@ -254,9 +258,10 @@ RevenueModel _revenue({
 /// Unwraps a repository `Either`, failing the test with the `Left` if it
 /// isn't a `Right`.
 Revenue _unwrap(Either<Failure, Revenue> result) {
-  return result.fold((failure) => fail('expected Right, got $failure'), (
-    revenue,
-  ) => revenue);
+  return result.fold(
+    (failure) => fail('expected Right, got $failure'),
+    (revenue) => revenue,
+  );
 }
 
 void main() {
@@ -272,289 +277,264 @@ void main() {
     await h.dispose();
   });
 
-  test(
-    'offline burst (2 creates, 1 edit) coalesces in the outbox, then '
-    'reconnect + syncNow converges: server has both revenues with the edit '
-    'applied, local serverIds are populated, outbox is empty',
-    () async {
-      h.connectivity.online = false;
+  test('offline burst (2 creates, 1 edit) coalesces in the outbox, then '
+      'reconnect + syncNow converges: server has both revenues with the edit '
+      'applied, local serverIds are populated, outbox is empty', () async {
+    h.connectivity.online = false;
 
-      final revenue1 = _unwrap(
-        await h.repo.addRevenue(
-          source: 'plant',
-          sourceId: '901',
-          type: 'Maize Harvest',
-          quantity: 10,
-          unitPrice: 50,
-          date: DateTime.utc(2026, 1),
-        ),
-      );
-      final revenue2 = _unwrap(
-        await h.repo.addRevenue(
-          source: 'animal',
-          sourceId: '902',
-          type: 'Milk Sale',
-          quantity: 20,
-          unitPrice: 5,
-          date: DateTime.utc(2026, 2),
-        ),
-      );
-
-      await h.repo.updateRevenue(
-        id: revenue2.id,
-        source: revenue2.source,
-        sourceId: revenue2.sourceId,
-        type: revenue2.type,
-        quantity: 25,
-        unitPrice: revenue2.unitPrice,
-        total: 25 * revenue2.unitPrice,
-        date: revenue2.date,
-        notes: revenue2.notes,
-      );
-
-      // --- Outbox coalesced BEFORE any sync attempt ---
-      final pendingRows = await h.outbox.peekAll();
-      expect(pendingRows.map((r) => r.clientUuid).toSet(), {
-        revenue1.id,
-        revenue2.id,
-      });
-      expect(pendingRows.every((r) => r.op == 'create'), isTrue);
-      expect(pendingRows, hasLength(2));
-
-      // --- Reconnect and converge ---
-      h.connectivity.online = true;
-      await h.engine.syncNow();
-
-      expect(await h.outbox.peekAll(), isEmpty);
-      expect(h.remote.allRows, hasLength(2));
-
-      final serverQuantities = {
-        for (final r in h.remote.allRows) r.clientUuid: r.quantity,
-      };
-      expect(serverQuantities[revenue1.id], 10);
-      expect(serverQuantities[revenue2.id], 25);
-
-      final local1 = await h.local.getByClientUuid(revenue1.id);
-      final local2 = await h.local.getByClientUuid(revenue2.id);
-      expect(local1, isNotNull);
-      expect(local2, isNotNull);
-      expect(local1!.id, isNotEmpty, reason: 'serverId reconciled');
-      expect(local2!.id, isNotEmpty, reason: 'serverId reconciled');
-      expect(local2.quantity, 25);
-
-      // The already-synced parent source id is pushed through untouched
-      // (P3 scope — no clientUuid->serverId FK translation attempted).
-      final pushed = h.remote.allRows.firstWhere(
-        (r) => r.clientUuid == revenue1.id,
-      );
-      expect(pushed.sourceId, '901');
-    },
-  );
-
-  test(
-    'offline create+delete annihilation: the fake server never sees an '
-    'addRevenue for the row',
-    () async {
-      h.connectivity.online = false;
-
-      final ghost = _unwrap(
-        await h.repo.addRevenue(
-          source: 'plant',
-          sourceId: '901',
-          type: 'Maize Harvest',
-          quantity: 99,
-          unitPrice: 1,
-          date: DateTime.utc(2026),
-        ),
-      );
-      await h.repo.deleteRevenue(ghost.id);
-
-      final rows = await h.outbox.peekAll();
-      expect(rows.where((r) => r.clientUuid == ghost.id), isEmpty);
-      expect(rows, isEmpty);
-
-      h.connectivity.online = true;
-      await h.engine.syncNow();
-
-      expect(h.remote.addRevenueClientUuids, isNot(contains(ghost.id)));
-      expect(h.remote.allRows, isEmpty);
-
-      final visible = await h.local.watchRevenues().first;
-      expect(visible, isEmpty);
-    },
-  );
-
-  test(
-    'inbound update: a newer server row overwrites the local mirror on '
-    'pull',
-    () async {
-      await h.local.upsert(
-        _revenue(
-          clientUuid: 'cu-inbound-update',
-          id: 'srv-1',
-          quantity: 5,
-          updatedAt: DateTime.utc(2026),
-        ),
-        pending: false,
-      );
-
-      h.remote.seedServerRow(
-        _revenue(
-          clientUuid: 'cu-inbound-update',
-          id: 'srv-1',
-          quantity: 55,
-          updatedAt: DateTime.utc(2026, 6),
-        ),
-      );
-
-      await h.engine.syncNow();
-
-      final row = await h.local.getByClientUuid('cu-inbound-update');
-      expect(row, isNotNull);
-      expect(row!.quantity, 55);
-      expect(row.pending, isFalse);
-    },
-  );
-
-  test(
-    'inbound tombstone: a server-reported deletion hard-deletes the local '
-    'row, which then disappears from watchRevenues',
-    () async {
-      await h.local.upsert(
-        _revenue(clientUuid: 'cu-tombstoned', id: 'srv-2'),
-        pending: false,
-      );
-      expect(await h.local.getByClientUuid('cu-tombstoned'), isNotNull);
-
-      h.deletions.addTombstone('cu-tombstoned');
-
-      await h.engine.syncNow();
-
-      expect(h.deletions.applyCount, 1);
-      expect(await h.local.getByClientUuid('cu-tombstoned'), isNull);
-
-      final visible = await h.local.watchRevenues().first;
-      expect(
-        visible.map((m) => m.clientUuid),
-        isNot(contains('cu-tombstoned')),
-      );
-    },
-  );
-
-  test(
-    'LWW: a newer local pending edit beats a stale server row, and a newer '
-    'server row beats a stale local pending edit',
-    () async {
-      // --- (a) local pending edit is NEWER than the server's row: local
-      // wins. ---
-      await h.local.upsert(
-        _revenue(
-          clientUuid: 'cu-lww-local-wins',
-          id: 'srv-a',
-          quantity: 1,
-          updatedAt: DateTime.utc(2026),
-        ),
-        pending: false,
-      );
-      await h.local.upsert(
-        _revenue(
-          clientUuid: 'cu-lww-local-wins',
-          id: 'srv-a',
-          quantity: 2,
-          updatedAt: DateTime.utc(2026, 3),
-        ),
-        pending: true,
-      );
-      h.remote.seedServerRow(
-        _revenue(
-          clientUuid: 'cu-lww-local-wins',
-          id: 'srv-a',
-          quantity: 3,
-          updatedAt: DateTime.utc(2026, 2),
-        ),
-      );
-
-      await h.engine.syncNow();
-
-      final localWinsRow = await h.local.getByClientUuid(
-        'cu-lww-local-wins',
-      );
-      expect(localWinsRow, isNotNull);
-      expect(localWinsRow!.quantity, 2);
-      expect(localWinsRow.pending, isTrue);
-
-      // --- (b) server row is NEWER than the local pending edit: server
-      // wins. ---
-      await h.local.upsert(
-        _revenue(
-          clientUuid: 'cu-lww-server-wins',
-          id: 'srv-b',
-          quantity: 1,
-          updatedAt: DateTime.utc(2026),
-        ),
-        pending: false,
-      );
-      await h.local.upsert(
-        _revenue(
-          clientUuid: 'cu-lww-server-wins',
-          id: 'srv-b',
-          quantity: 2,
-          updatedAt: DateTime.utc(2026, 2),
-        ),
-        pending: true,
-      );
-      h.remote.seedServerRow(
-        _revenue(
-          clientUuid: 'cu-lww-server-wins',
-          id: 'srv-b',
-          quantity: 4,
-          updatedAt: DateTime.utc(2026, 4),
-        ),
-      );
-
-      await h.engine.syncNow();
-
-      final serverWinsRow = await h.local.getByClientUuid(
-        'cu-lww-server-wins',
-      );
-      expect(serverWinsRow, isNotNull);
-      expect(serverWinsRow!.quantity, 4);
-      expect(serverWinsRow.pending, isFalse);
-    },
-  );
-
-  test(
-    'watchRevenues() stays UNFILTERED (R1) through an offline create + '
-    'reconnect sync — both sources appear',
-    () async {
-      h.connectivity.online = false;
-
+    final revenue1 = _unwrap(
       await h.repo.addRevenue(
         source: 'plant',
         sourceId: '901',
         type: 'Maize Harvest',
-        quantity: 7,
-        unitPrice: 1,
-        date: DateTime.utc(2026),
-      );
+        quantity: 10,
+        unitPrice: 50,
+        date: DateTime.utc(2026, 1),
+      ),
+    );
+    final revenue2 = _unwrap(
       await h.repo.addRevenue(
         source: 'animal',
-        sourceId: '903',
+        sourceId: '902',
         type: 'Milk Sale',
-        quantity: 999,
+        quantity: 20,
+        unitPrice: 5,
+        date: DateTime.utc(2026, 2),
+      ),
+    );
+
+    await h.repo.updateRevenue(
+      id: revenue2.id,
+      source: revenue2.source,
+      sourceId: revenue2.sourceId,
+      type: revenue2.type,
+      quantity: 25,
+      unitPrice: revenue2.unitPrice,
+      total: 25 * revenue2.unitPrice,
+      date: revenue2.date,
+      notes: revenue2.notes,
+    );
+
+    // --- Outbox coalesced BEFORE any sync attempt ---
+    final pendingRows = await h.outbox.peekAll();
+    expect(pendingRows.map((r) => r.clientUuid).toSet(), {
+      revenue1.id,
+      revenue2.id,
+    });
+    expect(pendingRows.every((r) => r.op == 'create'), isTrue);
+    expect(pendingRows, hasLength(2));
+
+    // --- Reconnect and converge ---
+    h.connectivity.online = true;
+    await h.engine.syncNow();
+
+    expect(await h.outbox.peekAll(), isEmpty);
+    expect(h.remote.allRows, hasLength(2));
+
+    final serverQuantities = {
+      for (final r in h.remote.allRows) r.clientUuid: r.quantity,
+    };
+    expect(serverQuantities[revenue1.id], 10);
+    expect(serverQuantities[revenue2.id], 25);
+
+    final local1 = await h.local.getByClientUuid(revenue1.id);
+    final local2 = await h.local.getByClientUuid(revenue2.id);
+    expect(local1, isNotNull);
+    expect(local2, isNotNull);
+    expect(local1!.id, isNotEmpty, reason: 'serverId reconciled');
+    expect(local2!.id, isNotEmpty, reason: 'serverId reconciled');
+    expect(local2.quantity, 25);
+
+    // The already-synced parent source id is pushed through untouched
+    // (P3 scope — no clientUuid->serverId FK translation attempted).
+    final pushed = h.remote.allRows.firstWhere(
+      (r) => r.clientUuid == revenue1.id,
+    );
+    expect(pushed.sourceId, '901');
+  });
+
+  test('offline create+delete annihilation: the fake server never sees an '
+      'addRevenue for the row', () async {
+    h.connectivity.online = false;
+
+    final ghost = _unwrap(
+      await h.repo.addRevenue(
+        source: 'plant',
+        sourceId: '901',
+        type: 'Maize Harvest',
+        quantity: 99,
         unitPrice: 1,
         date: DateTime.utc(2026),
-      );
+      ),
+    );
+    await h.repo.deleteRevenue(ghost.id);
 
-      final all = await h.local.watchRevenues().first;
-      expect(all, hasLength(2));
-      expect(all.map((r) => r.source).toSet(), {'plant', 'animal'});
+    final rows = await h.outbox.peekAll();
+    expect(rows.where((r) => r.clientUuid == ghost.id), isEmpty);
+    expect(rows, isEmpty);
 
-      h.connectivity.online = true;
-      await h.engine.syncNow();
+    h.connectivity.online = true;
+    await h.engine.syncNow();
 
-      final allAfterSync = await h.local.watchRevenues().first;
-      expect(allAfterSync, hasLength(2));
-    },
-  );
+    expect(h.remote.addRevenueClientUuids, isNot(contains(ghost.id)));
+    expect(h.remote.allRows, isEmpty);
+
+    final visible = await h.local.watchRevenues().first;
+    expect(visible, isEmpty);
+  });
+
+  test('inbound update: a newer server row overwrites the local mirror on '
+      'pull', () async {
+    await h.local.upsert(
+      _revenue(
+        clientUuid: 'cu-inbound-update',
+        id: 'srv-1',
+        quantity: 5,
+        updatedAt: DateTime.utc(2026),
+      ),
+      pending: false,
+    );
+
+    h.remote.seedServerRow(
+      _revenue(
+        clientUuid: 'cu-inbound-update',
+        id: 'srv-1',
+        quantity: 55,
+        updatedAt: DateTime.utc(2026, 6),
+      ),
+    );
+
+    await h.engine.syncNow();
+
+    final row = await h.local.getByClientUuid('cu-inbound-update');
+    expect(row, isNotNull);
+    expect(row!.quantity, 55);
+    expect(row.pending, isFalse);
+  });
+
+  test('inbound tombstone: a server-reported deletion hard-deletes the local '
+      'row, which then disappears from watchRevenues', () async {
+    await h.local.upsert(
+      _revenue(clientUuid: 'cu-tombstoned', id: 'srv-2'),
+      pending: false,
+    );
+    expect(await h.local.getByClientUuid('cu-tombstoned'), isNotNull);
+
+    h.deletions.addTombstone('cu-tombstoned');
+
+    await h.engine.syncNow();
+
+    expect(h.deletions.applyCount, 1);
+    expect(await h.local.getByClientUuid('cu-tombstoned'), isNull);
+
+    final visible = await h.local.watchRevenues().first;
+    expect(visible.map((m) => m.clientUuid), isNot(contains('cu-tombstoned')));
+  });
+
+  test('LWW: a newer local pending edit beats a stale server row, and a newer '
+      'server row beats a stale local pending edit', () async {
+    // --- (a) local pending edit is NEWER than the server's row: local
+    // wins. ---
+    await h.local.upsert(
+      _revenue(
+        clientUuid: 'cu-lww-local-wins',
+        id: 'srv-a',
+        quantity: 1,
+        updatedAt: DateTime.utc(2026),
+      ),
+      pending: false,
+    );
+    await h.local.upsert(
+      _revenue(
+        clientUuid: 'cu-lww-local-wins',
+        id: 'srv-a',
+        quantity: 2,
+        updatedAt: DateTime.utc(2026, 3),
+      ),
+      pending: true,
+    );
+    h.remote.seedServerRow(
+      _revenue(
+        clientUuid: 'cu-lww-local-wins',
+        id: 'srv-a',
+        quantity: 3,
+        updatedAt: DateTime.utc(2026, 2),
+      ),
+    );
+
+    await h.engine.syncNow();
+
+    final localWinsRow = await h.local.getByClientUuid('cu-lww-local-wins');
+    expect(localWinsRow, isNotNull);
+    expect(localWinsRow!.quantity, 2);
+    expect(localWinsRow.pending, isTrue);
+
+    // --- (b) server row is NEWER than the local pending edit: server
+    // wins. ---
+    await h.local.upsert(
+      _revenue(
+        clientUuid: 'cu-lww-server-wins',
+        id: 'srv-b',
+        quantity: 1,
+        updatedAt: DateTime.utc(2026),
+      ),
+      pending: false,
+    );
+    await h.local.upsert(
+      _revenue(
+        clientUuid: 'cu-lww-server-wins',
+        id: 'srv-b',
+        quantity: 2,
+        updatedAt: DateTime.utc(2026, 2),
+      ),
+      pending: true,
+    );
+    h.remote.seedServerRow(
+      _revenue(
+        clientUuid: 'cu-lww-server-wins',
+        id: 'srv-b',
+        quantity: 4,
+        updatedAt: DateTime.utc(2026, 4),
+      ),
+    );
+
+    await h.engine.syncNow();
+
+    final serverWinsRow = await h.local.getByClientUuid('cu-lww-server-wins');
+    expect(serverWinsRow, isNotNull);
+    expect(serverWinsRow!.quantity, 4);
+    expect(serverWinsRow.pending, isFalse);
+  });
+
+  test('watchRevenues() stays UNFILTERED (R1) through an offline create + '
+      'reconnect sync — both sources appear', () async {
+    h.connectivity.online = false;
+
+    await h.repo.addRevenue(
+      source: 'plant',
+      sourceId: '901',
+      type: 'Maize Harvest',
+      quantity: 7,
+      unitPrice: 1,
+      date: DateTime.utc(2026),
+    );
+    await h.repo.addRevenue(
+      source: 'animal',
+      sourceId: '903',
+      type: 'Milk Sale',
+      quantity: 999,
+      unitPrice: 1,
+      date: DateTime.utc(2026),
+    );
+
+    final all = await h.local.watchRevenues().first;
+    expect(all, hasLength(2));
+    expect(all.map((r) => r.source).toSet(), {'plant', 'animal'});
+
+    h.connectivity.online = true;
+    await h.engine.syncNow();
+
+    final allAfterSync = await h.local.watchRevenues().first;
+    expect(allAfterSync, hasLength(2));
+  });
 }

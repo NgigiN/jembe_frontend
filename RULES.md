@@ -9,8 +9,8 @@ remediation phases. Before "de-duplicating" or "simplifying" any of the below, r
 `lib/core/widgets/crud/` (`entity_card`, `entity_form_sheet`, `entity_details_sheet`,
 `entity_empty_view`, `entity_error_view`, `entity_delete_dialog`, `entity_picker_with_add`, the skeleton
 list) is duplication *already correctly consolidated* — the best-factored part of the UI. New entity
-screens must build on it. The remaining large pages (`analysis_page.dart`, `revenue_page.dart`) should be
-extracted *into* this kit over time, **not** grown as parallel bespoke patterns.
+screens must build on it. `analysis_page.dart` is now split under `pages/analytics/` (2026-09); `revenue_page.dart` remains the next
+extraction candidate — extract *into* this kit, **not** grown as parallel bespoke patterns.
 
 ## 2. Repository/bloc layering after R2-02 — no pass-through use-case layer
 
@@ -78,3 +78,13 @@ them as load-bearing.
 _Origin: pre-release audit `docs/audit/20-redundancy.md` §R2-05, plus decisions from remediation phases
 R2-01/R2-02/R2-06 and Phase 8 (dashboard/trash/pagination). This file lives in the repo so the decision
 travels with the code — the root `docs/` audit is local-only, and this repo's `docs/` is gitignored._
+
+## 8. `ScopeChips` is THE filter pattern (analytics + revenue)
+
+`lib/core/widgets/filters/scope_chips.dart` + `AnalyticsScope` (`domain/entities/analytics_scope.dart`) are the
+only way a list or analytics page is narrowed by source / land / herd. The scope travels to the server as query
+params (`source`, `land_id`, `herd_id`); nothing is filtered in Dart on the online path. `AnalysisBloc` holds the
+scope SHARED by the three analytics pages and caches per scope (stale-while-revalidate); `RevenueBloc` keeps its
+own. The old `EnterprisePicker` sheet was deleted (2026-09) — do not re-introduce a per-page picker. Under the
+dark offline flag the revenue filter runs in memory via `AnalyticsScope.matchesRevenue`, with a land resolved to
+its season ids by the page from `SeasonBloc`.

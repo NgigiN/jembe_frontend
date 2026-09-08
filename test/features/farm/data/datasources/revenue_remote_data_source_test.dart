@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/revenue_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Pins the wire contract [RevenueRemoteDataSourceImpl] sends/expects
@@ -113,38 +114,43 @@ void main() {
       expect(await source.getRevenues(), isEmpty);
     });
 
-    test('sends source/start_date/end_date/updated_since as query params', () async {
-      final adapter = _FakeAdapter(body: '[]');
-      final source = RevenueRemoteDataSourceImpl(dio: _dioWith(adapter));
+    test(
+      'sends scope/start_date/end_date/updated_since as query params',
+      () async {
+        final adapter = _FakeAdapter(body: '[]');
+        final source = RevenueRemoteDataSourceImpl(dio: _dioWith(adapter));
 
-      await source.getRevenues(
-        source: 'harvest',
-        startDate: DateTime.utc(2026),
-        endDate: DateTime.utc(2026, 1, 31),
-        updatedSince: DateTime.utc(2026, 3, 4),
-      );
+        await source.getRevenues(
+          scope: const AnalyticsScope.land('7'),
+          startDate: DateTime.utc(2026),
+          endDate: DateTime.utc(2026, 1, 31),
+          updatedSince: DateTime.utc(2026, 3, 4),
+        );
 
-      final params = adapter.lastOptions!.uri.queryParameters;
-      expect(params['source'], 'harvest');
-      expect(params['start_date'], '2026-01-01');
-      expect(params['end_date'], '2026-01-31');
-      expect(params['updated_since'], '2026-03-04T00:00:00.000Z');
-    });
-
-    test('sends limit and cursor as query params when given (P3-02a)',
-        () async {
-      final adapter = _FakeAdapter(body: '[]');
-      final source = RevenueRemoteDataSourceImpl(dio: _dioWith(adapter));
-
-      await source.getRevenues(limit: 500, cursor: 42);
-
-      final params = adapter.lastOptions!.uri.queryParameters;
-      expect(params['limit'], '500');
-      expect(params['cursor'], '42');
-    });
+        final params = adapter.lastOptions!.uri.queryParameters;
+        expect(params['source'], 'plant');
+        expect(params['land_id'], '7');
+        expect(params['start_date'], '2026-01-01');
+        expect(params['end_date'], '2026-01-31');
+        expect(params['updated_since'], '2026-03-04T00:00:00.000Z');
+      },
+    );
 
     test(
-        'the initial fetch sends limit=500 but omits cursor '
+      'sends limit and cursor as query params when given (P3-02a)',
+      () async {
+        final adapter = _FakeAdapter(body: '[]');
+        final source = RevenueRemoteDataSourceImpl(dio: _dioWith(adapter));
+
+        await source.getRevenues(limit: 500, cursor: 42);
+
+        final params = adapter.lastOptions!.uri.queryParameters;
+        expect(params['limit'], '500');
+        expect(params['cursor'], '42');
+      },
+    );
+
+    test('the initial fetch sends limit=500 but omits cursor '
         '(P3-02a, F3)', () async {
       final adapter = _FakeAdapter(body: '[]');
       final source = RevenueRemoteDataSourceImpl(dio: _dioWith(adapter));
@@ -172,10 +178,7 @@ void main() {
         dio: _dioWith(_ThrowingAdapter()),
       );
 
-      await expectLater(
-        source.getRevenues(),
-        throwsA(isA<NetworkException>()),
-      );
+      await expectLater(source.getRevenues(), throwsA(isA<NetworkException>()));
     });
 
     test('a non-200 response throws ServerException', () async {
@@ -216,55 +219,47 @@ void main() {
   });
 
   group('addRevenue', () {
-    test(
-      'POSTs to /api/v1/revenue spreading toJson() plus client_uuid; '
-      '"total" is INCLUDED when > 0',
-      () async {
-        final adapter = _FakeAdapter(
-          body:
-              '{"id":"9","source":"harvest","source_id":"1","type":"milk",'
-              '"quantity":10,"unit_price":50,"total":500,'
-              '"date":"2026-01-01T00:00:00Z",'
-              '"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}',
-          statusCode: 201,
-        );
-        final source = RevenueRemoteDataSourceImpl(dio: _dioWith(adapter));
+    test('POSTs to /api/v1/revenue spreading toJson() plus client_uuid; '
+        '"total" is INCLUDED when > 0', () async {
+      final adapter = _FakeAdapter(
+        body:
+            '{"id":"9","source":"harvest","source_id":"1","type":"milk",'
+            '"quantity":10,"unit_price":50,"total":500,'
+            '"date":"2026-01-01T00:00:00Z",'
+            '"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}',
+        statusCode: 201,
+      );
+      final source = RevenueRemoteDataSourceImpl(dio: _dioWith(adapter));
 
-        final result = await source.addRevenue(
-          _revenue(clientUuid: 'cu-9', total: 500),
-        );
+      final result = await source.addRevenue(
+        _revenue(clientUuid: 'cu-9', total: 500),
+      );
 
-        expect(adapter.lastOptions!.method, 'POST');
-        expect(adapter.lastOptions!.path, '/api/v1/revenue');
-        final body = adapter.lastOptions!.data as Map<String, dynamic>;
-        expect(body['total'], 500);
-        expect(body['client_uuid'], 'cu-9');
-        expect(result.id, '9');
-      },
-    );
+      expect(adapter.lastOptions!.method, 'POST');
+      expect(adapter.lastOptions!.path, '/api/v1/revenue');
+      final body = adapter.lastOptions!.data as Map<String, dynamic>;
+      expect(body['total'], 500);
+      expect(body['client_uuid'], 'cu-9');
+      expect(result.id, '9');
+    });
 
-    test(
-      '"total" is OMITTED from the body when it is 0 (the flagship quirk '
-      "R2-01's toRequestBody override must preserve)",
-      () async {
-        final adapter = _FakeAdapter(
-          body:
-              '{"id":"9","source":"harvest","source_id":"1","type":"milk",'
-              '"quantity":0,"unit_price":0,"total":0,'
-              '"date":"2026-01-01T00:00:00Z",'
-              '"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}',
-          statusCode: 201,
-        );
-        final source = RevenueRemoteDataSourceImpl(dio: _dioWith(adapter));
+    test('"total" is OMITTED from the body when it is 0 (the flagship quirk '
+        "R2-01's toRequestBody override must preserve)", () async {
+      final adapter = _FakeAdapter(
+        body:
+            '{"id":"9","source":"harvest","source_id":"1","type":"milk",'
+            '"quantity":0,"unit_price":0,"total":0,'
+            '"date":"2026-01-01T00:00:00Z",'
+            '"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}',
+        statusCode: 201,
+      );
+      final source = RevenueRemoteDataSourceImpl(dio: _dioWith(adapter));
 
-        await source.addRevenue(
-          _revenue(quantity: 0, unitPrice: 0, total: 0),
-        );
+      await source.addRevenue(_revenue(quantity: 0, unitPrice: 0, total: 0));
 
-        final body = adapter.lastOptions!.data as Map<String, dynamic>;
-        expect(body.containsKey('total'), isFalse);
-      },
-    );
+      final body = adapter.lastOptions!.data as Map<String, dynamic>;
+      expect(body.containsKey('total'), isFalse);
+    });
 
     test('"notes" is OMITTED from the body when null or empty', () async {
       final adapter = _FakeAdapter(

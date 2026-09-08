@@ -12,6 +12,7 @@ import 'package:farm_tracker/core/utils/guard.dart';
 import 'package:farm_tracker/features/farm/data/datasources/revenue_local_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/revenue_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/revenue_repository.dart';
 
@@ -92,18 +93,20 @@ class RevenueRepositoryImpl
     updatedAt: model.updatedAt,
   );
 
-  /// Applies the same `source`/date-range predicate the server's filtered
+  /// Applies the same scope/date-range predicate the server's filtered
   /// `getRevenues` endpoint uses — inclusive on both ends of the date
-  /// range. Mirrors `RevenueBloc`'s in-memory filter (kept in sync
-  /// deliberately, one small predicate each, rather than sharing code
-  /// across the data/presentation layer boundary).
+  /// range. The scope match lives on [AnalyticsScope.matchesRevenue] so the
+  /// bloc's in-memory filter and this one cannot drift apart.
   bool _matchesFilter(
     Revenue revenue, {
-    String? source,
+    required AnalyticsScope scope,
+    required Set<String> seasonIdsOnLand,
     DateTime? startDate,
     DateTime? endDate,
   }) {
-    if (source != null && revenue.source != source) return false;
+    if (!scope.matchesRevenue(revenue, seasonIdsOnLand: seasonIdsOnLand)) {
+      return false;
+    }
     if (startDate != null && revenue.date.isBefore(startDate)) return false;
     if (endDate != null && revenue.date.isAfter(endDate)) return false;
     return true;
@@ -127,7 +130,8 @@ class RevenueRepositoryImpl
 
   @override
   Future<Either<Failure, List<Revenue>>> getRevenues({
-    String? source,
+    AnalyticsScope scope = const AnalyticsScope.all(),
+    Set<String> seasonIdsOnLand = const {},
     DateTime? startDate,
     DateTime? endDate,
     int? limit,
@@ -142,7 +146,8 @@ class RevenueRepositoryImpl
           .where(
             (r) => _matchesFilter(
               r,
-              source: source,
+              scope: scope,
+              seasonIdsOnLand: seasonIdsOnLand,
               startDate: startDate,
               endDate: endDate,
             ),
@@ -152,7 +157,7 @@ class RevenueRepositoryImpl
     }
     return guard(
       () => remoteDataSource.getRevenues(
-        source: source,
+        scope: scope,
         startDate: startDate,
         endDate: endDate,
         limit: limit,

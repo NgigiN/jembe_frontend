@@ -4,6 +4,7 @@ import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
+import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/revenue_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_event.dart';
@@ -43,7 +44,6 @@ class _RevenuesWatchFailed extends RevenueEvent {
 }
 
 class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
-
   RevenueBloc({required this.repository}) : super(RevenueInitial()) {
     on<LoadRevenues>(_onLoadRevenues);
     on<LoadMoreRevenuesEvent>(_onLoadMoreRevenues);
@@ -78,17 +78,20 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
   /// a filter-only change (no re-subscribe).
   List<Revenue> _allRevenues = const [];
 
-  // The current source/date-range filter, seeded (and later updated) by
+  // The current scope/date-range filter, seeded (and later updated) by
   // `WatchRevenuesEvent`'s args. Mirrors the server-side filter semantics
-  // `RevenueRepositoryImpl`'s offline `getRevenues` branch uses: source
-  // equality, date inclusive within [_startDate, _endDate].
-  String? _source;
+  // `RevenueRepositoryImpl`'s offline `getRevenues` branch uses: the
+  // AnalyticsScope match, date inclusive within [_startDate, _endDate].
+  AnalyticsScope _scope = const AnalyticsScope.all();
+  Set<String> _seasonIdsOnLand = const {};
   DateTime? _startDate;
   DateTime? _endDate;
 
   List<Revenue> _filtered() {
     return _allRevenues.where((r) {
-      if (_source != null && r.source != _source) return false;
+      if (!_scope.matchesRevenue(r, seasonIdsOnLand: _seasonIdsOnLand)) {
+        return false;
+      }
       if (_startDate != null && r.date.isBefore(_startDate!)) return false;
       if (_endDate != null && r.date.isAfter(_endDate!)) return false;
       return true;
@@ -102,7 +105,7 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     emit(RevenueLoading(revenues: state.revenues));
 
     final result = await repository.getRevenues(
-      source: event.source,
+      scope: event.scope,
       startDate: event.startDate,
       endDate: event.endDate,
       limit: kOnlineListPageSize,
@@ -110,22 +113,25 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
     result.fold(
       (failure) {
-        emit(RevenueError(
-          resolveFailureMessage(failure, 'Failed to load revenues'),
-          revenues: state.revenues,
-        ));
+        emit(
+          RevenueError(
+            resolveFailureMessage(failure, 'Failed to load revenues'),
+            revenues: state.revenues,
+          ),
+        );
       },
       (revenues) {
         // Online (flag off): this was page 1 of a cursor-paged list. Offline
         // returns the whole (filtered) local mirror in one shot, so it always
         // reaches max here and never pages.
         final online = !OfflineConfig.enabled;
-        emit(RevenueLoaded(
-          revenues: revenues,
-          hasReachedMax:
-              !online || revenues.length < kOnlineListPageSize,
-          nextCursor: online ? _cursorOf(revenues) : null,
-        ));
+        emit(
+          RevenueLoaded(
+            revenues: revenues,
+            hasReachedMax: !online || revenues.length < kOnlineListPageSize,
+            nextCursor: online ? _cursorOf(revenues) : null,
+          ),
+        );
       },
     );
   }
@@ -141,15 +147,13 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
     if (OfflineConfig.enabled) return;
     final current = state;
     if (current is! RevenueLoaded) return;
-    if (current.hasReachedMax ||
-        current.nextCursor == null ||
-        _isLoadingMore) {
+    if (current.hasReachedMax || current.nextCursor == null || _isLoadingMore) {
       return;
     }
     _isLoadingMore = true;
     try {
       final result = await repository.getRevenues(
-        source: event.source,
+        scope: event.scope,
         startDate: event.startDate,
         endDate: event.endDate,
         limit: kOnlineListPageSize,
@@ -159,10 +163,12 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
       result.fold(
         (failure) {
           if (state != current) return;
-          emit(RevenueError(
-            resolveFailureMessage(failure, 'Failed to load revenues'),
-            revenues: current.revenues,
-          ));
+          emit(
+            RevenueError(
+              resolveFailureMessage(failure, 'Failed to load revenues'),
+              revenues: current.revenues,
+            ),
+          );
         },
         (more) {
           // A concurrent Add/Update/Delete/refresh emitted a newer state
@@ -171,11 +177,13 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
           // LoadMore against the fresh state.
           if (state != current) return;
           final combined = List<Revenue>.from(current.revenues)..addAll(more);
-          emit(RevenueLoaded(
-            revenues: combined,
-            hasReachedMax: more.length < kOnlineListPageSize,
-            nextCursor: _cursorOf(more),
-          ));
+          emit(
+            RevenueLoaded(
+              revenues: combined,
+              hasReachedMax: more.length < kOnlineListPageSize,
+              nextCursor: _cursorOf(more),
+            ),
+          );
         },
       );
     } finally {
@@ -190,14 +198,12 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
   // Synchronous handler, no `await` before the guard: dispatching
   // WatchRevenuesEvent twice in quick succession (e.g. initState + a
-  // source-selector change) must never race and orphan a live subscription
+  // scope-chip change) must never race and orphan a live subscription
   // — the guard makes every dispatch after the first update the in-memory
   // filter and re-emit from the cached list, WITHOUT ever re-subscribing.
-  void _onWatchRevenues(
-    WatchRevenuesEvent event,
-    Emitter<RevenueState> emit,
-  ) {
-    _source = event.source;
+  void _onWatchRevenues(WatchRevenuesEvent event, Emitter<RevenueState> emit) {
+    _scope = event.scope;
+    _seasonIdsOnLand = event.seasonIdsOnLand;
     _startDate = event.startDate;
     _endDate = event.endDate;
 
@@ -242,10 +248,12 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
       result.fold(
         (failure) {
-          emit(RevenueError(
-            resolveFailureMessage(failure, 'Failed to add revenue'),
-            revenues: state.revenues,
-          ));
+          emit(
+            RevenueError(
+              resolveFailureMessage(failure, 'Failed to add revenue'),
+              revenues: state.revenues,
+            ),
+          );
         },
         (revenue) {
           // NO manual append — the watch stream (still subscribed; the
@@ -274,10 +282,12 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
     result.fold(
       (failure) {
-        emit(RevenueError(
-          resolveFailureMessage(failure, 'Failed to add revenue'),
-          revenues: currentRevenues,
-        ));
+        emit(
+          RevenueError(
+            resolveFailureMessage(failure, 'Failed to add revenue'),
+            revenues: currentRevenues,
+          ),
+        );
       },
       (revenue) {
         final updatedList = List<Revenue>.from(currentRevenues)..add(revenue);
@@ -305,10 +315,12 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
       result.fold(
         (failure) {
-          emit(RevenueError(
-            resolveFailureMessage(failure, 'Failed to update revenue'),
-            revenues: state.revenues,
-          ));
+          emit(
+            RevenueError(
+              resolveFailureMessage(failure, 'Failed to update revenue'),
+              revenues: state.revenues,
+            ),
+          );
         },
         (revenue) {
           // NO manual list replace — the watch stream refreshes
@@ -336,10 +348,12 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
     result.fold(
       (failure) {
-        emit(RevenueError(
-          resolveFailureMessage(failure, 'Failed to update revenue'),
-          revenues: currentRevenues,
-        ));
+        emit(
+          RevenueError(
+            resolveFailureMessage(failure, 'Failed to update revenue'),
+            revenues: currentRevenues,
+          ),
+        );
       },
       (revenue) {
         final updatedList = List<Revenue>.from(currentRevenues);
@@ -361,10 +375,12 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
       result.fold(
         (failure) {
-          emit(RevenueError(
-            resolveFailureMessage(failure, 'Failed to delete revenue'),
-            revenues: state.revenues,
-          ));
+          emit(
+            RevenueError(
+              resolveFailureMessage(failure, 'Failed to delete revenue'),
+              revenues: state.revenues,
+            ),
+          );
         },
         (_) {
           // NO manual removeWhere — the watch stream refreshes
@@ -382,10 +398,12 @@ class RevenueBloc extends Bloc<RevenueEvent, RevenueState> {
 
     result.fold(
       (failure) {
-        emit(RevenueError(
-          resolveFailureMessage(failure, 'Failed to delete revenue'),
-          revenues: currentRevenues,
-        ));
+        emit(
+          RevenueError(
+            resolveFailureMessage(failure, 'Failed to delete revenue'),
+            revenues: currentRevenues,
+          ),
+        );
       },
       (_) {
         final updatedList = List<Revenue>.from(currentRevenues)
