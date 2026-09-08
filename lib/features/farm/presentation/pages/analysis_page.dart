@@ -1,10 +1,8 @@
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/core/utils/responsive_utils.dart';
 import 'package:farm_tracker/core/widgets/lively_tap.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm_activity/presentation/widgets/farm_activity_card.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 class AnalysisPage extends StatelessWidget {
@@ -13,7 +11,7 @@ class AnalysisPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Farm Analysis')),
+      appBar: AppBar(title: const Text('Farm Analytics')),
       body: ColoredBox(
         color: Theme.of(context).colorScheme.surface,
         child: Padding(
@@ -21,11 +19,6 @@ class AnalysisPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Farm Analytics',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 8),
               Text(
                 'Track your farm performance and costs',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -125,15 +118,11 @@ class AnalysisPage extends StatelessWidget {
     );
   }
 
-  void _showTotalCostsBySeason(BuildContext context) {
-    context.read<AnalysisBloc>().add(const LoadTotalCostsBySeason());
-    context.push(AppRoutePath.totalCosts);
-  }
+  void _showTotalCostsBySeason(BuildContext context) =>
+      context.push(AppRoutePath.totalCosts);
 
-  void _showCostBreakdown(BuildContext context) {
-    context.read<AnalysisBloc>().add(const LoadCostBreakdown());
-    context.push(AppRoutePath.costBreakdown);
-  }
+  void _showCostBreakdown(BuildContext context) =>
+      context.push(AppRoutePath.costBreakdown);
 
   void _showAnnualSummary(BuildContext context) {
     context.push(AppRoutePath.annualSummary);

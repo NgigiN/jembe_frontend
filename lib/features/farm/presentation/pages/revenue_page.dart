@@ -10,6 +10,7 @@ import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 import 'package:farm_tracker/core/widgets/crud/paginated_list_view.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/widgets/filters/scope_chips.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
 import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
@@ -18,6 +19,8 @@ import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_state.dart';
@@ -50,15 +53,45 @@ class _RevenuePageState extends State<RevenuePage> {
     // below), so guarding on "is! RevenueLoaded" could skip the fetch and
     // leave a stale, differently-filtered list from a previous visit on
     // screen while the filter chips show "All" selected. Always re-fetch.
+    if (OfflineConfig.enabled) {
+      context.read<LandBloc>().add(WatchLandsEvent());
+      context.read<HerdBloc>().add(WatchHerdsEvent());
+      // Land scope is resolved to season ids client-side under the flag.
+      context.read<SeasonBloc>().add(WatchSeasonsEvent());
+    } else {
+      context.read<LandBloc>().add(GetLandsEvent());
+      context.read<HerdBloc>().add(GetHerdsEvent());
+    }
     _loadRevenues();
+  }
+
+  /// Offline only: the season ids belonging to the selected land, so the
+  /// in-memory filter can match plant revenues (rows carry a season id).
+  Set<String> _seasonIdsOnLand() {
+    final landId = _scope.landId;
+    if (landId == null) return const {};
+    return context
+        .read<SeasonBloc>()
+        .state
+        .seasons
+        .where((season) => season.landId == landId)
+        .map((season) => season.id)
+        .toSet();
   }
 
   void _loadRevenues() {
     if (OfflineConfig.enabled) {
-      context.read<RevenueBloc>().add(WatchRevenuesEvent(scope: _scope));
+      context.read<RevenueBloc>().add(
+        WatchRevenuesEvent(scope: _scope, seasonIdsOnLand: _seasonIdsOnLand()),
+      );
     } else {
       context.read<RevenueBloc>().add(LoadRevenues(scope: _scope));
     }
+  }
+
+  void _onScopeChanged(AnalyticsScope scope) {
+    setState(() => _scope = scope);
+    _loadRevenues();
   }
 
   @override
@@ -158,45 +191,17 @@ class _RevenuePageState extends State<RevenuePage> {
 
   Widget _buildFilters() {
     return Padding(
-      padding: EdgeInsets.all(context.paddingMedium),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _buildFilterChip('All', const AnalyticsScope.all()),
-          const SizedBox(width: 8),
-          _buildFilterChip(
-            'Plants',
-            const AnalyticsScope.source(ScopeSource.plant),
-          ),
-          const SizedBox(width: 8),
-          _buildFilterChip(
-            'Animals',
-            const AnalyticsScope.source(ScopeSource.animal),
-          ),
-        ],
+      padding: EdgeInsets.fromLTRB(
+        context.paddingMedium,
+        context.paddingMedium,
+        context.paddingMedium,
+        0,
       ),
-    );
-  }
-
-  Widget _buildFilterChip(String label, AnalyticsScope value) {
-    final isSelected = _scope == value;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        if (selected) {
-          setState(() => _scope = value);
-          _loadRevenues();
-        }
-      },
-      selectedColor: Theme.of(
-        context,
-      ).colorScheme.primary.withValues(alpha: 0.2),
-      labelStyle: TextStyle(
-        color: isSelected
-            ? Theme.of(context).colorScheme.primary
-            : Theme.of(context).colorScheme.onSurface,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      child: ScopeChips(
+        scope: _scope,
+        lands: context.watch<LandBloc>().state.lands,
+        herds: context.watch<HerdBloc>().state.herds,
+        onChanged: _onScopeChanged,
       ),
     );
   }
@@ -333,10 +338,7 @@ class _RevenuePageState extends State<RevenuePage> {
           if (!_scope.isFarmWide) ...[
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () {
-                setState(() => _scope = const AnalyticsScope.all());
-                _loadRevenues();
-              },
+              onPressed: () => _onScopeChanged(const AnalyticsScope.all()),
               child: const Text('Clear filters'),
             ),
           ],
