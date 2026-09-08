@@ -23,7 +23,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/revenue_state.dart'
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
-import 'package:farm_tracker/features/farm/presentation/pages/analysis_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/analytics/streak_page.dart';
 import 'package:farm_tracker/features/farm_activity/presentation/widgets/farm_activity_card.dart';
 import 'package:farm_tracker/injection_container.dart';
 import 'package:flutter/material.dart';
