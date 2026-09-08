@@ -13,6 +13,7 @@ import 'package:farm_tracker/features/farm/data/datasources/revenue_local_data_s
 import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/revenue_model.dart';
 import 'package:farm_tracker/features/farm/data/repositories/revenue_repository_impl.dart';
+import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class FakeRevenueRemoteDataSource implements RevenueRemoteDataSource {
@@ -25,7 +26,7 @@ class FakeRevenueRemoteDataSource implements RevenueRemoteDataSource {
 
   @override
   Future<List<RevenueModel>> getRevenues({
-    String? source,
+    AnalyticsScope scope = const AnalyticsScope.all(),
     DateTime? startDate,
     DateTime? endDate,
     DateTime? updatedSince,
@@ -130,60 +131,54 @@ void main() {
   });
 
   group("flag OFF (today's live-HTTP behavior, unchanged)", () {
-    test(
-      'addRevenue builds a fresh RevenueModel from the primitive args and '
-      'sends it to the data source',
-      () async {
-        final dataSource = FakeRevenueRemoteDataSource();
-        final repository = RevenueRepositoryImpl(remoteDataSource: dataSource);
-        final date = DateTime.utc(2026, 3);
+    test('addRevenue builds a fresh RevenueModel from the primitive args and '
+        'sends it to the data source', () async {
+      final dataSource = FakeRevenueRemoteDataSource();
+      final repository = RevenueRepositoryImpl(remoteDataSource: dataSource);
+      final date = DateTime.utc(2026, 3);
 
-        await repository.addRevenue(
-          source: 'plant',
-          sourceId: 'server-season-1',
-          type: 'Maize Harvest',
-          quantity: 10,
-          unitPrice: 50,
-          date: date,
-        );
+      await repository.addRevenue(
+        source: 'plant',
+        sourceId: 'server-season-1',
+        type: 'Maize Harvest',
+        quantity: 10,
+        unitPrice: 50,
+        date: date,
+      );
 
-        expect(dataSource.lastAdded?.source, 'plant');
-        expect(dataSource.lastAdded?.sourceId, 'server-season-1');
-        expect(dataSource.lastAdded?.type, 'Maize Harvest');
-        expect(dataSource.lastAdded?.quantity, 10);
-        expect(dataSource.lastAdded?.unitPrice, 50);
-        expect(dataSource.lastAdded?.total, 500);
-        expect(dataSource.lastAdded?.id, '');
-      },
-    );
+      expect(dataSource.lastAdded?.source, 'plant');
+      expect(dataSource.lastAdded?.sourceId, 'server-season-1');
+      expect(dataSource.lastAdded?.type, 'Maize Harvest');
+      expect(dataSource.lastAdded?.quantity, 10);
+      expect(dataSource.lastAdded?.unitPrice, 50);
+      expect(dataSource.lastAdded?.total, 500);
+      expect(dataSource.lastAdded?.id, '');
+    });
 
-    test(
-      'updateRevenue sends the primitive args straight through as a fresh '
-      "RevenueModel, with userId '' (server-populated) and fresh "
-      'created/updated timestamps',
-      () async {
-        final dataSource = FakeRevenueRemoteDataSource();
-        final repository = RevenueRepositoryImpl(remoteDataSource: dataSource);
-        final date = DateTime.utc(2026, 3);
+    test('updateRevenue sends the primitive args straight through as a fresh '
+        "RevenueModel, with userId '' (server-populated) and fresh "
+        'created/updated timestamps', () async {
+      final dataSource = FakeRevenueRemoteDataSource();
+      final repository = RevenueRepositoryImpl(remoteDataSource: dataSource);
+      final date = DateTime.utc(2026, 3);
 
-        await repository.updateRevenue(
-          id: 'revenue-1',
-          source: 'animal',
-          sourceId: 'server-herd-1',
-          type: 'Milk Sale',
-          quantity: 20,
-          unitPrice: 5,
-          total: 100,
-          date: date,
-        );
+      await repository.updateRevenue(
+        id: 'revenue-1',
+        source: 'animal',
+        sourceId: 'server-herd-1',
+        type: 'Milk Sale',
+        quantity: 20,
+        unitPrice: 5,
+        total: 100,
+        date: date,
+      );
 
-        expect(dataSource.lastUpdated?.id, 'revenue-1');
-        expect(dataSource.lastUpdated?.userId, '');
-        expect(dataSource.lastUpdated?.source, 'animal');
-        expect(dataSource.lastUpdated?.sourceId, 'server-herd-1');
-        expect(dataSource.lastUpdated?.total, 100);
-      },
-    );
+      expect(dataSource.lastUpdated?.id, 'revenue-1');
+      expect(dataSource.lastUpdated?.userId, '');
+      expect(dataSource.lastUpdated?.source, 'animal');
+      expect(dataSource.lastUpdated?.sourceId, 'server-herd-1');
+      expect(dataSource.lastUpdated?.total, 100);
+    });
 
     test('deleteRevenue delegates straight to the data source', () async {
       final dataSource = FakeRevenueRemoteDataSource();
@@ -195,49 +190,42 @@ void main() {
       expect(dataSource.deleteCalls, ['revenue-1']);
     });
 
-    test(
-      'getRevenues delegates straight to the data source with the given '
-      'filters',
-      () async {
-        final dataSource = FakeRevenueRemoteDataSource()
-          ..getRevenuesResult = [_revenue(clientUuid: '', id: 'r1')];
-        final repository = RevenueRepositoryImpl(remoteDataSource: dataSource);
+    test('getRevenues delegates straight to the data source with the given '
+        'filters', () async {
+      final dataSource = FakeRevenueRemoteDataSource()
+        ..getRevenuesResult = [_revenue(clientUuid: '', id: 'r1')];
+      final repository = RevenueRepositoryImpl(remoteDataSource: dataSource);
 
-        final result = await repository.getRevenues(source: 'plant');
+      final result = await repository.getRevenues(
+        scope: const AnalyticsScope.source(ScopeSource.plant),
+      );
 
-        expect(result.isRight(), isTrue);
-        result.fold(
-          (failure) => fail('expected Right, got $failure'),
-          (revenues) => expect(revenues, hasLength(1)),
-        );
-      },
-    );
+      expect(result.isRight(), isTrue);
+      result.fold(
+        (failure) => fail('expected Right, got $failure'),
+        (revenues) => expect(revenues, hasLength(1)),
+      );
+    });
 
-    test(
-      'getRevenueById delegates straight to the data source',
-      () async {
-        final dataSource = FakeRevenueRemoteDataSource()
-          ..getRevenuesResult = [_revenue(clientUuid: '', id: 'r1')];
-        final repository = RevenueRepositoryImpl(remoteDataSource: dataSource);
+    test('getRevenueById delegates straight to the data source', () async {
+      final dataSource = FakeRevenueRemoteDataSource()
+        ..getRevenuesResult = [_revenue(clientUuid: '', id: 'r1')];
+      final repository = RevenueRepositoryImpl(remoteDataSource: dataSource);
 
-        final result = await repository.getRevenueById('r1');
+      final result = await repository.getRevenueById('r1');
 
-        expect(result.isRight(), isTrue);
-      },
-    );
+      expect(result.isRight(), isTrue);
+    });
 
-    test(
-      'watchRevenues does not crash and mirrors a single getRevenues '
-      'snapshot',
-      () async {
-        final dataSource = FakeRevenueRemoteDataSource();
-        final repository = RevenueRepositoryImpl(remoteDataSource: dataSource);
+    test('watchRevenues does not crash and mirrors a single getRevenues '
+        'snapshot', () async {
+      final dataSource = FakeRevenueRemoteDataSource();
+      final repository = RevenueRepositoryImpl(remoteDataSource: dataSource);
 
-        final emission = await repository.watchRevenues().first;
+      final emission = await repository.watchRevenues().first;
 
-        expect(emission, isEmpty);
-      },
-    );
+      expect(emission, isEmpty);
+    });
   });
 
   group('flag OFF error mapping (R2-02 net)', () {
@@ -356,123 +344,116 @@ void main() {
       await db.close();
     });
 
-    test(
-      'addRevenue upserts a local pending row with a minted clientUuid, '
-      'enqueues a create intent, and never calls remote',
-      () async {
-        final repository = RevenueRepositoryImpl(
-          remoteDataSource: remote,
-          local: local,
-          outbox: outbox,
-          sync: sync,
-          uuid: const _FixedUuidGen('cu-new-1'),
-        );
-        final date = DateTime.utc(2026, 3);
+    test('addRevenue upserts a local pending row with a minted clientUuid, '
+        'enqueues a create intent, and never calls remote', () async {
+      final repository = RevenueRepositoryImpl(
+        remoteDataSource: remote,
+        local: local,
+        outbox: outbox,
+        sync: sync,
+        uuid: const _FixedUuidGen('cu-new-1'),
+      );
+      final date = DateTime.utc(2026, 3);
 
-        final result = await repository.addRevenue(
+      final result = await repository.addRevenue(
+        source: 'plant',
+        sourceId: 'server-season-1',
+        type: 'Maize Harvest',
+        quantity: 10,
+        unitPrice: 50,
+        date: date,
+      );
+
+      expect(remote.lastAdded, isNull);
+
+      expect(result.isRight(), isTrue);
+      result.fold(
+        (failure) => fail('expected Right, got $failure'),
+        (revenue) => expect(revenue.id, 'cu-new-1'),
+      );
+
+      final row = await local.getByClientUuid('cu-new-1');
+      expect(row, isNotNull);
+      expect(row!.pending, isTrue);
+      expect(row.source, 'plant');
+      expect(row.sourceId, 'server-season-1');
+      expect(row.total, 500, reason: 'total defaults to quantity*unitPrice');
+
+      final rows = await outbox.peekAll();
+      expect(rows, hasLength(1));
+      expect(rows.single.op, 'create');
+      expect(rows.single.entity, 'revenue');
+      expect(rows.single.clientUuid, 'cu-new-1');
+
+      final payload = jsonDecode(rows.single.payload!) as Map<String, dynamic>;
+      expect(payload['source'], 'plant');
+      expect(payload['source_id'], 'server-season-1');
+      expect(
+        payload.containsKey('client_uuid'),
+        isFalse,
+        reason:
+            'toJson() never carries client_uuid — only the remote create '
+            'call site adds it to the wire body',
+      );
+
+      expect(sync.syncNowCalls, 1);
+    });
+
+    test('updateRevenue upserts (pending) and enqueues an update, preserving '
+        'the existing serverId and userId', () async {
+      await local.upsert(
+        _revenue(
+          clientUuid: 'cu-existing',
+          id: 'server-42',
           source: 'plant',
-          sourceId: 'server-season-1',
-          type: 'Maize Harvest',
-          quantity: 10,
-          unitPrice: 50,
-          date: date,
-        );
+          type: 'Old type',
+        ),
+        pending: false,
+      );
 
-        expect(remote.lastAdded, isNull);
+      final repository = RevenueRepositoryImpl(
+        remoteDataSource: remote,
+        local: local,
+        outbox: outbox,
+        sync: sync,
+      );
+      final date = DateTime.utc(2026, 4);
 
-        expect(result.isRight(), isTrue);
-        result.fold(
-          (failure) => fail('expected Right, got $failure'),
-          (revenue) => expect(revenue.id, 'cu-new-1'),
-        );
+      final result = await repository.updateRevenue(
+        id: 'cu-existing',
+        source: 'animal',
+        sourceId: 'server-herd-9',
+        type: 'New type',
+        quantity: 30,
+        unitPrice: 2,
+        total: 60,
+        date: date,
+      );
 
-        final row = await local.getByClientUuid('cu-new-1');
-        expect(row, isNotNull);
-        expect(row!.pending, isTrue);
-        expect(row.source, 'plant');
-        expect(row.sourceId, 'server-season-1');
-        expect(row.total, 500, reason: 'total defaults to quantity*unitPrice');
+      expect(remote.lastUpdated, isNull);
+      expect(result.isRight(), isTrue);
 
-        final rows = await outbox.peekAll();
-        expect(rows, hasLength(1));
-        expect(rows.single.op, 'create');
-        expect(rows.single.entity, 'revenue');
-        expect(rows.single.clientUuid, 'cu-new-1');
+      final row = await local.getByClientUuid('cu-existing');
+      expect(row, isNotNull);
+      expect(
+        row!.id,
+        'server-42',
+        reason: 'the existing serverId must be preserved',
+      );
+      expect(row.userId, 'user-1', reason: 'existing userId preserved');
+      expect(row.type, 'New type');
+      expect(row.source, 'animal');
+      expect(row.sourceId, 'server-herd-9');
+      expect(row.total, 60);
+      expect(row.pending, isTrue);
 
-        final payload =
-            jsonDecode(rows.single.payload!) as Map<String, dynamic>;
-        expect(payload['source'], 'plant');
-        expect(payload['source_id'], 'server-season-1');
-        expect(
-          payload.containsKey('client_uuid'),
-          isFalse,
-          reason:
-              'toJson() never carries client_uuid — only the remote create '
-              'call site adds it to the wire body',
-        );
+      final rows = await outbox.peekAll();
+      expect(rows, hasLength(1));
+      expect(rows.single.op, 'update');
+      expect(rows.single.clientUuid, 'cu-existing');
 
-        expect(sync.syncNowCalls, 1);
-      },
-    );
-
-    test(
-      'updateRevenue upserts (pending) and enqueues an update, preserving '
-      'the existing serverId and userId',
-      () async {
-        await local.upsert(
-          _revenue(
-            clientUuid: 'cu-existing',
-            id: 'server-42',
-            source: 'plant',
-            type: 'Old type',
-          ),
-          pending: false,
-        );
-
-        final repository = RevenueRepositoryImpl(
-          remoteDataSource: remote,
-          local: local,
-          outbox: outbox,
-          sync: sync,
-        );
-        final date = DateTime.utc(2026, 4);
-
-        final result = await repository.updateRevenue(
-          id: 'cu-existing',
-          source: 'animal',
-          sourceId: 'server-herd-9',
-          type: 'New type',
-          quantity: 30,
-          unitPrice: 2,
-          total: 60,
-          date: date,
-        );
-
-        expect(remote.lastUpdated, isNull);
-        expect(result.isRight(), isTrue);
-
-        final row = await local.getByClientUuid('cu-existing');
-        expect(row, isNotNull);
-        expect(
-          row!.id,
-          'server-42',
-          reason: 'the existing serverId must be preserved',
-        );
-        expect(row.userId, 'user-1', reason: 'existing userId preserved');
-        expect(row.type, 'New type');
-        expect(row.source, 'animal');
-        expect(row.sourceId, 'server-herd-9');
-        expect(row.total, 60);
-        expect(row.pending, isTrue);
-
-        final rows = await outbox.peekAll();
-        expect(rows, hasLength(1));
-        expect(rows.single.op, 'update');
-        expect(rows.single.clientUuid, 'cu-existing');
-
-        expect(sync.syncNowCalls, 1);
-      },
-    );
+      expect(sync.syncNowCalls, 1);
+    });
 
     test(
       'updateRevenue on a missing clientUuid returns CacheFailure',
@@ -499,112 +480,128 @@ void main() {
       },
     );
 
-    test(
-      'deleteRevenue marks the local row deleted and enqueues a delete '
-      'intent',
-      () async {
-        await local.upsert(_revenue(clientUuid: 'cu-doomed'), pending: false);
+    test('deleteRevenue marks the local row deleted and enqueues a delete '
+        'intent', () async {
+      await local.upsert(_revenue(clientUuid: 'cu-doomed'), pending: false);
 
-        final repository = RevenueRepositoryImpl(
-          remoteDataSource: remote,
-          local: local,
-          outbox: outbox,
-          sync: sync,
-        );
+      final repository = RevenueRepositoryImpl(
+        remoteDataSource: remote,
+        local: local,
+        outbox: outbox,
+        sync: sync,
+      );
 
-        final result = await repository.deleteRevenue('cu-doomed');
+      final result = await repository.deleteRevenue('cu-doomed');
 
-        expect(remote.deleteCalls, isEmpty);
-        expect(result.isRight(), isTrue);
+      expect(remote.deleteCalls, isEmpty);
+      expect(result.isRight(), isTrue);
 
-        final row = await local.getByClientUuid('cu-doomed');
-        expect(row, isNotNull);
-        expect(row!.deletedLocally, isTrue);
+      final row = await local.getByClientUuid('cu-doomed');
+      expect(row, isNotNull);
+      expect(row!.deletedLocally, isTrue);
 
-        final rows = await outbox.peekAll();
-        expect(rows, hasLength(1));
-        expect(rows.single.op, 'delete');
-        expect(rows.single.clientUuid, 'cu-doomed');
+      final rows = await outbox.peekAll();
+      expect(rows, hasLength(1));
+      expect(rows.single.op, 'delete');
+      expect(rows.single.clientUuid, 'cu-doomed');
 
-        expect(sync.syncNowCalls, 1);
-      },
-    );
+      expect(sync.syncNowCalls, 1);
+    });
 
-    test(
-      'watchRevenues emits domain Revenues whose id equals the row '
-      'clientUuid',
-      () async {
-        await local.upsert(
-          _revenue(clientUuid: 'cu-watch-1', type: 'Watched Revenue'),
-          pending: false,
-        );
+    test('watchRevenues emits domain Revenues whose id equals the row '
+        'clientUuid', () async {
+      await local.upsert(
+        _revenue(clientUuid: 'cu-watch-1', type: 'Watched Revenue'),
+        pending: false,
+      );
 
-        final repository = RevenueRepositoryImpl(
-          remoteDataSource: remote,
-          local: local,
-          outbox: outbox,
-          sync: sync,
-        );
+      final repository = RevenueRepositoryImpl(
+        remoteDataSource: remote,
+        local: local,
+        outbox: outbox,
+        sync: sync,
+      );
 
-        final emission = await repository.watchRevenues().first;
+      final emission = await repository.watchRevenues().first;
 
-        expect(emission, hasLength(1));
-        expect(emission.single.id, 'cu-watch-1');
-        expect(emission.single.type, 'Watched Revenue');
-      },
-    );
+      expect(emission, hasLength(1));
+      expect(emission.single.id, 'cu-watch-1');
+      expect(emission.single.type, 'Watched Revenue');
+    });
 
-    test(
-      'getRevenues (flag on) reads the local mirror and applies the '
-      'source/date filter in memory',
-      () async {
-        await local.upsert(
-          _revenue(
-            clientUuid: 'cu-plant',
-            source: 'plant',
-            date: DateTime.utc(2026, 1, 15),
-          ),
-          pending: false,
-        );
-        await local.upsert(
-          _revenue(
-            clientUuid: 'cu-animal',
-            source: 'animal',
-            date: DateTime.utc(2026, 6, 15),
-          ),
-          pending: false,
-        );
+    test('getRevenues (flag on) reads the local mirror and applies the '
+        'source/date filter in memory', () async {
+      await local.upsert(
+        _revenue(
+          clientUuid: 'cu-plant',
+          source: 'plant',
+          date: DateTime.utc(2026, 1, 15),
+        ),
+        pending: false,
+      );
+      await local.upsert(
+        _revenue(
+          clientUuid: 'cu-animal',
+          source: 'animal',
+          date: DateTime.utc(2026, 6, 15),
+        ),
+        pending: false,
+      );
 
-        final repository = RevenueRepositoryImpl(
-          remoteDataSource: remote,
-          local: local,
-          outbox: outbox,
-          sync: sync,
-        );
+      final repository = RevenueRepositoryImpl(
+        remoteDataSource: remote,
+        local: local,
+        outbox: outbox,
+        sync: sync,
+      );
 
-        final result = await repository.getRevenues(source: 'plant');
+      final result = await repository.getRevenues(
+        scope: const AnalyticsScope.source(ScopeSource.plant),
+      );
 
-        expect(remote.getRevenuesResult, isEmpty, reason: 'never hits remote');
-        result.fold(
-          (failure) => fail('expected Right, got $failure'),
-          (revenues) {
-            expect(revenues, hasLength(1));
-            expect(revenues.single.id, 'cu-plant');
-          },
-        );
+      expect(remote.getRevenuesResult, isEmpty, reason: 'never hits remote');
+      result.fold((failure) => fail('expected Right, got $failure'), (
+        revenues,
+      ) {
+        expect(revenues, hasLength(1));
+        expect(revenues.single.id, 'cu-plant');
+      });
 
-        final dateScoped = await repository.getRevenues(
-          startDate: DateTime.utc(2026, 5),
-        );
-        dateScoped.fold(
-          (failure) => fail('expected Right, got $failure'),
-          (revenues) {
-            expect(revenues, hasLength(1));
-            expect(revenues.single.id, 'cu-animal');
-          },
-        );
-      },
-    );
+      final dateScoped = await repository.getRevenues(
+        startDate: DateTime.utc(2026, 5),
+      );
+      dateScoped.fold((failure) => fail('expected Right, got $failure'), (
+        revenues,
+      ) {
+        expect(revenues, hasLength(1));
+        expect(revenues.single.id, 'cu-animal');
+      });
+
+      // Scope chips (spec 2026-09-08): herd matches sourceId directly; a
+      // land scope needs the caller-resolved season ids.
+      final herdScoped = await repository.getRevenues(
+        scope: const AnalyticsScope.herd('server-season-1'),
+      );
+      herdScoped.fold(
+        (failure) => fail('expected Right, got $failure'),
+        (revenues) => expect(revenues.map((r) => r.id), ['cu-animal']),
+      );
+      final landScoped = await repository.getRevenues(
+        scope: const AnalyticsScope.land('land-x'),
+        seasonIdsOnLand: const {'server-season-1'},
+      );
+      landScoped.fold(
+        (failure) => fail('expected Right, got $failure'),
+        (revenues) => expect(revenues.map((r) => r.id), ['cu-plant']),
+      );
+      final landUnresolved = await repository.getRevenues(
+        scope: const AnalyticsScope.land('land-x'),
+      );
+      landUnresolved.fold(
+        (failure) => fail('expected Right, got $failure'),
+        (revenues) => expect(revenues, isEmpty),
+      );
+    });
 
     test(
       'getRevenueById (flag on, R4) reads the local mirror by clientUuid',
@@ -636,54 +633,48 @@ void main() {
   });
 
   group('RevenueModel wire body (byte-for-byte field set)', () {
-    test(
-      'toJson includes total only when >0 and notes only when non-empty, '
-      'and coerces a numeric source_id',
-      () {
-        final revenue = _revenue(
-          clientUuid: 'cu-1',
-          source: 'plant',
-          sourceId: '42',
-          type: 'Maize Harvest',
-          quantity: 10,
-          unitPrice: 5,
-          total: 0,
-          notes: null,
-          date: DateTime.utc(2026, 3, 1),
-        );
+    test('toJson includes total only when >0 and notes only when non-empty, '
+        'and coerces a numeric source_id', () {
+      final revenue = _revenue(
+        clientUuid: 'cu-1',
+        source: 'plant',
+        sourceId: '42',
+        type: 'Maize Harvest',
+        quantity: 10,
+        unitPrice: 5,
+        total: 0,
+        notes: null,
+        date: DateTime.utc(2026, 3, 1),
+      );
 
-        expect(revenue.toJson(), {
-          'source': 'plant',
-          'source_id': 42,
-          'type': 'Maize Harvest',
-          'quantity': 10.0,
-          'unit_price': 5.0,
-          'date': DateTime.utc(2026, 3, 1).toIso8601String(),
-        });
-      },
-    );
+      expect(revenue.toJson(), {
+        'source': 'plant',
+        'source_id': 42,
+        'type': 'Maize Harvest',
+        'quantity': 10.0,
+        'unit_price': 5.0,
+        'date': DateTime.utc(2026, 3, 1).toIso8601String(),
+      });
+    });
 
-    test(
-      'toJson keeps a non-numeric source_id as a string, and includes '
-      'total/notes when present',
-      () {
-        final revenue = _revenue(
-          clientUuid: 'cu-2',
-          source: 'animal',
-          sourceId: 'unsynced-clientuuid',
-          type: 'Milk Sale',
-          quantity: 4,
-          unitPrice: 25,
-          total: 100,
-          notes: 'Sold at the gate',
-          date: DateTime.utc(2026, 4, 2),
-        );
+    test('toJson keeps a non-numeric source_id as a string, and includes '
+        'total/notes when present', () {
+      final revenue = _revenue(
+        clientUuid: 'cu-2',
+        source: 'animal',
+        sourceId: 'unsynced-clientuuid',
+        type: 'Milk Sale',
+        quantity: 4,
+        unitPrice: 25,
+        total: 100,
+        notes: 'Sold at the gate',
+        date: DateTime.utc(2026, 4, 2),
+      );
 
-        final json = revenue.toJson();
-        expect(json['source_id'], 'unsynced-clientuuid');
-        expect(json['total'], 100.0);
-        expect(json['notes'], 'Sold at the gate');
-      },
-    );
+      final json = revenue.toJson();
+      expect(json['source_id'], 'unsynced-clientuuid');
+      expect(json['total'], 100.0);
+      expect(json['notes'], 'Sold at the gate');
+    });
   });
 }

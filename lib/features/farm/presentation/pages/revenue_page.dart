@@ -11,6 +11,7 @@ import 'package:farm_tracker/core/widgets/crud/entity_picker_with_add.dart';
 import 'package:farm_tracker/core/widgets/crud/paginated_list_view.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
+import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
@@ -37,15 +38,15 @@ class RevenuePage extends StatefulWidget {
 }
 
 class _RevenuePageState extends State<RevenuePage> {
-  String? _selectedSource; // null for All, 'plant', 'animal'
+  AnalyticsScope _scope = const AnalyticsScope.all();
 
   @override
   void initState() {
     super.initState();
     // RevenueBloc is a shared, app-wide singleton and LoadRevenues is
-    // parameterized by _selectedSource, which isn't recorded on
+    // parameterized by _scope, which isn't recorded on
     // RevenueLoaded. A fresh mount of this page always starts with
-    // _selectedSource == null (the "All" filter, matching the chip UI
+    // _scope == AnalyticsScope.all() (the "All" filter, matching the chip UI
     // below), so guarding on "is! RevenueLoaded" could skip the fetch and
     // leave a stale, differently-filtered list from a previous visit on
     // screen while the filter chips show "All" selected. Always re-fetch.
@@ -54,11 +55,9 @@ class _RevenuePageState extends State<RevenuePage> {
 
   void _loadRevenues() {
     if (OfflineConfig.enabled) {
-      context.read<RevenueBloc>().add(
-        WatchRevenuesEvent(source: _selectedSource),
-      );
+      context.read<RevenueBloc>().add(WatchRevenuesEvent(scope: _scope));
     } else {
-      context.read<RevenueBloc>().add(LoadRevenues(source: _selectedSource));
+      context.read<RevenueBloc>().add(LoadRevenues(scope: _scope));
     }
   }
 
@@ -86,51 +85,59 @@ class _RevenuePageState extends State<RevenuePage> {
                   );
                 },
                 child: BlocConsumer<RevenueBloc, RevenueState>(
-                listener: (context, state) {
-                  if (state is RevenueDeleted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      AppSnackBar.success(context, 'Revenue deleted successfully'),
-                    );
-                  }
-                },
-                builder: (context, state) {
-                  if (state is RevenueLoading && state.revenues.isEmpty) {
-                    return _scrollableEmptyState(
-                      const Center(child: CircularProgressIndicator()),
-                    );
-                  } else if (state is RevenueError && state.revenues.isEmpty) {
-                    return _scrollableEmptyState(_buildErrorView(state.message));
-                  }
-
-                  final revenues = state.revenues;
-                  if (revenues.isEmpty) {
-                    return _scrollableEmptyState(_buildEmptyView());
-                  }
-
-                  final offline = OfflineConfig.enabled;
-                  final hasReachedMax =
-                      offline || state is! RevenueLoaded || state.hasReachedMax;
-                  return PaginatedListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: context
-                        .scrollListPadding(forFab: true)
-                        .copyWith(
-                          left: context.paddingMedium,
-                          right: context.paddingMedium,
+                  listener: (context, state) {
+                    if (state is RevenueDeleted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        AppSnackBar.success(
+                          context,
+                          'Revenue deleted successfully',
                         ),
-                    itemCount: revenues.length,
-                    hasReachedMax: hasReachedMax,
-                    onEndReached: offline
-                        ? () {}
-                        : () => context.read<RevenueBloc>().add(
-                              LoadMoreRevenuesEvent(source: _selectedSource),
+                      );
+                    }
+                  },
+                  builder: (context, state) {
+                    if (state is RevenueLoading && state.revenues.isEmpty) {
+                      return _scrollableEmptyState(
+                        const Center(child: CircularProgressIndicator()),
+                      );
+                    } else if (state is RevenueError &&
+                        state.revenues.isEmpty) {
+                      return _scrollableEmptyState(
+                        _buildErrorView(state.message),
+                      );
+                    }
+
+                    final revenues = state.revenues;
+                    if (revenues.isEmpty) {
+                      return _scrollableEmptyState(_buildEmptyView());
+                    }
+
+                    final offline = OfflineConfig.enabled;
+                    final hasReachedMax =
+                        offline ||
+                        state is! RevenueLoaded ||
+                        state.hasReachedMax;
+                    return PaginatedListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: context
+                          .scrollListPadding(forFab: true)
+                          .copyWith(
+                            left: context.paddingMedium,
+                            right: context.paddingMedium,
+                          ),
+                      itemCount: revenues.length,
+                      hasReachedMax: hasReachedMax,
+                      onEndReached: offline
+                          ? () {}
+                          : () => context.read<RevenueBloc>().add(
+                              LoadMoreRevenuesEvent(scope: _scope),
                             ),
-                    itemBuilder: (context, index) {
-                      final revenue = revenues[index];
-                      return _buildRevenueListItem(context, revenue);
-                    },
-                  );
-                },
+                      itemBuilder: (context, index) {
+                        final revenue = revenues[index];
+                        return _buildRevenueListItem(context, revenue);
+                      },
+                    );
+                  },
                 ),
               ),
             ),
@@ -155,26 +162,30 @@ class _RevenuePageState extends State<RevenuePage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildFilterChip('All', null),
+          _buildFilterChip('All', const AnalyticsScope.all()),
           const SizedBox(width: 8),
-          _buildFilterChip('Plants', 'plant'),
+          _buildFilterChip(
+            'Plants',
+            const AnalyticsScope.source(ScopeSource.plant),
+          ),
           const SizedBox(width: 8),
-          _buildFilterChip('Animals', 'animal'),
+          _buildFilterChip(
+            'Animals',
+            const AnalyticsScope.source(ScopeSource.animal),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChip(String label, String? value) {
-    final isSelected = _selectedSource == value;
+  Widget _buildFilterChip(String label, AnalyticsScope value) {
+    final isSelected = _scope == value;
     return ChoiceChip(
       label: Text(label),
       selected: isSelected,
       onSelected: (selected) {
         if (selected) {
-          setState(() {
-            _selectedSource = value;
-          });
+          setState(() => _scope = value);
           _loadRevenues();
         }
       },
@@ -319,13 +330,11 @@ class _RevenuePageState extends State<RevenuePage> {
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
-          if (_selectedSource != null) ...[
+          if (!_scope.isFarmWide) ...[
             const SizedBox(height: 8),
             TextButton(
               onPressed: () {
-                setState(() {
-                  _selectedSource = null;
-                });
+                setState(() => _scope = const AnalyticsScope.all());
                 _loadRevenues();
               },
               child: const Text('Clear filters'),
@@ -572,9 +581,9 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
       body: BlocListener<RevenueBloc, RevenueState>(
         listener: (context, state) {
           if (state is RevenueAdded) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(AppSnackBar.success(context, 'Revenue added successfully'));
+            ScaffoldMessenger.of(context).showSnackBar(
+              AppSnackBar.success(context, 'Revenue added successfully'),
+            );
             Navigator.pop(context);
             if (OfflineConfig.enabled) {
               context.read<RevenueBloc>().add(WatchRevenuesEvent());
@@ -846,11 +855,11 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
   void _submitForm() {
     if (!_formKey.currentState!.validate()) return;
 
-    final dateError = validateDateNotInFuture(
-      _selectedDate,
-    );
+    final dateError = validateDateNotInFuture(_selectedDate);
     if (dateError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(AppSnackBar.error(context, dateError));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(AppSnackBar.error(context, dateError));
       return;
     }
 

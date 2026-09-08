@@ -8,6 +8,7 @@
 // differently-filtered list on screen).
 import 'package:bloc_test/bloc_test.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
+import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_state.dart';
@@ -38,54 +39,52 @@ void main() {
   });
 
   group("flag OFF (today's one-shot behavior, unchanged)", () {
-    testWidgets(
-      'dispatches the one-shot LoadRevenues(source: null) on mount',
-      (tester) async {
-        final bloc = MockRevenueBloc();
-        whenListen(
-          bloc,
-          const Stream<RevenueState>.empty(),
-          initialState: RevenueInitial(),
-        );
+    testWidgets('dispatches the one-shot LoadRevenues(scope: all) on mount', (
+      tester,
+    ) async {
+      final bloc = MockRevenueBloc();
+      whenListen(
+        bloc,
+        const Stream<RevenueState>.empty(),
+        initialState: RevenueInitial(),
+      );
 
-        await tester.pumpWidget(_wrap(bloc));
+      await tester.pumpWidget(_wrap(bloc));
 
-        verify(
-          () => bloc.add(
-            any(
-              that: isA<LoadRevenues>().having(
-                (e) => e.source,
-                'source',
-                isNull,
-              ),
+      verify(
+        () => bloc.add(
+          any(
+            that: isA<LoadRevenues>().having(
+              (e) => e.scope,
+              'scope',
+              const AnalyticsScope.all(),
             ),
           ),
-        ).called(1);
-        verifyNever(() => bloc.add(any(that: isA<WatchRevenuesEvent>())));
-      },
-    );
+        ),
+      ).called(1);
+      verifyNever(() => bloc.add(any(that: isA<WatchRevenuesEvent>())));
+    });
 
-    testWidgets(
-      'still dispatches LoadRevenues on mount even when revenues are '
-      'already loaded (no "already loaded" guard on this page)',
-      (tester) async {
-        final bloc = MockRevenueBloc();
-        whenListen(
-          bloc,
-          const Stream<RevenueState>.empty(),
-          initialState: const RevenueLoaded(),
-        );
+    testWidgets('still dispatches LoadRevenues on mount even when revenues are '
+        'already loaded (no "already loaded" guard on this page)', (
+      tester,
+    ) async {
+      final bloc = MockRevenueBloc();
+      whenListen(
+        bloc,
+        const Stream<RevenueState>.empty(),
+        initialState: const RevenueLoaded(),
+      );
 
-        await tester.pumpWidget(_wrap(bloc));
+      await tester.pumpWidget(_wrap(bloc));
 
-        verify(() => bloc.add(any(that: isA<LoadRevenues>()))).called(1);
-      },
-    );
+      verify(() => bloc.add(any(that: isA<LoadRevenues>()))).called(1);
+    });
   });
 
   group('flag ON (reactive watch stream)', () {
     testWidgets(
-      'dispatches WatchRevenuesEvent(source: null) instead of LoadRevenues',
+      'dispatches WatchRevenuesEvent(scope: all) instead of LoadRevenues',
       (tester) async {
         OfflineConfig.enabled = true;
         final bloc = MockRevenueBloc();
@@ -101,9 +100,9 @@ void main() {
           () => bloc.add(
             any(
               that: isA<WatchRevenuesEvent>().having(
-                (e) => e.source,
-                'source',
-                isNull,
+                (e) => e.scope,
+                'scope',
+                const AnalyticsScope.all(),
               ),
             ),
           ),
