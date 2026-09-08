@@ -1,14 +1,22 @@
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/widgets/filters/scope_chips.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
-import 'package:farm_tracker/features/farm/presentation/widgets/enterprise_picker.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+/// Unified Farm Costs: one row per season (plant) or herd (animal), scoped
+/// by the shared [ScopeChips] selection held in [AnalysisBloc]. Rows are
+/// grouped into Active / Completed sections (spec 2026-09-08 D3) so nothing
+/// is hidden behind a picker.
 class TotalCostsBySeasonPage extends StatefulWidget {
   const TotalCostsBySeasonPage({super.key});
 
@@ -17,149 +25,130 @@ class TotalCostsBySeasonPage extends StatefulWidget {
 }
 
 class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
-  Enterprise? _selected;
-
   @override
   void initState() {
     super.initState();
-    context.read<SeasonBloc>().add(GetSeasonsEvent());
-    context.read<HerdBloc>().add(GetHerdsEvent());
-  }
-
-  List<Enterprise> _buildEnterprises(BuildContext context) {
-    final seasons = context.watch<SeasonBloc>().state.seasons;
-    final herds = context.watch<HerdBloc>().state.herds;
-    return [
-      for (final season in seasons)
-        Enterprise(
-          id: season.id,
-          kind: EnterpriseKind.season,
-          name: season.name,
-          startDate: season.startDate,
-          endDate: season.endDate,
-        ),
-      for (final herd in herds)
-        Enterprise(
-          id: herd.id,
-          kind: EnterpriseKind.herd,
-          name: herd.name,
-          startDate: herd.startDate,
-          endDate: herd.endDate,
-        ),
-    ];
-  }
-
-  bool _matchesSelected(CostDetail detail) {
-    final selected = _selected;
-    if (selected == null) {
-      return detail.endDate == null || detail.endDate!.isAfter(DateTime.now());
+    context.read<AnalysisBloc>().add(const LoadTotalCostsBySeason());
+    if (OfflineConfig.enabled) {
+      context.read<LandBloc>().add(WatchLandsEvent());
+      context.read<HerdBloc>().add(WatchHerdsEvent());
+    } else {
+      context.read<LandBloc>().add(GetLandsEvent());
+      context.read<HerdBloc>().add(GetHerdsEvent());
     }
-    final expectedType = selected.kind == EnterpriseKind.season
-        ? 'plant'
-        : 'animal';
-    return detail.type == expectedType && detail.id.toString() == selected.id;
+  }
+
+  Future<void> _refresh() async {
+    final bloc = context.read<AnalysisBloc>()
+      ..add(const LoadTotalCostsBySeason(forceRefresh: true));
+    // orElse: a closed stream (or one that never emits again) must not
+    // throw out of a pull-to-refresh / retry gesture.
+    await bloc.stream.firstWhere(
+      (s) => !s.detailedCosts.isLoading,
+      orElse: () => bloc.state,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final lands = context.watch<LandBloc>().state.lands;
+    final herds = context.watch<HerdBloc>().state.herds;
     return Scaffold(
       appBar: AppBar(title: const Text('Unified Farm Costs')),
-      body: BlocBuilder<AnalysisBloc, AnalysisState>(
+      body: BlocConsumer<AnalysisBloc, AnalysisState>(
+        listenWhen: (previous, current) =>
+            current.detailedCosts.error != null &&
+            current.detailedCosts.data != null &&
+            previous.detailedCosts.error != current.detailedCosts.error,
+        listener: (context, state) => ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(AppSnackBar.error(context, state.detailedCosts.error!)),
         builder: (context, state) {
-          if (state.detailedCosts.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state.detailedCosts.error != null) {
-            return RefreshIndicator(
-              onRefresh: () async {
-                context.read<AnalysisBloc>().add(
-                  const LoadTotalCostsBySeason(),
-                );
-              },
-              child: ListView(
-                children: [
-                  SizedBox(height: MediaQuery.of(context).size.height * 0.3),
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          state.detailedCosts.error!,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            context.read<AnalysisBloc>().add(
-                              const LoadTotalCostsBySeason(),
-                            );
-                          },
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
+          final slice = state.detailedCosts;
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: ScopeChips(
+                  scope: state.scope,
+                  lands: lands,
+                  herds: herds,
+                  onChanged: (scope) => context.read<AnalysisBloc>().add(
+                    AnalysisScopeChanged(scope),
                   ),
-                ],
+                ),
               ),
-            );
-          } else if (state.detailedCosts.data != null) {
-            final data = state.detailedCosts.data!;
-            if (data.details.isEmpty) {
-              return const Center(child: Text('No cost data available'));
-            }
-
-            final visibleDetails = data.details
-                .where(_matchesSelected)
-                .toList();
-
-            return Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                  child: EnterprisePicker(
-                    enterprises: _buildEnterprises(context),
-                    selected: _selected,
-                    onChanged: (value) => setState(() => _selected = value),
-                  ),
-                ),
-                Expanded(
-                  child: visibleDetails.isEmpty
-                      ? const Center(
-                          child: Text('No cost data for this selection'),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: () async {
-                            context.read<AnalysisBloc>().add(
-                              const LoadTotalCostsBySeason(),
-                            );
-                          },
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            itemCount: visibleDetails.length,
-                            itemBuilder: (context, index) {
-                              final detail = visibleDetails[index];
-                              return _buildCostDetailItem(context, detail);
-                            },
-                          ),
-                        ),
-                ),
-              ],
-            );
-          }
-          return const Center(child: Text('No data loaded'));
+              if (slice.isLoading && slice.data != null)
+                const LinearProgressIndicator(minHeight: 2),
+              Expanded(child: _body(context, slice)),
+            ],
+          );
         },
       ),
     );
   }
+
+  Widget _body(BuildContext context, AnalysisSlice<FarmDetailedCost> slice) {
+    if (slice.data == null) {
+      if (slice.isLoading) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (slice.error != null) {
+        return EntityErrorView(message: slice.error!, onRetry: _refresh);
+      }
+      return const SizedBox.shrink();
+    }
+    final details = slice.data!.details;
+    if (details.isEmpty) {
+      return const EntityEmptyView(
+        icon: Icons.attach_money,
+        title: 'No cost data for this selection',
+        subtitle: 'Costs appear here once inputs or activities are recorded.',
+      );
+    }
+    final now = DateTime.now();
+    bool isActive(CostDetail d) => d.endDate == null || d.endDate!.isAfter(now);
+    final active = details.where(isActive).toList();
+    final completed = details.where((d) => !isActive(d)).toList();
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          if (active.isNotEmpty) ...[
+            _header(context, 'Active (${active.length})'),
+            _list(active),
+          ],
+          if (completed.isNotEmpty) ...[
+            _header(context, 'Completed (${completed.length})'),
+            _list(completed),
+          ],
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ],
+      ),
+    );
+  }
+
+  Widget _header(BuildContext context, String text) => SliverToBoxAdapter(
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ),
+  );
+
+  Widget _list(List<CostDetail> rows) => SliverPadding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    sliver: SliverList.builder(
+      itemCount: rows.length,
+      itemBuilder: (context, i) => _buildCostDetailItem(context, rows[i]),
+    ),
+  );
 
   Widget _buildCostDetailItem(BuildContext context, CostDetail detail) {
     final isPlant = detail.type.toLowerCase() == 'plant';

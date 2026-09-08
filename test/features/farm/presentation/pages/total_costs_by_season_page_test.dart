@@ -1,137 +1,167 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
-import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
-import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/analytics/total_costs_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
 class MockAnalysisBloc extends MockBloc<AnalysisEvent, AnalysisState>
     implements AnalysisBloc {}
 
-class MockSeasonBloc extends MockBloc<SeasonEvent, SeasonState>
-    implements SeasonBloc {}
+class MockLandBloc extends MockBloc<LandEvent, LandState> implements LandBloc {}
 
 class MockHerdBloc extends MockBloc<HerdEvent, HerdState> implements HerdBloc {}
 
+CostDetail _detail(String name, {required String type, DateTime? end}) =>
+    CostDetail(
+      type: type,
+      id: name.hashCode,
+      name: name,
+      category: 'c',
+      location: 'l',
+      startDate: DateTime(2025),
+      endDate: end,
+      inputCost: 1,
+      activityCost: 1,
+      totalCost: 2,
+    );
+
 void main() {
+  setUpAll(() {
+    registerFallbackValue(const LoadTotalCostsBySeason());
+    registerFallbackValue(GetLandsEvent());
+    registerFallbackValue(GetHerdsEvent());
+  });
+
+  late MockAnalysisBloc analysis;
+  late MockLandBloc lands;
+  late MockHerdBloc herds;
+
+  Widget wrap() => MaterialApp(
+    home: MultiBlocProvider(
+      providers: [
+        BlocProvider<AnalysisBloc>.value(value: analysis),
+        BlocProvider<LandBloc>.value(value: lands),
+        BlocProvider<HerdBloc>.value(value: herds),
+      ],
+      child: const TotalCostsBySeasonPage(),
+    ),
+  );
+
+  setUp(() {
+    analysis = MockAnalysisBloc();
+    lands = MockLandBloc();
+    herds = MockHerdBloc();
+    final land = Land(
+      id: 'l1',
+      userId: 'u',
+      name: 'Shamba A',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    whenListen(
+      lands,
+      Stream<LandState>.value(LandLoaded(lands: [land])),
+      initialState: LandLoaded(lands: [land]),
+    );
+    whenListen(
+      herds,
+      Stream<HerdState>.value(const HerdLoaded([])),
+      initialState: const HerdLoaded([]),
+    );
+  });
+
   testWidgets(
-    'defaults to Active-only and lets the farmer filter to one season',
+    'loads on mount, renders chips, and groups rows into Active / Completed',
     (tester) async {
-      final analysisBloc = MockAnalysisBloc();
-      final seasonBloc = MockSeasonBloc();
-      final herdBloc = MockHerdBloc();
-
-      final season = Season(
-        id: '1',
-        userId: 'u1',
-        name: 'Long Rains 2026',
-        plantId: 'p1',
-        landId: 'l1',
-        startDate: DateTime(2026, 3),
-        createdAt: DateTime(2026, 3),
-        updatedAt: DateTime(2026, 3),
-      );
-      final closedHerd = Herd(
-        id: '2',
-        userId: 'u1',
-        name: 'Broiler Batch 1',
-        animalTypeId: 'a1',
-        location: 'Coop A',
-        initialHeadCount: 100,
-        currentHeadCount: 0,
-        startDate: DateTime(2025),
-        endDate: DateTime(2025, 2),
-        createdAt: DateTime(2025),
-        updatedAt: DateTime(2025, 2),
-      );
-
-      final detailedCosts = FarmDetailedCost(
-        details: [
-          CostDetail(
-            type: 'plant',
-            id: 1,
-            name: 'Long Rains 2026',
-            category: 'Maize',
-            location: 'Field A',
-            startDate: DateTime(2026, 3),
-            inputCost: 500,
-            activityCost: 200,
-            totalCost: 700,
-          ),
-          CostDetail(
-            type: 'animal',
-            id: 2,
-            name: 'Broiler Batch 1',
-            category: 'Broilers',
-            location: 'Coop A',
-            startDate: DateTime(2025),
-            endDate: DateTime(2025, 2),
-            inputCost: 300,
-            activityCost: 100,
-            totalCost: 400,
-          ),
-        ],
-      );
-
-      whenListen(
-        analysisBloc,
-        Stream<AnalysisState>.value(
-          AnalysisState(detailedCosts: AnalysisSlice(data: detailedCosts)),
-        ),
-        initialState: AnalysisState(
-          detailedCosts: AnalysisSlice(data: detailedCosts),
-        ),
-      );
-      whenListen(
-        seasonBloc,
-        Stream<SeasonState>.value(SeasonLoaded(seasons: [season])),
-        initialState: SeasonLoaded(seasons: [season]),
-      );
-      whenListen(
-        herdBloc,
-        Stream<HerdState>.value(HerdLoaded([closedHerd])),
-        initialState: HerdLoaded([closedHerd]),
-      );
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MultiBlocProvider(
-            providers: [
-              BlocProvider<AnalysisBloc>.value(value: analysisBloc),
-              BlocProvider<SeasonBloc>.value(value: seasonBloc),
-              BlocProvider<HerdBloc>.value(value: herdBloc),
+      final state = AnalysisState(
+        detailedCosts: AnalysisSlice(
+          data: FarmDetailedCost(
+            details: [
+              _detail('Long Rains 2026', type: 'plant'),
+              _detail('Broilers 2025', type: 'animal', end: DateTime(2025, 2)),
             ],
-            child: const TotalCostsBySeasonPage(),
           ),
+          loadedFor: const AnalyticsScope.all(),
         ),
       );
+      whenListen(
+        analysis,
+        Stream<AnalysisState>.value(state),
+        initialState: state,
+      );
+
+      await tester.pumpWidget(wrap());
       await tester.pump();
 
-      // Default "All Active" hides the closed broiler batch.
+      verify(
+        () => analysis.add(any(that: isA<LoadTotalCostsBySeason>())),
+      ).called(1);
+      expect(find.text('All'), findsOneWidget);
+      expect(find.text('Active (1)'), findsOneWidget);
+      expect(find.text('Completed (1)'), findsOneWidget);
       expect(find.text('Long Rains 2026'), findsOneWidget);
-      expect(find.text('Broiler Batch 1'), findsNothing);
-
-      // Opening the picker and selecting the closed herd (from Completed)
-      // shows only that herd's row.
-      await tester.tap(find.text('All Active Seasons/Herds'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('COMPLETED (1)'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Broiler Batch 1').last);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Long Rains 2026'), findsNothing);
-      // Appears twice: once as the picker button's label, once as the card title.
-      expect(find.text('Broiler Batch 1'), findsNWidgets(2));
+      expect(find.text('Broilers 2025'), findsOneWidget);
     },
   );
+
+  testWidgets('tapping Plants then a land dispatches AnalysisScopeChanged', (
+    tester,
+  ) async {
+    const plants = AnalyticsScope.source(ScopeSource.plant);
+    const s0 = AnalysisState(
+      detailedCosts: AnalysisSlice(data: FarmDetailedCost(details: [])),
+    );
+    whenListen(
+      analysis,
+      Stream<AnalysisState>.fromIterable([s0, s0.copyWith(scope: plants)]),
+      initialState: s0,
+    );
+
+    await tester.pumpWidget(wrap());
+    await tester.pump();
+    await tester.tap(find.text('Plants'));
+    verify(() => analysis.add(const AnalysisScopeChanged(plants))).called(1);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Shamba A'));
+    verify(
+      () => analysis.add(const AnalysisScopeChanged(AnalyticsScope.land('l1'))),
+    ).called(1);
+  });
+
+  testWidgets('error with no data shows the kit error view with retry', (
+    tester,
+  ) async {
+    const state = AnalysisState(detailedCosts: AnalysisSlice(error: 'boom'));
+    whenListen(
+      analysis,
+      Stream<AnalysisState>.value(state),
+      initialState: state,
+    );
+    await tester.pumpWidget(wrap());
+    await tester.pump();
+    expect(find.text('boom'), findsOneWidget);
+    await tester.tap(find.text('Try Again'));
+    verify(
+      () => analysis.add(
+        any(
+          that: isA<LoadTotalCostsBySeason>().having(
+            (e) => e.forceRefresh,
+            'forceRefresh',
+            isTrue,
+          ),
+        ),
+      ),
+    ).called(1);
+  });
 }
