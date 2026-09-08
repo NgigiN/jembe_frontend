@@ -1,13 +1,22 @@
+import 'package:farm_tracker/core/offline/offline_config.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
+import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/core/widgets/filters/scope_chips.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
-import 'package:farm_tracker/features/farm/presentation/widgets/enterprise_picker.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/land_event.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/analytics/breakdown_grouping.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+/// Cost Breakdown by Input Type, scoped by the shared [ScopeChips] selection
+/// in [AnalysisBloc]. Rows arrive per (input type × season/herd) and are
+/// grouped client-side by input type — one expandable header per type.
 class CostBreakdownPage extends StatefulWidget {
   const CostBreakdownPage({super.key});
 
@@ -16,149 +25,129 @@ class CostBreakdownPage extends StatefulWidget {
 }
 
 class _CostBreakdownPageState extends State<CostBreakdownPage> {
-  Enterprise? _selected;
-
   @override
   void initState() {
     super.initState();
-    context.read<SeasonBloc>().add(GetSeasonsEvent());
-    context.read<HerdBloc>().add(GetHerdsEvent());
-  }
-
-  List<Enterprise> _buildEnterprises(BuildContext context) {
-    final seasons = context.watch<SeasonBloc>().state.seasons;
-    final herds = context.watch<HerdBloc>().state.herds;
-    return [
-      for (final season in seasons)
-        Enterprise(
-          id: season.id,
-          kind: EnterpriseKind.season,
-          name: season.name,
-          startDate: season.startDate,
-          endDate: season.endDate,
-        ),
-      for (final herd in herds)
-        Enterprise(
-          id: herd.id,
-          kind: EnterpriseKind.herd,
-          name: herd.name,
-          startDate: herd.startDate,
-          endDate: herd.endDate,
-        ),
-    ];
-  }
-
-  bool _matchesSelected(CostBreakdown row, List<Enterprise> enterprises) {
-    final selected = _selected;
-    if (selected == null) {
-      if (row.originId == null) return true;
-      final match = enterprises.where((e) => e.id == row.originId).firstOrNull;
-      return match?.isActive ?? true;
+    context.read<AnalysisBloc>().add(const LoadCostBreakdown());
+    if (OfflineConfig.enabled) {
+      context.read<LandBloc>().add(WatchLandsEvent());
+      context.read<HerdBloc>().add(WatchHerdsEvent());
+    } else {
+      context.read<LandBloc>().add(GetLandsEvent());
+      context.read<HerdBloc>().add(GetHerdsEvent());
     }
-    final expectedType = selected.kind == EnterpriseKind.season
-        ? 'season'
-        : 'herd';
-    return row.originType == expectedType && row.originId == selected.id;
+  }
+
+  Future<void> _refresh() async {
+    final bloc = context.read<AnalysisBloc>()
+      ..add(const LoadCostBreakdown(forceRefresh: true));
+    await bloc.stream.firstWhere(
+      (s) => !s.breakdowns.isLoading,
+      orElse: () => bloc.state,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final enterprises = _buildEnterprises(context);
-
+    final lands = context.watch<LandBloc>().state.lands;
+    final herds = context.watch<HerdBloc>().state.herds;
     return Scaffold(
       appBar: AppBar(title: const Text('Cost Breakdown by Input Type')),
-      body: BlocBuilder<AnalysisBloc, AnalysisState>(
+      body: BlocConsumer<AnalysisBloc, AnalysisState>(
+        listenWhen: (previous, current) =>
+            current.breakdowns.error != null &&
+            current.breakdowns.data != null &&
+            previous.breakdowns.error != current.breakdowns.error,
+        listener: (context, state) => ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(AppSnackBar.error(context, state.breakdowns.error!)),
         builder: (context, state) {
-          if (state.breakdowns.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state.breakdowns.error != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.error,
+          final slice = state.breakdowns;
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: ScopeChips(
+                  scope: state.scope,
+                  lands: lands,
+                  herds: herds,
+                  onChanged: (scope) => context.read<AnalysisBloc>().add(
+                    AnalysisScopeChanged(scope),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    state.breakdowns.error!,
-                    style: const TextStyle(fontSize: 16),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                ),
               ),
-            );
-          } else if (state.breakdowns.data != null) {
-            final breakdowns = state.breakdowns.data!;
-            if (breakdowns.isEmpty) {
-              return const Center(child: Text('No data available'));
-            }
-
-            final visible = breakdowns
-                .where((row) => _matchesSelected(row, enterprises))
-                .toList();
-
-            return Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: EnterprisePicker(
-                    enterprises: enterprises,
-                    selected: _selected,
-                    onChanged: (value) => setState(() => _selected = value),
-                  ),
-                ),
-                Expanded(
-                  child: visible.isEmpty
-                      ? const Center(
-                          child: Text('No cost data for this selection'),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: visible.length,
-                          itemBuilder: (context, index) {
-                            final breakdown = visible[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              child: ListTile(
-                                title: Text(
-                                  breakdown.category,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Origin: ${breakdown.origin}'),
-                                    Text('Type: ${breakdown.type}'),
-                                    Text(
-                                      'Percentage: ${breakdown.percentage.toStringAsFixed(1)}%',
-                                    ),
-                                  ],
-                                ),
-                                trailing: Text(
-                                  'KES ${breakdown.totalCost.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
-            );
-          }
-          return const Center(child: Text('No data loaded'));
+              if (slice.isLoading && slice.data != null)
+                const LinearProgressIndicator(minHeight: 2),
+              Expanded(child: _body(context, slice)),
+            ],
+          );
         },
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context, AnalysisSlice<List<CostBreakdown>> slice) {
+    if (slice.data == null) {
+      if (slice.isLoading) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (slice.error != null) {
+        return EntityErrorView(message: slice.error!, onRetry: _refresh);
+      }
+      return const SizedBox.shrink();
+    }
+    final groups = groupBreakdowns(slice.data!);
+    if (groups.isEmpty) {
+      return const EntityEmptyView(
+        icon: Icons.pie_chart_outline,
+        title: 'No cost data for this selection',
+        subtitle: 'Record inputs or activities to see a breakdown.',
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        itemCount: groups.length,
+        itemBuilder: (context, i) => _groupTile(context, groups[i]),
+      ),
+    );
+  }
+
+  Widget _groupTile(BuildContext context, BreakdownGroup group) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ExpansionTile(
+        title: Text(
+          group.category,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text('${group.percentage.toStringAsFixed(1)}%'),
+        trailing: Text(
+          'KES ${group.totalCost.toStringAsFixed(0)}',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: scheme.onSurface,
+          ),
+        ),
+        children: [
+          for (final origin in group.origins)
+            ListTile(
+              dense: true,
+              leading: Icon(
+                origin.type == 'plant' ? Icons.grass : Icons.pets,
+                color: origin.type == 'plant'
+                    ? AppColors.plantCategory
+                    : AppColors.animalCategory,
+                size: 20,
+              ),
+              title: Text(origin.origin),
+              trailing: Text('KES ${origin.totalCost.toStringAsFixed(2)}'),
+            ),
+        ],
       ),
     );
   }
