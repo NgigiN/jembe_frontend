@@ -2,7 +2,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:farm_tracker/features/auth/domain/entities/user.dart';
 import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
-import 'package:farm_tracker/features/farm/presentation/pages/analysis_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/analytics/annual_summary_page.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_event.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_state.dart';

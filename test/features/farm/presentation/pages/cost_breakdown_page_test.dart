@@ -8,7 +8,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
-import 'package:farm_tracker/features/farm/presentation/pages/analysis_page.dart';
+import 'package:farm_tracker/features/farm/presentation/pages/analytics/cost_breakdown_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
