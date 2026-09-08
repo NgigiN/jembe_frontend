@@ -5,6 +5,7 @@ import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/constants/list_pagination.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
+import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/revenue_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/revenue_bloc.dart';
@@ -37,6 +38,10 @@ void main() {
 
   late MockRevenueRepository mockRepository;
 
+  setUpAll(() {
+    registerFallbackValue(const AnalyticsScope.all());
+  });
+
   setUp(() {
     mockRepository = MockRevenueRepository();
   });
@@ -54,7 +59,7 @@ void main() {
       build: () {
         when(
           () => mockRepository.getRevenues(
-            source: any(named: 'source'),
+            scope: any(named: 'scope'),
             startDate: any(named: 'startDate'),
             endDate: any(named: 'endDate'),
             limit: any(named: 'limit'),
@@ -102,11 +107,10 @@ void main() {
         isA<RevenueLoading>(),
         isA<RevenueAdded>()
             .having((s) => s.revenue.id, 'revenue.id', 'revenue-2')
-            .having(
-              (s) => s.revenues.map((r) => r.id),
-              'revenues',
-              ['revenue-1', 'revenue-2'],
-            ),
+            .having((s) => s.revenues.map((r) => r.id), 'revenues', [
+              'revenue-1',
+              'revenue-2',
+            ]),
       ],
     );
   });
@@ -125,7 +129,36 @@ void main() {
         );
         return buildBloc();
       },
-      act: (bloc) => bloc.add(WatchRevenuesEvent(source: 'plant')),
+      act: (bloc) => bloc.add(
+        WatchRevenuesEvent(
+          scope: const AnalyticsScope.source(ScopeSource.plant),
+        ),
+      ),
+      wait: const Duration(milliseconds: 50),
+      expect: () => [
+        RevenueLoaded(revenues: [revenue(id: 'r-plant')]),
+      ],
+    );
+
+    blocTest<RevenueBloc, RevenueState>(
+      'flag ON: a land scope filters the cached stream through '
+      'seasonIdsOnLand',
+      setUp: () => OfflineConfig.enabled = true,
+      build: () {
+        when(() => mockRepository.watchRevenues()).thenAnswer(
+          (_) => Stream.value([
+            revenue(id: 'r-plant'), // sourceId server-season-1
+            revenue(id: 'r-animal', source: 'animal'),
+          ]),
+        );
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(
+        WatchRevenuesEvent(
+          scope: const AnalyticsScope.land('l1'),
+          seasonIdsOnLand: const {'server-season-1'},
+        ),
+      ),
       wait: const Duration(milliseconds: 50),
       expect: () => [
         RevenueLoaded(revenues: [revenue(id: 'r-plant')]),
@@ -169,14 +202,24 @@ void main() {
         return buildBloc();
       },
       act: (bloc) async {
-        bloc.add(WatchRevenuesEvent(source: 'plant'));
+        bloc.add(
+          WatchRevenuesEvent(
+            scope: const AnalyticsScope.source(ScopeSource.plant),
+          ),
+        );
         await Future<void>.delayed(const Duration(milliseconds: 20));
-        bloc.add(WatchRevenuesEvent(source: 'animal'));
+        bloc.add(
+          WatchRevenuesEvent(
+            scope: const AnalyticsScope.source(ScopeSource.animal),
+          ),
+        );
       },
       wait: const Duration(milliseconds: 50),
       expect: () => [
         RevenueLoaded(revenues: [revenue(id: 'r-plant')]),
-        RevenueLoaded(revenues: [revenue(id: 'r-animal', source: 'animal')]),
+        RevenueLoaded(
+          revenues: [revenue(id: 'r-animal', source: 'animal')],
+        ),
       ],
       verify: (_) {
         verify(() => mockRepository.watchRevenues()).called(1);
@@ -331,8 +374,9 @@ void main() {
       'stays alive for a later emission',
       setUp: () => OfflineConfig.enabled = true,
       build: () {
-        when(() => mockRepository.watchRevenues())
-            .thenAnswer((_) => controller.stream);
+        when(
+          () => mockRepository.watchRevenues(),
+        ).thenAnswer((_) => controller.stream);
         return buildBloc();
       },
       seed: () => RevenueLoaded(revenues: [revenue()]),
@@ -361,22 +405,23 @@ void main() {
       build: () {
         when(
           () => mockRepository.getRevenues(
-            source: any(named: 'source'),
+            scope: any(named: 'scope'),
             startDate: any(named: 'startDate'),
             endDate: any(named: 'endDate'),
             limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
           ),
-        ).thenAnswer(
-          (_) async => Right([revenue(id: '3'), revenue(id: '2')]),
-        );
+        ).thenAnswer((_) async => Right([revenue(id: '3'), revenue(id: '2')]));
         return buildBloc();
       },
       act: (bloc) => bloc.add(LoadRevenues()),
       expect: () => [
         const RevenueLoading(),
         RevenueLoaded(
-          revenues: [revenue(id: '3'), revenue(id: '2')],
+          revenues: [
+            revenue(id: '3'),
+            revenue(id: '2'),
+          ],
           nextCursor: 2,
         ),
       ],
@@ -393,7 +438,7 @@ void main() {
       verify: (_) {
         verifyNever(
           () => mockRepository.getRevenues(
-            source: any(named: 'source'),
+            scope: any(named: 'scope'),
             startDate: any(named: 'startDate'),
             endDate: any(named: 'endDate'),
             limit: any(named: 'limit'),
@@ -414,7 +459,7 @@ void main() {
         final page2 = [revenue(id: '500'), revenue(id: '499')];
         when(
           () => mockRepository.getRevenues(
-            source: any(named: 'source'),
+            scope: any(named: 'scope'),
             startDate: any(named: 'startDate'),
             endDate: any(named: 'endDate'),
             limit: any(named: 'limit'),
@@ -435,20 +480,26 @@ void main() {
       expect: () => [
         const RevenueLoading(),
         isA<RevenueLoaded>()
-            .having((s) => s.revenues.length, 'page 1 length',
-                kOnlineListPageSize)
+            .having(
+              (s) => s.revenues.length,
+              'page 1 length',
+              kOnlineListPageSize,
+            )
             .having((s) => s.hasReachedMax, 'hasReachedMax', false)
             .having((s) => s.nextCursor, 'nextCursor', 501),
         isA<RevenueLoaded>()
-            .having((s) => s.revenues.length, 'appended length',
-                kOnlineListPageSize + 2)
+            .having(
+              (s) => s.revenues.length,
+              'appended length',
+              kOnlineListPageSize + 2,
+            )
             .having((s) => s.hasReachedMax, 'hasReachedMax', true)
             .having((s) => s.nextCursor, 'nextCursor', 499),
       ],
       verify: (_) {
         verify(
           () => mockRepository.getRevenues(
-            source: any(named: 'source'),
+            scope: any(named: 'scope'),
             startDate: any(named: 'startDate'),
             endDate: any(named: 'endDate'),
             limit: any(named: 'limit'),

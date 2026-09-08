@@ -3,20 +3,21 @@ import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/features/farm/data/models/revenue_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 
 abstract class RevenueRemoteDataSource {
   /// Fetches revenues matching the given filters, or — when [updatedSince]
   /// is given — only those the server has changed strictly after that
   /// instant (used by the sync pull phase, which passes ONLY
-  /// [updatedSince], never [source]/[startDate]/[endDate]). Existing
-  /// filtered callers (the flag-off repo path) are unaffected.
+  /// [updatedSince]; [scope] stays farm-wide there). [scope] is sent as the
+  /// server's `source` / `land_id` / `herd_id` params (spec 2026-09-08 §3.1).
   ///
   /// [limit] caps the page size (server default & max is 500) and [cursor]
   /// pages backward through the newest-first list — the server returns rows
   /// with `id < cursor`. Both are used ONLY by the online infinite-scroll
   /// list path (P3-02a); the sync pull passes neither.
   Future<List<RevenueModel>> getRevenues({
-    String? source,
+    AnalyticsScope scope = const AnalyticsScope.all(),
     DateTime? startDate,
     DateTime? endDate,
     DateTime? updatedSince,
@@ -35,7 +36,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
 
   @override
   Future<List<RevenueModel>> getRevenues({
-    String? source,
+    AnalyticsScope scope = const AnalyticsScope.all(),
     DateTime? startDate,
     DateTime? endDate,
     DateTime? updatedSince,
@@ -43,10 +44,7 @@ class RevenueRemoteDataSourceImpl implements RevenueRemoteDataSource {
     int? cursor,
   }) async {
     try {
-      final queryParams = <String, dynamic>{};
-      if (source != null) {
-        queryParams['source'] = source;
-      }
+      final queryParams = <String, dynamic>{...scope.toQueryParams()};
       if (startDate != null) {
         queryParams['start_date'] = startDate.toIso8601String().split('T')[0];
       }

@@ -1,13 +1,19 @@
 import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
 
 abstract class RevenueRepository {
+  /// [scope] narrows by source / land / herd (spec 2026-09-08 §3.1). Online it
+  /// travels to the server; offline it is applied in memory, where a LAND
+  /// scope needs [seasonIdsOnLand] — the season ids belonging to that land,
+  /// resolved by the caller from `SeasonBloc` (ignored online).
   /// [limit]/[cursor] drive the online infinite-scroll list path (P3-02a):
   /// they are threaded through only when the offline flag is off. The offline
   /// (`watchRevenues`) path ignores them — it mirrors the whole local store.
   Future<Either<Failure, List<Revenue>>> getRevenues({
-    String? source,
+    AnalyticsScope scope = const AnalyticsScope.all(),
+    Set<String> seasonIdsOnLand = const {},
     DateTime? startDate,
     DateTime? endDate,
     int? limit,
