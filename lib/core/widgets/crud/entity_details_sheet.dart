@@ -47,7 +47,9 @@ class EntityDetailsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        // Matches entity_form_sheet.dart: one tier above the page's
+        // `surface` so the sheet visibly lifts off the page behind it.
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: const EdgeInsets.all(24),

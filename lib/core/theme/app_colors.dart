@@ -13,70 +13,63 @@ class AppColors {
   static const Color textBlack = Colors.black87;
   static const Color textGrey = Colors.grey;
 
-  // Material 3 Light Color Scheme
-  static final ColorScheme lightColorScheme = ColorScheme(
-    brightness: Brightness.light,
-    
+  // Material 3 Light Color Scheme. Seeded via ColorScheme.fromSeed so the
+  // full surface family (surfaceContainerLow/Container/High/Highest,
+  // outline, surfaceTint, ...) is generated as a harmonized tonal palette
+  // instead of hand-picked flat greys, then the brand's explicit role
+  // colors are layered on top with copyWith. Only used when the platform
+  // has no Material You dynamic color to offer (see main.dart) - dynamic
+  // color takes over the whole scheme, generated surfaces included, when
+  // it's available.
+  static final ColorScheme lightColorScheme = ColorScheme.fromSeed(
+    seedColor: primaryGreen,
+  ).copyWith(
     primary: primaryGreen.shade600,
     onPrimary: Colors.white,
     primaryContainer: primaryGreen.shade100,
     onPrimaryContainer: primaryGreen.shade900,
-    
+
     secondary: primaryPurple.shade600,
     onSecondary: Colors.white,
     secondaryContainer: primaryPurple.shade100,
     onSecondaryContainer: primaryPurple.shade900,
-    
+
     tertiary: primaryBlue.shade600,
     onTertiary: Colors.white,
     tertiaryContainer: primaryBlue.shade100,
     onTertiaryContainer: primaryBlue.shade900,
-    
+
     error: errorRed,
     onError: Colors.white,
     errorContainer: errorRed.shade100,
     onErrorContainer: errorRed.shade900,
-
-    surface: Colors.white,
-    onSurface: textBlack,
-    surfaceContainerHighest: Colors.grey.shade100,
-    onSurfaceVariant: Colors.grey.shade700,
-    
-    outline: Colors.grey.shade400,
-    outlineVariant: Colors.grey.shade200,
   );
 
-  // Material 3 Dark Color Scheme
-  static final ColorScheme darkColorScheme = ColorScheme(
+  // Material 3 Dark Color Scheme. See lightColorScheme above for why this
+  // is seed-generated rather than flat literals.
+  static final ColorScheme darkColorScheme = ColorScheme.fromSeed(
+    seedColor: primaryGreen,
     brightness: Brightness.dark,
-    
+  ).copyWith(
     primary: primaryGreen.shade400,
     onPrimary: Colors.black,
     primaryContainer: primaryGreen.shade800,
     onPrimaryContainer: primaryGreen.shade100,
-    
+
     secondary: primaryPurple.shade300,
     onSecondary: Colors.black,
     secondaryContainer: primaryPurple.shade800,
     onSecondaryContainer: primaryPurple.shade100,
-    
+
     tertiary: primaryBlue.shade300,
     onTertiary: Colors.black,
     tertiaryContainer: primaryBlue.shade800,
     onTertiaryContainer: primaryBlue.shade100,
-    
+
     error: errorRed.shade400,
     onError: Colors.black,
     errorContainer: errorRed.shade900,
     onErrorContainer: errorRed.shade200,
-
-    surface: const Color(0xFF1E1E1E),
-    onSurface: Colors.white70,
-    surfaceContainerHighest: const Color(0xFF2C2C2C),
-    onSurfaceVariant: Colors.white54,
-    
-    outline: Colors.grey.shade600,
-    outlineVariant: Colors.grey.shade800,
   );
 
   // Semantic Categories

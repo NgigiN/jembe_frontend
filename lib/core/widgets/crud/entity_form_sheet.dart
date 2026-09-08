@@ -65,7 +65,10 @@ class EntityFormSheet {
         curve: Curves.easeOut,
         height: height,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          // One tier above the page's `surface` so the sheet visibly lifts
+          // off the list behind it instead of blending into the same flat
+          // tone.
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         // Gives any ListTile/InkWell inside child a Material ancestor that

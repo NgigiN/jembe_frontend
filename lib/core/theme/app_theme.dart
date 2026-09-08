@@ -29,15 +29,12 @@ class AppTheme {
         ),
       ),
       cardTheme: CardThemeData(
-        elevation: 2,
+        color: colorScheme.surfaceContainer,
+        elevation: 1,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         clipBehavior: Clip.antiAlias,
       ),
-      inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        filled: true,
-        fillColor: colorScheme.surfaceContainerHighest,
-      ),
+      inputDecorationTheme: _inputDecorationTheme(colorScheme),
       extensions: [
         StatusColors(
           positive: AppColors.primaryGreen.shade700,
@@ -76,16 +73,12 @@ class AppTheme {
         ),
       ),
       cardTheme: CardThemeData(
-        color: colorScheme.surfaceContainerHighest,
-        elevation: 4,
+        color: colorScheme.surfaceContainer,
+        elevation: 1,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         clipBehavior: Clip.antiAlias,
       ),
-      inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        filled: true,
-        fillColor: colorScheme.surfaceContainerHighest,
-      ),
+      inputDecorationTheme: _inputDecorationTheme(colorScheme),
       extensions: [
         StatusColors(
           positive: AppColors.primaryGreen.shade300,
@@ -93,6 +86,29 @@ class AppTheme {
           negative: AppColors.errorRed.shade300,
         ),
       ],
+    );
+  }
+
+  // Shared by both themes: fields sit one tier above cards
+  // (surfaceContainerHighest vs. surfaceContainer) so they read as the
+  // "top" interactive layer, and carry an explicit accent-colored focus
+  // border instead of relying on Flutter's neutral default - a flat
+  // unfocused-looking field is exactly what read as "grey" before this.
+  static InputDecorationTheme _inputDecorationTheme(ColorScheme colorScheme) {
+    OutlineInputBorder border(Color color, {double width = 1}) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: color, width: width),
+        );
+
+    return InputDecorationTheme(
+      filled: true,
+      fillColor: colorScheme.surfaceContainerHighest,
+      border: border(colorScheme.outlineVariant),
+      enabledBorder: border(colorScheme.outlineVariant),
+      focusedBorder: border(colorScheme.primary, width: 2),
+      errorBorder: border(colorScheme.error),
+      focusedErrorBorder: border(colorScheme.error, width: 2),
     );
   }
 }
