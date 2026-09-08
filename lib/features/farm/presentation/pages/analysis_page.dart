@@ -147,12 +147,12 @@ class AnalysisPage extends StatelessWidget {
   }
 
   void _showTotalCostsBySeason(BuildContext context) {
-    context.read<AnalysisBloc>().add(LoadTotalCostsBySeason());
+    context.read<AnalysisBloc>().add(const LoadTotalCostsBySeason());
     context.push(AppRoutePath.totalCosts);
   }
 
   void _showCostBreakdown(BuildContext context) {
-    context.read<AnalysisBloc>().add(LoadCostBreakdown());
+    context.read<AnalysisBloc>().add(const LoadCostBreakdown());
     context.push(AppRoutePath.costBreakdown);
   }
 
@@ -165,8 +165,7 @@ class TotalCostsBySeasonPage extends StatefulWidget {
   const TotalCostsBySeasonPage({super.key});
 
   @override
-  State<TotalCostsBySeasonPage> createState() =>
-      _TotalCostsBySeasonPageState();
+  State<TotalCostsBySeasonPage> createState() => _TotalCostsBySeasonPageState();
 }
 
 class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
@@ -207,8 +206,9 @@ class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
     if (selected == null) {
       return detail.endDate == null || detail.endDate!.isAfter(DateTime.now());
     }
-    final expectedType =
-        selected.kind == EnterpriseKind.season ? 'plant' : 'animal';
+    final expectedType = selected.kind == EnterpriseKind.season
+        ? 'plant'
+        : 'animal';
     return detail.type == expectedType && detail.id.toString() == selected.id;
   }
 
@@ -218,12 +218,14 @@ class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
       appBar: AppBar(title: const Text('Unified Farm Costs')),
       body: BlocBuilder<AnalysisBloc, AnalysisState>(
         builder: (context, state) {
-          if (state.isLoading) {
+          if (state.detailedCosts.isLoading) {
             return const Center(child: CircularProgressIndicator());
-          } else if (state.error != null) {
+          } else if (state.detailedCosts.error != null) {
             return RefreshIndicator(
               onRefresh: () async {
-                context.read<AnalysisBloc>().add(LoadTotalCostsBySeason());
+                context.read<AnalysisBloc>().add(
+                  const LoadTotalCostsBySeason(),
+                );
               },
               child: ListView(
                 children: [
@@ -239,7 +241,7 @@ class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          state.error!,
+                          state.detailedCosts.error!,
                           style: Theme.of(context).textTheme.bodyLarge,
                           textAlign: TextAlign.center,
                         ),
@@ -247,7 +249,7 @@ class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
                         ElevatedButton(
                           onPressed: () {
                             context.read<AnalysisBloc>().add(
-                              LoadTotalCostsBySeason(),
+                              const LoadTotalCostsBySeason(),
                             );
                           },
                           child: const Text('Retry'),
@@ -258,13 +260,15 @@ class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
                 ],
               ),
             );
-          } else if (state.detailedCosts != null) {
-            final data = state.detailedCosts!;
+          } else if (state.detailedCosts.data != null) {
+            final data = state.detailedCosts.data!;
             if (data.details.isEmpty) {
               return const Center(child: Text('No cost data available'));
             }
 
-            final visibleDetails = data.details.where(_matchesSelected).toList();
+            final visibleDetails = data.details
+                .where(_matchesSelected)
+                .toList();
 
             return Column(
               children: [
@@ -284,7 +288,7 @@ class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
                       : RefreshIndicator(
                           onRefresh: () async {
                             context.read<AnalysisBloc>().add(
-                              LoadTotalCostsBySeason(),
+                              const LoadTotalCostsBySeason(),
                             );
                           },
                           child: ListView.builder(
@@ -311,8 +315,9 @@ class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
 
   Widget _buildCostDetailItem(BuildContext context, CostDetail detail) {
     final isPlant = detail.type.toLowerCase() == 'plant';
-    final itemColor =
-        isPlant ? AppColors.plantCategory : AppColors.animalCategory;
+    final itemColor = isPlant
+        ? AppColors.plantCategory
+        : AppColors.animalCategory;
     final icon = isPlant ? Icons.grass : Icons.pets;
 
     return Card(
@@ -461,8 +466,9 @@ class _CostBreakdownPageState extends State<CostBreakdownPage> {
       final match = enterprises.where((e) => e.id == row.originId).firstOrNull;
       return match?.isActive ?? true;
     }
-    final expectedType =
-        selected.kind == EnterpriseKind.season ? 'season' : 'herd';
+    final expectedType = selected.kind == EnterpriseKind.season
+        ? 'season'
+        : 'herd';
     return row.originType == expectedType && row.originId == selected.id;
   }
 
@@ -474,9 +480,9 @@ class _CostBreakdownPageState extends State<CostBreakdownPage> {
       appBar: AppBar(title: const Text('Cost Breakdown by Input Type')),
       body: BlocBuilder<AnalysisBloc, AnalysisState>(
         builder: (context, state) {
-          if (state.isLoading) {
+          if (state.breakdowns.isLoading) {
             return const Center(child: CircularProgressIndicator());
-          } else if (state.error != null) {
+          } else if (state.breakdowns.error != null) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -488,15 +494,15 @@ class _CostBreakdownPageState extends State<CostBreakdownPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    state.error!,
+                    state.breakdowns.error!,
                     style: const TextStyle(fontSize: 16),
                     textAlign: TextAlign.center,
                   ),
                 ],
               ),
             );
-          } else if (state.breakdowns != null) {
-            final breakdowns = state.breakdowns!;
+          } else if (state.breakdowns.data != null) {
+            final breakdowns = state.breakdowns.data!;
             if (breakdowns.isEmpty) {
               return const Center(child: Text('No data available'));
             }
@@ -549,7 +555,9 @@ class _CostBreakdownPageState extends State<CostBreakdownPage> {
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                   ),
                                 ),
                               ),
@@ -618,9 +626,9 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
 
           return BlocBuilder<AnalysisBloc, AnalysisState>(
             builder: (context, state) {
-              if (state.isLoading) {
+              if (state.summaries.isLoading) {
                 return const Center(child: CircularProgressIndicator());
-              } else if (state.error != null) {
+              } else if (state.summaries.error != null) {
                 // Keep the year switcher live even on error - the request
                 // that failed is scoped to farmYear, so the user can still
                 // page to a different year instead of getting stuck on a
@@ -660,7 +668,7 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              state.error!,
+                              state.summaries.error!,
                               style: Theme.of(context).textTheme.bodyLarge,
                               textAlign: TextAlign.center,
                             ),
@@ -682,11 +690,11 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
                     ],
                   ),
                 );
-              } else if (state.summaries != null) {
+              } else if (state.summaries.data != null) {
                 // Sort summaries by month string (e.g. "2026-01")
-                final sortedSummaries =
-                    List<MonthlySummary>.from(state.summaries!)
-                      ..sort((a, b) => a.month.compareTo(b.month));
+                final sortedSummaries = List<MonthlySummary>.from(
+                  state.summaries.data!,
+                )..sort((a, b) => a.month.compareTo(b.month));
 
                 return RefreshIndicator(
                   onRefresh: () async {
@@ -935,10 +943,11 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: (isProfit
-                            ? context.statusColors.positive
-                            : context.statusColors.negative)
-                        .withValues(alpha: 0.1),
+                    color:
+                        (isProfit
+                                ? context.statusColors.positive
+                                : context.statusColors.negative)
+                            .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -1202,9 +1211,9 @@ class _StreakPageState extends State<StreakPage> {
                 const SizedBox(height: 24),
                 Text(
                   'Herd & season activity',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 for (final entry in result.breakdown)
@@ -1265,9 +1274,9 @@ class _StreakPageState extends State<StreakPage> {
               children: [
                 Text(
                   '$weeklyStreak-week streak',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   "You've logged something every week for the last "
@@ -1298,8 +1307,8 @@ class _StreakPageState extends State<StreakPage> {
     final statusColor = days == null
         ? Theme.of(context).colorScheme.onSurfaceVariant
         : (isFresh
-            ? context.statusColors.positive
-            : context.statusColors.negative);
+              ? context.statusColors.positive
+              : context.statusColors.negative);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),

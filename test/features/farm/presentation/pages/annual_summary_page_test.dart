@@ -32,7 +32,7 @@ MonthlySummary _summary(String month, double revenue, double costs) {
 
 void main() {
   setUpAll(() {
-    registerFallbackValue(LoadTotalCostsBySeason());
+    registerFallbackValue(const LoadTotalCostsBySeason());
   });
 
   testWidgets(
@@ -62,9 +62,11 @@ void main() {
       whenListen(
         analysisBloc,
         Stream<AnalysisState>.value(
-          AnalysisState(summaries: [decSummary]),
+          AnalysisState(summaries: AnalysisSlice(data: [decSummary])),
         ),
-        initialState: AnalysisState(summaries: [decSummary]),
+        initialState: AnalysisState(
+          summaries: AnalysisSlice(data: [decSummary]),
+        ),
       );
 
       await tester.pumpWidget(
@@ -86,9 +88,7 @@ void main() {
       expect(find.textContaining('/'), findsWidgets);
 
       verify(
-        () => analysisBloc.add(
-          any(that: isA<LoadAnnualCostSummary>()),
-        ),
+        () => analysisBloc.add(any(that: isA<LoadAnnualCostSummary>())),
       ).called(greaterThanOrEqualTo(1));
 
       // Tap previous — should dispatch another LoadAnnualCostSummary.
@@ -98,9 +98,7 @@ void main() {
       await tester.pump();
 
       verify(
-        () => analysisBloc.add(
-          any(that: isA<LoadAnnualCostSummary>()),
-        ),
+        () => analysisBloc.add(any(that: isA<LoadAnnualCostSummary>())),
       ).called(1);
     },
   );
@@ -131,11 +129,15 @@ void main() {
         analysisBloc,
         Stream<AnalysisState>.value(
           const AnalysisState(
-            error: 'Something went wrong. Please try again.',
+            summaries: AnalysisSlice(
+              error: 'Something went wrong. Please try again.',
+            ),
           ),
         ),
         initialState: const AnalysisState(
-          error: 'Something went wrong. Please try again.',
+          summaries: AnalysisSlice(
+            error: 'Something went wrong. Please try again.',
+          ),
         ),
       );
 
@@ -164,18 +166,14 @@ void main() {
       // Consume the initial-mount dispatch so the check below only counts
       // the one triggered by the tap (mocktail's verify resets on each call).
       verify(
-        () => analysisBloc.add(
-          any(that: isA<LoadAnnualCostSummary>()),
-        ),
+        () => analysisBloc.add(any(that: isA<LoadAnnualCostSummary>())),
       ).called(greaterThanOrEqualTo(1));
 
       await tester.tap(find.byIcon(Icons.chevron_left));
       await tester.pump();
 
       verify(
-        () => analysisBloc.add(
-          any(that: isA<LoadAnnualCostSummary>()),
-        ),
+        () => analysisBloc.add(any(that: isA<LoadAnnualCostSummary>())),
       ).called(1);
     },
   );
