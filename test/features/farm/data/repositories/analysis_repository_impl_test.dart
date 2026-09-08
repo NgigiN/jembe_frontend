@@ -5,6 +5,7 @@ import 'package:farm_tracker/features/farm/data/models/cost_breakdown_model.dart
 import 'package:farm_tracker/features/farm/data/models/farm_detailed_cost_model.dart';
 import 'package:farm_tracker/features/farm/data/models/monthly_summary_model.dart';
 import 'package:farm_tracker/features/farm/data/repositories/analysis_repository_impl.dart';
+import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class FakeAnalysisRemoteDataSource implements AnalysisRemoteDataSource {
@@ -12,7 +13,9 @@ class FakeAnalysisRemoteDataSource implements AnalysisRemoteDataSource {
   Exception? throwOnTotalCosts;
 
   @override
-  Future<List<CostBreakdownModel>> getCostBreakdownByInputType() async {
+  Future<List<CostBreakdownModel>> getCostBreakdownByInputType(
+    AnalyticsScope scope,
+  ) async {
     if (throwOnCostBreakdown != null) throw throwOnCostBreakdown!;
     return const [
       CostBreakdownModel(
@@ -28,7 +31,9 @@ class FakeAnalysisRemoteDataSource implements AnalysisRemoteDataSource {
   }
 
   @override
-  Future<FarmDetailedCostModel> getTotalCostsBySeason() async {
+  Future<FarmDetailedCostModel> getTotalCostsBySeason(
+    AnalyticsScope scope,
+  ) async {
     if (throwOnTotalCosts != null) throw throwOnTotalCosts!;
     return const FarmDetailedCostModel(details: []);
   }
@@ -37,6 +42,7 @@ class FakeAnalysisRemoteDataSource implements AnalysisRemoteDataSource {
   Future<List<MonthlySummaryModel>> getAnnualCostSummary(
     DateTime startDate,
     DateTime endDate,
+    AnalyticsScope scope,
   ) async {
     throw UnimplementedError();
   }
@@ -50,7 +56,9 @@ void main() {
         remoteDataSource: FakeAnalysisRemoteDataSource(),
       );
 
-      final result = await repository.getCostBreakdownByInputType();
+      final result = await repository.getCostBreakdownByInputType(
+        const AnalyticsScope.all(),
+      );
 
       final breakdowns = result.getOrElse(() => []);
       expect(breakdowns, hasLength(1));
@@ -60,56 +68,53 @@ void main() {
   );
 
   group('flag OFF error mapping (R2-02 net)', () {
-    test(
-      'getCostBreakdownByInputType: a NetworkException maps to '
-      'NetworkFailure',
-      () async {
-        final dataSource = FakeAnalysisRemoteDataSource()
-          ..throwOnCostBreakdown = NetworkException();
-        final repository = AnalysisRepositoryImpl(remoteDataSource: dataSource);
+    test('getCostBreakdownByInputType: a NetworkException maps to '
+        'NetworkFailure', () async {
+      final dataSource = FakeAnalysisRemoteDataSource()
+        ..throwOnCostBreakdown = NetworkException();
+      final repository = AnalysisRepositoryImpl(remoteDataSource: dataSource);
 
-        final result = await repository.getCostBreakdownByInputType();
+      final result = await repository.getCostBreakdownByInputType(
+        const AnalyticsScope.all(),
+      );
 
-        result.fold(
-          (failure) => expect(failure, isA<NetworkFailure>()),
-          (_) => fail('expected Left'),
-        );
-      },
-    );
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
 
-    test(
-      'getCostBreakdownByInputType: a ServerException(msg) maps to '
-      'ServerFailure(msg)',
-      () async {
-        final dataSource = FakeAnalysisRemoteDataSource()
-          ..throwOnCostBreakdown = const ServerException('boom');
-        final repository = AnalysisRepositoryImpl(remoteDataSource: dataSource);
+    test('getCostBreakdownByInputType: a ServerException(msg) maps to '
+        'ServerFailure(msg)', () async {
+      final dataSource = FakeAnalysisRemoteDataSource()
+        ..throwOnCostBreakdown = const ServerException('boom');
+      final repository = AnalysisRepositoryImpl(remoteDataSource: dataSource);
 
-        final result = await repository.getCostBreakdownByInputType();
+      final result = await repository.getCostBreakdownByInputType(
+        const AnalyticsScope.all(),
+      );
 
-        result.fold(
-          (failure) => expect((failure as ServerFailure).message, 'boom'),
-          (_) => fail('expected Left'),
-        );
-      },
-    );
+      result.fold(
+        (failure) => expect((failure as ServerFailure).message, 'boom'),
+        (_) => fail('expected Left'),
+      );
+    });
 
-    test(
-      'getCostBreakdownByInputType: an UnauthorizedException maps to '
-      'UnauthorizedFailure (F1-05/S4-C1)',
-      () async {
-        final dataSource = FakeAnalysisRemoteDataSource()
-          ..throwOnCostBreakdown = UnauthorizedException();
-        final repository = AnalysisRepositoryImpl(remoteDataSource: dataSource);
+    test('getCostBreakdownByInputType: an UnauthorizedException maps to '
+        'UnauthorizedFailure (F1-05/S4-C1)', () async {
+      final dataSource = FakeAnalysisRemoteDataSource()
+        ..throwOnCostBreakdown = UnauthorizedException();
+      final repository = AnalysisRepositoryImpl(remoteDataSource: dataSource);
 
-        final result = await repository.getCostBreakdownByInputType();
+      final result = await repository.getCostBreakdownByInputType(
+        const AnalyticsScope.all(),
+      );
 
-        result.fold(
-          (failure) => expect(failure, isA<UnauthorizedFailure>()),
-          (_) => fail('expected Left'),
-        );
-      },
-    );
+      result.fold(
+        (failure) => expect(failure, isA<UnauthorizedFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
 
     test(
       'getTotalCostsBySeason: a NetworkException maps to NetworkFailure',
@@ -118,7 +123,9 @@ void main() {
           ..throwOnTotalCosts = NetworkException();
         final repository = AnalysisRepositoryImpl(remoteDataSource: dataSource);
 
-        final result = await repository.getTotalCostsBySeason();
+        final result = await repository.getTotalCostsBySeason(
+          const AnalyticsScope.all(),
+        );
 
         result.fold(
           (failure) => expect(failure, isA<NetworkFailure>()),
@@ -127,45 +134,45 @@ void main() {
       },
     );
 
-    test(
-      'getTotalCostsBySeason: a ServerException(msg) maps to '
-      'ServerFailure(msg)',
-      () async {
-        final dataSource = FakeAnalysisRemoteDataSource()
-          ..throwOnTotalCosts = const ServerException('boom');
-        final repository = AnalysisRepositoryImpl(remoteDataSource: dataSource);
+    test('getTotalCostsBySeason: a ServerException(msg) maps to '
+        'ServerFailure(msg)', () async {
+      final dataSource = FakeAnalysisRemoteDataSource()
+        ..throwOnTotalCosts = const ServerException('boom');
+      final repository = AnalysisRepositoryImpl(remoteDataSource: dataSource);
 
-        final result = await repository.getTotalCostsBySeason();
+      final result = await repository.getTotalCostsBySeason(
+        const AnalyticsScope.all(),
+      );
 
-        result.fold(
-          (failure) => expect((failure as ServerFailure).message, 'boom'),
-          (_) => fail('expected Left'),
-        );
-      },
-    );
+      result.fold(
+        (failure) => expect((failure as ServerFailure).message, 'boom'),
+        (_) => fail('expected Left'),
+      );
+    });
 
-    test(
-      'getTotalCostsBySeason: an UnauthorizedException maps to '
-      'UnauthorizedFailure (F1-05/S4-C1)',
-      () async {
-        final dataSource = FakeAnalysisRemoteDataSource()
-          ..throwOnTotalCosts = UnauthorizedException();
-        final repository = AnalysisRepositoryImpl(remoteDataSource: dataSource);
+    test('getTotalCostsBySeason: an UnauthorizedException maps to '
+        'UnauthorizedFailure (F1-05/S4-C1)', () async {
+      final dataSource = FakeAnalysisRemoteDataSource()
+        ..throwOnTotalCosts = UnauthorizedException();
+      final repository = AnalysisRepositoryImpl(remoteDataSource: dataSource);
 
-        final result = await repository.getTotalCostsBySeason();
+      final result = await repository.getTotalCostsBySeason(
+        const AnalyticsScope.all(),
+      );
 
-        result.fold(
-          (failure) => expect(failure, isA<UnauthorizedFailure>()),
-          (_) => fail('expected Left'),
-        );
-      },
-    );
+      result.fold(
+        (failure) => expect(failure, isA<UnauthorizedFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
 
     test('a successful getTotalCostsBySeason maps to Right', () async {
       final dataSource = FakeAnalysisRemoteDataSource();
       final repository = AnalysisRepositoryImpl(remoteDataSource: dataSource);
 
-      final result = await repository.getTotalCostsBySeason();
+      final result = await repository.getTotalCostsBySeason(
+        const AnalyticsScope.all(),
+      );
 
       expect(result.isRight(), isTrue);
     });

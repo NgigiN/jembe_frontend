@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:farm_tracker/core/error/failures.dart';
+import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
 import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
@@ -19,13 +20,16 @@ class FakeAnalysisRepository implements AnalysisRepository {
   Either<Failure, List<MonthlySummary>>? annualSummaryResult;
 
   @override
-  Future<Either<Failure, FarmDetailedCost>> getTotalCostsBySeason() async {
+  Future<Either<Failure, FarmDetailedCost>> getTotalCostsBySeason(
+    AnalyticsScope scope,
+  ) async {
     return totalCostsResult ?? const Left(ServerFailure('not stubbed'));
   }
 
   @override
-  Future<Either<Failure, List<CostBreakdown>>>
-      getCostBreakdownByInputType() async {
+  Future<Either<Failure, List<CostBreakdown>>> getCostBreakdownByInputType(
+    AnalyticsScope scope,
+  ) async {
     return breakdownResult ?? const Left(ServerFailure('not stubbed'));
   }
 
@@ -33,6 +37,7 @@ class FakeAnalysisRepository implements AnalysisRepository {
   Future<Either<Failure, List<MonthlySummary>>> getAnnualCostSummary(
     DateTime startDate,
     DateTime endDate,
+    AnalyticsScope scope,
   ) async {
     return annualSummaryResult ?? const Left(ServerFailure('not stubbed'));
   }
