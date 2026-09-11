@@ -3,217 +3,256 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Shamba+ — Farm Finance Made Simple</title>
-<meta name="description" content="Shamba+ helps Kenyan farmers track crops, livestock, income, and expenses in one place — so you always know where your farm stands.">
+<title>Shamba+ — Farm finance for Kenyan smallholders</title>
+<meta name="description" content="Shamba+ is an Android app that keeps your land, crops, seasons, harvests, livestock, costs and sales in one place, and shows what each season made or lost.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://shamba.samtama.lol/">
-<meta property="og:title" content="Shamba+ — Farm Finance Made Simple">
-<meta property="og:description" content="Track crops, livestock, income, and expenses in one place. Secure, simple farm record-keeping for Kenyan farmers.">
-<meta property="og:image" content="https://shamba.samtama.lol/assets/hero.jpg">
-<meta property="og:image:type" content="image/jpeg">
-<meta property="og:image:width" content="1168">
-<meta property="og:image:height" content="784">
-<meta property="og:image:alt" content="Shamba+ — Farm Finance Made Simple. Secure, Grow, Sustain.">
+<meta property="og:title" content="Shamba+ — Farm finance for Kenyan smallholders">
+<meta property="og:description" content="Keep your land, crops, seasons, harvests, livestock, costs and sales in one place, and see what each season made or lost.">
+<meta property="og:image" content="https://shamba.samtama.lol/assets/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Shamba+ — Know what your farm actually earns.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://shamba.samtama.lol/">
 <meta property="og:site_name" content="Shamba+">
 <meta property="og:locale" content="en_KE">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Shamba+ — Farm Finance Made Simple">
-<meta name="twitter:description" content="Shamba+ helps Kenyan farmers track crops, livestock, income, and expenses in one place — so you always know where your farm stands.">
-<meta name="twitter:image" content="https://shamba.samtama.lol/assets/hero.jpg">
-<meta name="twitter:image:alt" content="Shamba+ — Farm Finance Made Simple. Secure, Grow, Sustain.">
-<meta name="theme-color" content="#f7f5f0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#14170f" media="(prefers-color-scheme: dark)">
+<meta name="twitter:title" content="Shamba+ — Farm finance for Kenyan smallholders">
+<meta name="twitter:description" content="Keep your land, crops, seasons, harvests, livestock, costs and sales in one place, and see what each season made or lost.">
+<meta name="twitter:image" content="https://shamba.samtama.lol/assets/og.png">
+<meta name="twitter:image:alt" content="Shamba+ — Know what your farm actually earns.">
+<meta name="theme-color" content="#ffffff">
 <link rel="icon" href="/assets/logo.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preload" href="/assets/fonts/Fraunces-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/WorkSans-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/styles.css">
 <script type="application/ld+json">
-[
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "Shamba+",
-    "url": "https://shamba.samtama.lol/"
-  },
-  {
-    "@context": "https://schema.org",
-    "@type": "MobileApplication",
-    "name": "Shamba+",
-    "description": "Shamba+ helps Kenyan farmers track crops, livestock, income, and expenses in one place — so you always know where your farm stands.",
-    "url": "https://shamba.samtama.lol/",
-    "operatingSystem": "Android",
-    "applicationCategory": "FinanceApplication",
-    "inLanguage": "en",
-    "author": {
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
       "@type": "Organization",
-      "name": "SaMTama"
+      "@id": "https://shamba.samtama.lol/#org",
+      "name": "samTama",
+      "url": "https://shamba.samtama.lol/",
+      "logo": "https://shamba.samtama.lol/assets/logo.png",
+      "email": "ngigi.nyongo@gmail.com",
+      "address": { "@type": "PostalAddress", "addressCountry": "KE" },
+      "founder": { "@id": "https://shamba.samtama.lol/#maker" },
+      "sameAs": ["https://github.com/NgigiN", "https://portfolio.samtama.lol"]
+    },
+    {
+      "@type": "Person",
+      "@id": "https://shamba.samtama.lol/#maker",
+      "name": "Samuel Ngigi",
+      "jobTitle": "Founder",
+      "worksFor": { "@id": "https://shamba.samtama.lol/#org" },
+      "sameAs": ["https://github.com/NgigiN", "https://portfolio.samtama.lol"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://shamba.samtama.lol/#site",
+      "name": "Shamba+",
+      "url": "https://shamba.samtama.lol/",
+      "publisher": { "@id": "https://shamba.samtama.lol/#org" }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://shamba.samtama.lol/#app",
+      "name": "Shamba+",
+      "description": "Shamba+ is an Android app that keeps your land, crops, seasons, harvests, livestock, costs and sales in one place, and shows what each season made or lost.",
+      "url": "https://shamba.samtama.lol/",
+      "operatingSystem": "Android",
+      "applicationCategory": "FinanceApplication",
+      "inLanguage": "en",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KES" },
+      "author": { "@id": "https://shamba.samtama.lol/#org" }
     }
-  }
-]
+  ]
+}
 </script>
 </head>
 <body>
 <header class="nav">
   <div class="wrap nav-inner">
     <a class="brand" href="/#top">
-      <img class="mark-img" src="/assets/logo.png" width="36" height="36" alt="">
+      <img class="mark-img" src="/assets/logo.png" width="32" height="32" alt="">
       <span class="name">Shamba+</span>
     </a>
     <nav aria-label="Primary">
-      <a href="#about">About</a>
-      <a href="#how-it-works">How It Works</a>
-      <a href="#features">Features</a>
-      <a href="#who-its-for">Who It's For</a>
+      <a href="#what">What it does</a>
+      <a href="#how">How it works</a>
+      <a href="/support/legal/privacy-policy.html">Privacy</a>
+      <a href="#maker">About</a>
+      <a class="btn btn-primary btn-sm" href="mailto:ngigi.nyongo@gmail.com?subject=Shamba%2B%20early%20access&body=Hi%20Samuel%2C%0A%0AI%27d%20like%20early%20access%20to%20Shamba%2B.%0A%0AMy%20county%3A%20%0AWhat%20I%20farm%3A%20">Request early access</a>
     </nav>
   </div>
 </header>
 
 <main id="top">
   <section class="hero wrap">
-    <span class="badge">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      Built for Kenyan Farmers
-    </span>
-    <h1>Shamba+</h1>
-    <p class="tagline">Farm Finance Made Simple</p>
-    <p class="lede">Shamba+ helps Kenyan farmers track crops, livestock, income, and expenses in one place — so you always know where your farm stands, and can make confident decisions about what's next.</p>
-    <div class="hero-actions">
-      <a href="#how-it-works" class="btn btn-primary">How It Works</a>
-      <a href="#about" class="btn btn-outline">About Shamba+</a>
+    <div class="hero-copy">
+      <p class="eyebrow">Farm finance for Kenyan smallholders</p>
+      <hr class="rule" aria-hidden="true">
+      <h1>Know what your farm actually earns.</h1>
+      <p class="lede">Shamba+ is an Android app that keeps your land, crops, seasons, harvests, livestock, costs and sales in one place, and shows what each season made or lost.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="mailto:ngigi.nyongo@gmail.com?subject=Shamba%2B%20early%20access&body=Hi%20Samuel%2C%0A%0AI%27d%20like%20early%20access%20to%20Shamba%2B.%0A%0AMy%20county%3A%20%0AWhat%20I%20farm%3A%20">Request early access</a>
+        <a class="link-arrow" href="#how">See how it works <span aria-hidden="true">→</span></a>
+      </div>
+      <p class="meta">Free during early access · Android · Built in Kenya</p>
     </div>
-    <img class="hero-image" src="/assets/hero.jpg" width="1168" height="784" alt="Shamba+ — Farm Finance Made Simple. Secure, Grow, Sustain.">
-  </section>
-
-  <div class="trust-strip" role="region" aria-label="Trust signals">
-    <div class="wrap">
-      <ul class="trust-items">
-        <li class="trust-item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          Google Secure Sign-In
-        </li>
-        <li class="trust-item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-          Crops, livestock & finances — one place
-        </li>
-        <li class="trust-item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
-          Encrypted, private records
-        </li>
-        <li class="trust-item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          Built for Kenyan smallholder farms
-        </li>
-      </ul>
-    </div>
-  </div>
-
-  <section id="about" class="about wrap">
-    <div class="about-card">
-      <h2>About Shamba+</h2>
-      <p>Most smallholder farms in Kenya run on paper notebooks, memory, and guesswork — it's hard to know whether a season was actually profitable, which crop or herd is pulling its weight, or where money is really going until it's too late to change course.</p>
-      <p>Shamba+ brings your farm's records into one place: land, crops, seasons and harvests; animals, herds, and their activity; every cost, input, and revenue entry. Instead of scattered notebooks, you get a clear, always-up-to-date picture of your farm's finances — so you can spot what's working, plan the next season with real numbers, and make decisions with confidence instead of guesswork.</p>
+    <div class="hero-visual">
+      <div class="device">
+        <img src="/assets/screens/analytics.png" width="1080" height="2400" fetchpriority="high" alt="Shamba+ Farm Analytics screen showing costs and revenue for a season">
+      </div>
     </div>
   </section>
 
-  <section id="how-it-works" class="wrap">
+  <p class="trust wrap"><span>No ads.</span> <a href="/support/legal/privacy-policy.html#third-parties">No trackers.</a> <a href="/support/legal/delete-account.html">Your records are yours to delete.</a></p>
+
+  <section id="what" class="section wrap">
     <div class="section-header">
-      <h2>How Shamba+ works</h2>
-      <p>From sign-in to season-end numbers, in four steps.</p>
+      <p class="eyebrow">What it does</p>
+      <h2>One record of the whole farm.</h2>
     </div>
-    <div class="steps">
-      <div class="step-card">
+    <div class="cards">
+      <div class="card">
+        <div class="icon-badge">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22V12"/><path d="M12 12c0-4 3-7 7-7 0 4-3 7-7 7z"/><path d="M12 15c0-3-2.5-5.5-6-5.5 0 3 2.5 5.5 6 5.5z"/></svg>
+        </div>
+        <h3>Crops and seasons</h3>
+        <p>Land, what's planted on it, each season, and every harvest weighed against what it cost to grow.</p>
+      </div>
+      <div class="card">
+        <div class="icon-badge">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14v6"/><path d="M20 14v6"/><path d="M8 12v8"/><path d="M16 12v8"/><path d="M3 10c1-4 4-6 9-6s8 2 9 6c-2 1-4 2-9 2s-7-1-9-2z"/></svg>
+        </div>
+        <h3>Animals and herds</h3>
+        <p>Every animal and herd, with activity, purchases and sales logged as they happen.</p>
+      </div>
+      <div class="card">
+        <div class="icon-badge">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        <h3>Money</h3>
+        <p>Costs, inputs, infrastructure and revenue, rolled up into cost breakdowns and season-by-season and annual summaries.</p>
+      </div>
+    </div>
+    <p class="quiet">Also inside: short farming tips, and Ask Us, where you send a question and get an answer back in the app.</p>
+  </section>
+
+  <section id="how" class="section wrap">
+    <div class="section-header">
+      <p class="eyebrow">How it works</p>
+      <h2>From sign-in to season-end numbers.</h2>
+    </div>
+    <div class="cards">
+      <div class="card">
         <span class="step-number">1</span>
         <div class="icon-badge">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
         </div>
         <h3>Sign in with Google</h3>
-        <p>One tap, no new password to create or remember.</p>
+        <p>One tap. No new password.</p>
       </div>
-      <div class="step-card">
+      <div class="card">
         <span class="step-number">2</span>
         <div class="icon-badge">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
         </div>
         <h3>Set up your farm</h3>
-        <p>Add your land, crops, seasons, and livestock.</p>
+        <p>Land, crops, seasons, animals, herds.</p>
       </div>
-      <div class="step-card">
+      <div class="card">
         <span class="step-number">3</span>
         <div class="icon-badge">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="20" x2="16" y2="8"/><polygon points="15 7 17 5 20 8 18 10"/><line x1="4" y1="20" x2="7" y2="19"/></svg>
         </div>
         <h3>Log as you go</h3>
-        <p>Record costs, inputs, harvests, and revenue as they happen.</p>
+        <p>Costs, inputs, harvests, sales, as they happen.</p>
       </div>
-      <div class="step-card">
+      <div class="card">
         <span class="step-number">4</span>
-        <div class="icon-badge">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-        </div>
-        <h3>See the full picture</h3>
-        <p>Track trends across seasons and know exactly where your farm stands.</p>
-      </div>
-    </div>
-  </section>
-
-  <section id="features" class="wrap">
-    <div class="section-header">
-      <h2>Why Shamba+</h2>
-    </div>
-    <div class="features">
-      <div class="feature-card">
-        <div class="icon-badge">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        </div>
-        <h3>Secure</h3>
-        <p>Google Sign-In and encrypted storage keep your farm and financial records safe — only you can access them.</p>
-      </div>
-      <div class="feature-card">
         <div class="icon-badge">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
         </div>
-        <h3>Grow</h3>
-        <p>Track crops, livestock, income, and expenses in one place, and see clear trends as your farm grows.</p>
-      </div>
-      <div class="feature-card">
-        <div class="icon-badge">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21 L12 11"/><path d="M12 11 L6 5 L4 9 L8 13 Z"/><path d="M12 11 L18 6 L20 10 L15 14 Z"/></svg>
-        </div>
-        <h3>Sustain</h3>
-        <p>Simple, data-backed record-keeping that helps you make better decisions season after season.</p>
+        <h3>See the full picture</h3>
+        <p>What each season, crop and herd made or lost.</p>
       </div>
     </div>
   </section>
 
-  <section id="who-its-for" class="wrap">
+  <section id="google" class="section wrap">
     <div class="section-header">
-      <h2>Who Shamba+ is for</h2>
+      <p class="eyebrow">Your Google account</p>
+      <h2>How Shamba+ uses your Google account</h2>
     </div>
-    <p>Shamba+ is built for Kenyan smallholder farmers — whether you grow crops, keep livestock, or run a mixed operation — who are ready to trade paper notebooks and guesswork for a clear, always-current record of how their farm is really doing.</p>
-    <ul class="chip-list">
-      <li class="chip">Crop farmers</li>
-      <li class="chip">Livestock keepers</li>
-      <li class="chip">Mixed farms</li>
-      <li class="chip">Family-run smallholdings</li>
-    </ul>
+    <div class="prose">
+      <p>Shamba+ uses Google Sign-In so you don't need another password. When you sign in, Google shares your name, email address and profile picture with Shamba+. We use them to create your account, show who is signed in, and contact you about your account if we ever need to. That is all.</p>
+      <p>Your Google data is never used for advertising, never sold, and never shared with anyone else. Shamba+'s use of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
+    </div>
+    <div class="links">
+      <a href="/support/legal/privacy-policy.html">Read the Privacy Policy</a>
+      <a href="/support/legal/delete-account.html">Delete your account</a>
+    </div>
+  </section>
+
+  <section id="maker" class="section wrap">
+    <div class="letter">
+      <p class="eyebrow">From the maker</p>
+      <p class="opening">I'm Samuel Ngigi, and I'm building Shamba+ from Kenya.</p>
+      <p>Most farms I know run on a notebook, memory and guesswork. Shamba+ exists so that at the end of a season you can see, in real numbers, what each crop and herd made or lost.</p>
+      <p>Shamba+ is independent. There are no investors, no ads, and no plan to sell your records to a lender or an input company. The only way it earns is by being useful enough that farmers keep it. If it isn't, write to me.</p>
+      <p class="signature">— Samuel Ngigi, <a href="mailto:ngigi.nyongo@gmail.com">ngigi.nyongo@gmail.com</a></p>
+    </div>
+  </section>
+
+  <section id="believe" class="section wrap">
+    <div class="section-header">
+      <p class="eyebrow">What we believe</p>
+      <h2>Three commitments.</h2>
+    </div>
+    <div class="beliefs">
+      <div class="belief"><p><strong>Your records are yours.</strong> You can delete them from inside the app at any time, and we will never sell them.</p></div>
+      <div class="belief"><p><strong>A farm is a business.</strong> Every season, crop and herd should be able to show what it made or lost.</p></div>
+      <div class="belief"><p><strong>It should work where the farm is.</strong> On an ordinary Android phone, on little data, and increasingly without signal.</p></div>
+    </div>
+  </section>
+
+  <section id="today" class="section wrap">
+    <div class="section-header">
+      <p class="eyebrow">Where we are</p>
+      <h2>Shamba+ today, and next.</h2>
+    </div>
+    <div class="today">
+      <div class="today-col">
+        <h3>Today</h3>
+        <p>Shamba+ runs on Android and is in closed testing with early-access farmers. Land, crops, seasons, harvests, animals, herds, inputs, infrastructure, revenue, costs, farm analytics, farming tips and Ask Us all work today.</p>
+      </div>
+      <div class="today-col">
+        <h3>Next</h3>
+        <p>Working fully offline, with changes syncing when you're back in signal. A public Google Play release.</p>
+      </div>
+    </div>
   </section>
 </main>
 
 <footer class="site-footer">
   <div class="wrap footer-inner">
     <a class="brand" href="/#top">
-      <img class="mark-img" src="/assets/logo.png" width="28" height="28" alt="">
+      <img class="mark-img" src="/assets/logo.png" width="24" height="24" alt="">
       <span class="name">Shamba+</span>
     </a>
     <nav class="footer-nav" aria-label="Legal">
       <a href="/support/legal/privacy-policy.html">Privacy Policy</a>
       <a href="/support/legal/terms-of-service.html">Terms of Service</a>
-      <a href="/support/legal/delete-account.html">Delete Account</a>
+      <a href="/support/legal/delete-account.html">Delete account</a>
+      <a href="mailto:ngigi.nyongo@gmail.com">ngigi.nyongo@gmail.com</a>
     </nav>
-    <p class="copyright">© 2026 Shamba+</p>
+    <p class="copyright">© 2026 samTama · Made in Kenya</p>
   </div>
 </footer>
 </body>
