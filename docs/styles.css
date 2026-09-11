@@ -132,7 +132,7 @@ a:hover { color: var(--accent-deep); }
 .hero-visual { display: flex; justify-content: center; }
 .device {
   width: min(300px, 80vw);
-  aspect-ratio: 9 / 19.5;
+  aspect-ratio: 1080 / 2125;
   border-radius: 36px;
   background: #111511;
   padding: 8px;
