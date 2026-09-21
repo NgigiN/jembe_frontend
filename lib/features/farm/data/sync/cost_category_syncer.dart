@@ -112,7 +112,7 @@ class CostCategorySyncer implements EntitySyncer {
     // UNFILTERED, no `updatedSince` — see class docs: this entity has no
     // timestamps to delta against, so every pull is a full re-fetch.
     final serverRows = await _remote.getCostCategories();
-    await _local.replaceAllFromServer(serverRows);
+    await _local.replaceAllFromServer(serverRows, farmId: farmId);
     return null;
   }
 }

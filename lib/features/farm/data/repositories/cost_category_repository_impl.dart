@@ -14,6 +14,7 @@ import 'package:farm_tracker/features/farm/data/datasources/cost_category_remote
 import 'package:farm_tracker/features/farm/data/models/cost_category_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/cost_category_repository.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 
 /// Live-HTTP (flag off) or local-first read-through cache (flag on)
 /// implementation of [CostCategoryRepository].
@@ -84,9 +85,12 @@ class CostCategoryRepositoryImpl
     String? category,
   }) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Right([]);
       final models = await local!.getCostCategories(
         type: type,
         category: category,
+        farmId: farmId,
       );
       return Right(models.map(_toCostCategory).toList());
     }
@@ -103,6 +107,8 @@ class CostCategoryRepositoryImpl
     required String category,
   }) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       final model = CostCategoryModel.create(
         name: name,
         type: type,
@@ -114,6 +120,7 @@ class CostCategoryRepositoryImpl
         model,
         jsonEncode(model.toJson()),
         OutboxOp.create,
+        farmId: farmId,
       );
       return const Right(true);
     }
@@ -130,8 +137,10 @@ class CostCategoryRepositoryImpl
   @override
   Future<Either<Failure, void>> deleteCostCategory(String id) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `id` is a clientUuid (presentation identity) — see class docs.
-      await stageDelete(local!, id);
+      await stageDelete(local!, id, farmId: farmId);
       return const Right(null);
     }
     return guard(

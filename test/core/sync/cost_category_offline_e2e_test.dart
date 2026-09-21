@@ -23,7 +23,9 @@ import 'package:farm_tracker/features/farm/data/datasources/cost_category_remote
 import 'package:farm_tracker/features/farm/data/models/cost_category_model.dart';
 import 'package:farm_tracker/features/farm/data/repositories/cost_category_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/sync/cost_category_syncer.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// In-memory fake "server" for the `cost_category` entity.
 ///
@@ -139,11 +141,15 @@ T _unwrap<T>(Either<Failure, T> result) {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late _Harness h;
 
-  setUp(() {
+  setUp(() async {
     h = _Harness();
     OfflineConfig.enabled = true;
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    await FarmStorageService.setCurrentFarmId(1);
   });
 
   tearDown(() async {

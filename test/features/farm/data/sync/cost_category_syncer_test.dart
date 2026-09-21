@@ -397,5 +397,19 @@ void main() {
         await expectLater(syncer.pull(null), throwsA(isA<ServerException>()));
       },
     );
+
+    test('pull threads farmId into replaceAllFromServer — another '
+        "farm's cache is untouched", () async {
+      await local.upsert(
+        CostCategoryModel.create(name: 'Other farm row', type: 'expense', category: 'input'),
+        pending: false,
+        farmId: 2,
+      );
+
+      await syncer.pull(null, farmId: 1);
+
+      final farm2Rows = await local.getCostCategories(farmId: 2);
+      expect(farm2Rows.map((c) => c.name), ['Other farm row']);
+    });
   });
 }

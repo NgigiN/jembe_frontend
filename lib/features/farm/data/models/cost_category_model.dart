@@ -130,6 +130,7 @@ class CostCategoryModel extends CostCategory implements SyncableModel {
   CostCategoriesCompanion toCompanion({
     required bool pending,
     bool deletedLocally = false,
+    int farmId = 1,
   }) {
     final now = DateTime.now();
     return CostCategoriesCompanion(
@@ -143,6 +144,7 @@ class CostCategoryModel extends CostCategory implements SyncableModel {
       updatedAt: Value(now),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 
