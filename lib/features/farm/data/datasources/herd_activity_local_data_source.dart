@@ -26,7 +26,7 @@ class HerdActivityLocalDataSource implements LocalSyncStore<HerdActivityModel> {
   Future<void> upsert(HerdActivityModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.herdActivities)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone. Part of the

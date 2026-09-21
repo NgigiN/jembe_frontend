@@ -14,6 +14,7 @@ import 'package:farm_tracker/features/farm/data/datasources/herd_activity_remote
 import 'package:farm_tracker/features/farm/data/models/herd_activity_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd_activity.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/herd_activity_repository.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 
 /// Live-HTTP (flag off) or local-first + outbox (flag on) implementation of
 /// [HerdActivityRepository].
@@ -69,6 +70,8 @@ class HerdActivityRepositoryImpl
     String? notes,
   ) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // herdId is passed through as-is here — this repository stages the
       // create locally with whatever id it's given (a synced herd's server
       // id or an unsynced herd's client_uuid). `HerdActivitySyncer.push`
@@ -87,6 +90,7 @@ class HerdActivityRepositoryImpl
         model,
         jsonEncode(model.toJson()),
         OutboxOp.create,
+        farmId: farmId,
       );
       return Right(model);
     }
