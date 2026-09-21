@@ -136,6 +136,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       if (OfflineConfig.enabled) {
         unawaited(di.sl<SyncEngine>().syncNow());
       }
+      // Farm-membership/role-change discovery (V2 sub-project 3, spec §7):
+      // catches an invite accepted or a role changed elsewhere mid-session,
+      // without waiting for the 24h session expiry to force a re-login.
+      // Unlike the sync trigger above, this is NOT gated on
+      // OfflineConfig.enabled — farms/roles are live today, independent of
+      // the (still dark) offline pipeline.
+      di.sl<FarmBloc>().add(RefreshFarms());
     }
   }
 
