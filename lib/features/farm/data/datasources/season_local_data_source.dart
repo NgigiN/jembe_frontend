@@ -39,7 +39,7 @@ class SeasonLocalDataSource implements LocalSyncStore<SeasonModel> {
   /// Inserts [model], or replaces the existing row sharing its
   /// `clientUuid` (the primary key) if one already exists.
   @override
-  Future<void> upsert(SeasonModel model, {required bool pending}) {
+  Future<void> upsert(SeasonModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.seasons)
         .insertOnConflictUpdate(model.toCompanion(pending: pending));

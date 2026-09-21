@@ -51,7 +51,7 @@ class CostCategoryLocalDataSource
   /// Inserts [model], or replaces the existing row sharing its `clientUuid`
   /// (the primary key) if one already exists.
   @override
-  Future<void> upsert(CostCategoryModel model, {required bool pending}) {
+  Future<void> upsert(CostCategoryModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.costCategories)
         .insertOnConflictUpdate(model.toCompanion(pending: pending));

@@ -143,7 +143,7 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
   static final DateTime _epoch = DateTime.utc(1970);
 
   @override
-  Future<DateTime?> pull(DateTime? since) async {
+  Future<DateTime?> pull(DateTime? since, {int farmId = 1}) async {
     // The backend's list endpoints serve TWO different orders depending on
     // whether `updated_since` is present: the display path (`id DESC`, used
     // when the query param is absent — i.e. when [getSince] is called with
@@ -173,7 +173,7 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
 
       DateTime? pageMax;
       for (final server in rows) {
-        await _applyPulledRow(server);
+        await _applyPulledRow(server, farmId);
         if (pageMax == null || server.syncUpdatedAt.isAfter(pageMax)) {
           pageMax = server.syncUpdatedAt;
         }
@@ -201,7 +201,7 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
 
   /// Applies one server row to the local mirror, honouring delete-wins and
   /// last-writer-wins over any conflicting local mutation.
-  Future<void> _applyPulledRow(M server) async {
+  Future<void> _applyPulledRow(M server, int farmId) async {
     final local = await _findLocal(server);
 
     // The row is keyed locally by `clientUuid` (the drift primary key).
@@ -221,7 +221,11 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
     }
 
     if (local == null) {
-      await _local.upsert(_withClientUuid(server, clientUuid), pending: false);
+      await _local.upsert(
+        _withClientUuid(server, clientUuid),
+        pending: false,
+        farmId: farmId,
+      );
       return;
     }
 
@@ -239,6 +243,7 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
         await _local.upsert(
           _withClientUuid(server, clientUuid),
           pending: false,
+          farmId: farmId,
         );
       }
       // Else: local is newer or equal — keep the local edit, skip.
@@ -246,7 +251,11 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
     }
 
     // Clean (not pending) local row — accept the server's version outright.
-    await _local.upsert(_withClientUuid(server, clientUuid), pending: false);
+    await _local.upsert(
+      _withClientUuid(server, clientUuid),
+      pending: false,
+      farmId: farmId,
+    );
   }
 
   /// Looks up the local row a pulled [server] row corresponds to: primarily

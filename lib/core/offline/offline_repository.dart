@@ -26,29 +26,33 @@ mixin OfflineRepositoryMixin {
   /// Flag-on CREATE/UPDATE plumbing: local upsert(pending:true) → outbox
   /// enqueue(op, payload) → fire-and-forget syncNow. Caller has already built
   /// [model] and its [payload] json and chosen [op] (create or update).
+  /// [farmId] defaults to `1` — see the plan's Global Constraints for why.
   Future<void> stageWrite<M extends SyncableModel>(
     LocalSyncStore<M> local,
     M model,
     String payload,
-    OutboxOp op,
-  ) async {
-    await local.upsert(model, pending: true);
+    OutboxOp op, {
+    int farmId = 1,
+  }) async {
+    await local.upsert(model, pending: true, farmId: farmId);
     await syncOutbox!.enqueue(OutboxIntent(
       op: op, entity: syncEntity,
-      clientUuid: model.syncClientUuid, payload: payload,
+      clientUuid: model.syncClientUuid, payload: payload, farmId: farmId,
     ));
     unawaited(syncEngine!.syncNow());
   }
 
   /// Flag-on DELETE plumbing: mark the local row a tombstone → enqueue a
-  /// delete intent (no payload) → fire-and-forget syncNow.
+  /// delete intent (no payload) → fire-and-forget syncNow. [farmId] defaults
+  /// to `1` — see the plan's Global Constraints for why.
   Future<void> stageDelete<M extends SyncableModel>(
     LocalSyncStore<M> local,
-    String clientUuid,
-  ) async {
+    String clientUuid, {
+    int farmId = 1,
+  }) async {
     await local.markDeleted(clientUuid);
     await syncOutbox!.enqueue(
-      OutboxIntent(op: OutboxOp.delete, entity: syncEntity, clientUuid: clientUuid),
+      OutboxIntent(op: OutboxOp.delete, entity: syncEntity, clientUuid: clientUuid, farmId: farmId),
     );
     unawaited(syncEngine!.syncNow());
   }

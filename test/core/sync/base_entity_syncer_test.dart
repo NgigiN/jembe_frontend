@@ -120,8 +120,11 @@ class _FakeLocal implements LocalSyncStore<_FakeModel> {
     return null;
   }
 
+  int? lastUpsertFarmId;
+
   @override
-  Future<void> upsert(_FakeModel model, {required bool pending}) async {
+  Future<void> upsert(_FakeModel model, {required bool pending, int farmId = 1}) async {
+    lastUpsertFarmId = farmId;
     byClientUuid[model.clientUuid] = model.copyWith(pending: pending);
   }
 
@@ -709,5 +712,25 @@ void main() {
         await expectLater(syncer.pull(null), throwsA(isA<ServerException>()));
       },
     );
+
+    test('pull threads the given farmId into every local upsert', () async {
+      remote.onGetSince = (since) => [
+        _FakeModel(clientUuid: 'x', updatedAt: DateTime.utc(2026, 2)),
+      ];
+
+      await syncer.pull(null, farmId: 42);
+
+      expect(local.lastUpsertFarmId, 42);
+    });
+
+    test('pull defaults to farmId 1 when not specified (back-compat)', () async {
+      remote.onGetSince = (since) => [
+        _FakeModel(clientUuid: 'x', updatedAt: DateTime.utc(2026, 2)),
+      ];
+
+      await syncer.pull(null);
+
+      expect(local.lastUpsertFarmId, 1);
+    });
   });
 }

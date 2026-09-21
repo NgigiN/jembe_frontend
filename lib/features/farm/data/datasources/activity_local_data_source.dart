@@ -49,7 +49,7 @@ class ActivityLocalDataSource implements LocalSyncStore<ActivityModel> {
   /// Inserts [model], or replaces the existing row sharing its
   /// `clientUuid` (the primary key) if one already exists.
   @override
-  Future<void> upsert(ActivityModel model, {required bool pending}) {
+  Future<void> upsert(ActivityModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.activities)
         .insertOnConflictUpdate(model.toCompanion(pending: pending));

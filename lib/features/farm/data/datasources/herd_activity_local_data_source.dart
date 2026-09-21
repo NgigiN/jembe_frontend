@@ -23,7 +23,7 @@ class HerdActivityLocalDataSource implements LocalSyncStore<HerdActivityModel> {
   /// Inserts [model], or replaces the existing row sharing its `clientUuid`
   /// (the primary key) if one already exists.
   @override
-  Future<void> upsert(HerdActivityModel model, {required bool pending}) {
+  Future<void> upsert(HerdActivityModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.herdActivities)
         .insertOnConflictUpdate(model.toCompanion(pending: pending));

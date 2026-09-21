@@ -40,7 +40,7 @@ class AnimalLocalDataSource implements LocalSyncStore<AnimalModel> {
   /// Inserts [model], or replaces the existing row sharing its
   /// `clientUuid` (the primary key) if one already exists.
   @override
-  Future<void> upsert(AnimalModel model, {required bool pending}) {
+  Future<void> upsert(AnimalModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.animals)
         .insertOnConflictUpdate(model.toCompanion(pending: pending));

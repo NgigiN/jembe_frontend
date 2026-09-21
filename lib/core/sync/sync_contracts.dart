@@ -81,9 +81,10 @@ abstract class LocalSyncStore<M> {
   /// The row with the given server [serverId], or `null`.
   Future<M?> getByServerId(String serverId);
 
-  /// Inserts [model], or replaces the row sharing its client uuid, writing the
-  /// given [pending] flag onto the row.
-  Future<void> upsert(M model, {required bool pending});
+  /// Inserts [model], or replaces the row sharing its client uuid, writing
+  /// the given [pending] flag and [farmId] onto the row. [farmId] defaults
+  /// to `1` — see the plan's Global Constraints for why.
+  Future<void> upsert(M model, {required bool pending, int farmId = 1});
 
   /// Physically removes the row for [clientUuid] (after a delete has synced).
   Future<void> hardDelete(String clientUuid);

@@ -39,7 +39,7 @@ class LandLocalDataSource implements LocalSyncStore<LandModel> {
   /// Inserts [model], or replaces the existing row sharing its
   /// `clientUuid` (the primary key) if one already exists.
   @override
-  Future<void> upsert(LandModel model, {required bool pending}) {
+  Future<void> upsert(LandModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.lands)
         .insertOnConflictUpdate(model.toCompanion(pending: pending));

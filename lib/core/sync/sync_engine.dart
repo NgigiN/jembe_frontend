@@ -60,6 +60,7 @@ class SyncEngine {
     Duration baseBackoff = const Duration(seconds: 1),
     Duration maxBackoff = const Duration(seconds: 60),
     Future<bool> Function()? isAuthenticated,
+    Future<int?> Function()? currentFarmId,
     void Function(Object error, StackTrace stackTrace)? onError,
     Map<String, LocalSyncStore<SyncableModel>> fkStores = const {},
   }) : _outbox = outbox,
@@ -71,11 +72,17 @@ class SyncEngine {
        _baseBackoff = baseBackoff,
        _maxBackoff = maxBackoff,
        _isAuthenticated = isAuthenticated ?? _defaultIsAuthenticated,
+       _currentFarmId = currentFarmId ?? _defaultCurrentFarmId,
        _onError = onError ?? _noopOnError,
        _fkStores = fkStores,
        _syncers = {for (final syncer in syncers) syncer.entity: syncer};
 
   static Future<bool> _defaultIsAuthenticated() async => true;
+
+  // Defaults to farmId 1 (see the plan's Global Constraints) — every
+  // pre-existing test that constructs a SyncEngine without a
+  // currentFarmId callback keeps behaving exactly as before.
+  static Future<int?> _defaultCurrentFarmId() async => 1;
 
   static void _noopOnError(Object error, StackTrace stackTrace) {}
 
@@ -89,6 +96,7 @@ class SyncEngine {
   final Duration _baseBackoff;
   final Duration _maxBackoff;
   final Future<bool> Function() _isAuthenticated;
+  final Future<int?> Function() _currentFarmId;
   final void Function(Object error, StackTrace stackTrace) _onError;
   final Map<String, LocalSyncStore<SyncableModel>> _fkStores;
 
@@ -187,6 +195,10 @@ class SyncEngine {
     var phase = SyncPhase.idle;
     DateTime? lastSyncedAt;
     var scheduleRetry = false;
+    // Resolved once the farm gate passes below; the error-path _emit calls
+    // after the try/catch need it too, so it's hoisted out here rather than
+    // left as a try-scoped local.
+    var resolvedFarmId = 1;
 
     try {
       final online = await _connectivity.isOnline();
@@ -206,11 +218,21 @@ class SyncEngine {
         return;
       }
 
-      await _emit(SyncPhase.syncing);
+      final farmId = await _currentFarmId();
+      if (farmId == null) {
+        // No current farm known yet (e.g. FarmBloc hasn't loaded on this
+        // very first pass) — no-op, same reasoning as the auth gate above:
+        // every trigger funnels through syncNow, so gating here is enough.
+        await _emit(SyncPhase.idle);
+        return;
+      }
+      resolvedFarmId = farmId;
 
-      final transientStop = await _pushPhase();
+      await _emit(SyncPhase.syncing, farmId: farmId);
+
+      final transientStop = await _pushPhase(farmId);
       if (!transientStop) {
-        await _pullPhase();
+        await _pullPhase(farmId);
       }
 
       if (transientStop) {
@@ -256,19 +278,20 @@ class SyncEngine {
     }
 
     if (phase == SyncPhase.error) {
-      await _emit(SyncPhase.error);
+      await _emit(SyncPhase.error, farmId: resolvedFarmId);
       if (scheduleRetry) {
         _scheduleRetry();
       }
     } else {
-      await _emit(SyncPhase.idle, lastSyncedAt: lastSyncedAt);
+      await _emit(SyncPhase.idle, lastSyncedAt: lastSyncedAt, farmId: resolvedFarmId);
     }
   }
 
-  /// Drains the outbox FIFO. Returns true if a transient failure stopped the
-  /// phase early (remaining entries left queued for the backoff retry).
-  Future<bool> _pushPhase() async {
-    final rows = await _outbox.peekAll();
+  /// Drains the outbox FIFO for [farmId]. Returns true if a transient
+  /// failure stopped the phase early (remaining entries left queued for the
+  /// backoff retry).
+  Future<bool> _pushPhase(int farmId) async {
+    final rows = await _outbox.peekAll(farmId: farmId);
     final resolver = FkResolver(_fkStores);
     for (final row in rows) {
       if (row.state != 'pending') continue;
@@ -297,7 +320,7 @@ class SyncEngine {
     return false;
   }
 
-  Future<void> _pullPhase() async {
+  Future<void> _pullPhase(int farmId) async {
     // Captured once, before any syncer's pull runs, so a successful-but-empty
     // pull can advance its cursor to a stable pass-wide timestamp below
     // (rather than each syncer racing wall-clock time independently).
@@ -306,13 +329,13 @@ class SyncEngine {
     // Snapshot cursors BEFORE pulling so deletions ask from the same point.
     final preCursors = <String, DateTime?>{};
     for (final syncer in _syncers.values) {
-      preCursors[syncer.entity] = await _cursors.get(syncer.entity);
+      preCursors[syncer.entity] = await _cursors.get(syncer.entity, farmId: farmId);
     }
 
     for (final syncer in _syncers.values) {
-      final newCursor = await syncer.pull(preCursors[syncer.entity]);
+      final newCursor = await syncer.pull(preCursors[syncer.entity], farmId: farmId);
       if (newCursor != null) {
-        await _cursors.set(syncer.entity, newCursor);
+        await _cursors.set(syncer.entity, newCursor, farmId: farmId);
       } else if (syncer.hasCursor) {
         // A cursor-bearing syncer's pull SUCCEEDED (we're past the `await`
         // inside this loop — an exception would have propagated out and
@@ -332,6 +355,7 @@ class SyncEngine {
         await _cursors.set(
           syncer.entity,
           passStart.subtract(const Duration(minutes: 2)),
+          farmId: farmId,
         );
       }
     }
@@ -402,10 +426,10 @@ class SyncEngine {
     return Duration(milliseconds: half + jitter);
   }
 
-  Future<void> _emit(SyncPhase phase, {DateTime? lastSyncedAt}) async {
+  Future<void> _emit(SyncPhase phase, {DateTime? lastSyncedAt, int farmId = 1}) async {
     var pending = _status.pendingCount;
     try {
-      pending = await _outbox.pendingCount();
+      pending = await _outbox.pendingCount(farmId: farmId);
     } on Object {
       // A broken local pending-count read must never wedge a status
       // transition; fall back to the last known count.

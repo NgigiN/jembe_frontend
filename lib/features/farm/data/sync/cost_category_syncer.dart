@@ -108,7 +108,7 @@ class CostCategorySyncer implements EntitySyncer {
   }
 
   @override
-  Future<DateTime?> pull(DateTime? since) async {
+  Future<DateTime?> pull(DateTime? since, {int farmId = 1}) async {
     // UNFILTERED, no `updatedSince` — see class docs: this entity has no
     // timestamps to delta against, so every pull is a full re-fetch.
     final serverRows = await _remote.getCostCategories();
