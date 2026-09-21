@@ -19,6 +19,7 @@ import 'package:farm_tracker/features/auth/domain/repositories/auth_repository.d
 import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_source.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/content/data/datasources/content_local_data_source.dart';
 import 'package:farm_tracker/features/content/data/datasources/question_remote_data_source.dart';
@@ -503,6 +504,9 @@ Future<void> init({AppDatabase? database}) async {
         // token stored >24h ago is treated as unauthenticated, not just an
         // absent one, so a stale session can't slip a pass through either.
         isAuthenticated: () => UserStorageService.isLoggedIn(),
+        // V2 sub-project 3: resolves the farm every pass is scoped to from
+        // the same persisted store the UI reads/writes on switch.
+        currentFarmId: () => FarmStorageService.getCurrentFarmId(),
         // Pre-flip hardening: surface an otherwise-swallowed non-transient
         // pass failure (see SyncEngine's "Error logging" doc) via the app
         // logger instead of silently ending the pass in `SyncPhase.error`.
