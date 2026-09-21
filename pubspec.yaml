@@ -125,6 +125,14 @@ flutter:
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package
 
+  fonts:
+    - family: Fraunces
+      fonts:
+        - asset: assets/fonts/Fraunces-var.ttf
+    - family: WorkSans
+      fonts:
+        - asset: assets/fonts/WorkSans-var.ttf
+
 flutter_launcher_icons:
   android: true
   ios: true
