@@ -214,31 +214,35 @@ class _SettingsPageState extends State<SettingsPage> {
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                                 const SizedBox(height: 12),
-                                SegmentedButton<ThemeMode>(
-                                  segments: const [
-                                    ButtonSegment(
-                                      value: ThemeMode.system,
-                                      icon: Icon(Icons.brightness_auto),
-                                      label: Text('System'),
-                                    ),
-                                    ButtonSegment(
-                                      value: ThemeMode.light,
-                                      icon: Icon(Icons.light_mode),
-                                      label: Text('Light'),
-                                    ),
-                                    ButtonSegment(
-                                      value: ThemeMode.dark,
-                                      icon: Icon(Icons.dark_mode),
-                                      label: Text('Dark'),
-                                    ),
-                                  ],
-                                  selected: {themeState.themeMode},
-                                  onSelectionChanged: (selection) {
-                                    HapticFeedback.selectionClick();
-                                    context.read<ThemeBloc>().add(
-                                      SetThemeModeEvent(selection.first),
-                                    );
-                                  },
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: SegmentedButton<ThemeMode>(
+                                    segments: const [
+                                      ButtonSegment(
+                                        value: ThemeMode.system,
+                                        icon: Icon(Icons.brightness_auto),
+                                        label: Text('System'),
+                                      ),
+                                      ButtonSegment(
+                                        value: ThemeMode.light,
+                                        icon: Icon(Icons.light_mode),
+                                        label: Text('Light'),
+                                      ),
+                                      ButtonSegment(
+                                        value: ThemeMode.dark,
+                                        icon: Icon(Icons.dark_mode),
+                                        label: Text('Dark'),
+                                      ),
+                                    ],
+                                    selected: {themeState.themeMode},
+                                    onSelectionChanged: (selection) {
+                                      HapticFeedback.selectionClick();
+                                      context.read<ThemeBloc>().add(
+                                        SetThemeModeEvent(selection.first),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ],
                             ),

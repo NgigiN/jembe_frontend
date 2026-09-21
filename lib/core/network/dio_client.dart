@@ -13,8 +13,42 @@ final _sensitiveLogPattern = RegExp(
   caseSensitive: false,
 );
 
+// pretty_dio_logger prints one logical block (a Headers section, a Body
+// dump, etc.) as many separate logPrint calls bounded by a '╔'-prefixed
+// open line and a '╚'-prefixed close line, wrapping long values — e.g. the
+// Authorization header's Bearer token — across several of those calls.
+// Matching line-by-line missed continuation lines that don't repeat the
+// word that tripped the match on the first line, leaking the raw token.
+// Buffer each block and redact it as a whole if any line in it is
+// sensitive, so a wrapped value can't slip through on its later lines.
+final List<String> _logBlockBuffer = [];
+bool _inLogBlock = false;
+
 void _redactedLogPrint(Object object) {
   final message = object.toString();
+
+  if (message.startsWith('╔')) {
+    _inLogBlock = true;
+    _logBlockBuffer
+      ..clear()
+      ..add(message);
+    return;
+  }
+
+  if (_inLogBlock) {
+    _logBlockBuffer.add(message);
+    if (message.startsWith('╚')) {
+      _inLogBlock = false;
+      if (_logBlockBuffer.any(_sensitiveLogPattern.hasMatch)) {
+        debugPrint('[REDACTED HTTP LOG — contains sensitive auth data]');
+      } else {
+        _logBlockBuffer.forEach(debugPrint);
+      }
+      _logBlockBuffer.clear();
+    }
+    return;
+  }
+
   if (_sensitiveLogPattern.hasMatch(message)) {
     debugPrint('[REDACTED HTTP LOG — contains sensitive auth data]');
     return;
