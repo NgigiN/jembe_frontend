@@ -132,6 +132,7 @@ class LandModel extends Land implements SyncableModel {
   LandsCompanion toCompanion({
     required bool pending,
     bool deletedLocally = false,
+    int farmId = 1,
   }) {
     return LandsCompanion(
       clientUuid: Value(clientUuid),
@@ -146,6 +147,7 @@ class LandModel extends Land implements SyncableModel {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 

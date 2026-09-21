@@ -14,7 +14,9 @@ import 'package:farm_tracker/features/farm/data/datasources/land_remote_data_sou
 import 'package:farm_tracker/features/farm/data/models/land_model.dart';
 import 'package:farm_tracker/features/farm/data/repositories/land_repository_impl.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeLandRemoteDataSource implements LandRemoteDataSource {
   LandModel? lastAdded;
@@ -105,6 +107,8 @@ LandModel _land({
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   // Every test that flips the flag on must not leak it into the next test.
   tearDown(() {
     OfflineConfig.enabled = false;
@@ -274,8 +278,15 @@ void main() {
     late _FakeSyncEngine sync;
     late FakeLandRemoteDataSource remote;
 
-    setUp(() {
+    setUp(() async {
       OfflineConfig.enabled = true;
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      // Every pre-existing offline-path test in this group predates farm
+      // scoping and expects the success path — give it a current farm
+      // (id 1, matching every other farmId default in this plan) so
+      // FarmStorageService.getCurrentFarmId() doesn't resolve null and
+      // divert these into the new CacheFailure/empty-result branch.
+      await FarmStorageService.setCurrentFarmId(1);
       db = AppDatabase.forTesting(NativeDatabase.memory());
       local = LandLocalDataSource(db);
       outbox = OutboxDao(db);
@@ -466,5 +477,47 @@ void main() {
         });
       },
     );
+
+    group('farm scoping', () {
+      test('addLand reads the current farm id and stamps it on the staged '
+          'write', () async {
+        await FarmStorageService.setCurrentFarmId(9);
+        final repository = LandRepositoryImpl(
+          remoteDataSource: remote,
+          local: local,
+          outbox: outbox,
+          sync: sync,
+          uuid: const _FixedUuidGen('cu-farm9'),
+        );
+        final now = DateTime.now();
+
+        await repository.addLand(Land(
+          id: '', userId: 'user-1', name: 'North Field',
+          createdAt: now, updatedAt: now,
+        ));
+
+        final rows = await outbox.peekAll(farmId: 9);
+        expect(rows.map((r) => r.clientUuid), ['cu-farm9']);
+      });
+
+      test('addLand returns CacheFailure when no current farm is known yet',
+          () async {
+        await FarmStorageService.clearFarmData();
+        final repository = LandRepositoryImpl(
+          remoteDataSource: remote,
+          local: local,
+          outbox: outbox,
+          sync: sync,
+        );
+        final now = DateTime.now();
+
+        final result = await repository.addLand(Land(
+          id: '', userId: 'user-1', name: 'North Field',
+          createdAt: now, updatedAt: now,
+        ));
+
+        expect(result.isLeft(), isTrue);
+      });
+    });
   });
 }
