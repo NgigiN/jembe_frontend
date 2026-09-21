@@ -79,9 +79,9 @@ void main() {
       () {
         final statusColors = theme.extension<StatusColors>();
         expect(statusColors, isNotNull);
-        expect(statusColors!.positive, AppColors.primaryGreen.shade700);
-        expect(statusColors.warning, AppColors.primaryAmber.shade800);
-        expect(statusColors.negative, AppColors.errorRed.shade700);
+        expect(statusColors!.positive, AppColors.statusPositiveLight);
+        expect(statusColors.warning, AppColors.statusWarningLight);
+        expect(statusColors.negative, AppColors.statusNegativeLight);
       },
     );
   });
@@ -125,9 +125,9 @@ void main() {
       () {
         final statusColors = theme.extension<StatusColors>();
         expect(statusColors, isNotNull);
-        expect(statusColors!.positive, AppColors.primaryGreen.shade300);
-        expect(statusColors.warning, AppColors.primaryAmber.shade300);
-        expect(statusColors.negative, AppColors.errorRed.shade300);
+        expect(statusColors!.positive, AppColors.statusPositiveDark);
+        expect(statusColors.warning, AppColors.statusWarningDark);
+        expect(statusColors.negative, AppColors.statusNegativeDark);
       },
     );
   });

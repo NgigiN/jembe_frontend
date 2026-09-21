@@ -1,3 +1,4 @@
+import 'package:adaptive_scaffold_plus/adaptive_scaffold_plus.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/core/offline/widgets/offline_banner.dart';
 import 'package:farm_tracker/core/offline/widgets/sync_status_indicator.dart';
@@ -11,16 +12,40 @@ class LandingPage extends StatelessWidget {
   const LandingPage({required this.child, super.key});
   final Widget child;
 
+  static const _destinations = [
+    AdaptiveDestination(icon: Icons.eco_outlined, selectedIcon: Icons.eco, label: 'Plants'),
+    AdaptiveDestination(icon: Icons.analytics_outlined, selectedIcon: Icons.analytics, label: 'Analytics'),
+    AdaptiveDestination(icon: Icons.pets_outlined, selectedIcon: Icons.pets, label: 'Animals'),
+    AdaptiveDestination(
+      icon: Icons.monetization_on_outlined,
+      selectedIcon: Icons.monetization_on,
+      label: 'Revenue',
+    ),
+    AdaptiveDestination(icon: Icons.settings_outlined, selectedIcon: Icons.settings, label: 'Settings'),
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final index = _calculateIndex(context);
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthInitial) {
           context.go(AppRoutePath.googleLogin);
         }
       },
-      child: Scaffold(
-        body: Column(
+      // Keyed on the router-resolved index: AdaptiveScaffoldPlus only reads
+      // its initialIndex once in initState (no didUpdateWidget - verified by
+      // reading its source during planning), so a route change from
+      // anywhere other than tapping a destination here (a deep link, the
+      // back button, a context.go() elsewhere) would leave the wrong tab
+      // highlighted unless the whole widget remounts. The ValueKey forces
+      // that remount in lockstep with every index change.
+      child: AdaptiveScaffoldPlus(
+        key: ValueKey(index),
+        destinations: _destinations,
+        initialIndex: index,
+        onDestinationSelected: (i) => _onTabSelected(i, context),
+        body: (_) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Self-hides (SizedBox.shrink()) when OfflineConfig.enabled is
@@ -44,37 +69,6 @@ class LandingPage extends StatelessWidget {
               ),
             ),
             Expanded(child: child),
-          ],
-        ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _calculateIndex(context),
-          onDestinationSelected: (index) => _onTabSelected(index, context),
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.eco_outlined),
-              selectedIcon: Icon(Icons.eco),
-              label: 'Plants',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.analytics_outlined),
-              selectedIcon: Icon(Icons.analytics),
-              label: 'Analytics',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.pets_outlined),
-              selectedIcon: Icon(Icons.pets),
-              label: 'Animals',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.monetization_on_outlined),
-              selectedIcon: Icon(Icons.monetization_on),
-              label: 'Revenue',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings),
-              label: 'Settings',
-            ),
           ],
         ),
       ),

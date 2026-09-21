@@ -1,5 +1,6 @@
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/theme/app_typography.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
@@ -127,10 +128,8 @@ class _CostBreakdownPageState extends State<CostBreakdownPage> {
         subtitle: Text('${group.percentage.toStringAsFixed(1)}%'),
         trailing: Text(
           'KES ${group.totalCost.toStringAsFixed(0)}',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: scheme.onSurface,
+          style: AppTypography.money(
+            TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: scheme.onSurface),
           ),
         ),
         children: [
@@ -145,7 +144,10 @@ class _CostBreakdownPageState extends State<CostBreakdownPage> {
                 size: 20,
               ),
               title: Text(origin.origin),
-              trailing: Text('KES ${origin.totalCost.toStringAsFixed(2)}'),
+              trailing: Text(
+                'KES ${origin.totalCost.toStringAsFixed(2)}',
+                style: AppTypography.money(const TextStyle()),
+              ),
             ),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/theme/app_typography.dart';
 import 'package:farm_tracker/core/theme/status_colors.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/filters/scope_chips.dart';
@@ -276,11 +277,13 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
           const SizedBox(height: 8),
           Text(
             'KES ${totalAnnualProfit.toStringAsFixed(2)}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.1,
+            style: AppTypography.money(
+              const TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.1,
+              ),
             ),
           ),
           const SizedBox(height: 24),
@@ -355,10 +358,8 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
         const SizedBox(height: 8),
         Text(
           'KES ${value.toStringAsFixed(0)}',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+          style: AppTypography.money(
+            const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ),
         Text(
@@ -494,10 +495,12 @@ class _AnnualSummaryPageState extends State<AnnualSummaryPage> {
         const SizedBox(height: 4),
         Text(
           'KES ${value.toStringAsFixed(0)}',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: value < 0 ? context.statusColors.negative : color,
-            fontSize: 15,
+          style: AppTypography.money(
+            TextStyle(
+              fontWeight: FontWeight.bold,
+              color: value < 0 ? context.statusColors.negative : color,
+              fontSize: 15,
+            ),
           ),
         ),
       ],
