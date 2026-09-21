@@ -29,6 +29,8 @@ import 'package:farm_tracker/features/farm/presentation/pages/revenue_page.dart'
 import 'package:farm_tracker/features/farm/presentation/pages/season_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/settings_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/trash_page.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
+import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -61,6 +63,9 @@ class AppRouteName {
   static const contentDetail = 'content-detail';
   static const askQuestion = 'ask-question';
   static const trash = 'trash';
+  static const farmsList = 'farms-list';
+  static const createFarm = 'create-farm';
+  static const farmManage = 'farm-manage';
 }
 
 class AppRoutePath {
@@ -92,6 +97,9 @@ class AppRoutePath {
   static const contentDetailTemplate = '/content/:id';
   static const askQuestion = '/ask-question';
   static const trash = '/trash';
+  static const farmsList = '/farms';
+  static const createFarm = '/farms/create';
+  static const farmManage = '/farms/manage';
 
   static String inputsFor(String sourceType) => '/inputs/$sourceType';
   static String activitiesFor(String sourceType) => '/activities/$sourceType';
@@ -121,15 +129,61 @@ class AppRouter {
     return AppRoutePath.googleLogin;
   }
 
+  /// Revenue/Analytics/Trash and their sub-routes — matches the real
+  /// `staff` (owner+manager) gate on `/revenue`, `/analytics`, `/trash` in
+  /// `internal/routes/routes.go`. A worker hitting these entirely
+  /// legitimately gets a flat 403 from the backend; this turns that into a
+  /// redirect before the request is ever made.
+  static const Set<String> _staffOnlyPaths = {
+    AppRoutePath.revenue,
+    AppRoutePath.revenueAdd,
+    AppRoutePath.analytics,
+    AppRoutePath.totalCosts,
+    AppRoutePath.costBreakdown,
+    AppRoutePath.annualSummary,
+    AppRoutePath.streak,
+    AppRoutePath.trash,
+  };
+
+  /// No dedicated owner-only ROUTE exists in this sub-project — the
+  /// successor/transfer controls live as a section inside `FarmManagePage`,
+  /// a page every role can open. Declared empty (rather than omitted) so a
+  /// future owner-only route has an obvious place to register itself.
+  static const Set<String> _ownerOnlyPaths = {};
+
+  /// Pure redirect decision (unit-tested): where to send a navigation given
+  /// the current farm [role], or null to allow it. Defense-in-depth exactly
+  /// like [authRedirectLocation] — the backend rejects the call regardless;
+  /// this turns "a 403 on every screen" into a redirect home. A `null`
+  /// [role] (farm data not loaded yet) never redirects — `FarmBloc` has its
+  /// own load lifecycle; this only gates once a role is actually known.
+  static String? staffOnlyRedirectLocation({
+    required FarmRole? role,
+    required String location,
+  }) {
+    if (role == null) return null;
+    if (_staffOnlyPaths.contains(location) && !role.isStaff) {
+      return AppRoutePath.home;
+    }
+    if (_ownerOnlyPaths.contains(location) && role != FarmRole.owner) {
+      return AppRoutePath.home;
+    }
+    return null;
+  }
+
   final GoRouter router = GoRouter(
     initialLocation: AppRoutePath.splash,
     observers: [LoggingGoRouterObserver()],
     redirect: (context, state) async {
       final loggedIn = await UserStorageService.isLoggedIn();
-      return authRedirectLocation(
+      final authRedirect = authRedirectLocation(
         loggedIn: loggedIn,
         location: state.matchedLocation,
       );
+      if (authRedirect != null) return authRedirect;
+
+      final role = await FarmStorageService.getCurrentRole();
+      return staffOnlyRedirectLocation(role: role, location: state.matchedLocation);
     },
     routes: [
       GoRoute(
