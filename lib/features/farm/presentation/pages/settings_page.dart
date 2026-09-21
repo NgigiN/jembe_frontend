@@ -369,6 +369,17 @@ class _SettingsPageState extends State<SettingsPage> {
                     const SizedBox(height: 24),
                     _buildSettingsCard(
                       context,
+                      title: 'Your Farms',
+                      child: ListTile(
+                        leading: const Icon(Icons.agriculture_outlined),
+                        title: const Text('Your Farms'),
+                        subtitle: const Text('Switch farms, invite members, manage roles'),
+                        onTap: () => context.push(AppRoutePath.farmsList),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSettingsCard(
+                      context,
                       title: 'Farm Year',
                       child: Padding(
                         padding: const EdgeInsets.all(16),

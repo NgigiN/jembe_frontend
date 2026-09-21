@@ -333,4 +333,55 @@ void main() {
       expect(prefs.getBool(soundEffectsPrefsKey), isFalse);
     },
   );
+
+  testWidgets('shows a "Your Farms" entry that opens the farm switcher',
+      (tester) async {
+    final profileBloc = MockProfileBloc();
+    final themeBloc = MockThemeBloc();
+    final authBloc = MockAuthBloc();
+
+    const user = User(
+      id: '1',
+      email: 'a@example.com',
+      firstName: 'A',
+      lastName: 'B',
+      farmName: 'Green Acres',
+      location: 'Nakuru',
+      pictureUrl: '',
+    );
+
+    whenListen(
+      profileBloc,
+      Stream<ProfileState>.value(const ProfileLoaded(user: user)),
+      initialState: const ProfileLoaded(user: user),
+    );
+    whenListen(
+      themeBloc,
+      Stream<ThemeState>.value(const ThemeState(themeMode: ThemeMode.light)),
+      initialState: const ThemeState(themeMode: ThemeMode.light),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MultiBlocProvider(
+          providers: [
+            BlocProvider<ProfileBloc>.value(value: profileBloc),
+            BlocProvider<ThemeBloc>.value(value: themeBloc),
+            BlocProvider<AuthBloc>.value(value: authBloc),
+          ],
+          child: const SettingsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.dragUntilVisible(
+      find.text('Switch farms, invite members, manage roles'),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Switch farms, invite members, manage roles'), findsOneWidget);
+  });
 }
