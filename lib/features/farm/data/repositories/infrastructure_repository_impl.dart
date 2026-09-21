@@ -14,6 +14,7 @@ import 'package:farm_tracker/features/farm/data/datasources/infrastructure_remot
 import 'package:farm_tracker/features/farm/data/models/infrastructure_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/infrastructure.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/infrastructure_repository.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 
 /// Live-HTTP (flag off) or local-first + outbox (flag on) implementation of
 /// [InfrastructureRepository].
@@ -87,7 +88,14 @@ class InfrastructureRepositoryImpl
   @override
   Stream<List<Infrastructure>> watchInfrastructures() {
     if (OfflineConfig.enabled && local != null) {
-      return watchAsDomain(local!.watchInfrastructures(), _toInfrastructure);
+      return Stream.fromFuture(FarmStorageService.getCurrentFarmId()).asyncExpand(
+        (farmId) => farmId == null
+            ? Stream<List<Infrastructure>>.value(const [])
+            : watchAsDomain(
+                local!.watchInfrastructures(farmId: farmId),
+                _toInfrastructure,
+              ),
+      );
     }
     // Unused by the app while the flag is off (the bloc keeps its
     // remote-polling `GetInfrastructuresEvent` path) — this only needs to
@@ -110,7 +118,9 @@ class InfrastructureRepositoryImpl
     if (_offlineFirst) {
       // Offline mirror shows the whole local store — pagination
       // ([limit]/[cursor]) is an online-only concern and is ignored here.
-      final models = await local!.watchInfrastructures().first;
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Right([]);
+      final models = await local!.watchInfrastructures(farmId: farmId).first;
       return Right(models.map(_toInfrastructure).toList());
     }
     return guard(
@@ -131,6 +141,8 @@ class InfrastructureRepositoryImpl
     String? notes,
   ) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       final model = InfrastructureModel.create(
         userId: userId,
         type: type,
@@ -146,6 +158,7 @@ class InfrastructureRepositoryImpl
         model,
         jsonEncode(model.toJson()),
         OutboxOp.create,
+        farmId: farmId,
       );
       return Right(_toInfrastructure(model));
     }
@@ -175,6 +188,8 @@ class InfrastructureRepositoryImpl
     String? notes,
   ) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `id` is a clientUuid (presentation identity) — see class docs.
       final existing = await local!.getByClientUuid(id);
       if (existing == null) {
@@ -199,6 +214,7 @@ class InfrastructureRepositoryImpl
         updated,
         jsonEncode(updated.toJson()),
         OutboxOp.update,
+        farmId: farmId,
       );
       return Right(_toInfrastructure(updated));
     }
@@ -225,8 +241,10 @@ class InfrastructureRepositoryImpl
   @override
   Future<Either<Failure, void>> deleteInfrastructure(String id) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `id` is a clientUuid (presentation identity) — see class docs.
-      await stageDelete(local!, id);
+      await stageDelete(local!, id, farmId: farmId);
       return const Right(null);
     }
 

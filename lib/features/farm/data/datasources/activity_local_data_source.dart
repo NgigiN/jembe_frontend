@@ -34,9 +34,9 @@ class ActivityLocalDataSource implements LocalSyncStore<ActivityModel> {
   /// Ordered by `createdAt` ascending (oldest first) — a stable order tied
   /// to when an activity was first created locally, unaffected by later
   /// edits.
-  Stream<List<ActivityModel>> watchActivities({String? sourceType}) {
+  Stream<List<ActivityModel>> watchActivities({String? sourceType, int farmId = 1}) {
     final query = _db.select(_db.activities)
-      ..where((row) => row.deletedLocally.equals(false));
+      ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId));
     if (sourceType != null && sourceType.isNotEmpty) {
       query.where((row) => row.sourceType.equals(sourceType));
     }
@@ -52,7 +52,7 @@ class ActivityLocalDataSource implements LocalSyncStore<ActivityModel> {
   Future<void> upsert(ActivityModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.activities)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:

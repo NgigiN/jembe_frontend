@@ -35,9 +35,9 @@ class RevenueLocalDataSource implements LocalSyncStore<RevenueModel> {
   /// Ordered by `createdAt` ascending (oldest first) — a stable order tied
   /// to when a revenue was first recorded locally, unaffected by later
   /// edits.
-  Stream<List<RevenueModel>> watchRevenues() {
+  Stream<List<RevenueModel>> watchRevenues({int farmId = 1}) {
     final query = _db.select(_db.revenues)
-      ..where((row) => row.deletedLocally.equals(false))
+      ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId))
       ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]);
     return query.watch().map(
       (rows) => rows.map(RevenueModel.fromDrift).toList(),
@@ -50,7 +50,7 @@ class RevenueLocalDataSource implements LocalSyncStore<RevenueModel> {
   Future<void> upsert(RevenueModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.revenues)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:

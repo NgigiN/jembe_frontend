@@ -32,7 +32,9 @@ import 'package:farm_tracker/features/farm/data/repositories/revenue_repository_
 import 'package:farm_tracker/features/farm/data/sync/revenue_syncer.dart';
 import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// In-memory fake "server" for the `revenue` entity.
 ///
@@ -265,11 +267,15 @@ Revenue _unwrap(Either<Failure, Revenue> result) {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late _Harness h;
 
-  setUp(() {
+  setUp(() async {
     h = _Harness();
     OfflineConfig.enabled = true;
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    await FarmStorageService.setCurrentFarmId(1);
   });
 
   tearDown(() async {

@@ -15,6 +15,7 @@ import 'package:farm_tracker/features/farm/data/datasources/season_remote_data_s
 import 'package:farm_tracker/features/farm/data/models/season_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/season_repository.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 
 /// Live-HTTP (flag off) or local-first + outbox (flag on) implementation of
 /// [SeasonRepository].
@@ -95,7 +96,11 @@ class SeasonRepositoryImpl
   @override
   Stream<List<Season>> watchSeasons() {
     if (OfflineConfig.enabled && local != null) {
-      return watchAsDomain(local!.watchSeasons(), _toSeason);
+      return Stream.fromFuture(FarmStorageService.getCurrentFarmId()).asyncExpand(
+        (farmId) => farmId == null
+            ? Stream<List<Season>>.value(const [])
+            : watchAsDomain(local!.watchSeasons(farmId: farmId), _toSeason),
+      );
     }
     // Unused by the app while the flag is off (the bloc keeps its
     // remote-polling `GetSeasonsEvent` path) — this only needs to compile
@@ -116,7 +121,9 @@ class SeasonRepositoryImpl
     if (_offlineFirst) {
       // Offline mirror shows the whole local store — pagination
       // ([limit]/[cursor]) is an online-only concern and is ignored here.
-      final models = await local!.watchSeasons().first;
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Right([]);
+      final models = await local!.watchSeasons(farmId: farmId).first;
       return Right(models.map(_toSeason).toList());
     }
     return guard(
@@ -127,6 +134,8 @@ class SeasonRepositoryImpl
   @override
   Future<Either<Failure, Season>> addSeason(Season season) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       final model = SeasonModel.create(
         userId: season.userId,
         name: season.name,
@@ -141,6 +150,7 @@ class SeasonRepositoryImpl
         model,
         jsonEncode(model.toJson()),
         OutboxOp.create,
+        farmId: farmId,
       );
       return Right(_toSeason(model));
     }
@@ -166,8 +176,10 @@ class SeasonRepositoryImpl
   @override
   Future<Either<Failure, void>> deleteSeason(String id) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `id` is a clientUuid (presentation identity) — see class docs.
-      await stageDelete(local!, id);
+      await stageDelete(local!, id, farmId: farmId);
       return const Right(null);
     }
 
@@ -177,6 +189,8 @@ class SeasonRepositoryImpl
   @override
   Future<Either<Failure, Season>> updateSeason(Season season) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `season.id` is a clientUuid (presentation identity) — see class
       // docs.
       final existing = await local!.getByClientUuid(season.id);
@@ -201,6 +215,7 @@ class SeasonRepositoryImpl
         updated,
         jsonEncode(updated.toJson()),
         OutboxOp.update,
+        farmId: farmId,
       );
       return Right(season);
     }

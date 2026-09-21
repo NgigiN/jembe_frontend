@@ -27,9 +27,9 @@ class HerdLocalDataSource implements LocalSyncStore<HerdModel> {
   ///
   /// Ordered by `createdAt` ascending (oldest first) — a stable order tied
   /// to when a herd was first created locally, unaffected by later edits.
-  Stream<List<HerdModel>> watchHerds() {
+  Stream<List<HerdModel>> watchHerds({int farmId = 1}) {
     final query = _db.select(_db.herds)
-      ..where((row) => row.deletedLocally.equals(false))
+      ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId))
       ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]);
     return query.watch().map((rows) => rows.map(HerdModel.fromDrift).toList());
   }
@@ -40,7 +40,7 @@ class HerdLocalDataSource implements LocalSyncStore<HerdModel> {
   Future<void> upsert(HerdModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.herds)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:

@@ -157,6 +157,7 @@ class ActivityModel extends Activity implements SyncableModel {
   ActivitiesCompanion toCompanion({
     required bool pending,
     bool deletedLocally = false,
+    int farmId = 1,
   }) {
     return ActivitiesCompanion(
       clientUuid: Value(clientUuid),
@@ -173,6 +174,7 @@ class ActivityModel extends Activity implements SyncableModel {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 

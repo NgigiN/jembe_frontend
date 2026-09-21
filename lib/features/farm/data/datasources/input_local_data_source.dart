@@ -32,9 +32,9 @@ class InputLocalDataSource implements LocalSyncStore<InputModel> {
   ///
   /// Ordered by `createdAt` ascending (oldest first) — a stable order tied
   /// to when an input was first created locally, unaffected by later edits.
-  Stream<List<InputModel>> watchInputs({String? sourceType}) {
+  Stream<List<InputModel>> watchInputs({String? sourceType, int farmId = 1}) {
     final query = _db.select(_db.inputs)
-      ..where((row) => row.deletedLocally.equals(false));
+      ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId));
     if (sourceType != null && sourceType.isNotEmpty) {
       query.where((row) => row.sourceType.equals(sourceType));
     }
@@ -50,7 +50,7 @@ class InputLocalDataSource implements LocalSyncStore<InputModel> {
   Future<void> upsert(InputModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.inputs)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:

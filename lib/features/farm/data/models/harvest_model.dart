@@ -129,6 +129,7 @@ class HarvestModel extends Harvest implements SyncableModel {
   HarvestsCompanion toCompanion({
     required bool pending,
     bool deletedLocally = false,
+    int farmId = 1,
   }) {
     return HarvestsCompanion(
       clientUuid: Value(clientUuid),
@@ -143,6 +144,7 @@ class HarvestModel extends Harvest implements SyncableModel {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 

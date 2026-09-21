@@ -30,9 +30,9 @@ class InfrastructureLocalDataSource
   /// Ordered by `createdAt` ascending (oldest first) — a stable order tied
   /// to when an infrastructure row was first created locally, unaffected by
   /// later edits.
-  Stream<List<InfrastructureModel>> watchInfrastructures() {
+  Stream<List<InfrastructureModel>> watchInfrastructures({int farmId = 1}) {
     final query = _db.select(_db.infrastructures)
-      ..where((row) => row.deletedLocally.equals(false))
+      ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId))
       ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]);
     return query.watch().map(
       (rows) => rows.map(InfrastructureModel.fromDrift).toList(),
@@ -45,7 +45,7 @@ class InfrastructureLocalDataSource
   Future<void> upsert(InfrastructureModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.infrastructures)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:
