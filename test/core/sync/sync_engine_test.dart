@@ -736,10 +736,10 @@ class _FakeCursors extends SyncCursorDao {
   final Map<String, DateTime> storage = <String, DateTime>{};
 
   @override
-  Future<DateTime?> get(String entity) async => storage[entity];
+  Future<DateTime?> get(String entity, {int farmId = 1}) async => storage[entity];
 
   @override
-  Future<void> set(String entity, DateTime at) async {
+  Future<void> set(String entity, DateTime at, {int farmId = 1}) async {
     storage[entity] = at;
   }
 }
@@ -754,7 +754,7 @@ class _FakeOutbox extends OutboxDao {
   final List<int> bumped = <int>[];
 
   @override
-  Future<List<OutboxRow>> peekAll() async => List.of(_rows);
+  Future<List<OutboxRow>> peekAll({int farmId = 1}) async => List.of(_rows);
 
   @override
   Future<void> ack(int seq) async {
@@ -795,7 +795,7 @@ class _FakeOutbox extends OutboxDao {
   }
 
   @override
-  Future<int> pendingCount() async =>
+  Future<int> pendingCount({int farmId = 1}) async =>
       _rows.where((r) => r.state == 'pending').length;
 }
 
