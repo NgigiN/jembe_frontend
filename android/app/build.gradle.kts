@@ -18,7 +18,10 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.samtama.shamba"
-    compileSdk = flutter.compileSdkVersion
+    // flutter.compileSdkVersion currently resolves to 36; flutter_secure_storage
+    // requires compiling against 37 (backward compatible), so pin it literally
+    // rather than waiting on a Flutter SDK bump to move the default.
+    compileSdk = 37
     ndkVersion = "28.2.13676358"
 
     signingConfigs {
