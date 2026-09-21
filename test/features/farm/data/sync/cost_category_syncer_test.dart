@@ -89,6 +89,7 @@ OutboxRow _entry({
     attempts: 0,
     state: 'pending',
     updatedAt: DateTime.utc(2026),
+    farmId: 1,
   );
 }
 

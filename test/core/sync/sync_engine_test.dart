@@ -22,6 +22,7 @@ OutboxRow _row(
   String clientUuid = 'a',
   String state = 'pending',
   int attempts = 0,
+  int farmId = 1,
 }) {
   return OutboxRow(
     seq: seq,
@@ -32,6 +33,7 @@ OutboxRow _row(
     attempts: attempts,
     state: state,
     updatedAt: DateTime.utc(2026),
+    farmId: farmId,
   );
 }
 

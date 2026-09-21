@@ -81,6 +81,7 @@ void main() {
         updatedAt: DateTime.utc(2026, 9),
         pending: true,
         deletedLocally: false,
+        farmId: 1,
       );
 
       final model = HerdActivityModel.fromDrift(row);

@@ -151,6 +151,7 @@ void main() {
         updatedAt: now,
         pending: false,
         deletedLocally: false,
+        farmId: 1,
       );
 
       final land = LandModel.fromDrift(row);
@@ -177,6 +178,7 @@ void main() {
         updatedAt: now,
         pending: true,
         deletedLocally: false,
+        farmId: 1,
       );
 
       final land = LandModel.fromDrift(row);
