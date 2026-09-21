@@ -32,6 +32,7 @@ import 'package:farm_tracker/features/farm/presentation/pages/trash_page.dart';
 import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
 import 'package:farm_tracker/features/farms/presentation/pages/create_farm_page.dart';
+import 'package:farm_tracker/features/farms/presentation/pages/farm_manage_page.dart';
 import 'package:farm_tracker/features/farms/presentation/pages/farms_list_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -263,6 +264,12 @@ class AppRouter {
         path: AppRoutePath.createFarm,
         caseSensitive: false,
         pageBuilder: (context, state) => _slidePage(const CreateFarmPage(), state),
+      ),
+      GoRoute(
+        name: AppRouteName.farmManage,
+        path: AppRoutePath.farmManage,
+        caseSensitive: false,
+        pageBuilder: (context, state) => _slidePage(const FarmManagePage(), state),
       ),
       GoRoute(
         name: AppRouteName.lands,
