@@ -78,6 +78,7 @@ dependencies:
   # test` green and dependency_validator clean at this version.
   package_info_plus: ^10.2.1
   url_launcher: ^6.3.0
+  flex_color_scheme: 8.4.0
 
 dev_dependencies:
   flutter_test:
