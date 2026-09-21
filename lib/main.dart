@@ -14,6 +14,8 @@ import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_event.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/question_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
@@ -142,6 +144,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(create: (_) => di.sl<AuthBloc>()),
+        BlocProvider<FarmBloc>(create: (_) => di.sl<FarmBloc>()..add(LoadFarms())),
         BlocProvider<LandBloc>(create: (_) => di.sl<LandBloc>()),
         BlocProvider<PlantBloc>(create: (_) => di.sl<PlantBloc>()),
         BlocProvider<SeasonBloc>(create: (_) => di.sl<SeasonBloc>()),

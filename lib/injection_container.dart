@@ -18,6 +18,8 @@ import 'package:farm_tracker/features/auth/data/services/user_storage_service.da
 import 'package:farm_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_source.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/content/data/datasources/content_local_data_source.dart';
 import 'package:farm_tracker/features/content/data/datasources/question_remote_data_source.dart';
 import 'package:farm_tracker/features/content/data/repositories/content_repository_impl.dart';
@@ -161,6 +163,7 @@ Future<void> init({AppDatabase? database}) async {
     // to the widget tree, or a forced logout would land on an orphan bloc
     // the UI never sees.
     ..registerLazySingleton(() => AuthBloc(googleSignInUseCase: sl()))
+    ..registerLazySingleton(() => FarmBloc(remote: sl(), syncEngine: sl()))
     // Feature-specific blocs (preferred)
     ..registerFactory(() => LandBloc(repository: sl()))
     ..registerFactory(() => PlantBloc(repository: sl()))
@@ -325,6 +328,9 @@ Future<void> init({AppDatabase? database}) async {
     // Data Sources
     ..registerLazySingleton<AuthRemoteDataSource>(
       () => AuthRemoteDataSourceImpl(dio: sl()),
+    )
+    ..registerLazySingleton<FarmRemoteDataSource>(
+      () => FarmRemoteDataSourceImpl(dio: sl()),
     )
     ..registerLazySingleton<LandRemoteDataSource>(
       () => LandRemoteDataSourceImpl(dio: sl()),
