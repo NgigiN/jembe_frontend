@@ -38,11 +38,11 @@ class AppTheme {
         filled: true,
         fillColor: colorScheme.surfaceContainerHighest,
       ),
-      extensions: [
+      extensions: const [
         StatusColors(
-          positive: AppColors.primaryGreen.shade700,
-          warning: AppColors.primaryAmber.shade800,
-          negative: AppColors.errorRed.shade700,
+          positive: AppColors.statusPositiveLight,
+          warning: AppColors.statusWarningLight,
+          negative: AppColors.statusNegativeLight,
         ),
       ],
     );
@@ -86,11 +86,11 @@ class AppTheme {
         filled: true,
         fillColor: colorScheme.surfaceContainerHighest,
       ),
-      extensions: [
+      extensions: const [
         StatusColors(
-          positive: AppColors.primaryGreen.shade300,
-          warning: AppColors.primaryAmber.shade300,
-          negative: AppColors.errorRed.shade300,
+          positive: AppColors.statusPositiveDark,
+          warning: AppColors.statusWarningDark,
+          negative: AppColors.statusNegativeDark,
         ),
       ],
     );

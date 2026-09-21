@@ -22,10 +22,9 @@ class AppColors {
   // tones) still comes from seed generation.
   static final ColorScheme lightColorScheme = FlexColorScheme.light(
     colors: FlexSchemeColor.from(primary: brandSeed),
-    keyColors: const FlexKeyColors(useKeyColors: true, keepPrimary: true),
+    keyColors: const FlexKeyColors(keepPrimary: true),
     surface: _lightSurface,
     onSurface: _lightOnSurface,
-    useMaterial3: true,
   ).toScheme;
 
   // Dark mode is the same seed run through FlexColorScheme.dark, not a
@@ -39,8 +38,7 @@ class AppColors {
   // tonal derivation from the same seed.
   static final ColorScheme darkColorScheme = FlexColorScheme.dark(
     colors: FlexSchemeColor.from(primary: brandSeed),
-    keyColors: const FlexKeyColors(useKeyColors: true),
-    useMaterial3: true,
+    keyColors: const FlexKeyColors(),
   ).toScheme;
 
   // Status tokens — fixed per theme brightness, never seed-derived (spec §3:
@@ -50,7 +48,10 @@ class AppColors {
   // (Task 2). Values may be adjusted during the screen-review tasks
   // (Tasks 10-15) if they read wrong on a live screen.
   static const Color statusPositiveLight = Color(0xFF2E7D32);
-  static const Color statusWarningLight = Color(0xFFB26A00);
+  // #B26A00 (4.7:1) at first pass fell to 3.94:1 once the exact warm surface
+  // (#F6F7F4, lighter than pure white) was substituted in — darkened until
+  // it cleared WCAG AA 4.5:1 (verified in status_colors_contrast_test.dart).
+  static const Color statusWarningLight = Color(0xFFA05F00);
   static const Color statusNegativeLight = Color(0xFFB3261E);
   static const Color statusPositiveDark = Color(0xFF7BC67E);
   static const Color statusWarningDark = Color(0xFFFFB74D);
