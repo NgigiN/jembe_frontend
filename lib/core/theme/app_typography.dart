@@ -29,4 +29,13 @@ class AppTypography {
       labelSmall: TextStyle(fontFamily: _body, fontSize: 10, fontWeight: FontWeight.w500),
     );
   }
+
+  /// Tabular figures so KES amounts align in columns (stat cards, list
+  /// totals). Targeted, not a TextTheme-wide change — see design-system-
+  /// foundation spec §4.
+  static TextStyle money(TextStyle style) {
+    return style.copyWith(
+      fontFeatures: [...?style.fontFeatures, const FontFeature.tabularFigures()],
+    );
+  }
 }
