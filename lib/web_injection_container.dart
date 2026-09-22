@@ -54,7 +54,7 @@ Future<void> initWebDependencies() async {
       () => AuthRepositoryImpl(remoteDataSource: webSl()),
     )
     ..registerLazySingleton(() => GoogleSignInUseCase(webSl()))
-    ..registerLazySingleton(() => AuthBloc(googleSignInUseCase: webSl()))
+    ..registerLazySingleton(() => AuthBloc(googleSignInUseCase: webSl(), cleanCache: () => webSl<CacheStore>().clean()))
     ..registerLazySingleton<FarmRemoteDataSource>(
       () => FarmRemoteDataSourceImpl(dio: webSl()),
     )

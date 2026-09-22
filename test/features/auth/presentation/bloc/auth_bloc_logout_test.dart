@@ -68,7 +68,6 @@ void main() {
 
       final cacheStore = _ThrowingCacheStore();
       when(() => cacheStore.clean()).thenThrow(Exception('cache boom'));
-      sl.registerSingleton<CacheStore>(cacheStore);
 
       final db = _ThrowingAppDatabase();
       addTearDown(db.close);
@@ -76,6 +75,7 @@ void main() {
       final bloc = AuthBloc(
         googleSignInUseCase: _MockGoogleSignInUseCase(),
         wipeLocalData: db.wipeAll,
+        cleanCache: cacheStore.clean,
       );
       addTearDown(bloc.close);
 

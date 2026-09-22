@@ -1,4 +1,3 @@
-import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
@@ -10,13 +9,12 @@ import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecas
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
 import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
-import 'package:farm_tracker/injection_container.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart' as auth_google;
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  AuthBloc({required this.googleSignInUseCase, this.wipeLocalData})
+  AuthBloc({required this.googleSignInUseCase, this.wipeLocalData, this.cleanCache})
       : super(AuthInitial()) {
     on<GoogleSignInRequested>((event, emit) async {
       emit(AuthLoading());
@@ -88,11 +86,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // so a failure here (e.g. a broken cache store) can never leave logout
       // half-done — the token clear, sign-out, and state emit below must
       // still run regardless.
-      if (sl.isRegistered<CacheStore>()) {
+      if (cleanCache != null) {
         try {
-          await sl<CacheStore>().clean();
+          await cleanCache!();
         } catch (e, st) {
-          appLogger.logError('AuthBloc.logout: CacheStore.clean', e, st);
+          appLogger.logError('AuthBloc.logout: cleanCache', e, st);
         }
       }
       // Offline-first wipe-on-logout (Task 10): flag-guarded, so this is a
@@ -101,7 +99,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // user's data (or queued mutation) survives on a shared device.
       // `SyncEngine` is a DI singleton and is intentionally NOT disposed
       // here — only its tables are cleared. Guarded for the same reason as
-      // `CacheStore.clean` above: a wipe failure must not block the rest of
+      // `cleanCache` above: a wipe failure must not block the rest of
       // logout.
       if (OfflineConfig.enabled && wipeLocalData != null) {
         try {
@@ -160,6 +158,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
   final GoogleSignInUseCase googleSignInUseCase;
   final Future<void> Function()? wipeLocalData;
+  final Future<void> Function()? cleanCache;
 
   static bool get _supportsGoogleSignIn =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;

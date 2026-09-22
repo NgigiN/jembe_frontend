@@ -163,7 +163,7 @@ Future<void> init({AppDatabase? database}) async {
     // main.dart dispatches LogoutEvent onto and the one BlocProvider hands
     // to the widget tree, or a forced logout would land on an orphan bloc
     // the UI never sees.
-    ..registerLazySingleton(() => AuthBloc(googleSignInUseCase: sl(), wipeLocalData: () => sl<AppDatabase>().wipeAll()))
+    ..registerLazySingleton(() => AuthBloc(googleSignInUseCase: sl(), wipeLocalData: () => sl<AppDatabase>().wipeAll(), cleanCache: () => sl<CacheStore>().clean()))
     ..registerLazySingleton(() => FarmBloc(remote: sl(), triggerSync: () => sl<SyncEngine>().syncNow()))
     // Feature-specific blocs (preferred)
     ..registerFactory(() => LandBloc(repository: sl()))
