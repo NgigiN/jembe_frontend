@@ -197,4 +197,28 @@ void main() {
       expect(await dataSource.getByClientUuid('cu-2'), isNull);
     });
   });
+
+  group('farm scoping', () {
+    test('upsert stamps the given farmId onto the row', () async {
+      final model = _land(clientUuid: 'cu-farm42');
+
+      await dataSource.upsert(model, pending: true, farmId: 42);
+
+      final row = await dataSource.getByClientUuid(model.clientUuid);
+      expect(row, isNotNull);
+    });
+
+    test('watchLands only returns rows for the given farmId', () async {
+      final farm1Land = _land(clientUuid: 'cu-1', name: 'Farm 1 Land');
+      final farm2Land = _land(clientUuid: 'cu-2', name: 'Farm 2 Land');
+      await dataSource.upsert(farm1Land, pending: false, farmId: 1);
+      await dataSource.upsert(farm2Land, pending: false, farmId: 2);
+
+      final farm1Rows = await dataSource.watchLands(farmId: 1).first;
+      final farm2Rows = await dataSource.watchLands(farmId: 2).first;
+
+      expect(farm1Rows.map((l) => l.name), ['Farm 1 Land']);
+      expect(farm2Rows.map((l) => l.name), ['Farm 2 Land']);
+    });
+  });
 }

@@ -111,6 +111,7 @@ class PlantModel extends Plant implements SyncableModel {
   PlantsCompanion toCompanion({
     required bool pending,
     bool deletedLocally = false,
+    int farmId = 1,
   }) {
     return PlantsCompanion(
       clientUuid: Value(clientUuid),
@@ -122,6 +123,7 @@ class PlantModel extends Plant implements SyncableModel {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 

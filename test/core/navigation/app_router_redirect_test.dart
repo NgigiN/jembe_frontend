@@ -1,6 +1,7 @@
 import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
 import 'package:farm_tracker/injection_container.dart' as di;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -37,6 +38,69 @@ void main() {
         expect(AppRouter.authRedirectLocation(loggedIn: true, location: path),
             isNull, reason: path);
       }
+    });
+  });
+
+  group('staffOnlyRedirectLocation (decision matrix)', () {
+    test('owner and manager are never redirected from staff-only paths', () {
+      for (final role in [FarmRole.owner, FarmRole.manager]) {
+        for (final path in [
+          AppRoutePath.revenue,
+          AppRoutePath.analytics,
+          AppRoutePath.trash,
+          AppRoutePath.totalCosts,
+          AppRoutePath.costBreakdown,
+          AppRoutePath.annualSummary,
+          AppRoutePath.streak,
+          AppRoutePath.revenueAdd,
+        ]) {
+          expect(
+            AppRouter.staffOnlyRedirectLocation(role: role, location: path),
+            isNull,
+            reason: '$role at $path',
+          );
+        }
+      }
+    });
+
+    test('a worker is redirected home from every staff-only path', () {
+      for (final path in [
+        AppRoutePath.revenue,
+        AppRoutePath.analytics,
+        AppRoutePath.trash,
+        AppRoutePath.totalCosts,
+        AppRoutePath.costBreakdown,
+        AppRoutePath.annualSummary,
+        AppRoutePath.streak,
+        AppRoutePath.revenueAdd,
+      ]) {
+        expect(
+          AppRouter.staffOnlyRedirectLocation(role: FarmRole.worker, location: path),
+          AppRoutePath.home,
+          reason: path,
+        );
+      }
+    });
+
+    test('every role is never redirected from non-staff-only paths', () {
+      for (final role in [FarmRole.owner, FarmRole.manager, FarmRole.worker]) {
+        for (final path in ['/', '/animals', '/lands', '/settings', AppRoutePath.farmsList]) {
+          expect(
+            AppRouter.staffOnlyRedirectLocation(role: role, location: path),
+            isNull,
+            reason: '$role at $path',
+          );
+        }
+      }
+    });
+
+    test('a null role (not yet loaded) is never redirected — FarmBloc has '
+        'its own load-then-gate lifecycle, this is defense-in-depth on top '
+        'of it, not the primary gate', () {
+      expect(
+        AppRouter.staffOnlyRedirectLocation(role: null, location: AppRoutePath.revenue),
+        isNull,
+      );
     });
   });
 

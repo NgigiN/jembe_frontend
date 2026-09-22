@@ -59,17 +59,22 @@ class OutboxDao {
                 clientUuid: coalescedIntent.clientUuid,
                 payload: Value(coalescedIntent.payload),
                 updatedAt: now,
+                farmId: Value(coalescedIntent.farmId),
               ),
             );
       }
     });
   }
 
-  /// All outbox rows, any state, ordered by `seq` ascending (FIFO).
-  Future<List<OutboxRow>> peekAll() {
-    return (_db.select(
-      _db.outbox,
-    )..orderBy([(row) => OrderingTerm.asc(row.seq)])).get();
+  /// All outbox rows for [farmId], any state, ordered by `seq` ascending
+  /// (FIFO). Defaults to farmId 1 (see the plan's Global Constraints —
+  /// keeps every pre-existing caller that doesn't care about farm scoping
+  /// unchanged).
+  Future<List<OutboxRow>> peekAll({int farmId = 1}) {
+    return (_db.select(_db.outbox)
+          ..where((row) => row.farmId.equals(farmId))
+          ..orderBy([(row) => OrderingTerm.asc(row.seq)]))
+        .get();
   }
 
   /// Removes the row at [seq] — call once it's been synced successfully.
@@ -108,10 +113,12 @@ class OutboxDao {
     );
   }
 
-  /// The number of rows still awaiting sync (`state == 'pending'`).
-  Future<int> pendingCount() async {
+  /// The number of rows for [farmId] still awaiting sync
+  /// (`state == 'pending'`). Defaults to farmId 1 (see the plan's Global
+  /// Constraints).
+  Future<int> pendingCount({int farmId = 1}) async {
     final query = _db.selectOnly(_db.outbox)
-      ..where(_db.outbox.state.equals('pending'))
+      ..where(_db.outbox.state.equals('pending') & _db.outbox.farmId.equals(farmId))
       ..addColumns([_db.outbox.seq.count()]);
     final row = await query.getSingle();
     return row.read(_db.outbox.seq.count()) ?? 0;
@@ -123,6 +130,7 @@ class OutboxDao {
       clientUuid: row.clientUuid,
       entity: row.entity,
       payload: row.payload,
+      farmId: row.farmId,
     );
   }
 }

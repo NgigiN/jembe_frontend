@@ -158,6 +158,7 @@ class RevenueModel extends Revenue implements SyncableModel {
   RevenuesCompanion toCompanion({
     required bool pending,
     bool deletedLocally = false,
+    int farmId = 1,
   }) {
     return RevenuesCompanion(
       clientUuid: Value(clientUuid),
@@ -175,6 +176,7 @@ class RevenueModel extends Revenue implements SyncableModel {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 

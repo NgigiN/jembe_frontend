@@ -24,11 +24,11 @@ void main() {
   });
 
   test(
-    'opens at schema v2 with all 15 tables present and usable '
+    'opens at the current schema with all 15 tables present and usable '
     '(insert + select a row on each of the 12 new offline mirrors)',
     () async {
       final db = AppDatabase.forTesting(NativeDatabase.memory());
-      expect(db.schemaVersion, 2);
+      expect(db.schemaVersion, 3);
       final now = DateTime(2026);
 
       await db

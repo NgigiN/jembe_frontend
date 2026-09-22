@@ -13,7 +13,9 @@ import 'package:farm_tracker/features/farm/data/datasources/herd_local_data_sour
 import 'package:farm_tracker/features/farm/data/datasources/herd_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
 import 'package:farm_tracker/features/farm/data/repositories/herd_repository_impl.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeHerdRemoteDataSource implements HerdRemoteDataSource {
   HerdModel? lastAdded;
@@ -112,6 +114,8 @@ HerdModel _herd({
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   tearDown(() {
     OfflineConfig.enabled = false;
   });
@@ -295,8 +299,13 @@ void main() {
     late _FakeSyncEngine sync;
     late FakeHerdRemoteDataSource remote;
 
-    setUp(() {
+    setUp(() async {
       OfflineConfig.enabled = true;
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      // Every pre-existing offline-path test in this group predates farm
+      // scoping and expects the success path — give it a current farm
+      // (id 1, matching every other farmId default in this plan).
+      await FarmStorageService.setCurrentFarmId(1);
       db = AppDatabase.forTesting(NativeDatabase.memory());
       local = HerdLocalDataSource(db);
       outbox = OutboxDao(db);

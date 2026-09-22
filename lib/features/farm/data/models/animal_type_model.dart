@@ -105,6 +105,7 @@ class AnimalTypeModel extends AnimalType implements SyncableModel {
   AnimalTypesCompanion toCompanion({
     required bool pending,
     bool deletedLocally = false,
+    int farmId = 1,
   }) {
     return AnimalTypesCompanion(
       clientUuid: Value(clientUuid),
@@ -116,6 +117,7 @@ class AnimalTypeModel extends AnimalType implements SyncableModel {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 

@@ -4,6 +4,9 @@ import 'package:farm_tracker/core/offline/widgets/offline_banner.dart';
 import 'package:farm_tracker/core/offline/widgets/sync_status_indicator.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
+import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -12,21 +15,43 @@ class LandingPage extends StatelessWidget {
   const LandingPage({required this.child, super.key});
   final Widget child;
 
-  static const _destinations = [
-    AdaptiveDestination(icon: Icons.eco_outlined, selectedIcon: Icons.eco, label: 'Plants'),
-    AdaptiveDestination(icon: Icons.analytics_outlined, selectedIcon: Icons.analytics, label: 'Analytics'),
-    AdaptiveDestination(icon: Icons.pets_outlined, selectedIcon: Icons.pets, label: 'Animals'),
-    AdaptiveDestination(
+  static const Map<String, AdaptiveDestination> _allDestinations = {
+    '/': AdaptiveDestination(icon: Icons.eco_outlined, selectedIcon: Icons.eco, label: 'Plants'),
+    AppRoutePath.analytics: AdaptiveDestination(
+      icon: Icons.analytics_outlined,
+      selectedIcon: Icons.analytics,
+      label: 'Analytics',
+    ),
+    AppRoutePath.animals: AdaptiveDestination(icon: Icons.pets_outlined, selectedIcon: Icons.pets, label: 'Animals'),
+    AppRoutePath.revenue: AdaptiveDestination(
       icon: Icons.monetization_on_outlined,
       selectedIcon: Icons.monetization_on,
       label: 'Revenue',
     ),
-    AdaptiveDestination(icon: Icons.settings_outlined, selectedIcon: Icons.settings, label: 'Settings'),
-  ];
+    AppRoutePath.settingsPage: AdaptiveDestination(
+      icon: Icons.settings_outlined,
+      selectedIcon: Icons.settings,
+      label: 'Settings',
+    ),
+  };
+
+  /// Routes only staff (owner/manager) see. A worker's shell drops these.
+  static const Set<String> _staffOnlyRoutes = {AppRoutePath.analytics, AppRoutePath.revenue};
+
+  /// A null role (farms not loaded yet, or an error) shows every
+  /// destination — the same behavior this shell had before roles existed —
+  /// rather than flashing a reduced shell during the brief window before
+  /// FarmBloc resolves.
+  static List<String> _routesFor(FarmRole? role) =>
+      _allDestinations.keys.where((route) => role == null || role.isStaff || !_staffOnlyRoutes.contains(route)).toList();
 
   @override
   Widget build(BuildContext context) {
-    final index = _calculateIndex(context);
+    final farmState = context.watch<FarmBloc>().state;
+    final role = farmState is FarmLoaded ? farmState.currentRole : null;
+    final routes = _routesFor(role);
+    final destinations = routes.map((route) => _allDestinations[route]!).toList();
+    final index = _calculateIndex(context, routes);
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthInitial) {
@@ -42,9 +67,9 @@ class LandingPage extends StatelessWidget {
       // that remount in lockstep with every index change.
       child: AdaptiveScaffoldPlus(
         key: ValueKey(index),
-        destinations: _destinations,
+        destinations: destinations,
         initialIndex: index,
-        onDestinationSelected: (i) => _onTabSelected(i, context),
+        onDestinationSelected: (i) => _onTabSelected(i, context, routes),
         body: (_) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -75,27 +100,16 @@ class LandingPage extends StatelessWidget {
     );
   }
 
-  int _calculateIndex(BuildContext context) {
+  int _calculateIndex(BuildContext context, List<String> routes) {
     final uri = GoRouterState.of(context).uri.toString();
-    if (uri.startsWith('/analytics')) return 1;
-    if (uri.startsWith('/animals')) return 2;
-    if (uri.startsWith('/revenue')) return 3;
-    if (uri.startsWith('/settings')) return 4;
-    return 0;
+    for (var i = routes.length - 1; i >= 0; i--) {
+      final route = routes[i];
+      if (route != '/' && uri.startsWith(route)) return i;
+    }
+    return routes.indexOf('/').clamp(0, routes.length - 1);
   }
 
-  void _onTabSelected(int index, BuildContext context) {
-    switch (index) {
-      case 0:
-        context.go('/');
-      case 1:
-        context.go('/analytics');
-      case 2:
-        context.go('/animals');
-      case 3:
-        context.go('/revenue');
-      case 4:
-        context.go('/settings');
-    }
+  void _onTabSelected(int index, BuildContext context, List<String> routes) {
+    context.go(routes[index]);
   }
 }

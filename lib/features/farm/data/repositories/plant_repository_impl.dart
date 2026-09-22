@@ -15,6 +15,7 @@ import 'package:farm_tracker/features/farm/data/datasources/plant_remote_data_so
 import 'package:farm_tracker/features/farm/data/models/plant_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/plant_repository.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 
 /// Live-HTTP (flag off) or local-first + outbox (flag on) implementation of
 /// [PlantRepository].
@@ -84,7 +85,11 @@ class PlantRepositoryImpl
   @override
   Stream<List<Plant>> watchPlants() {
     if (OfflineConfig.enabled && local != null) {
-      return watchAsDomain(local!.watchPlants(), _toPlant);
+      return Stream.fromFuture(FarmStorageService.getCurrentFarmId()).asyncExpand(
+        (farmId) => farmId == null
+            ? Stream<List<Plant>>.value(const [])
+            : watchAsDomain(local!.watchPlants(farmId: farmId), _toPlant),
+      );
     }
     // Unused by the app while the flag is off (the bloc keeps its
     // remote-polling `GetPlantsEvent` path) — this only needs to compile and
@@ -105,7 +110,9 @@ class PlantRepositoryImpl
     if (_offlineFirst) {
       // Offline mirror shows the whole local store — pagination
       // ([limit]/[cursor]) is an online-only concern and is ignored here.
-      final models = await local!.watchPlants().first;
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Right([]);
+      final models = await local!.watchPlants(farmId: farmId).first;
       return Right(models.map(_toPlant).toList());
     }
     return guard(
@@ -116,6 +123,8 @@ class PlantRepositoryImpl
   @override
   Future<Either<Failure, Plant>> addPlant(Plant plant) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       final model = PlantModel.create(
         userId: plant.userId,
         name: plant.name,
@@ -127,6 +136,7 @@ class PlantRepositoryImpl
         model,
         jsonEncode(model.toJson()),
         OutboxOp.create,
+        farmId: farmId,
       );
       return Right(_toPlant(model));
     }
@@ -145,6 +155,8 @@ class PlantRepositoryImpl
   @override
   Future<Either<Failure, Plant>> updatePlant(Plant plant) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `plant.id` is a clientUuid (presentation identity) — see class docs.
       final existing = await local!.getByClientUuid(plant.id);
       if (existing == null) {
@@ -165,6 +177,7 @@ class PlantRepositoryImpl
         updated,
         jsonEncode(updated.toJson()),
         OutboxOp.update,
+        farmId: farmId,
       );
       return Right(plant);
     }
@@ -185,8 +198,10 @@ class PlantRepositoryImpl
   @override
   Future<Either<Failure, void>> deletePlant(String id) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `id` is a clientUuid (presentation identity) — see class docs.
-      await stageDelete(local!, id);
+      await stageDelete(local!, id, farmId: farmId);
       return const Right(null);
     }
 

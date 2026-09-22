@@ -15,6 +15,7 @@ import 'package:farm_tracker/features/farm/data/datasources/animal_remote_data_s
 import 'package:farm_tracker/features/farm/data/models/animal_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/animal.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/animal_repository.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 
 /// Live-HTTP (flag off) or local-first + outbox (flag on) implementation of
 /// [AnimalRepository].
@@ -88,7 +89,11 @@ class AnimalRepositoryImpl
   @override
   Stream<List<Animal>> watchAnimals() {
     if (OfflineConfig.enabled && local != null) {
-      return watchAsDomain(local!.watchAnimals(), _toAnimal);
+      return Stream.fromFuture(FarmStorageService.getCurrentFarmId()).asyncExpand(
+        (farmId) => farmId == null
+            ? Stream<List<Animal>>.value(const [])
+            : watchAsDomain(local!.watchAnimals(farmId: farmId), _toAnimal),
+      );
     }
     // Unused by the app while the flag is off (the bloc keeps its
     // remote-polling `GetAnimalsEvent` path) — this only needs to compile
@@ -109,7 +114,9 @@ class AnimalRepositoryImpl
     if (_offlineFirst) {
       // Offline mirror shows the whole local store — pagination
       // ([limit]/[cursor]) is an online-only concern and is ignored here.
-      final models = await local!.watchAnimals().first;
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Right([]);
+      final models = await local!.watchAnimals(farmId: farmId).first;
       return Right(models.map(_toAnimal).toList());
     }
     return guard(
@@ -120,6 +127,8 @@ class AnimalRepositoryImpl
   @override
   Future<Either<Failure, Animal>> addAnimal(Animal animal) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       final model = AnimalModel.create(
         userId: animal.userId,
         name: animal.name,
@@ -135,6 +144,7 @@ class AnimalRepositoryImpl
         model,
         jsonEncode(model.toJson()),
         OutboxOp.create,
+        farmId: farmId,
       );
       return Right(_toAnimal(model));
     }
@@ -157,6 +167,8 @@ class AnimalRepositoryImpl
   @override
   Future<Either<Failure, Animal>> updateAnimal(Animal animal) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `animal.id` is a clientUuid (presentation identity) — see class
       // docs.
       final existing = await local!.getByClientUuid(animal.id);
@@ -182,6 +194,7 @@ class AnimalRepositoryImpl
         updated,
         jsonEncode(updated.toJson()),
         OutboxOp.update,
+        farmId: farmId,
       );
       return Right(animal);
     }
@@ -206,8 +219,10 @@ class AnimalRepositoryImpl
   @override
   Future<Either<Failure, void>> deleteAnimal(String id) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `id` is a clientUuid (presentation identity) — see class docs.
-      await stageDelete(local!, id);
+      await stageDelete(local!, id, farmId: farmId);
       return const Right(null);
     }
 

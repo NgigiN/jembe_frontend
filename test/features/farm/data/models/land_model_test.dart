@@ -151,6 +151,7 @@ void main() {
         updatedAt: now,
         pending: false,
         deletedLocally: false,
+        farmId: 1,
       );
 
       final land = LandModel.fromDrift(row);
@@ -177,6 +178,7 @@ void main() {
         updatedAt: now,
         pending: true,
         deletedLocally: false,
+        farmId: 1,
       );
 
       final land = LandModel.fromDrift(row);
@@ -228,6 +230,22 @@ void main() {
       final companion = land.toCompanion(pending: true);
 
       expect(companion.serverId, const Value(null));
+    });
+
+    test('toCompanion writes the given farmId onto the companion', () {
+      final model = LandModel.create(userId: 'u1', name: 'North Field');
+
+      final companion = model.toCompanion(pending: true, farmId: 42);
+
+      expect(companion.farmId.value, 42);
+    });
+
+    test('toCompanion defaults farmId to 1 when not specified (back-compat)', () {
+      final model = LandModel.create(userId: 'u1', name: 'North Field');
+
+      final companion = model.toCompanion(pending: true);
+
+      expect(companion.farmId.value, 1);
     });
   });
 }

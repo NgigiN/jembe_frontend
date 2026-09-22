@@ -5,6 +5,7 @@ import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -28,6 +29,33 @@ class _FixedStatusAdapter implements HttpClientAdapter {
     return ResponseBody.fromString(
       '{}',
       statusCode,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+/// Records the [RequestOptions] a request was sent with, then returns a
+/// canned 200 — enough to inspect what headers `_AuthInterceptor` set
+/// without a live server.
+class _CapturingAdapter implements HttpClientAdapter {
+  _CapturingAdapter(this.onRequest);
+  final void Function(RequestOptions) onRequest;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    onRequest(options);
+    return ResponseBody.fromString(
+      '{}',
+      200,
       headers: {
         Headers.contentTypeHeader: [Headers.jsonContentType],
       },
@@ -208,6 +236,42 @@ void main() {
       await dio.get<dynamic>('/api/v1/lands');
 
       expect(expired, isFalse);
+    });
+  });
+
+  group('_AuthInterceptor X-Farm-ID', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+    });
+
+    test('sends X-Farm-ID once a current farm is known', () async {
+      await FarmStorageService.saveFarms(const [], defaultFarmId: 42);
+
+      RequestOptions? captured;
+      final dio = DioClientFactory.create(
+        cacheStore: _MockCacheStore(),
+        sessionExpiry: SessionExpiryNotifier(),
+        baseUrl: 'https://example.test',
+        enableLogging: false,
+      )..httpClientAdapter = _CapturingAdapter((options) => captured = options);
+
+      await dio.get<dynamic>('/api/v1/lands');
+
+      expect(captured?.headers['X-Farm-ID'], '42');
+    });
+
+    test('omits X-Farm-ID when no current farm is known yet', () async {
+      RequestOptions? captured;
+      final dio = DioClientFactory.create(
+        cacheStore: _MockCacheStore(),
+        sessionExpiry: SessionExpiryNotifier(),
+        baseUrl: 'https://example.test',
+        enableLogging: false,
+      )..httpClientAdapter = _CapturingAdapter((options) => captured = options);
+
+      await dio.get<dynamic>('/api/v1/lands');
+
+      expect(captured?.headers.containsKey('X-Farm-ID'), isFalse);
     });
   });
 }

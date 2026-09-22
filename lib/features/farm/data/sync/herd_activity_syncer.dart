@@ -84,7 +84,7 @@ class HerdActivitySyncer implements EntitySyncer {
   }
 
   @override
-  Future<DateTime?> pull(DateTime? since) async {
+  Future<DateTime?> pull(DateTime? since, {int farmId = 1}) async {
     // NO-OP: nothing in the app lists herd activities, so there is nothing
     // to fetch back and reconcile against the local mirror — see class
     // docs. Always returns `null` (no cursor).

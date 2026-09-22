@@ -15,6 +15,7 @@ import 'package:farm_tracker/features/farm/data/datasources/input_remote_data_so
 import 'package:farm_tracker/features/farm/data/models/input_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/input.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/input_repository.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 
 /// Live-HTTP (flag off) or local-first + outbox (flag on) implementation of
 /// [InputRepository].
@@ -118,9 +119,13 @@ class InputRepositoryImpl
   @override
   Stream<List<Input>> watchInputs({String? sourceType}) {
     if (OfflineConfig.enabled && local != null) {
-      return watchAsDomain(
-        local!.watchInputs(sourceType: sourceType),
-        _toInput,
+      return Stream.fromFuture(FarmStorageService.getCurrentFarmId()).asyncExpand(
+        (farmId) => farmId == null
+            ? Stream<List<Input>>.value(const [])
+            : watchAsDomain(
+                local!.watchInputs(sourceType: sourceType, farmId: farmId),
+                _toInput,
+              ),
       );
     }
     // Unused by the app while the flag is off (the bloc keeps its
@@ -143,7 +148,10 @@ class InputRepositoryImpl
     if (_offlineFirst) {
       // Offline mirror shows the whole local store — pagination
       // ([limit]/[cursor]) is an online-only concern and is ignored here.
-      final models = await local!.watchInputs(sourceType: sourceType).first;
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Right([]);
+      final models =
+          await local!.watchInputs(sourceType: sourceType, farmId: farmId).first;
       return Right(models.map(_toInput).toList());
     }
     return guard(
@@ -158,6 +166,8 @@ class InputRepositoryImpl
   @override
   Future<Either<Failure, Input>> addInput(Input input) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       final model = InputModel.create(
         sourceType: input.sourceType,
         sourceId: input.sourceId,
@@ -174,6 +184,7 @@ class InputRepositoryImpl
         model,
         jsonEncode(model.toJson()),
         OutboxOp.create,
+        farmId: farmId,
       );
       return Right(_toInput(model));
     }
@@ -184,6 +195,8 @@ class InputRepositoryImpl
   @override
   Future<Either<Failure, Input>> updateInput(Input input) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `input.id` is a clientUuid (presentation identity) — see class
       // docs.
       final existing = await local!.getByClientUuid(input.id);
@@ -210,6 +223,7 @@ class InputRepositoryImpl
         updated,
         jsonEncode(updated.toJson()),
         OutboxOp.update,
+        farmId: farmId,
       );
       return Right(input);
     }
@@ -220,8 +234,10 @@ class InputRepositoryImpl
   @override
   Future<Either<Failure, void>> deleteInput(String id) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `id` is a clientUuid (presentation identity) — see class docs.
-      await stageDelete(local!, id);
+      await stageDelete(local!, id, farmId: farmId);
       return const Right(null);
     }
 

@@ -43,7 +43,9 @@ import 'package:farm_tracker/features/farm/data/sync/land_syncer.dart';
 import 'package:farm_tracker/features/farm/data/sync/season_syncer.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Controllable fake of [ConnectivityService] — a plain online/offline
 /// switch a test flips directly, no platform channel involved. Shared by
@@ -462,12 +464,16 @@ Season _unwrapSeason(Either<Failure, Season> result) {
 // ---------------------------------------------------------------------------
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('land — airplane mode matrix', () {
     late _LandHarness h;
 
-    setUp(() {
+    setUp(() async {
       h = _LandHarness();
       OfflineConfig.enabled = true;
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      await FarmStorageService.setCurrentFarmId(1);
     });
 
     tearDown(() async {

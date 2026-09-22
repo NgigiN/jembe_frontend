@@ -34,9 +34,10 @@ class CostCategoryLocalDataSource
   Future<List<CostCategoryModel>> getCostCategories({
     String? type,
     String? category,
+    int farmId = 1,
   }) async {
     final query = _db.select(_db.costCategories)
-      ..where((row) => row.deletedLocally.equals(false));
+      ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId));
     if (type != null) {
       query.where((row) => row.type.equals(type));
     }
@@ -51,10 +52,10 @@ class CostCategoryLocalDataSource
   /// Inserts [model], or replaces the existing row sharing its `clientUuid`
   /// (the primary key) if one already exists.
   @override
-  Future<void> upsert(CostCategoryModel model, {required bool pending}) {
+  Future<void> upsert(CostCategoryModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.costCategories)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:
@@ -148,17 +149,18 @@ class CostCategoryLocalDataSource
   /// mirror half-replaced. Idempotent: re-running with the same
   /// [serverRows] deletes-and-reinserts to the same final state.
   Future<void> replaceAllFromServer(
-    List<CostCategoryModel> serverRows,
-  ) async {
+    List<CostCategoryModel> serverRows, {
+    int farmId = 1,
+  }) async {
     await _db.transaction(() async {
-      await (_db.delete(
-        _db.costCategories,
-      )..where((row) => row.pending.equals(false))).go();
+      await (_db.delete(_db.costCategories)
+            ..where((row) => row.pending.equals(false) & row.farmId.equals(farmId)))
+          .go();
       for (final server in serverRows) {
         final keyed = server.withSyncClientUuid('srv:${server.id}');
         await _db
             .into(_db.costCategories)
-            .insertOnConflictUpdate(keyed.toCompanion(pending: false));
+            .insertOnConflictUpdate(keyed.toCompanion(pending: false, farmId: farmId));
       }
     });
   }

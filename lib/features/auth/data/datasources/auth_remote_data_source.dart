@@ -34,12 +34,16 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
             'user': UserModel.fromJson(userData),
             'token': token,
             'record': userData,
+            'farms': data['farms'] ?? <dynamic>[],
+            'defaultFarmId': data['default_farm_id'],
           };
         } else {
           return {
             'user': UserModel.empty(),
             'token': token,
             'record': <String, dynamic>{},
+            'farms': <dynamic>[],
+            'defaultFarmId': null,
           };
         }
       } else {

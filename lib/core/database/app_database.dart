@@ -27,6 +27,7 @@ class Lands extends Table {
   BoolColumn get pending => boolean().withDefault(const Constant(false))();
   BoolColumn get deletedLocally =>
       boolean().withDefault(const Constant(false))();
+  IntColumn get farmId => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {clientUuid};
@@ -45,6 +46,7 @@ class Plants extends Table {
   BoolColumn get pending => boolean().withDefault(const Constant(false))();
   BoolColumn get deletedLocally =>
       boolean().withDefault(const Constant(false))();
+  IntColumn get farmId => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {clientUuid};
@@ -66,6 +68,7 @@ class Seasons extends Table {
   BoolColumn get pending => boolean().withDefault(const Constant(false))();
   BoolColumn get deletedLocally =>
       boolean().withDefault(const Constant(false))();
+  IntColumn get farmId => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {clientUuid};
@@ -88,6 +91,7 @@ class Animals extends Table {
   BoolColumn get pending => boolean().withDefault(const Constant(false))();
   BoolColumn get deletedLocally =>
       boolean().withDefault(const Constant(false))();
+  IntColumn get farmId => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {clientUuid};
@@ -111,6 +115,7 @@ class Harvests extends Table {
   BoolColumn get pending => boolean().withDefault(const Constant(false))();
   BoolColumn get deletedLocally =>
       boolean().withDefault(const Constant(false))();
+  IntColumn get farmId => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {clientUuid};
@@ -136,6 +141,7 @@ class Inputs extends Table {
   BoolColumn get pending => boolean().withDefault(const Constant(false))();
   BoolColumn get deletedLocally =>
       boolean().withDefault(const Constant(false))();
+  IntColumn get farmId => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {clientUuid};
@@ -161,6 +167,7 @@ class Activities extends Table {
   BoolColumn get pending => boolean().withDefault(const Constant(false))();
   BoolColumn get deletedLocally =>
       boolean().withDefault(const Constant(false))();
+  IntColumn get farmId => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {clientUuid};
@@ -179,6 +186,7 @@ class AnimalTypes extends Table {
   BoolColumn get pending => boolean().withDefault(const Constant(false))();
   BoolColumn get deletedLocally =>
       boolean().withDefault(const Constant(false))();
+  IntColumn get farmId => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {clientUuid};
@@ -202,6 +210,7 @@ class Herds extends Table {
   BoolColumn get pending => boolean().withDefault(const Constant(false))();
   BoolColumn get deletedLocally =>
       boolean().withDefault(const Constant(false))();
+  IntColumn get farmId => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {clientUuid};
@@ -226,6 +235,7 @@ class Infrastructures extends Table {
   BoolColumn get pending => boolean().withDefault(const Constant(false))();
   BoolColumn get deletedLocally =>
       boolean().withDefault(const Constant(false))();
+  IntColumn get farmId => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {clientUuid};
@@ -250,6 +260,7 @@ class Revenues extends Table {
   BoolColumn get pending => boolean().withDefault(const Constant(false))();
   BoolColumn get deletedLocally =>
       boolean().withDefault(const Constant(false))();
+  IntColumn get farmId => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {clientUuid};
@@ -273,6 +284,7 @@ class CostCategories extends Table {
   BoolColumn get pending => boolean().withDefault(const Constant(false))();
   BoolColumn get deletedLocally =>
       boolean().withDefault(const Constant(false))();
+  IntColumn get farmId => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {clientUuid};
@@ -297,6 +309,7 @@ class HerdActivities extends Table {
   BoolColumn get pending => boolean().withDefault(const Constant(false))();
   BoolColumn get deletedLocally =>
       boolean().withDefault(const Constant(false))();
+  IntColumn get farmId => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {clientUuid};
@@ -313,16 +326,20 @@ class Outbox extends Table {
   IntColumn get attempts => integer().withDefault(const Constant(0))();
   TextColumn get state => text().withDefault(const Constant('pending'))();
   DateTimeColumn get updatedAt => dateTime()();
+  IntColumn get farmId => integer().withDefault(const Constant(1))();
 }
 
-/// Tracks the last successful pull timestamp per synced entity.
+/// Tracks the last successful pull timestamp per synced entity, per farm.
 @DataClassName('SyncCursorRow')
 class SyncCursor extends Table {
   TextColumn get entity => text()();
   DateTimeColumn get lastPulledAt => dateTime().nullable()();
+  IntColumn get farmId => integer().withDefault(const Constant(1))();
 
+  // Two farms both pulling the same entity (e.g. 'land') would otherwise
+  // collide on a single-column {entity} key.
   @override
-  Set<Column> get primaryKey => {entity};
+  Set<Column> get primaryKey => {farmId, entity};
 }
 
 @DriftDatabase(
@@ -352,7 +369,7 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.open() => AppDatabase(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -374,6 +391,17 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(revenues);
         await m.createTable(costCategories);
         await m.createTable(herdActivities);
+      }
+      if (from < 3) {
+        // v3 adds farm_id to every table (V2 sub-project 3, Full Approach
+        // B — every local table becomes farm-scoped). OfflineConfig.enabled
+        // is false in production, so no real user has data to preserve
+        // here — drop and recreate every table rather than attempt a
+        // data-preserving backfill for data nobody has.
+        for (final table in allTables) {
+          await m.deleteTable(table.actualTableName);
+        }
+        await m.createAll();
       }
     },
   );

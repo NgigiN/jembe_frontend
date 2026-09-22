@@ -14,7 +14,9 @@ import 'package:farm_tracker/features/farm/data/datasources/season_remote_data_s
 import 'package:farm_tracker/features/farm/data/models/season_model.dart';
 import 'package:farm_tracker/features/farm/data/repositories/season_repository_impl.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeSeasonRemoteDataSource implements SeasonRemoteDataSource {
   SeasonModel? lastAdded;
@@ -111,6 +113,8 @@ SeasonModel _season({
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   // Every test that flips the flag on must not leak it into the next test.
   tearDown(() {
     OfflineConfig.enabled = false;
@@ -297,8 +301,13 @@ void main() {
     late _FakeSyncEngine sync;
     late FakeSeasonRemoteDataSource remote;
 
-    setUp(() {
+    setUp(() async {
       OfflineConfig.enabled = true;
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      // Every pre-existing offline-path test in this group predates farm
+      // scoping and expects the success path — give it a current farm
+      // (id 1, matching every other farmId default in this plan).
+      await FarmStorageService.setCurrentFarmId(1);
       db = AppDatabase.forTesting(NativeDatabase.memory());
       local = SeasonLocalDataSource(db);
       outbox = OutboxDao(db);

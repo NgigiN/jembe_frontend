@@ -22,6 +22,7 @@ OutboxRow _row(
   String clientUuid = 'a',
   String state = 'pending',
   int attempts = 0,
+  int farmId = 1,
 }) {
   return OutboxRow(
     seq: seq,
@@ -32,6 +33,7 @@ OutboxRow _row(
     attempts: attempts,
     state: state,
     updatedAt: DateTime.utc(2026),
+    farmId: farmId,
   );
 }
 
@@ -648,6 +650,42 @@ void main() {
       expect(phases.last, SyncPhase.idle);
     },
   );
+
+  test('a pass resolves currentFarmId once and threads it into outbox and '
+      'cursor calls', () async {
+    engine = build(rows: [_row(1, farmId: 7)]);
+    engine = SyncEngine(
+      outbox: outbox,
+      syncers: [syncer],
+      cursors: cursors,
+      connectivity: connectivity,
+      deletions: deletions,
+      currentFarmId: () async => 7,
+    );
+
+    await engine.syncNow();
+
+    expect(outbox.lastPeekAllFarmId, 7);
+    expect(cursors.lastFarmId, 7);
+    expect(syncer.lastPullFarmId, 7);
+  });
+
+  test('a pass no-ops when currentFarmId resolves null (no farm known yet)',
+      () async {
+    engine = SyncEngine(
+      outbox: outbox,
+      syncers: [syncer],
+      cursors: cursors,
+      connectivity: connectivity,
+      deletions: deletions,
+      currentFarmId: () async => null,
+    );
+
+    await engine.syncNow();
+
+    expect(syncer.pushCount, 0);
+    expect(syncer.pullCount, 0);
+  });
 }
 
 class _FakeConnectivity implements ConnectivityService {
@@ -715,10 +753,13 @@ class _FakeSyncer implements EntitySyncer {
     }
   }
 
+  int? lastPullFarmId;
+
   @override
-  Future<DateTime?> pull(DateTime? since) async {
+  Future<DateTime?> pull(DateTime? since, {int farmId = 1}) async {
     pullCount++;
     pullSinceArgs.add(since);
+    lastPullFarmId = farmId;
     _events.add('pull:$entity');
     final error = pullThrows;
     // Rethrow whatever the test injected (Network/Server/generic).
@@ -733,11 +774,17 @@ class _FakeCursors extends SyncCursorDao {
 
   final Map<String, DateTime> storage = <String, DateTime>{};
 
-  @override
-  Future<DateTime?> get(String entity) async => storage[entity];
+  int? lastFarmId;
 
   @override
-  Future<void> set(String entity, DateTime at) async {
+  Future<DateTime?> get(String entity, {int farmId = 1}) async {
+    lastFarmId = farmId;
+    return storage[entity];
+  }
+
+  @override
+  Future<void> set(String entity, DateTime at, {int farmId = 1}) async {
+    lastFarmId = farmId;
     storage[entity] = at;
   }
 }
@@ -751,8 +798,13 @@ class _FakeOutbox extends OutboxDao {
   final List<int> failed = <int>[];
   final List<int> bumped = <int>[];
 
+  int? lastPeekAllFarmId;
+
   @override
-  Future<List<OutboxRow>> peekAll() async => List.of(_rows);
+  Future<List<OutboxRow>> peekAll({int farmId = 1}) async {
+    lastPeekAllFarmId = farmId;
+    return List.of(_rows);
+  }
 
   @override
   Future<void> ack(int seq) async {
@@ -793,7 +845,7 @@ class _FakeOutbox extends OutboxDao {
   }
 
   @override
-  Future<int> pendingCount() async =>
+  Future<int> pendingCount({int farmId = 1}) async =>
       _rows.where((r) => r.state == 'pending').length;
 }
 

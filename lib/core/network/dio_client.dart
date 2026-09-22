@@ -5,6 +5,7 @@ import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
@@ -157,6 +158,12 @@ class _AuthInterceptor extends Interceptor {
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
+
+    final farmId = await FarmStorageService.getCurrentFarmId();
+    if (farmId != null) {
+      options.headers['X-Farm-ID'] = farmId.toString();
+    }
+
     handler.next(options);
   }
 

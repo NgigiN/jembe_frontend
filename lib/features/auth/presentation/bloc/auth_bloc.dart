@@ -10,6 +10,7 @@ import 'package:farm_tracker/features/auth/domain/entities/user.dart';
 import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:farm_tracker/injection_container.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -110,6 +111,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         }
       }
       await UserStorageService.clearUserData();
+      await FarmStorageService.clearFarmData();
       final googleSignIn = auth_google.GoogleSignIn.instance;
       try {
         await googleSignIn.signOut();

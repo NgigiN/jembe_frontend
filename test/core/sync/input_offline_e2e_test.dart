@@ -32,7 +32,9 @@ import 'package:farm_tracker/features/farm/data/models/input_model.dart';
 import 'package:farm_tracker/features/farm/data/repositories/input_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/sync/input_syncer.dart';
 import 'package:farm_tracker/features/farm/domain/entities/input.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// In-memory fake "server" for the `input` entity.
 ///
@@ -274,11 +276,15 @@ Input _unwrap(Either<Failure, Input> result) {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late _Harness h;
 
-  setUp(() {
+  setUp(() async {
     h = _Harness();
     OfflineConfig.enabled = true;
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    await FarmStorageService.setCurrentFarmId(1);
   });
 
   tearDown(() async {

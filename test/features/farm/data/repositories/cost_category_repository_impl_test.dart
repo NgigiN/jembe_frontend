@@ -13,7 +13,9 @@ import 'package:farm_tracker/features/farm/data/datasources/cost_category_local_
 import 'package:farm_tracker/features/farm/data/datasources/cost_category_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/cost_category_model.dart';
 import 'package:farm_tracker/features/farm/data/repositories/cost_category_repository_impl.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeCostCategoryRemoteDataSource implements CostCategoryRemoteDataSource {
   final List<Map<String, String?>> addCalls = [];
@@ -105,6 +107,8 @@ CostCategoryModel _category({
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   tearDown(() {
     OfflineConfig.enabled = false;
   });
@@ -303,8 +307,10 @@ void main() {
     late _FakeSyncEngine sync;
     late FakeCostCategoryRemoteDataSource remote;
 
-    setUp(() {
+    setUp(() async {
       OfflineConfig.enabled = true;
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      await FarmStorageService.setCurrentFarmId(1);
       db = AppDatabase.forTesting(NativeDatabase.memory());
       local = CostCategoryLocalDataSource(db);
       outbox = OutboxDao(db);

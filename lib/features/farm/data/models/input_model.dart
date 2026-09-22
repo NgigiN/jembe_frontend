@@ -158,6 +158,7 @@ class InputModel extends Input implements SyncableModel {
   InputsCompanion toCompanion({
     required bool pending,
     bool deletedLocally = false,
+    int farmId = 1,
   }) {
     return InputsCompanion(
       clientUuid: Value(clientUuid),
@@ -174,6 +175,7 @@ class InputModel extends Input implements SyncableModel {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 

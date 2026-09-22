@@ -136,6 +136,7 @@ class SeasonModel extends Season implements SyncableModel {
   SeasonsCompanion toCompanion({
     required bool pending,
     bool deletedLocally = false,
+    int farmId = 1,
   }) {
     return SeasonsCompanion(
       clientUuid: Value(clientUuid),
@@ -150,6 +151,7 @@ class SeasonModel extends Season implements SyncableModel {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 

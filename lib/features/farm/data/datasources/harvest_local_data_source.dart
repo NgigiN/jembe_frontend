@@ -42,9 +42,9 @@ class HarvestLocalDataSource implements LocalSyncStore<HarvestModel> {
   /// and filtering by the season's server-id matches the instant the season
   /// syncs — without waiting for the harvest's own push, or a later pull, to
   /// reconcile the row.
-  Stream<List<HarvestModel>> watchHarvests({String? seasonId}) {
+  Stream<List<HarvestModel>> watchHarvests({String? seasonId, int farmId = 1}) {
     final query = _db.select(_db.harvests)
-      ..where((row) => row.deletedLocally.equals(false));
+      ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId));
     if (seasonId != null && seasonId.isNotEmpty) {
       query.where((row) => row.seasonId.equals(seasonId));
     }
@@ -57,10 +57,10 @@ class HarvestLocalDataSource implements LocalSyncStore<HarvestModel> {
   /// Inserts [model], or replaces the existing row sharing its
   /// `clientUuid` (the primary key) if one already exists.
   @override
-  Future<void> upsert(HarvestModel model, {required bool pending}) {
+  Future<void> upsert(HarvestModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.harvests)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:

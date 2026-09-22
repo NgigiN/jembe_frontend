@@ -14,7 +14,9 @@ import 'package:farm_tracker/features/farm/data/datasources/input_remote_data_so
 import 'package:farm_tracker/features/farm/data/models/input_model.dart';
 import 'package:farm_tracker/features/farm/data/repositories/input_repository_impl.dart';
 import 'package:farm_tracker/features/farm/domain/entities/input.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeInputRemoteDataSource implements InputRemoteDataSource {
   InputModel? lastAdded;
@@ -117,6 +119,8 @@ InputModel _input({
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   // Every test that flips the flag on must not leak it into the next test.
   tearDown(() {
     OfflineConfig.enabled = false;
@@ -337,8 +341,13 @@ void main() {
     late _FakeSyncEngine sync;
     late FakeInputRemoteDataSource remote;
 
-    setUp(() {
+    setUp(() async {
       OfflineConfig.enabled = true;
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      // Every pre-existing offline-path test in this group predates farm
+      // scoping and expects the success path — give it a current farm
+      // (id 1, matching every other farmId default in this plan).
+      await FarmStorageService.setCurrentFarmId(1);
       db = AppDatabase.forTesting(NativeDatabase.memory());
       local = InputLocalDataSource(db);
       outbox = OutboxDao(db);

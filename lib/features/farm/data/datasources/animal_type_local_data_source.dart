@@ -29,9 +29,9 @@ class AnimalTypeLocalDataSource implements LocalSyncStore<AnimalTypeModel> {
   /// Ordered by `createdAt` ascending (oldest first) — a stable order tied
   /// to when an animal type was first created locally, unaffected by later
   /// edits.
-  Stream<List<AnimalTypeModel>> watchAnimalTypes() {
+  Stream<List<AnimalTypeModel>> watchAnimalTypes({int farmId = 1}) {
     final query = _db.select(_db.animalTypes)
-      ..where((row) => row.deletedLocally.equals(false))
+      ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId))
       ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]);
     return query.watch().map(
       (rows) => rows.map(AnimalTypeModel.fromDrift).toList(),
@@ -41,10 +41,10 @@ class AnimalTypeLocalDataSource implements LocalSyncStore<AnimalTypeModel> {
   /// Inserts [model], or replaces the existing row sharing its
   /// `clientUuid` (the primary key) if one already exists.
   @override
-  Future<void> upsert(AnimalTypeModel model, {required bool pending}) {
+  Future<void> upsert(AnimalTypeModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.animalTypes)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:

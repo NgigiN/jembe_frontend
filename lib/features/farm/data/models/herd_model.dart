@@ -149,6 +149,7 @@ class HerdModel extends Herd implements SyncableModel {
   HerdsCompanion toCompanion({
     required bool pending,
     bool deletedLocally = false,
+    int farmId = 1,
   }) {
     return HerdsCompanion(
       clientUuid: Value(clientUuid),
@@ -165,6 +166,7 @@ class HerdModel extends Herd implements SyncableModel {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 

@@ -128,6 +128,7 @@ class InfrastructureModel extends Infrastructure implements SyncableModel {
   InfrastructuresCompanion toCompanion({
     required bool pending,
     bool deletedLocally = false,
+    int farmId = 1,
   }) {
     return InfrastructuresCompanion(
       clientUuid: Value(clientUuid),
@@ -143,6 +144,7 @@ class InfrastructureModel extends Infrastructure implements SyncableModel {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 
