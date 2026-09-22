@@ -3,6 +3,7 @@ import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/audio/sound_service.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/di/service_locator.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/network/connectivity_service.dart';
 import 'package:farm_tracker/core/network/dio_client.dart';
@@ -126,9 +127,8 @@ import 'package:farm_tracker/features/profile/domain/usecases/delete_account.dar
 import 'package:farm_tracker/features/profile/domain/usecases/get_profile.dart';
 import 'package:farm_tracker/features/profile/domain/usecases/update_profile.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
-import 'package:get_it/get_it.dart';
 
-final sl = GetIt.instance;
+export 'package:farm_tracker/core/di/service_locator.dart';
 
 /// Wires the DI container.
 ///

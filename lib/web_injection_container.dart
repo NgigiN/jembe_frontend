@@ -18,6 +18,7 @@
 // confirmation — it doesn't register GoogleSignInService either.
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
+import 'package:farm_tracker/core/di/service_locator.dart';
 import 'package:farm_tracker/core/network/dio_client.dart';
 import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
@@ -82,4 +83,15 @@ Future<void> initWebDependencies() async {
     )
     ..registerFactory(() => FeedBloc(remote: webSl()))
     ..registerLazySingleton(ThemeBloc.new);
+
+  // Second registration of an equivalent FarmRemoteDataSourceImpl, this time
+  // on the SHARED global `sl` (GetIt.instance) rather than this file's own
+  // `webSl` — see lib/core/di/service_locator.dart. The reused mobile pages
+  // FarmManagePage/CreateFarmPage (web-console Task 15.6) read
+  // `sl<FarmRemoteDataSource>()` directly from that global instance, which
+  // nothing else in the web console populates. Both registrations point at
+  // the same webSl<Dio>() instance under the hood.
+  sl.registerLazySingleton<FarmRemoteDataSource>(
+    () => FarmRemoteDataSourceImpl(dio: webSl()),
+  );
 }

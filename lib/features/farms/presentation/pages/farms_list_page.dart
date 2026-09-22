@@ -1,4 +1,4 @@
-import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/navigation/app_route_path.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_event.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_state.dart';
