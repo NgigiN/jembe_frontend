@@ -6,12 +6,14 @@ import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/navigation/web_app_router.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/dashboard_bloc.dart';
 import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_event.dart';
 import 'package:farm_tracker/features/feed/presentation/bloc/feed_bloc.dart';
 import 'package:farm_tracker/features/feed/presentation/pages/feed_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_console_shell.dart';
+import 'package:farm_tracker/features/web_console/presentation/pages/web_dashboard_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_sign_in_page.dart';
 import 'package:farm_tracker/web_injection_container.dart' as web_di;
 import 'package:flutter/material.dart';
@@ -59,7 +61,7 @@ class _WebConsoleApp extends StatelessWidget {
         ShellRoute(
           builder: (context, state, child) => WebConsoleShell(child: child),
           routes: [
-            GoRoute(path: WebRoutePath.dashboard, builder: (_, __) => const Placeholder()),
+            GoRoute(path: WebRoutePath.dashboard, builder: (_, __) => const WebDashboardPage()),
             GoRoute(path: WebRoutePath.feed, builder: (_, __) => const FeedPage()),
             GoRoute(path: WebRoutePath.members, builder: (_, __) => const Placeholder()),
             GoRoute(path: WebRoutePath.reports, builder: (_, __) => const Placeholder()),
@@ -71,6 +73,7 @@ class _WebConsoleApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(create: (_) => web_di.webSl<AuthBloc>()),
+        BlocProvider<DashboardBloc>(create: (_) => web_di.webSl<DashboardBloc>()),
         BlocProvider<FarmBloc>(create: (_) => web_di.webSl<FarmBloc>()..add(LoadFarms())),
         BlocProvider<FeedBloc>(create: (_) => web_di.webSl<FeedBloc>()),
       ],
