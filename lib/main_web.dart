@@ -17,10 +17,14 @@
 // registrations), so importing them here no longer drags in mobile's
 // database/sync stack. `flutter build web -t lib/main_web.dart` succeeds
 // with this wiring in place (see task-16-report.md).
+import 'dart:async';
+
 import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/navigation/web_app_router.dart';
+import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/dashboard_bloc.dart';
 import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
@@ -57,16 +61,55 @@ void main() async {
 
   await web_di.initWebDependencies();
 
+  // A hard 401 on a protected resource (see session_expiry_notifier.dart)
+  // forces logout regardless of which page is active — same reasoning as
+  // lib/main.dart's identical wiring. AuthBloc is a webSl singleton, so this
+  // reaches the exact instance the widget tree below uses; logout when
+  // already logged out is a harmless no-op.
+  web_di.webSl<SessionExpiryNotifier>().addListener(() {
+    web_di.webSl<AuthBloc>().add(LogoutEvent());
+  });
+
   runApp(const _WebConsoleApp());
 }
 
-class _WebConsoleApp extends StatelessWidget {
+/// Bridges a Stream into a Listenable so GoRouter's `refreshListenable` can
+/// react to it — the standard go_router pattern for bloc-driven redirects.
+/// Notifies once immediately (matching the pattern's usual form) and again
+/// on every stream event.
+class _GoRouterRefreshStream extends ChangeNotifier {
+  _GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    unawaited(_subscription.cancel());
+    super.dispose();
+  }
+}
+
+class _WebConsoleApp extends StatefulWidget {
   const _WebConsoleApp();
 
   @override
-  Widget build(BuildContext context) {
-    final router = GoRouter(
+  State<_WebConsoleApp> createState() => _WebConsoleAppState();
+}
+
+class _WebConsoleAppState extends State<_WebConsoleApp> {
+  late final GoRouter _router;
+  late final _GoRouterRefreshStream _refreshListenable;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshListenable = _GoRouterRefreshStream(web_di.webSl<AuthBloc>().stream);
+    _router = GoRouter(
       initialLocation: WebRoutePath.dashboard,
+      refreshListenable: _refreshListenable,
       redirect: (context, state) async {
         final loggedIn = await UserStorageService.isLoggedIn();
         final authRedirect = WebAppRouter.authRedirectLocation(
@@ -92,7 +135,16 @@ class _WebConsoleApp extends StatelessWidget {
         ),
       ],
     );
+  }
 
+  @override
+  void dispose() {
+    _refreshListenable.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(create: (_) => web_di.webSl<AuthBloc>()),
@@ -101,7 +153,7 @@ class _WebConsoleApp extends StatelessWidget {
         BlocProvider<FarmBloc>(create: (_) => web_di.webSl<FarmBloc>()..add(LoadFarms())),
         BlocProvider<FeedBloc>(create: (_) => web_di.webSl<FeedBloc>()),
       ],
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(routerConfig: _router),
     );
   }
 }

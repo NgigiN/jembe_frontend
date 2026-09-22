@@ -111,4 +111,26 @@ void main() {
       ).called(1);
     },
   );
+
+  testWidgets('shows a SnackBar when AuthBloc emits AuthError', (tester) async {
+    final controller = StreamController<AuthState>();
+    addTearDown(controller.close);
+    whenListen(authBloc, controller.stream, initialState: AuthInitial());
+
+    await tester.pumpWidget(
+      harness(
+        WebSignInPage(
+          ensureInitialized: () async {},
+          idTokenEvents: const Stream<String>.empty(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    controller.add(AuthError('Sign-in failed on the backend'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Sign-in failed on the backend'), findsOneWidget);
+  });
 }

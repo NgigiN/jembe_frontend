@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:farm_tracker/features/auth/data/services/google_sign_in_service.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
+import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
 import 'package:farm_tracker/features/auth/presentation/widgets/google_sign_in_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -77,14 +78,26 @@ class _WebSignInPageState extends State<WebSignInPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: _error
-            ? const Text(
-                'Sign-in is currently unavailable. Please try again shortly.',
-              )
-            : _ready
-            ? const GoogleSignInButton()
-            : const CircularProgressIndicator(),
+      body: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is AuthError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+            );
+          }
+        },
+        child: Center(
+          child: _error
+              ? const Text(
+                  'Sign-in is currently unavailable. Please try again shortly.',
+                )
+              : _ready
+              ? const GoogleSignInButton()
+              : const CircularProgressIndicator(),
+        ),
       ),
     );
   }
