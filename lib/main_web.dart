@@ -9,6 +9,8 @@ import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_event.dart';
+import 'package:farm_tracker/features/feed/presentation/bloc/feed_bloc.dart';
+import 'package:farm_tracker/features/feed/presentation/pages/feed_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_console_shell.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_sign_in_page.dart';
 import 'package:farm_tracker/web_injection_container.dart' as web_di;
@@ -58,7 +60,7 @@ class _WebConsoleApp extends StatelessWidget {
           builder: (context, state, child) => WebConsoleShell(child: child),
           routes: [
             GoRoute(path: WebRoutePath.dashboard, builder: (_, __) => const Placeholder()),
-            GoRoute(path: WebRoutePath.feed, builder: (_, __) => const Placeholder()),
+            GoRoute(path: WebRoutePath.feed, builder: (_, __) => const FeedPage()),
             GoRoute(path: WebRoutePath.members, builder: (_, __) => const Placeholder()),
             GoRoute(path: WebRoutePath.reports, builder: (_, __) => const Placeholder()),
           ],
@@ -70,6 +72,7 @@ class _WebConsoleApp extends StatelessWidget {
       providers: [
         BlocProvider<AuthBloc>(create: (_) => web_di.webSl<AuthBloc>()),
         BlocProvider<FarmBloc>(create: (_) => web_di.webSl<FarmBloc>()..add(LoadFarms())),
+        BlocProvider<FeedBloc>(create: (_) => web_di.webSl<FeedBloc>()),
       ],
       child: MaterialApp.router(routerConfig: router),
     );

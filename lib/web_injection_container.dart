@@ -36,6 +36,8 @@ import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart'
 import 'package:farm_tracker/features/farm/presentation/bloc/dashboard_bloc.dart';
 import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_source.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
+import 'package:farm_tracker/features/feed/data/datasources/feed_remote_data_source.dart';
+import 'package:farm_tracker/features/feed/presentation/bloc/feed_bloc.dart';
 import 'package:get_it/get_it.dart';
 
 final GetIt webSl = GetIt.asNewInstance();
@@ -75,5 +77,9 @@ Future<void> initWebDependencies() async {
       () => AnalysisRepositoryImpl(remoteDataSource: webSl()),
     )
     ..registerFactory(() => AnalysisBloc(repository: webSl()))
+    ..registerLazySingleton<FeedRemoteDataSource>(
+      () => FeedRemoteDataSourceImpl(dio: webSl()),
+    )
+    ..registerFactory(() => FeedBloc(remote: webSl()))
     ..registerLazySingleton(ThemeBloc.new);
 }
