@@ -42,7 +42,7 @@ import 'package:farm_tracker/features/farms/data/services/farm_storage_service.d
 /// server id. [updateInput] and [deleteInput] therefore treat the incoming
 /// `id`/`input.id` as a `clientUuid`, never a server id. The drift row's
 /// nullable `serverId` is used ONLY by the syncer (via
-/// `InputModel.fromDrift`) to build server URLs — it never surfaces
+/// `inputModelFromDrift`) to build server URLs — it never surfaces
 /// through this repository's presentation.
 class InputRepositoryImpl
     with OfflineRepositoryMixin

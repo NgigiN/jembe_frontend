@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
+import 'package:farm_tracker/features/farm/data/models/activity_model_drift.dart';
 
 /// Drift-backed local data source for the activity feature.
 ///
@@ -42,7 +43,7 @@ class ActivityLocalDataSource implements LocalSyncStore<ActivityModel> {
     }
     query.orderBy([(row) => OrderingTerm.asc(row.createdAt)]);
     return query.watch().map(
-      (rows) => rows.map(ActivityModel.fromDrift).toList(),
+      (rows) => rows.map(activityModelFromDrift).toList(),
     );
   }
 
@@ -105,7 +106,7 @@ class ActivityLocalDataSource implements LocalSyncStore<ActivityModel> {
     final row = await (_db.select(
       _db.activities,
     )..where((r) => r.clientUuid.equals(clientUuid))).getSingleOrNull();
-    return row == null ? null : ActivityModel.fromDrift(row);
+    return row == null ? null : activityModelFromDrift(row);
   }
 
   /// The activity with the given server [serverId], or `null` if no such
@@ -115,7 +116,7 @@ class ActivityLocalDataSource implements LocalSyncStore<ActivityModel> {
     final row = await (_db.select(
       _db.activities,
     )..where((r) => r.serverId.equals(serverId))).getSingleOrNull();
-    return row == null ? null : ActivityModel.fromDrift(row);
+    return row == null ? null : activityModelFromDrift(row);
   }
 
   /// Deletes every row — used to wipe the local mirror on logout.
