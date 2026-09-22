@@ -161,5 +161,5 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final Future<void> Function()? cleanCache;
 
   static bool get _supportsGoogleSignIn =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+      kIsWeb || defaultTargetPlatform == TargetPlatform.android;
 }
