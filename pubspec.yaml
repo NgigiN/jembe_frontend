@@ -79,6 +79,13 @@ dependencies:
   url_launcher: ^6.3.0
   flex_color_scheme: ^8.4.0
   adaptive_scaffold_plus: ^1.1.1
+  # Web console CSV download (Task 15): dart:html is deprecated on this SDK
+  # (flutter analyze flags deprecated_member_use + avoid_web_libraries_in_flutter);
+  # package:web + dart:js_interop is the supported replacement. Was already a
+  # transitive dep (google_sign_in_web etc.) but lib/features/web_console/
+  # presentation/utils/csv_download.dart imports it directly, which needs an
+  # explicit entry or `flutter analyze` flags depend_on_referenced_packages.
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:
