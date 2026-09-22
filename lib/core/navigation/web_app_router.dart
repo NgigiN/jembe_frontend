@@ -9,6 +9,7 @@ class WebRoutePath {
   static const reports = '/reports';
   static const farmsList = '/farms';
   static const createFarm = '/farms/create';
+  static const farmManage = '/farms/manage';
 }
 
 class WebAppRouter {

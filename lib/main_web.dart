@@ -2,6 +2,21 @@
 //
 // Web console entry point (spec §3) — separate from lib/main.dart (mobile).
 // Never imports lib/injection_container.dart.
+//
+// The three reused sub-project 3 pages below (FarmsListPage, CreateFarmPage,
+// FarmManagePage) were previously blocked from being wired in here: they
+// transitively reached lib/injection_container.dart's dart:ffi-based
+// package:sqlite3 bindings via two import chains (farms_list_page.dart ->
+// app_router.dart's AppRoutePath -> ~20+ mobile pages; and
+// farm_manage_page.dart/create_farm_page.dart -> injection_container.dart
+// directly for `sl<FarmRemoteDataSource>()`), which fail to compile for
+// web. Task 15.6 (commit 8dabbe4) decoupled both chains: the pages now
+// import lib/core/navigation/app_route_path.dart (plain path-string
+// constants, no page imports) and lib/core/di/service_locator.dart (a
+// standalone `sl = GetIt.instance` accessor, no sqlite3-touching
+// registrations), so importing them here no longer drags in mobile's
+// database/sync stack. `flutter build web -t lib/main_web.dart` succeeds
+// with this wiring in place (see task-16-report.md).
 import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/navigation/web_app_router.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
@@ -11,6 +26,9 @@ import 'package:farm_tracker/features/farm/presentation/bloc/dashboard_bloc.dart
 import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_event.dart';
+import 'package:farm_tracker/features/farms/presentation/pages/create_farm_page.dart';
+import 'package:farm_tracker/features/farms/presentation/pages/farm_manage_page.dart';
+import 'package:farm_tracker/features/farms/presentation/pages/farms_list_page.dart';
 import 'package:farm_tracker/features/feed/presentation/bloc/feed_bloc.dart';
 import 'package:farm_tracker/features/feed/presentation/pages/feed_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_console_shell.dart';
@@ -60,12 +78,15 @@ class _WebConsoleApp extends StatelessWidget {
       },
       routes: [
         GoRoute(path: WebRoutePath.signIn, builder: (_, __) => const WebSignInPage()),
+        GoRoute(path: WebRoutePath.farmsList, builder: (_, __) => const FarmsListPage()),
+        GoRoute(path: WebRoutePath.createFarm, builder: (_, __) => const CreateFarmPage()),
+        GoRoute(path: WebRoutePath.farmManage, builder: (_, __) => const FarmManagePage()),
         ShellRoute(
           builder: (context, state, child) => WebConsoleShell(child: child),
           routes: [
             GoRoute(path: WebRoutePath.dashboard, builder: (_, __) => const WebDashboardPage()),
             GoRoute(path: WebRoutePath.feed, builder: (_, __) => const FeedPage()),
-            GoRoute(path: WebRoutePath.members, builder: (_, __) => const Placeholder()),
+            GoRoute(path: WebRoutePath.members, builder: (_, __) => const FarmManagePage()),
             GoRoute(path: WebRoutePath.reports, builder: (_, __) => const WebReportsPage()),
           ],
         ),
