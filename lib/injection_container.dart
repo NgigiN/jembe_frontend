@@ -164,7 +164,7 @@ Future<void> init({AppDatabase? database}) async {
     // to the widget tree, or a forced logout would land on an orphan bloc
     // the UI never sees.
     ..registerLazySingleton(() => AuthBloc(googleSignInUseCase: sl()))
-    ..registerLazySingleton(() => FarmBloc(remote: sl(), syncEngine: sl()))
+    ..registerLazySingleton(() => FarmBloc(remote: sl(), triggerSync: sl()))
     // Feature-specific blocs (preferred)
     ..registerFactory(() => LandBloc(repository: sl()))
     ..registerFactory(() => PlantBloc(repository: sl()))

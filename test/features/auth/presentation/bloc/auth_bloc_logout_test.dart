@@ -72,10 +72,10 @@ void main() {
 
       final db = _ThrowingAppDatabase();
       addTearDown(db.close);
-      sl.registerSingleton<AppDatabase>(db);
 
       final bloc = AuthBloc(
         googleSignInUseCase: _MockGoogleSignInUseCase(),
+        wipeLocalData: db.wipeAll,
       );
       addTearDown(bloc.close);
 

@@ -1,5 +1,4 @@
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
@@ -17,7 +16,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart' as auth_google;
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  AuthBloc({required this.googleSignInUseCase}) : super(AuthInitial()) {
+  AuthBloc({required this.googleSignInUseCase, this.wipeLocalData})
+      : super(AuthInitial()) {
     on<GoogleSignInRequested>((event, emit) async {
       emit(AuthLoading());
       appLogger.logAuthEvent('Google Sign-In attempt');
@@ -103,11 +103,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // here — only its tables are cleared. Guarded for the same reason as
       // `CacheStore.clean` above: a wipe failure must not block the rest of
       // logout.
-      if (OfflineConfig.enabled && sl.isRegistered<AppDatabase>()) {
+      if (OfflineConfig.enabled && wipeLocalData != null) {
         try {
-          await sl<AppDatabase>().wipeAll();
+          await wipeLocalData!();
         } catch (e, st) {
-          appLogger.logError('AuthBloc.logout: AppDatabase.wipeAll', e, st);
+          appLogger.logError('AuthBloc.logout: wipeLocalData', e, st);
         }
       }
       await UserStorageService.clearUserData();
@@ -159,6 +159,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     });
   }
   final GoogleSignInUseCase googleSignInUseCase;
+  final Future<void> Function()? wipeLocalData;
 
   static bool get _supportsGoogleSignIn =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
