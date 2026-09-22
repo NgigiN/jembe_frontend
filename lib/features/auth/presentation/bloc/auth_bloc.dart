@@ -44,26 +44,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           return;
         }
 
-        final result = await googleSignInUseCase(idToken);
-        
-        await result.fold(
-          (failure) async {
-            final message = resolveFailureMessage(failure, 'Google Sign-In failed');
-            appLogger.logAuthEvent(
-              'Google Sign-In failed',
-              details: {'error': message},
-            );
-            emit(AuthError(message));
-          },
-          (user) async {
-            appLogger.logAuthEvent(
-              'Google Sign-In successful',
-              userId: user.id,
-              details: {'email': user.email, 'name': user.fullName},
-            );
-            emit(AuthAuthenticated(user));
-          },
-        );
+        await _completeSignIn(idToken, emit);
       } catch (e) {
         if (isSignInCancellation(e)) {
           appLogger.logAuthEvent('Google Sign-In cancelled by user');
@@ -73,6 +54,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         appLogger.logError('GoogleSignInRequested', e);
         emit(AuthError('Google Sign-In failed. Please try again.'));
       }
+    });
+
+    on<GoogleSignInWebAccountReceived>((event, emit) async {
+      emit(AuthLoading());
+      appLogger.logAuthEvent('Google Sign-In attempt (web)');
+      await _completeSignIn(event.idToken, emit);
     });
 
     on<ResetAuthState>((event, emit) {
@@ -160,6 +147,32 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final Future<void> Function()? wipeLocalData;
   final Future<void> Function()? cleanCache;
 
+  // Web uses the separate GoogleSignInWebAccountReceived path instead
+  // (GIS's rendered button + authenticationEvents stream), since
+  // google_sign_in_web's authenticate() is unconditionally unimplemented.
   static bool get _supportsGoogleSignIn =>
-      kIsWeb || defaultTargetPlatform == TargetPlatform.android;
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  Future<void> _completeSignIn(String idToken, Emitter<AuthState> emit) async {
+    final result = await googleSignInUseCase(idToken);
+
+    await result.fold(
+      (failure) async {
+        final message = resolveFailureMessage(failure, 'Google Sign-In failed');
+        appLogger.logAuthEvent(
+          'Google Sign-In failed',
+          details: {'error': message},
+        );
+        emit(AuthError(message));
+      },
+      (user) async {
+        appLogger.logAuthEvent(
+          'Google Sign-In successful',
+          userId: user.id,
+          details: {'email': user.email, 'name': user.fullName},
+        );
+        emit(AuthAuthenticated(user));
+      },
+    );
+  }
 }
