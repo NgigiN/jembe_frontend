@@ -31,6 +31,7 @@ import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/dashboard_bloc.dart';
+import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_source.dart';
 import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_event.dart';
@@ -126,14 +127,23 @@ class _WebConsoleAppState extends State<_WebConsoleApp> {
       routes: [
         GoRoute(path: WebRoutePath.signIn, builder: (_, __) => const WebSignInPage()),
         GoRoute(path: WebRoutePath.farmsList, builder: (_, __) => const FarmsListPage()),
-        GoRoute(path: WebRoutePath.createFarm, builder: (_, __) => const CreateFarmPage()),
-        GoRoute(path: WebRoutePath.farmManage, builder: (_, __) => const FarmManagePage()),
+        GoRoute(
+          path: WebRoutePath.createFarm,
+          builder: (_, __) => CreateFarmPage(remote: web_di.webSl<FarmRemoteDataSource>()),
+        ),
+        GoRoute(
+          path: WebRoutePath.farmManage,
+          builder: (_, __) => FarmManagePage(remote: web_di.webSl<FarmRemoteDataSource>()),
+        ),
         ShellRoute(
           builder: (context, state, child) => WebConsoleShell(child: child),
           routes: [
             GoRoute(path: WebRoutePath.dashboard, builder: (_, __) => const WebDashboardPage()),
             GoRoute(path: WebRoutePath.feed, builder: (_, __) => const FeedPage()),
-            GoRoute(path: WebRoutePath.members, builder: (_, __) => const FarmManagePage()),
+            GoRoute(
+              path: WebRoutePath.members,
+              builder: (_, __) => FarmManagePage(remote: web_di.webSl<FarmRemoteDataSource>()),
+            ),
             GoRoute(path: WebRoutePath.reports, builder: (_, __) => const WebReportsPage()),
           ],
         ),

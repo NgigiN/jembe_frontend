@@ -46,18 +46,25 @@ void main() {
         web_di.webSl<SessionExpiryNotifier>(),
         isA<SessionExpiryNotifier>(),
       );
+      expect(
+        web_di.webSl<FarmRemoteDataSource>(),
+        isA<FarmRemoteDataSource>(),
+      );
     },
   );
 
   test(
-    'initWebDependencies() also populates the shared sl (GetIt.instance) '
-    'FarmRemoteDataSource that FarmManagePage/CreateFarmPage read directly '
-    '(web-console Task 15.6)',
+    'initWebDependencies() does NOT also register FarmRemoteDataSource onto '
+    'the shared sl (GetIt.instance) — regression guard for the DI '
+    'double-registration cleanup (web-console final-review finding I10): '
+    'FarmManagePage/CreateFarmPage now receive it via an explicit '
+    "constructor parameter from lib/main_web.dart's route builders instead "
+    'of a second global registration nothing else needed',
     () async {
       AppConfig.initialize();
       await web_di.initWebDependencies();
 
-      expect(sl<FarmRemoteDataSource>(), isA<FarmRemoteDataSource>());
+      expect(sl.isRegistered<FarmRemoteDataSource>(), isFalse);
     },
   );
 }

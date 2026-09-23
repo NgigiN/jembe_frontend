@@ -11,13 +11,22 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 class CreateFarmPage extends StatefulWidget {
-  const CreateFarmPage({super.key});
+  const CreateFarmPage({super.key, this.remote});
+
+  /// Overrides the shared global `sl<FarmRemoteDataSource>()` lookup this
+  /// page otherwise falls back to. Mobile call sites omit this (unchanged
+  /// behavior, resolves via `sl`, which lib/injection_container.dart
+  /// populates); the web console passes its own `webSl<FarmRemoteDataSource>()`
+  /// explicitly instead of also registering onto the shared `sl` just for
+  /// this page to read from (web-console final-review finding I10).
+  final FarmRemoteDataSource? remote;
 
   @override
   State<CreateFarmPage> createState() => _CreateFarmPageState();
 }
 
 class _CreateFarmPageState extends State<CreateFarmPage> {
+  late final FarmRemoteDataSource _remote = widget.remote ?? sl<FarmRemoteDataSource>();
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _locationController = TextEditingController();
@@ -35,7 +44,7 @@ class _CreateFarmPageState extends State<CreateFarmPage> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _submitting = true);
     try {
-      await sl<FarmRemoteDataSource>().createFarm(
+      await _remote.createFarm(
         name: sanitizeText(_nameController.text),
         location: sanitizeText(_locationController.text),
         fiscalYearStartMonth: _fiscalYearStartMonth,
