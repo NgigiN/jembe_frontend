@@ -28,12 +28,16 @@ import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecas
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/farm/data/datasources/analysis_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/dashboard_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/trash_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/repositories/analysis_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/dashboard_repository_impl.dart';
+import 'package:farm_tracker/features/farm/data/repositories/trash_repository_impl.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/analysis_repository.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/dashboard_repository.dart';
+import 'package:farm_tracker/features/farm/domain/repositories/trash_repository.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/dashboard_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/trash_bloc.dart';
 import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_source.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/feed/data/datasources/feed_remote_data_source.dart';
@@ -81,5 +85,13 @@ Future<void> initWebDependencies() async {
       () => FeedRemoteDataSourceImpl(dio: webSl()),
     )
     ..registerFactory(() => FeedBloc(remote: webSl()))
+    // Trash is already live-HTTP only on mobile, so it is reused verbatim.
+    ..registerLazySingleton<TrashRemoteDataSource>(
+      () => TrashRemoteDataSourceImpl(dio: webSl()),
+    )
+    ..registerLazySingleton<TrashRepository>(
+      () => TrashRepositoryImpl(remoteDataSource: webSl()),
+    )
+    ..registerFactory(() => TrashBloc(repository: webSl()))
     ..registerLazySingleton(ThemeBloc.new);
 }

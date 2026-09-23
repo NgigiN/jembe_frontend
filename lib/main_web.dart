@@ -29,6 +29,7 @@ import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/dashboard_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/trash_bloc.dart';
 import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_source.dart';
 import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
@@ -41,7 +42,9 @@ import 'package:farm_tracker/features/feed/presentation/pages/feed_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_console_shell.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_dashboard_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_reports_page.dart';
+import 'package:farm_tracker/features/web_console/presentation/pages/web_settings_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_sign_in_page.dart';
+import 'package:farm_tracker/features/web_console/presentation/pages/web_trash_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/theme/web_console_theme.dart';
 import 'package:farm_tracker/web_injection_container.dart' as web_di;
 import 'package:flutter/material.dart';
@@ -125,25 +128,30 @@ class _WebConsoleAppState extends State<_WebConsoleApp> {
       },
       routes: [
         GoRoute(path: WebRoutePath.signIn, builder: (_, __) => const WebSignInPage()),
-        GoRoute(path: WebRoutePath.farmsList, builder: (_, __) => const FarmsListPage()),
-        GoRoute(
-          path: WebRoutePath.createFarm,
-          builder: (_, __) => CreateFarmPage(remote: web_di.webSl<FarmRemoteDataSource>()),
-        ),
-        GoRoute(
-          path: WebRoutePath.farmManage,
-          builder: (_, __) => FarmManagePage(remote: web_di.webSl<FarmRemoteDataSource>()),
-        ),
+        // Everything past sign-in lives inside the shell: the sidebar is
+        // where the farm context is stated, so a page without it would
+        // leave you unsure which farm you are looking at.
         ShellRoute(
           builder: (context, state, child) => WebConsoleShell(child: child),
           routes: [
             GoRoute(path: WebRoutePath.dashboard, builder: (_, __) => const WebDashboardPage()),
             GoRoute(path: WebRoutePath.feed, builder: (_, __) => const FeedPage()),
+            GoRoute(path: WebRoutePath.reports, builder: (_, __) => const WebReportsPage()),
             GoRoute(
               path: WebRoutePath.members,
               builder: (_, __) => FarmManagePage(remote: web_di.webSl<FarmRemoteDataSource>()),
             ),
-            GoRoute(path: WebRoutePath.reports, builder: (_, __) => const WebReportsPage()),
+            GoRoute(path: WebRoutePath.farmsList, builder: (_, __) => const FarmsListPage()),
+            GoRoute(
+              path: WebRoutePath.createFarm,
+              builder: (_, __) => CreateFarmPage(remote: web_di.webSl<FarmRemoteDataSource>()),
+            ),
+            GoRoute(
+              path: WebRoutePath.farmManage,
+              builder: (_, __) => FarmManagePage(remote: web_di.webSl<FarmRemoteDataSource>()),
+            ),
+            GoRoute(path: WebRoutePath.trash, builder: (_, __) => const WebTrashPage()),
+            GoRoute(path: WebRoutePath.settings, builder: (_, __) => const WebSettingsPage()),
           ],
         ),
       ],
@@ -166,6 +174,7 @@ class _WebConsoleAppState extends State<_WebConsoleApp> {
         BlocProvider<FarmBloc>(create: (_) => web_di.webSl<FarmBloc>()..add(LoadFarms())),
         BlocProvider<FeedBloc>(create: (_) => web_di.webSl<FeedBloc>()),
         BlocProvider<ThemeBloc>(create: (_) => web_di.webSl<ThemeBloc>()),
+        BlocProvider<TrashBloc>(create: (_) => web_di.webSl<TrashBloc>()),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(
         builder: (context, themeState) {
