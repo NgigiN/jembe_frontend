@@ -87,7 +87,15 @@ class RoleTag extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(role.label, style: AppTypography.tag.copyWith(color: foreground)),
+          // Flexible so a narrow Role column clips the word rather than
+          // overflowing the row it sits in.
+          Flexible(
+            child: Text(
+              role.label,
+              style: AppTypography.tag.copyWith(color: foreground),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           if (trailing != null) ...[
             const SizedBox(width: 2),
             IconTheme(

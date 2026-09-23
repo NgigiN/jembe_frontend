@@ -3,6 +3,10 @@
 import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
 import 'package:farm_tracker/features/farm/domain/entities/dashboard.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
+import 'package:farm_tracker/features/farms/domain/entities/farm.dart';
+import 'package:farm_tracker/features/farms/domain/entities/farm_invitation.dart';
+import 'package:farm_tracker/features/farms/domain/entities/farm_member.dart';
+import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
 import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 import 'package:farm_tracker/features/feed/domain/entities/feed_entry.dart';
 
@@ -124,4 +128,69 @@ const sampleMonths = [
   MonthlySummary(month: '2026-07', totalCosts: 2300, totalRevenue: 1500, profit: -800, breakdown: _noBreakdown),
   MonthlySummary(month: '2026-08', totalCosts: 900, totalRevenue: 500, profit: -400, breakdown: _noBreakdown),
   MonthlySummary(month: '2026-09', totalCosts: 1300, totalRevenue: 500, profit: -800, breakdown: _noBreakdown),
+];
+
+final sampleMembers = [
+  FarmMember(
+    userId: 1,
+    firstName: 'Kamau',
+    lastName: 'Owner',
+    email: 'kamau@gmail.com',
+    role: FarmRole.owner,
+    joinedAt: DateTime(2026, 2, 3),
+  ),
+  FarmMember(
+    userId: 2,
+    firstName: 'Wanjiku',
+    lastName: 'Njeri',
+    email: 'wanjiku.njeri@gmail.com',
+    role: FarmRole.manager,
+    joinedAt: DateTime(2026, 3, 18),
+  ),
+  FarmMember(
+    userId: 3,
+    firstName: 'Otieno',
+    lastName: 'Baraka',
+    email: 'otieno.b@gmail.com',
+    role: FarmRole.worker,
+    joinedAt: DateTime(2026, 4, 2),
+  ),
+];
+
+final sampleInvitations = [
+  FarmInvitation(
+    id: 9,
+    email: 'achieng.m@gmail.com',
+    role: FarmRole.worker,
+    invitedBy: 1,
+    expiresAt: DateTime.now().add(const Duration(days: 5)),
+    createdAt: DateTime.now().subtract(const Duration(days: 2)),
+  ),
+];
+
+const sampleFarms = [
+  Farm(
+    id: 1,
+    name: 'Keringet',
+    location: 'Nakuru',
+    fiscalYearStartMonth: 1,
+    ownerUserId: 1,
+    successorUserId: null,
+    maxMembers: 10,
+    role: FarmRole.owner,
+    memberCount: 3,
+    isDefault: true,
+  ),
+  Farm(
+    id: 2,
+    name: 'Kamburu',
+    location: "Murang'a",
+    fiscalYearStartMonth: 1,
+    ownerUserId: 1,
+    successorUserId: null,
+    maxMembers: 10,
+    role: FarmRole.owner,
+    memberCount: 1,
+    isDefault: false,
+  ),
 ];

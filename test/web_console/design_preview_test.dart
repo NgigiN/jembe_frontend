@@ -2,6 +2,8 @@ import 'package:farm_tracker/core/navigation/web_app_router.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
 import 'package:farm_tracker/features/feed/presentation/pages/feed_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_dashboard_page.dart';
+import 'package:farm_tracker/features/web_console/presentation/pages/web_farms_page.dart';
+import 'package:farm_tracker/features/web_console/presentation/pages/web_members_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_reports_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -80,6 +82,46 @@ void main() {
         location: WebRoutePath.reports,
       ),
       'reports',
+    );
+  });
+
+  testWidgets('members', (tester) async {
+    await capture(
+      tester,
+      previewShell(
+        MembersView(
+          farmName: sampleFarmName,
+          seats: 10,
+          role: FarmRole.owner,
+          members: sampleMembers,
+          invitations: sampleInvitations,
+          onInvite: (_, __) {},
+          onResend: (_) {},
+          onRevoke: (_) {},
+          onRoleChange: (_, __) {},
+          onRemove: (_) {},
+          onNominate: (_) {},
+        ),
+        location: WebRoutePath.members,
+      ),
+      'members',
+    );
+  });
+
+  testWidgets('farms', (tester) async {
+    await capture(
+      tester,
+      previewShell(
+        FarmsView(
+          farms: sampleFarms,
+          currentFarmId: 1,
+          onSwitch: (_) {},
+          onManage: () {},
+          onCreate: (_, __) {},
+        ),
+        location: WebRoutePath.farmsList,
+      ),
+      'farms',
     );
   });
 

@@ -34,13 +34,12 @@ import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_so
 import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_event.dart';
-import 'package:farm_tracker/features/farms/presentation/pages/create_farm_page.dart';
-import 'package:farm_tracker/features/farms/presentation/pages/farm_manage_page.dart';
-import 'package:farm_tracker/features/farms/presentation/pages/farms_list_page.dart';
 import 'package:farm_tracker/features/feed/presentation/bloc/feed_bloc.dart';
 import 'package:farm_tracker/features/feed/presentation/pages/feed_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_console_shell.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_dashboard_page.dart';
+import 'package:farm_tracker/features/web_console/presentation/pages/web_farms_page.dart';
+import 'package:farm_tracker/features/web_console/presentation/pages/web_members_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_reports_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_settings_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_sign_in_page.dart';
@@ -139,16 +138,13 @@ class _WebConsoleAppState extends State<_WebConsoleApp> {
             GoRoute(path: WebRoutePath.reports, builder: (_, __) => const WebReportsPage()),
             GoRoute(
               path: WebRoutePath.members,
-              builder: (_, __) => FarmManagePage(remote: web_di.webSl<FarmRemoteDataSource>()),
-            ),
-            GoRoute(path: WebRoutePath.farmsList, builder: (_, __) => const FarmsListPage()),
-            GoRoute(
-              path: WebRoutePath.createFarm,
-              builder: (_, __) => CreateFarmPage(remote: web_di.webSl<FarmRemoteDataSource>()),
+              builder: (_, __) =>
+                  WebMembersPage(remote: web_di.webSl<FarmRemoteDataSource>()),
             ),
             GoRoute(
-              path: WebRoutePath.farmManage,
-              builder: (_, __) => FarmManagePage(remote: web_di.webSl<FarmRemoteDataSource>()),
+              path: WebRoutePath.farmsList,
+              builder: (_, __) =>
+                  WebFarmsPage(remote: web_di.webSl<FarmRemoteDataSource>()),
             ),
             GoRoute(path: WebRoutePath.trash, builder: (_, __) => const WebTrashPage()),
             GoRoute(path: WebRoutePath.settings, builder: (_, __) => const WebSettingsPage()),

@@ -8,8 +8,6 @@ class WebRoutePath {
   static const members = '/members';
   static const reports = '/reports';
   static const farmsList = '/farms';
-  static const createFarm = '/farms/create';
-  static const farmManage = '/farms/manage';
   static const trash = '/trash';
   static const settings = '/settings';
 }
