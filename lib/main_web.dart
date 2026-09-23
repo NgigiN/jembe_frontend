@@ -22,8 +22,6 @@ import 'dart:async';
 import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/navigation/web_app_router.dart';
 import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
-import 'package:farm_tracker/core/theme/app_colors.dart';
-import 'package:farm_tracker/core/theme/app_theme.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
@@ -44,6 +42,7 @@ import 'package:farm_tracker/features/web_console/presentation/pages/web_console
 import 'package:farm_tracker/features/web_console/presentation/pages/web_dashboard_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_reports_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_sign_in_page.dart';
+import 'package:farm_tracker/features/web_console/presentation/theme/web_console_theme.dart';
 import 'package:farm_tracker/web_injection_container.dart' as web_di;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -172,8 +171,8 @@ class _WebConsoleAppState extends State<_WebConsoleApp> {
         builder: (context, themeState) {
           return MaterialApp.router(
             title: 'Shamba+',
-            theme: AppTheme.getLightTheme(AppColors.lightColorScheme),
-            darkTheme: AppTheme.getDarkTheme(AppColors.darkColorScheme),
+            theme: WebConsoleTheme.light(),
+            darkTheme: WebConsoleTheme.dark(),
             themeMode: themeState.themeMode,
             routerConfig: _router,
             debugShowCheckedModeBanner: false,
