@@ -43,6 +43,7 @@ String _confirmation(LogEntryKind kind) => switch (kind) {
   LogEntryKind.revenue => 'Sale logged.',
   LogEntryKind.harvest => 'Harvest logged.',
   LogEntryKind.herdActivity => 'Herd event logged.',
+  LogEntryKind.land => 'Plot added.',
 };
 
 /// A "Log …" header action.

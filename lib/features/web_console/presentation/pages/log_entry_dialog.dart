@@ -17,7 +17,8 @@ enum LogEntryKind {
   input,
   revenue,
   harvest,
-  herdActivity;
+  herdActivity,
+  land;
 
   String get title => switch (this) {
     LogEntryKind.activity => 'Log an activity',
@@ -25,6 +26,7 @@ enum LogEntryKind {
     LogEntryKind.revenue => 'Log a sale',
     LogEntryKind.harvest => 'Log a harvest',
     LogEntryKind.herdActivity => 'Log a herd event',
+    LogEntryKind.land => 'Add a plot',
   };
 
   String get submitLabel => switch (this) {
@@ -33,6 +35,7 @@ enum LogEntryKind {
     LogEntryKind.revenue => 'Log sale',
     LogEntryKind.harvest => 'Log harvest',
     LogEntryKind.herdActivity => 'Log event',
+    LogEntryKind.land => 'Add plot',
   };
 
   String get blurb => switch (this) {
@@ -43,6 +46,8 @@ enum LogEntryKind {
     LogEntryKind.revenue => 'A sale: what went out, and what it brought in.',
     LogEntryKind.harvest => 'What came off a season, and how much of it.',
     LogEntryKind.herdActivity => 'A birth or a loss in one of your herds.',
+    LogEntryKind.land =>
+      'A field or paddock. Seasons and herds are set up against it.',
   };
 
   /// Whether the user picks between a season and a herd. A harvest is
@@ -52,6 +57,10 @@ enum LogEntryKind {
       this == LogEntryKind.activity ||
       this == LogEntryKind.input ||
       this == LogEntryKind.revenue;
+
+  /// A plot is the one thing logged against nothing — it is what seasons
+  /// and herds are later set up against.
+  bool get needsSource => this != LogEntryKind.land;
 }
 
 /// Opens the log form for [kind]. Resolves to true when something was
@@ -84,7 +93,12 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
   final _cost = TextEditingController();
   final _quantity = TextEditingController();
   final _unitPrice = TextEditingController();
-  final _unit = TextEditingController(text: 'kg');
+  // 'kg' suits the harvest form, which is the only kind that arrives with
+  // a sensible default unit; the plot form reuses this controller for soil
+  // and clears it.
+  late final _unit = TextEditingController(
+    text: widget.kind == LogEntryKind.harvest ? 'kg' : '',
+  );
   final _count = TextEditingController();
   final _details = TextEditingController();
   final _notes = TextEditingController();
@@ -102,6 +116,7 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
   /// never overrides a deliberate choice.
   bool _sourceTouched = false;
   String _herdEvent = 'birth';
+  String _tenure = 'owned';
   DateTime _date = DateTime.now();
   bool _submitting = false;
   String? _failure;
@@ -200,9 +215,12 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
   }
 
   /// Whether the farm has anything to log this kind against.
-  bool _hasSource(LogReference reference) => _source == 'plant'
-      ? reference.hasPlantSource
-      : reference.hasAnimalSource;
+  bool _hasSource(LogReference reference) {
+    if (!widget.kind.needsSource) return true;
+    return _source == 'plant'
+        ? reference.hasPlantSource
+        : reference.hasAnimalSource;
+  }
 
   Widget _form(BuildContext context, LogReference reference) {
     // A farm that keeps only animals should land on the herd form rather
@@ -263,17 +281,20 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
               ),
               const SizedBox(height: 14),
             ],
-            _sourcePicker(reference),
-            const SizedBox(height: 14),
+            if (kind.needsSource) ...[
+              _sourcePicker(reference),
+              const SizedBox(height: 14),
+            ],
             ..._kindFields(reference),
-            ConsoleField(
-              label: 'Notes',
-              child: ConsoleTextField(
-                controller: _notes,
-                maxLines: 2,
-                hintText: 'Anything worth remembering (optional)',
+            if (kind != LogEntryKind.land)
+              ConsoleField(
+                label: 'Notes',
+                child: ConsoleTextField(
+                  controller: _notes,
+                  maxLines: 2,
+                  hintText: 'Anything worth remembering (optional)',
+                ),
               ),
-            ),
             if (_failure != null) ...[
               const SizedBox(height: 14),
               _Problem(text: _failure!),
@@ -465,6 +486,55 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
           const SizedBox(height: 14),
         ];
 
+      case LogEntryKind.land:
+        return [
+          ConsoleField(
+            label: 'Plot name',
+            child: ConsoleTextField(
+              controller: _type,
+              autofocus: true,
+              hintText: 'West Plot',
+              validator: (value) => requiredText(value, 'plot name'),
+            ),
+          ),
+          const SizedBox(height: 14),
+          ConsoleFieldRow(
+            left: ConsoleField(
+              label: 'Size (hectares)',
+              child: ConsoleTextField.number(
+                controller: _quantity,
+                hintText: '1.2 (optional)',
+              ),
+            ),
+            right: ConsoleField(
+              label: 'Where it is',
+              child: ConsoleTextField(
+                controller: _details,
+                hintText: 'Nakuru (optional)',
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          ConsoleFieldRow(
+            left: ConsoleField(
+              label: 'Soil',
+              child: ConsoleTextField(
+                controller: _unit,
+                hintText: 'Loam (optional)',
+              ),
+            ),
+            right: ConsoleField(
+              label: 'Tenure',
+              child: ConsoleSegment<String>(
+                value: _tenure,
+                options: const [('owned', 'Owned'), ('rented', 'Rented')],
+                onChanged: (value) => setState(() => _tenure = value),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ];
+
       case LogEntryKind.herdActivity:
         return [
           ConsoleField(
@@ -511,8 +581,10 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    // A plot is logged against nothing, so a null selection is only a
+    // problem for the kinds that need one.
     final sourceId = _sourceId;
-    if (sourceId == null) return;
+    if (widget.kind.needsSource && sourceId == null) return;
 
     setState(() {
       _submitting = true;
@@ -526,7 +598,7 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
         case LogEntryKind.activity:
           await widget.service.addActivity(
             sourceType: _source,
-            sourceId: sourceId,
+            sourceId: sourceId!,
             type: _type.text.trim(),
             cost: double.parse(_cost.text.trim()),
             date: _date,
@@ -536,7 +608,7 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
         case LogEntryKind.input:
           await widget.service.addInput(
             sourceType: _source,
-            sourceId: sourceId,
+            sourceId: sourceId!,
             type: _type.text.trim(),
             cost: double.parse(_cost.text.trim()),
             date: _date,
@@ -546,7 +618,7 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
         case LogEntryKind.revenue:
           await widget.service.addRevenue(
             source: _source,
-            sourceId: sourceId,
+            sourceId: sourceId!,
             type: _type.text.trim(),
             quantity: double.parse(_quantity.text.trim()),
             unitPrice: double.parse(_unitPrice.text.trim()),
@@ -555,15 +627,25 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
           );
         case LogEntryKind.harvest:
           await widget.service.addHarvest(
-            seasonId: sourceId,
+            seasonId: sourceId!,
             quantity: double.parse(_quantity.text.trim()),
             unit: _unit.text.trim(),
             date: _date,
             notes: notes,
           );
+        case LogEntryKind.land:
+          await widget.service.addLand(
+            name: _type.text.trim(),
+            size: double.tryParse(_quantity.text.trim()),
+            location: _details.text.trim().isEmpty
+                ? null
+                : _details.text.trim(),
+            soilType: _unit.text.trim().isEmpty ? null : _unit.text.trim(),
+            tenureType: _tenure,
+          );
         case LogEntryKind.herdActivity:
           await widget.service.addHerdActivity(
-            herdId: sourceId,
+            herdId: sourceId!,
             activityType: _herdEvent,
             count: int.parse(_count.text.trim()),
             date: _date,

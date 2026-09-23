@@ -172,10 +172,9 @@ class DashboardView extends StatelessWidget {
           // that unblocks the rest.
           const LogEntryButton(
             label: 'Add a plot',
-            kind: LogEntryKind.activity,
+            kind: LogEntryKind.land,
             variant: LogButton.filled,
             icon: Icons.add,
-            enabled: false,
           )
         else
           const LogEntryButton(
@@ -532,9 +531,10 @@ class _Step extends StatelessWidget {
             ),
           ),
           if (cta)
-            ConsoleButton.filled(
+            const LogEntryButton(
               label: 'Add a plot',
-              onPressed: () => showLogOnAndroidDialog(context),
+              kind: LogEntryKind.land,
+              variant: LogButton.filled,
             ),
         ],
       ),

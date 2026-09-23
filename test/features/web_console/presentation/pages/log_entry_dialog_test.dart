@@ -146,4 +146,25 @@ void main() {
     await tester.pump();
     expect(writer.referenceLoads, greaterThan(1));
   });
+
+  testWidgets('a plot needs no season or herd to exist first', (tester) async {
+    final writer = FakeLogWriter(data: const LogReference.empty());
+    await _pump(tester, LogEntryKind.land, writer);
+
+    // The one form that works on a farm with nothing in it yet.
+    expect(find.textContaining('Start a season first'), findsNothing);
+
+    await tester.enterText(_field('West Plot'), 'East Plot');
+    await tester.enterText(_field('1.2 (optional)'), '0.8');
+    await tester.tap(find.text('Rented'));
+    await tester.pump();
+    await tester.tap(find.text('Add plot'));
+    await tester.pumpAndSettle();
+
+    final call = writer.calls.single;
+    expect(call['kind'], 'land');
+    expect(call['name'], 'East Plot');
+    expect(call['size'], 0.8);
+    expect(call['tenureType'], 'rented');
+  });
 }

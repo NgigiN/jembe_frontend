@@ -11,6 +11,7 @@ import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
 import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_activity_model.dart';
 import 'package:farm_tracker/features/farm/data/models/input_model.dart';
+import 'package:farm_tracker/features/farm/data/models/land_model.dart';
 import 'package:farm_tracker/features/farm/data/models/revenue_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
@@ -113,6 +114,14 @@ abstract interface class LogWriter {
     required DateTime date,
     String? notes,
   });
+
+  Future<void> addLand({
+    required String name,
+    double? size,
+    String? location,
+    String? soilType,
+    String? tenureType,
+  });
 }
 
 /// The console's write path for the things an office logs: a purchase, a
@@ -134,6 +143,7 @@ class ConsoleLogService implements LogWriter {
     required this.lands,
     required this.herds,
     required this.categories,
+    required this.currentUserId,
   });
 
   final ActivityRemoteDataSource activities;
@@ -145,6 +155,11 @@ class ConsoleLogService implements LogWriter {
   final LandRemoteDataSource lands;
   final HerdRemoteDataSource herds;
   final CostCategoryRemoteDataSource categories;
+
+  /// A plot is owned by a user, and the server expects that id on the way
+  /// in. Injected rather than read from storage here so the service stays
+  /// testable without a storage plugin behind it.
+  final Future<String?> Function() currentUserId;
 
   Future<LogReference>? _pending;
 
@@ -287,5 +302,31 @@ class ConsoleLogService implements LogWriter {
         notes: notes,
       ),
     );
+  }
+
+  @override
+  Future<void> addLand({
+    required String name,
+    double? size,
+    String? location,
+    String? soilType,
+    String? tenureType,
+  }) async {
+    final userId = await currentUserId();
+    if (userId == null || userId.isEmpty) {
+      throw StateError('No signed-in user to own the plot');
+    }
+    await lands.addLand(
+      LandModel.create(
+        userId: userId,
+        name: name,
+        size: size,
+        location: location,
+        soilType: soilType,
+        tenureType: tenureType,
+      ),
+    );
+    // The new plot belongs in the next form's season labels.
+    invalidateReference();
   }
 }

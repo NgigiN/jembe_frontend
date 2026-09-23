@@ -23,6 +23,7 @@ import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:farm_tracker/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:farm_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
@@ -145,6 +146,7 @@ Future<void> initWebDependencies() async {
         lands: webSl(),
         herds: webSl(),
         categories: webSl(),
+        currentUserId: UserStorageService.getUserId,
       ),
     )
     ..registerLazySingleton(ThemeBloc.new);

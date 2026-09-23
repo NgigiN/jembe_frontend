@@ -119,6 +119,22 @@ class FakeLogWriter implements LogWriter {
     'date': date,
     'notes': notes,
   });
+
+  @override
+  Future<void> addLand({
+    required String name,
+    double? size,
+    String? location,
+    String? soilType,
+    String? tenureType,
+  }) => _record('land', {
+    'name': name,
+    'size': size,
+    'location': location,
+    'soilType': soilType,
+    'tenureType': tenureType,
+  });
+
 }
 
 /// The mockups' sample farm (DESIGN_SPEC §8) as a reference set.
