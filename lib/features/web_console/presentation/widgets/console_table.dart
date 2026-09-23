@@ -78,11 +78,16 @@ class ConsoleTable extends StatelessWidget {
     required this.columns,
     required this.rows,
     this.footer,
+    this.dense = false,
     super.key,
   });
 
   final List<ConsoleColumn> columns;
   final List<ConsoleRow> rows;
+
+  /// Tighter cell padding, for a table in the 320px rail where the default
+  /// 10px gutters would wrap an eight-letter header.
+  final bool dense;
 
   /// The pager strip, drawn below the last row without a separator.
   final Widget? footer;
@@ -93,11 +98,12 @@ class ConsoleTable extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _HeaderRow(columns: columns),
+        _HeaderRow(columns: columns, dense: dense),
         // No keys: rows are positional and are rebuilt wholesale on every
         // data change, so the default position-plus-type matching is what
         // keeps a hovered row hovered across a rebuild.
-        for (final row in rows) _DataRow(columns: columns, row: row),
+        for (final row in rows)
+          _DataRow(columns: columns, row: row, dense: dense),
         if (footer != null)
           Padding(
             padding: const EdgeInsets.only(top: 12),
@@ -112,9 +118,10 @@ class ConsoleTable extends StatelessWidget {
 }
 
 class _HeaderRow extends StatelessWidget {
-  const _HeaderRow({required this.columns});
+  const _HeaderRow({required this.columns, required this.dense});
 
   final List<ConsoleColumn> columns;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +138,9 @@ class _HeaderRow extends StatelessWidget {
             _columnSlot(
               column,
               Padding(
-                padding: ConsoleMetrics.tableHeaderPadding,
+                padding: dense
+                    ? const EdgeInsets.symmetric(vertical: 8, horizontal: 4)
+                    : ConsoleMetrics.tableHeaderPadding,
                 child: _HeaderCell(column: column, scheme: scheme),
               ),
             ),
@@ -189,10 +198,15 @@ class _HeaderCell extends StatelessWidget {
 }
 
 class _DataRow extends StatefulWidget {
-  const _DataRow({required this.columns, required this.row});
+  const _DataRow({
+    required this.columns,
+    required this.row,
+    required this.dense,
+  });
 
   final List<ConsoleColumn> columns;
   final ConsoleRow row;
+  final bool dense;
 
   @override
   State<_DataRow> createState() => _DataRowState();
@@ -231,7 +245,9 @@ class _DataRowState extends State<_DataRow> {
             _columnSlot(
               widget.columns[i],
               Padding(
-                padding: ConsoleMetrics.tableCellPadding,
+                padding: widget.dense
+                    ? const EdgeInsets.symmetric(vertical: 9, horizontal: 4)
+                    : ConsoleMetrics.tableCellPadding,
                 child: DefaultTextStyle.merge(
                   style: AppTypography.cell.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,

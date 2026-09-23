@@ -221,10 +221,10 @@ class _DetailsTable extends StatelessWidget {
     return ConsoleTable(
       columns: const [
         ConsoleColumn('Source', flex: 4),
-        ConsoleColumn('Category', flex: 2),
+        ConsoleColumn('Category', flex: 3),
         ConsoleColumn('Applied to', flex: 3),
         ConsoleColumn('Inputs', flex: 2, alignEnd: true),
-        ConsoleColumn('Activities', flex: 2, alignEnd: true),
+        ConsoleColumn('Activities', flex: 3, alignEnd: true),
         ConsoleColumn('Total', flex: 2, alignEnd: true),
       ],
       rows: [
@@ -491,6 +491,7 @@ class _MonthlyTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ConsoleTable(
+      dense: true,
       columns: const [
         ConsoleColumn('Month', flex: 3),
         ConsoleColumn('Costs', flex: 3, alignEnd: true),
