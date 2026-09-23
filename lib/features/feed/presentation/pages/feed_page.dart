@@ -456,13 +456,13 @@ class FeedView extends StatelessWidget {
     final name = loggedByName(entry);
     final console = context.console;
 
-    // The feed endpoint carries entity type, summary, who and when — not
-    // the amount or the per-entry detail the mockups show. Rather than
-    // invent either, both cells say "n/a" the way §3 prescribes, except a
-    // worker's Detail, which reads "Hidden" where money would have been.
+    // A worker sees what was done but not what it cost, so money-shaped
+    // detail on an input or a sale reads "Hidden" rather than going blank
+    // — blank would look like nothing was logged (DESIGN_SPEC §4).
     final hiddenForWorker =
         !_isStaff &&
         (entry.entityType == 'input' || entry.entityType == 'revenue');
+    final detail = hiddenForWorker ? 'Hidden' : entry.detail;
 
     return ConsoleRow([
       Text(
@@ -475,16 +475,26 @@ class FeedView extends StatelessWidget {
         style: AppTypography.cell.copyWith(color: console.onSurface2),
       ),
       Text(
-        hiddenForWorker ? 'Hidden' : '—',
+        detail ?? '—',
         style: AppTypography.cell.copyWith(color: console.muted),
       ),
       LoggedByCell(name, avatar: InitialsAvatar(name)),
-      if (_isStaff) const MoneyText.none(),
+      if (_isStaff)
+        if (entry.amount == null)
+          const MoneyText.none()
+        else
+          MoneyText(
+            entry.amount,
+            signed: true,
+            tone: entry.amount! < 0 ? MoneyTone.neutral : MoneyTone.positive,
+          ),
     ]);
   }
 
   void _exportCsv(List<FeedEntry> rows) {
-    final buffer = StringBuffer('Date,Time,Type,Entry,Logged by\n');
+    final buffer = StringBuffer(
+      'Date,Time,Type,Entry,Detail,Logged by,Amount\n',
+    );
     for (final entry in rows) {
       final local = entry.createdAt.toLocal();
       buffer.writeln(
@@ -493,7 +503,11 @@ class FeedView extends StatelessWidget {
           formatTime(local),
           lookOf(entry.entityType).type,
           _csvField(entry.summary),
+          _csvField(entry.detail ?? ''),
           _csvField(loggedByName(entry)),
+          // The raw signed number, not "−KES 3,400": a spreadsheet has to
+          // be able to sum this column.
+          entry.amount?.toStringAsFixed(2) ?? '',
         ].join(','),
       );
     }

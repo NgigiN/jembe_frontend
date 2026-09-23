@@ -32,26 +32,30 @@ FeedEntry _entry(
   String summary,
   String first,
   String last,
-  int daysAgo, [
+  int daysAgo, {
   int hour = 9,
-]) => FeedEntry(
+  String? detail,
+  double? amount,
+}) => FeedEntry(
   entityType: type,
   summary: summary,
   loggedByUserId: 1,
   loggedByFirstName: first,
   loggedByLastName: last,
+  detail: detail,
+  amount: amount,
   createdAt: _day.subtract(Duration(days: daysAgo, hours: 14 - hour)),
 );
 
 final sampleFeed = [
-  _entry('activity', 'Weeding — Maize, West Plot', 'Otieno', 'Baraka', 0, 14),
-  _entry('input', 'Broiler feed 50 kg', 'Wanjiku', 'Njeri', 0, 11),
-  _entry('herd_activity', 'Milking — Dairy herd (6 cows)', 'Otieno', 'Baraka', 1, 7),
-  _entry('revenue', 'Milk sales — Keringet Dairies', 'Kamau', 'Owner', 1, 16),
-  _entry('activity', 'Vaccination — Broilers (120)', 'Wanjiku', 'Njeri', 2, 10),
-  _entry('activity', 'Top-dressing — Maize, East Plot', 'Otieno', 'Baraka', 3, 8),
-  _entry('harvest', 'Maize harvest — West Plot', 'Kamau', 'Owner', 4, 12),
-  _entry('input', 'CAN fertilizer 50 kg', 'Kamau', 'Owner', 5),
+  _entry('activity', 'Weeding', 'Otieno', 'Baraka', 0, hour: 14, detail: '3 hrs'),
+  _entry('input', 'Broiler feed', 'Wanjiku', 'Njeri', 0, hour: 11, detail: '50', amount: -3400),
+  _entry('herd_activity', 'Milking', 'Otieno', 'Baraka', 1, hour: 7, detail: '41 L'),
+  _entry('revenue', 'Milk sales', 'Kamau', 'Owner', 1, hour: 16, detail: '180', amount: 12600),
+  _entry('activity', 'Vaccination', 'Wanjiku', 'Njeri', 2, hour: 10, detail: 'Gumboro'),
+  _entry('activity', 'Top-dressing', 'Otieno', 'Baraka', 3, hour: 8, detail: '2 hrs'),
+  _entry('harvest', 'Harvest', 'Kamau', 'Owner', 4, hour: 12, detail: '18 bags'),
+  _entry('input', 'CAN fertilizer', 'Kamau', 'Owner', 5, detail: '50', amount: -4500),
 ];
 
 const sampleBreakdown = [

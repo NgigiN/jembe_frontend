@@ -347,9 +347,14 @@ class _SeasonLog extends StatelessWidget {
         style: AppTypography.cell.copyWith(color: context.console.onSurface2),
       ),
       LoggedByCell(name, avatar: InitialsAvatar(name)),
-      // The feed endpoint carries no amount yet, so every row reads as the
-      // spec's "n/a" dash rather than a fabricated figure.
-      const MoneyText.none(),
+      if (entry.amount == null)
+        const MoneyText.none()
+      else
+        MoneyText(
+          entry.amount,
+          signed: true,
+          tone: entry.amount! < 0 ? MoneyTone.neutral : MoneyTone.positive,
+        ),
     ]);
   }
 }
