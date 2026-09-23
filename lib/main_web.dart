@@ -22,6 +22,10 @@ import 'dart:async';
 import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/navigation/web_app_router.dart';
 import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
+import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/theme/app_theme.dart';
+import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
+import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
@@ -152,8 +156,20 @@ class _WebConsoleAppState extends State<_WebConsoleApp> {
         BlocProvider<AnalysisBloc>(create: (_) => web_di.webSl<AnalysisBloc>()),
         BlocProvider<FarmBloc>(create: (_) => web_di.webSl<FarmBloc>()..add(LoadFarms())),
         BlocProvider<FeedBloc>(create: (_) => web_di.webSl<FeedBloc>()),
+        BlocProvider<ThemeBloc>(create: (_) => web_di.webSl<ThemeBloc>()),
       ],
-      child: MaterialApp.router(routerConfig: _router),
+      child: BlocBuilder<ThemeBloc, ThemeState>(
+        builder: (context, themeState) {
+          return MaterialApp.router(
+            title: 'Shamba+',
+            theme: AppTheme.getLightTheme(AppColors.lightColorScheme),
+            darkTheme: AppTheme.getDarkTheme(AppColors.darkColorScheme),
+            themeMode: themeState.themeMode,
+            routerConfig: _router,
+            debugShowCheckedModeBanner: false,
+          );
+        },
+      ),
     );
   }
 }
