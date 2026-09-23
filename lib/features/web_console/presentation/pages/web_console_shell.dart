@@ -4,9 +4,16 @@ import 'package:farm_tracker/features/auth/data/models/user_storage_model.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/dashboard_bloc.dart';
+import 'package:farm_tracker/features/farm/presentation/bloc/dashboard_event.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_state.dart';
+import 'package:farm_tracker/features/feed/presentation/bloc/feed_bloc.dart';
+import 'package:farm_tracker/features/feed/presentation/bloc/feed_event.dart';
+import 'package:farm_tracker/features/web_console/data/console_log_service.dart';
+import 'package:farm_tracker/features/web_console/presentation/widgets/console_log_scope.dart';
 import 'package:farm_tracker/features/web_console/presentation/widgets/console_sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,9 +27,14 @@ import 'package:go_router/go_router.dart';
 /// the console's seven destinations sit in two groups, and a bottom bar
 /// would have to drop one group or the other.
 class WebConsoleShell extends StatefulWidget {
-  const WebConsoleShell({required this.child, super.key});
+  const WebConsoleShell({required this.child, this.logService, super.key});
 
   final Widget child;
+
+  /// The console's write path, put in scope for every page inside the
+  /// shell. Null in widget tests, where the log buttons fall back to
+  /// explaining that logging happens on the phone.
+  final ConsoleLogService? logService;
 
   @override
   State<WebConsoleShell> createState() => _WebConsoleShellState();
@@ -66,7 +78,7 @@ class _WebConsoleShellState extends State<WebConsoleShell> {
                     onSignOut: () =>
                         context.read<AuthBloc>().add(LogoutEvent()),
                   ),
-                  Expanded(child: widget.child),
+                  Expanded(child: _withLogScope(widget.child)),
                 ],
               );
             },
@@ -74,6 +86,26 @@ class _WebConsoleShellState extends State<WebConsoleShell> {
         },
       ),
     );
+  }
+
+  Widget _withLogScope(Widget child) {
+    final service = widget.logService;
+    if (service == null) return child;
+    return ConsoleLogScope(
+      service: service,
+      onLogged: _reloadAfterLog,
+      child: child,
+    );
+  }
+
+  /// A new row belongs on whatever page you logged it from, so all three
+  /// readers are refreshed rather than guessing which one is on screen.
+  void _reloadAfterLog() {
+    context.read<FeedBloc>().add(LoadFeed());
+    context.read<DashboardBloc>().add(GetDashboardEvent());
+    context.read<AnalysisBloc>()
+      ..add(const LoadTotalCostsBySeason())
+      ..add(const LoadCostBreakdown());
   }
 
   String? _currentFarmName(FarmState state) {

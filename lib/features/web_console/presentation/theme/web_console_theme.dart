@@ -85,6 +85,18 @@ abstract final class WebConsoleTheme {
           side: BorderSide(color: console.outline),
         ),
       ),
+      // Dialogs follow the card: the surface a card is drawn in, a 1px
+      // outline and the console radius — not M3's tonal container, which
+      // reads as a third surface colour next to the page and the card.
+      dialogTheme: DialogThemeData(
+        backgroundColor: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ConsoleMetrics.radiusCard),
+          side: BorderSide(color: console.outline),
+        ),
+      ),
       filledButtonTheme: FilledButtonThemeData(style: _buttonStyle()),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: _buttonStyle().copyWith(

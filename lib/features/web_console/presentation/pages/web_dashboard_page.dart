@@ -15,6 +15,7 @@ import 'package:farm_tracker/features/feed/domain/entities/feed_entry.dart';
 import 'package:farm_tracker/features/feed/presentation/bloc/feed_bloc.dart';
 import 'package:farm_tracker/features/feed/presentation/bloc/feed_event.dart';
 import 'package:farm_tracker/features/feed/presentation/bloc/feed_state.dart';
+import 'package:farm_tracker/features/web_console/presentation/pages/log_entry_dialog.dart';
 import 'package:farm_tracker/features/web_console/presentation/widgets/console_card.dart';
 import 'package:farm_tracker/features/web_console/presentation/widgets/console_controls.dart';
 import 'package:farm_tracker/features/web_console/presentation/widgets/console_count_tile.dart';
@@ -26,7 +27,7 @@ import 'package:farm_tracker/features/web_console/presentation/widgets/console_s
 import 'package:farm_tracker/features/web_console/presentation/widgets/console_table.dart';
 import 'package:farm_tracker/features/web_console/presentation/widgets/console_text.dart';
 import 'package:farm_tracker/features/web_console/presentation/widgets/feed_entry_look.dart';
-import 'package:farm_tracker/features/web_console/presentation/widgets/log_on_android_button.dart';
+import 'package:farm_tracker/features/web_console/presentation/widgets/log_entry_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -156,17 +157,30 @@ class DashboardView extends StatelessWidget {
       title: farmName,
       subtitle: subtitle,
       actions: [
-        LogOnAndroidButton(label: 'Log activity', enabled: !firstRun),
-        LogOnAndroidButton(label: 'Log input', enabled: !firstRun),
+        LogEntryButton(
+          label: 'Log activity',
+          kind: LogEntryKind.activity,
+          enabled: !firstRun,
+        ),
+        LogEntryButton(
+          label: 'Log input',
+          kind: LogEntryKind.input,
+          enabled: !firstRun,
+        ),
         if (firstRun)
-          const LogOnAndroidButton(
+          // Nothing to log against yet, so the one live action is the step
+          // that unblocks the rest.
+          const LogEntryButton(
             label: 'Add a plot',
+            kind: LogEntryKind.activity,
             variant: LogButton.filled,
             icon: Icons.add,
+            enabled: false,
           )
         else
-          const LogOnAndroidButton(
+          const LogEntryButton(
             label: 'Log revenue',
+            kind: LogEntryKind.revenue,
             variant: LogButton.filled,
           ),
       ],
@@ -518,9 +532,9 @@ class _Step extends StatelessWidget {
             ),
           ),
           if (cta)
-            const LogOnAndroidButton(
+            ConsoleButton.filled(
               label: 'Add a plot',
-              variant: LogButton.filled,
+              onPressed: () => showLogOnAndroidDialog(context),
             ),
         ],
       ),

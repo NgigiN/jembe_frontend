@@ -2,6 +2,7 @@ import 'package:farm_tracker/core/navigation/web_app_router.dart';
 import 'package:farm_tracker/features/farm/domain/entities/dashboard.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
 import 'package:farm_tracker/features/feed/presentation/pages/feed_page.dart';
+import 'package:farm_tracker/features/web_console/presentation/pages/log_entry_dialog.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_dashboard_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_farms_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_members_page.dart';
@@ -12,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'design_preview.dart';
+import 'fake_log_writer.dart';
 import 'sample_data.dart';
 
 void main() {
@@ -234,6 +236,27 @@ void main() {
       size: const Size(860, 1100),
     );
   });
+
+  for (final (kind, name) in const [
+    (LogEntryKind.input, 'log-input'),
+    (LogEntryKind.revenue, 'log-revenue'),
+    (LogEntryKind.herdActivity, 'log-herd-event'),
+  ]) {
+    testWidgets(name, (tester) async {
+      await capture(
+        tester,
+        MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: WebConsoleTheme.light(),
+          home: Scaffold(
+            body: LogEntryDialog(kind: kind, service: FakeLogWriter()),
+          ),
+        ),
+        name,
+        size: const Size(760, 720),
+      );
+    });
+  }
 
   testWidgets('sign-in', (tester) async {
     await capture(

@@ -26,8 +26,17 @@ import 'package:farm_tracker/features/auth/data/repositories/auth_repository_imp
 import 'package:farm_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:farm_tracker/features/farm/data/datasources/activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/analysis_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/cost_category_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/dashboard_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/harvest_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/herd_activity_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/herd_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/input_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/land_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/season_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/trash_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/repositories/analysis_repository_impl.dart';
 import 'package:farm_tracker/features/farm/data/repositories/dashboard_repository_impl.dart';
@@ -42,6 +51,7 @@ import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_so
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/feed/data/datasources/feed_remote_data_source.dart';
 import 'package:farm_tracker/features/feed/presentation/bloc/feed_bloc.dart';
+import 'package:farm_tracker/features/web_console/data/console_log_service.dart';
 import 'package:get_it/get_it.dart';
 
 final GetIt webSl = GetIt.asNewInstance();
@@ -93,5 +103,49 @@ Future<void> initWebDependencies() async {
       () => TrashRepositoryImpl(remoteDataSource: webSl()),
     )
     ..registerFactory(() => TrashBloc(repository: webSl()))
+    // The console's write path. Remote-only on purpose — the Android app
+    // queues writes so work can be logged with no signal, and a second
+    // queue here would mean two sources of truth for the same row.
+    ..registerLazySingleton<ActivityRemoteDataSource>(
+      () => ActivityRemoteDataSourceImpl(dio: webSl()),
+    )
+    ..registerLazySingleton<InputRemoteDataSource>(
+      () => InputRemoteDataSourceImpl(dio: webSl()),
+    )
+    ..registerLazySingleton<RevenueRemoteDataSource>(
+      () => RevenueRemoteDataSourceImpl(dio: webSl()),
+    )
+    ..registerLazySingleton<HarvestRemoteDataSource>(
+      () => HarvestRemoteDataSourceImpl(dio: webSl()),
+    )
+    ..registerLazySingleton<HerdActivityRemoteDataSource>(
+      () => HerdActivityRemoteDataSourceImpl(dio: webSl()),
+    )
+    // Reference data the log forms fill their pickers from.
+    ..registerLazySingleton<SeasonRemoteDataSource>(
+      () => SeasonRemoteDataSourceImpl(dio: webSl()),
+    )
+    ..registerLazySingleton<LandRemoteDataSource>(
+      () => LandRemoteDataSourceImpl(dio: webSl()),
+    )
+    ..registerLazySingleton<HerdRemoteDataSource>(
+      () => HerdRemoteDataSourceImpl(dio: webSl()),
+    )
+    ..registerLazySingleton<CostCategoryRemoteDataSource>(
+      () => CostCategoryRemoteDataSourceImpl(dio: webSl()),
+    )
+    ..registerLazySingleton(
+      () => ConsoleLogService(
+        activities: webSl(),
+        inputs: webSl(),
+        revenues: webSl(),
+        harvests: webSl(),
+        herdActivities: webSl(),
+        seasons: webSl(),
+        lands: webSl(),
+        herds: webSl(),
+        categories: webSl(),
+      ),
+    )
     ..registerLazySingleton(ThemeBloc.new);
 }

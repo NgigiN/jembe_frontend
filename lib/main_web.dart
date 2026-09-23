@@ -36,6 +36,7 @@ import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_event.dart';
 import 'package:farm_tracker/features/feed/presentation/bloc/feed_bloc.dart';
 import 'package:farm_tracker/features/feed/presentation/pages/feed_page.dart';
+import 'package:farm_tracker/features/web_console/data/console_log_service.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_console_shell.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_dashboard_page.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_farms_page.dart';
@@ -131,7 +132,10 @@ class _WebConsoleAppState extends State<_WebConsoleApp> {
         // where the farm context is stated, so a page without it would
         // leave you unsure which farm you are looking at.
         ShellRoute(
-          builder: (context, state, child) => WebConsoleShell(child: child),
+          builder: (context, state, child) => WebConsoleShell(
+            logService: web_di.webSl<ConsoleLogService>(),
+            child: child,
+          ),
           routes: [
             GoRoute(path: WebRoutePath.dashboard, builder: (_, __) => const WebDashboardPage()),
             GoRoute(path: WebRoutePath.feed, builder: (_, __) => const FeedPage()),

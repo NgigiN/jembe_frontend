@@ -11,6 +11,7 @@ import 'package:farm_tracker/features/feed/domain/entities/feed_entry.dart';
 import 'package:farm_tracker/features/feed/presentation/bloc/feed_bloc.dart';
 import 'package:farm_tracker/features/feed/presentation/bloc/feed_event.dart';
 import 'package:farm_tracker/features/feed/presentation/bloc/feed_state.dart';
+import 'package:farm_tracker/features/web_console/presentation/pages/log_entry_dialog.dart';
 import 'package:farm_tracker/features/web_console/presentation/utils/csv_download.dart';
 import 'package:farm_tracker/features/web_console/presentation/widgets/console_card.dart';
 import 'package:farm_tracker/features/web_console/presentation/widgets/console_controls.dart';
@@ -21,7 +22,7 @@ import 'package:farm_tracker/features/web_console/presentation/widgets/console_s
 import 'package:farm_tracker/features/web_console/presentation/widgets/console_table.dart';
 import 'package:farm_tracker/features/web_console/presentation/widgets/console_text.dart';
 import 'package:farm_tracker/features/web_console/presentation/widgets/feed_entry_look.dart';
-import 'package:farm_tracker/features/web_console/presentation/widgets/log_on_android_button.dart';
+import 'package:farm_tracker/features/web_console/presentation/widgets/log_entry_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -191,8 +192,9 @@ class FeedView extends StatelessWidget {
             icon: Icons.download_outlined,
             onPressed: filtered.isEmpty ? null : () => _exportCsv(filtered),
           ),
-        const LogOnAndroidButton(
-          label: 'Log entry',
+        LogEntryButton(
+          label: _isStaff ? 'Log input' : 'Log activity',
+          kind: _isStaff ? LogEntryKind.input : LogEntryKind.activity,
           variant: LogButton.filled,
           icon: Icons.add,
         ),
@@ -313,6 +315,7 @@ class FeedView extends StatelessWidget {
                     child: _QuickLogTile(
                       label: 'Activity',
                       icon: Icons.grass_outlined,
+                      kind: LogEntryKind.activity,
                     ),
                   ),
                   SizedBox(width: 10),
@@ -320,6 +323,7 @@ class FeedView extends StatelessWidget {
                     child: _QuickLogTile(
                       label: 'Harvest',
                       icon: Icons.agriculture_outlined,
+                      kind: LogEntryKind.harvest,
                     ),
                   ),
                 ],
@@ -331,6 +335,7 @@ class FeedView extends StatelessWidget {
                     child: _QuickLogTile(
                       label: 'Herd activity',
                       icon: Icons.pets_outlined,
+                      kind: LogEntryKind.herdActivity,
                     ),
                   ),
                   SizedBox(width: 10),
@@ -338,6 +343,7 @@ class FeedView extends StatelessWidget {
                     child: _QuickLogTile(
                       label: 'Input',
                       icon: Icons.inventory_2_outlined,
+                      kind: LogEntryKind.input,
                     ),
                   ),
                 ],
@@ -502,10 +508,15 @@ class FeedView extends StatelessWidget {
 
 /// One of the worker rail's four shortcuts (DESIGN_SPEC §4, screen 10).
 class _QuickLogTile extends StatelessWidget {
-  const _QuickLogTile({required this.label, required this.icon});
+  const _QuickLogTile({
+    required this.label,
+    required this.icon,
+    required this.kind,
+  });
 
   final String label;
   final IconData icon;
+  final LogEntryKind kind;
 
   @override
   Widget build(BuildContext context) {
@@ -514,7 +525,7 @@ class _QuickLogTile extends StatelessWidget {
       color: console.surfaceLow,
       borderRadius: BorderRadius.circular(ConsoleMetrics.radiusTile),
       child: InkWell(
-        onTap: () => showLogOnAndroidDialog(context),
+        onTap: () => logEntry(context, kind),
         borderRadius: BorderRadius.circular(ConsoleMetrics.radiusTile),
         child: Padding(
           padding: const EdgeInsets.all(12),
