@@ -281,37 +281,44 @@ class ConsoleTabs extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final console = context.console;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var i = 0; i < labels.length; i++)
-          InkWell(
-            onTap: () => onSelected(i),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(2, 6, 2, 9),
-              margin: EdgeInsets.only(right: i == labels.length - 1 ? 0 : 18),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
+    // Scrollable so the tabs never overflow a narrow page; on a wide one
+    // it lays out exactly as a plain Row would.
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < labels.length; i++)
+            InkWell(
+              onTap: () => onSelected(i),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(2, 6, 2, 9),
+                margin: EdgeInsets.only(right: i == labels.length - 1 ? 0 : 18),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: i == selectedIndex
+                          ? scheme.primary
+                          : Colors.transparent,
+                      width: 2,
+                    ),
+                  ),
+                ),
+                child: Text(
+                  labels[i],
+                  style: AppTypography.navItem.copyWith(
+                    fontWeight: i == selectedIndex
+                        ? FontWeight.w600
+                        : FontWeight.w500,
                     color: i == selectedIndex
-                        ? scheme.primary
-                        : Colors.transparent,
-                    width: 2,
+                        ? scheme.onSurface
+                        : console.muted,
                   ),
                 ),
               ),
-              child: Text(
-                labels[i],
-                style: AppTypography.navItem.copyWith(
-                  fontWeight: i == selectedIndex
-                      ? FontWeight.w600
-                      : FontWeight.w500,
-                  color: i == selectedIndex ? scheme.onSurface : console.muted,
-                ),
-              ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

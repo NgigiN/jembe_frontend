@@ -221,10 +221,10 @@ class _DetailsTable extends StatelessWidget {
     return ConsoleTable(
       columns: const [
         ConsoleColumn('Source', flex: 4),
-        ConsoleColumn('Category', flex: 3),
-        ConsoleColumn('Applied to', flex: 3),
-        ConsoleColumn('Inputs', flex: 2, alignEnd: true),
-        ConsoleColumn('Activities', flex: 3, alignEnd: true),
+        ConsoleColumn('Category', flex: 3, dropBelow: 820),
+        ConsoleColumn('Applied to', flex: 3, dropBelow: 700),
+        ConsoleColumn('Inputs', flex: 2, alignEnd: true, dropBelow: 980),
+        ConsoleColumn('Activities', flex: 3, alignEnd: true, dropBelow: 980),
         ConsoleColumn('Total', flex: 2, alignEnd: true),
       ],
       rows: [
@@ -293,10 +293,10 @@ class _BreakdownTable extends StatelessWidget {
     return ConsoleTable(
       columns: const [
         ConsoleColumn('Category', flex: 3),
-        ConsoleColumn('Origin', flex: 3),
-        ConsoleColumn('Type', flex: 2),
+        ConsoleColumn('Origin', flex: 3, dropBelow: 700),
+        ConsoleColumn('Type', flex: 2, dropBelow: 820),
         ConsoleColumn('Cost', flex: 2, alignEnd: true),
-        ConsoleColumn('Share', width: 84, alignEnd: true),
+        ConsoleColumn('Share', width: 84, alignEnd: true, dropBelow: 560),
       ],
       rows: [
         for (final row in breakdowns!)

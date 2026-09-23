@@ -1,5 +1,3 @@
-import 'package:drift/drift.dart' show Value;
-import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
 import 'package:farm_tracker/core/utils/json_parsing.dart';
@@ -62,31 +60,6 @@ class HerdActivityModel extends HerdActivity implements SyncableModel {
     );
   }
 
-  /// Rehydrates a model from a local drift row. The row's nullable
-  /// `serverId` becomes the model's `id` when present, else `''` (mirroring
-  /// the server-unknown placeholder used by `.create()`). The row also
-  /// stores [herdId] — the syncer needs it to build the nested
-  /// `/herds/:herdId/activities` push URL.
-  ///
-  /// Carries over the row's local sync-state flags ([pending],
-  /// [deletedLocally]); the row's `updated_at` column is deliberately NOT
-  /// carried over — see class docs: it is synthesized fresh from
-  /// [createdAt] wherever needed, never round-tripped.
-  factory HerdActivityModel.fromDrift(HerdActivityRow row) {
-    return HerdActivityModel(
-      id: row.serverId ?? '',
-      clientUuid: row.clientUuid,
-      herdId: row.herdId,
-      activityType: row.activityType,
-      count: row.count,
-      date: row.date,
-      notes: row.notes,
-      createdAt: row.createdAt,
-      pending: row.pending,
-      deletedLocally: row.deletedLocally,
-    );
-  }
-
   /// Local-only identity used by the offline outbox/push pipeline to track
   /// this activity before (and independently of) the server-assigned
   /// [HerdActivity.id]. Lives on the data model only — the domain
@@ -115,32 +88,6 @@ class HerdActivityModel extends HerdActivity implements SyncableModel {
       'date': date.toUtc().toIso8601String(),
       'reason': notes ?? '',
     };
-  }
-
-  /// Converts this model into a drift insert/update companion for the
-  /// `HerdActivities` table. `serverId` is `null` while the server hasn't
-  /// assigned an `id` yet (i.e. `id` is empty). `updatedAt` is SYNTHETIC —
-  /// set to [createdAt] (see class docs) since this entity has no real
-  /// `updatedAt` of its own.
-  HerdActivitiesCompanion toCompanion({
-    required bool pending,
-    bool deletedLocally = false,
-    int farmId = 1,
-  }) {
-    return HerdActivitiesCompanion(
-      clientUuid: Value(clientUuid),
-      serverId: Value(id.isEmpty ? null : id),
-      herdId: Value(herdId),
-      activityType: Value(activityType),
-      count: Value(count),
-      date: Value(date),
-      notes: Value(notes),
-      createdAt: Value(createdAt),
-      updatedAt: Value(createdAt),
-      pending: Value(pending),
-      deletedLocally: Value(deletedLocally),
-      farmId: Value(farmId),
-    );
   }
 
   // --- SyncableModel: the read-only sync fields `HerdActivitySyncer` reads

@@ -301,8 +301,8 @@ class _SeasonLog extends StatelessWidget {
       columns: const [
         ConsoleColumn('Date', width: 84),
         ConsoleColumn('Entry', flex: 4),
-        ConsoleColumn('Type', flex: 2),
-        ConsoleColumn('Logged by', flex: 2),
+        ConsoleColumn('Type', flex: 2, dropBelow: 640),
+        ConsoleColumn('Logged by', flex: 2, dropBelow: 540),
         ConsoleColumn('Amount', flex: 2, alignEnd: true),
       ],
       rows: [

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/models/season_model.dart';
+import 'package:farm_tracker/features/farm/data/models/season_model_drift.dart';
 
 /// Drift-backed local data source for the season feature.
 ///
@@ -32,7 +33,7 @@ class SeasonLocalDataSource implements LocalSyncStore<SeasonModel> {
       ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId))
       ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]);
     return query.watch().map(
-      (rows) => rows.map(SeasonModel.fromDrift).toList(),
+      (rows) => rows.map(seasonModelFromDrift).toList(),
     );
   }
 
@@ -128,7 +129,7 @@ class SeasonLocalDataSource implements LocalSyncStore<SeasonModel> {
     final row = await (_db.select(
       _db.seasons,
     )..where((r) => r.clientUuid.equals(clientUuid))).getSingleOrNull();
-    return row == null ? null : SeasonModel.fromDrift(row);
+    return row == null ? null : seasonModelFromDrift(row);
   }
 
   /// The season with the given server [serverId], or `null` if no such row
@@ -138,7 +139,7 @@ class SeasonLocalDataSource implements LocalSyncStore<SeasonModel> {
     final row = await (_db.select(
       _db.seasons,
     )..where((r) => r.serverId.equals(serverId))).getSingleOrNull();
-    return row == null ? null : SeasonModel.fromDrift(row);
+    return row == null ? null : seasonModelFromDrift(row);
   }
 
   /// Deletes every row — used to wipe the local mirror on logout.

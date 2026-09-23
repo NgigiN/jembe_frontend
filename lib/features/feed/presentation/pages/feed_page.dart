@@ -233,46 +233,70 @@ class FeedView extends StatelessWidget {
     final people = {for (final entry in all) loggedByName(entry)}.toList()
       ..sort();
 
-    return Row(
-      children: [
-        Expanded(
-          child: ConsoleChips(
-            labels: _typeFilters,
-            selectedIndex: typeFilterIndex,
-            onSelected: onTypeFilterChanged ?? (_) {},
+    final chips = ConsoleChips(
+      labels: _typeFilters,
+      selectedIndex: typeFilterIndex,
+      onSelected: onTypeFilterChanged ?? (_) {},
+    );
+    final personFilter = ConsoleSelect<String>(
+      value: people.contains(person) ? person : everyone,
+      items: [everyone, ...people],
+      labelBuilder: (value) => value,
+      icon: Icons.person_outline,
+      onChanged: onPersonChanged ?? (_) {},
+    );
+    final search = SizedBox(
+      height: ConsoleMetrics.buttonHeight,
+      child: TextField(
+        controller: searchController,
+        onChanged: onSearchChanged,
+        style: AppTypography.bodyDense,
+        decoration: InputDecoration(
+          hintText: 'Search entries',
+          prefixIcon: Icon(
+            Icons.search,
+            size: 18,
+            color: context.console.muted,
+          ),
+          prefixIconConstraints: const BoxConstraints.tightFor(
+            width: 32,
+            height: 20,
           ),
         ),
-        const SizedBox(width: 10),
-        ConsoleSelect<String>(
-          value: people.contains(person) ? person : everyone,
-          items: [everyone, ...people],
-          labelBuilder: (value) => value,
-          icon: Icons.person_outline,
-          onChanged: onPersonChanged ?? (_) {},
-        ),
-        const SizedBox(width: 8),
-        SizedBox(
-          width: 200,
-          height: ConsoleMetrics.buttonHeight,
-          child: TextField(
-            controller: searchController,
-            onChanged: onSearchChanged,
-            style: AppTypography.bodyDense,
-            decoration: InputDecoration(
-              hintText: 'Search entries',
-              prefixIcon: Icon(
-                Icons.search,
-                size: 18,
-                color: context.console.muted,
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Five chips, a person filter and a search field want about 700px
+        // between them. Under that the filters take their own line rather
+        // than orphaning a chip onto a second row.
+        if (constraints.maxWidth < 700) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              chips,
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  personFilter,
+                  const SizedBox(width: 8),
+                  Expanded(child: search),
+                ],
               ),
-              prefixIconConstraints: const BoxConstraints.tightFor(
-                width: 32,
-                height: 20,
-              ),
-            ),
-          ),
-        ),
-      ],
+            ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: chips),
+            const SizedBox(width: 10),
+            personFilter,
+            const SizedBox(width: 8),
+            SizedBox(width: 200, child: search),
+          ],
+        );
+      },
     );
   }
 
@@ -377,11 +401,17 @@ class FeedView extends StatelessWidget {
 
     return ConsoleTable(
       columns: [
+        // What survives a narrow window, in order of what the Feed is
+        // for: when it happened, what happened, and what it cost.
         const ConsoleColumn('Time', width: 72),
         const ConsoleColumn('Entry', flex: 5),
-        const ConsoleColumn('Type', flex: 2),
-        const ConsoleColumn('Detail', flex: 2),
-        const ConsoleColumn('Logged by', flex: 3),
+        const ConsoleColumn('Type', flex: 2, dropBelow: 820),
+        // Detail is the first thing staff lose on a narrow window — the
+        // feed endpoint sends nothing for it yet, so it reads "—". For a
+        // worker it is the column that says "Hidden", which is the only
+        // place they learn amounts exist, so it stays.
+        ConsoleColumn('Detail', flex: 2, dropBelow: _isStaff ? 980 : null),
+        const ConsoleColumn('Logged by', flex: 3, dropBelow: 680),
         if (_isStaff) const ConsoleColumn('Amount', flex: 2, alignEnd: true),
       ],
       rows: tableRows,

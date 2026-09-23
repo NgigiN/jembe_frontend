@@ -12,6 +12,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:farm_tracker/core/theme/console_metrics.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
 import 'package:farm_tracker/features/web_console/presentation/theme/web_console_theme.dart';
 import 'package:farm_tracker/features/web_console/presentation/widgets/console_sidebar.dart';
@@ -68,21 +69,26 @@ Widget previewShell(
         ? WebConsoleTheme.dark()
         : WebConsoleTheme.light(),
     home: Scaffold(
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ConsoleSidebar(
-            location: location,
-            role: sidebar.role,
-            farmName: sidebar.farmName,
-            userName: sidebar.userName,
-            userEmail: sidebar.userEmail,
-            onNavigate: (_) {},
-            onSignOut: () {},
-            onSwitchFarm: () {},
-          ),
-          Expanded(child: page),
-        ],
+      body: LayoutBuilder(
+        // Mirrors WebConsoleShell, so a narrow preview shows the icon rail
+        // the real shell would show at that width.
+        builder: (context, constraints) => Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ConsoleSidebar(
+              location: location,
+              role: sidebar.role,
+              farmName: sidebar.farmName,
+              userName: sidebar.userName,
+              userEmail: sidebar.userEmail,
+              compact: constraints.maxWidth < ConsoleMetrics.shellBreakpoint,
+              onNavigate: (_) {},
+              onSignOut: () {},
+              onSwitchFarm: () {},
+            ),
+            Expanded(child: page),
+          ],
+        ),
       ),
     ),
   );

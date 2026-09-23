@@ -19,6 +19,13 @@ abstract final class ConsoleMetrics {
     vertical: 22,
     horizontal: 28,
   );
+
+  /// The same padding on a narrow window, where 28px gutters cost more
+  /// than they buy.
+  static const EdgeInsets mainPaddingNarrow = EdgeInsets.symmetric(
+    vertical: 16,
+    horizontal: 16,
+  );
   static const EdgeInsets cardPadding = EdgeInsets.all(16);
   static const double gridGap = 16;
   static const EdgeInsets tableCellPadding = EdgeInsets.symmetric(
@@ -48,9 +55,13 @@ abstract final class ConsoleMetrics {
   /// the reference screens show the rail beside the content at that size.
   static const double railStackBreakpoint = 900;
 
-  /// Below this the custom console shell hands off to the app's existing
-  /// `adaptive_scaffold_plus` behaviour (rail, then bottom nav).
+  /// Below this the sidebar collapses to a 72px icon rail.
   static const double shellBreakpoint = 900;
+
+  /// Below this a page is being read on a phone or a narrow split window:
+  /// gutters tighten, the header's actions move under the title, and
+  /// tables start dropping their lowest-priority columns.
+  static const double narrowBreakpoint = 640;
 
   /// The console's only shadow: a 1px border does most of the lifting, and
   /// this sits under it (DESIGN_SPEC §1 — "No heavier shadows").

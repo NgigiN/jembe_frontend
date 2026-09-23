@@ -262,9 +262,9 @@ class MembersView extends StatelessWidget {
     return ConsoleTable(
       columns: [
         const ConsoleColumn('Name', flex: 4),
-        const ConsoleColumn('Email', flex: 6),
+        const ConsoleColumn('Email', flex: 6, dropBelow: 720),
         const ConsoleColumn('Role', width: 118),
-        const ConsoleColumn('Joined', flex: 2),
+        const ConsoleColumn('Joined', flex: 2, dropBelow: 860),
         // Wide enough for Resend + Revoke side by side, with slack for a
         // fallback font that measures wider than Work Sans.
         if (_isStaff) const ConsoleColumn('', width: 176, alignEnd: true),

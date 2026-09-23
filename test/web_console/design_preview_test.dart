@@ -184,6 +184,57 @@ void main() {
     );
   });
 
+  testWidgets('feed-tablet', (tester) async {
+    await capture(
+      tester,
+      previewShell(
+        FeedView(
+          farmName: sampleFarmName,
+          role: FarmRole.owner,
+          entries: sampleFeed,
+        ),
+        location: WebRoutePath.feed,
+      ),
+      'feed-tablet',
+      size: const Size(860, 860),
+    );
+  });
+
+  testWidgets('feed-phone', (tester) async {
+    await capture(
+      tester,
+      previewShell(
+        FeedView(
+          farmName: sampleFarmName,
+          role: FarmRole.owner,
+          entries: sampleFeed,
+        ),
+        location: WebRoutePath.feed,
+      ),
+      'feed-phone',
+      size: const Size(560, 900),
+    );
+  });
+
+  testWidgets('dashboard-tablet', (tester) async {
+    await capture(
+      tester,
+      previewShell(
+        DashboardView(
+          farmName: sampleFarmName,
+          subtitle: 'Nakuru \u00b7 Wednesday 23 September',
+          counts: sampleCounts,
+          totals: sampleTotals,
+          entries: sampleFeed,
+          breakdown: sampleBreakdown,
+        ),
+        location: WebRoutePath.dashboard,
+      ),
+      'dashboard-tablet',
+      size: const Size(860, 1100),
+    );
+  });
+
   testWidgets('sign-in', (tester) async {
     await capture(
       tester,

@@ -39,7 +39,7 @@ import 'package:farm_tracker/features/farms/data/services/farm_storage_service.d
 /// exists offline and never changes when the row later syncs and gains a
 /// server id. [updateLand] and [deleteLand] therefore treat the incoming
 /// `id`/`land.id` as a `clientUuid`, never a server id. The drift row's
-/// nullable `serverId` is used ONLY by the syncer (via `LandModel.fromDrift`)
+/// nullable `serverId` is used ONLY by the syncer (via `landModelFromDrift`)
 /// to build server URLs — it never surfaces through this repository's
 /// presentation.
 class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {

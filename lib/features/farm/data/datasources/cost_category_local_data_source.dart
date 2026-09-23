@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/models/cost_category_model.dart';
+import 'package:farm_tracker/features/farm/data/models/cost_category_model_drift.dart';
 
 /// Drift-backed local data source for the `cost_category` read-through
 /// cache — the P3 outlier with a BESPOKE syncer (see `cost_category_model.dart`
@@ -46,7 +47,7 @@ class CostCategoryLocalDataSource
     }
     query.orderBy([(row) => OrderingTerm.asc(row.name)]);
     final rows = await query.get();
-    return rows.map(CostCategoryModel.fromDrift).toList();
+    return rows.map(costCategoryModelFromDrift).toList();
   }
 
   /// Inserts [model], or replaces the existing row sharing its `clientUuid`
@@ -125,7 +126,7 @@ class CostCategoryLocalDataSource
     final row = await (_db.select(
       _db.costCategories,
     )..where((r) => r.clientUuid.equals(clientUuid))).getSingleOrNull();
-    return row == null ? null : CostCategoryModel.fromDrift(row);
+    return row == null ? null : costCategoryModelFromDrift(row);
   }
 
   /// The category with the given server [serverId], or `null` if no such row
@@ -135,7 +136,7 @@ class CostCategoryLocalDataSource
     final row = await (_db.select(
       _db.costCategories,
     )..where((r) => r.serverId.equals(serverId))).getSingleOrNull();
-    return row == null ? null : CostCategoryModel.fromDrift(row);
+    return row == null ? null : costCategoryModelFromDrift(row);
   }
 
   /// Full re-fetch reconciliation for `CostCategorySyncer.pull`: replaces

@@ -148,9 +148,9 @@ class FarmsView extends StatelessWidget {
     return ConsoleTable(
       columns: const [
         ConsoleColumn('Farm', flex: 5),
-        ConsoleColumn('Your role', width: 96),
-        ConsoleColumn('County', flex: 3),
-        ConsoleColumn('Members', width: 82, alignEnd: true),
+        ConsoleColumn('Your role', width: 96, dropBelow: 620),
+        ConsoleColumn('County', flex: 3, dropBelow: 760),
+        ConsoleColumn('Members', width: 82, alignEnd: true, dropBelow: 540),
         ConsoleColumn('', width: 128, alignEnd: true),
       ],
       rows: [

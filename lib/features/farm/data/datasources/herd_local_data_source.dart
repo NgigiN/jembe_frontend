@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
+import 'package:farm_tracker/features/farm/data/models/herd_model_drift.dart';
 
 /// Drift-backed local data source for the herd feature.
 ///
@@ -31,7 +32,7 @@ class HerdLocalDataSource implements LocalSyncStore<HerdModel> {
     final query = _db.select(_db.herds)
       ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId))
       ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]);
-    return query.watch().map((rows) => rows.map(HerdModel.fromDrift).toList());
+    return query.watch().map((rows) => rows.map(herdModelFromDrift).toList());
   }
 
   /// Inserts [model], or replaces the existing row sharing its
@@ -90,7 +91,7 @@ class HerdLocalDataSource implements LocalSyncStore<HerdModel> {
     final row = await (_db.select(
       _db.herds,
     )..where((r) => r.clientUuid.equals(clientUuid))).getSingleOrNull();
-    return row == null ? null : HerdModel.fromDrift(row);
+    return row == null ? null : herdModelFromDrift(row);
   }
 
   /// The herd with the given server [serverId], or `null` if no such row
@@ -100,7 +101,7 @@ class HerdLocalDataSource implements LocalSyncStore<HerdModel> {
     final row = await (_db.select(
       _db.herds,
     )..where((r) => r.serverId.equals(serverId))).getSingleOrNull();
-    return row == null ? null : HerdModel.fromDrift(row);
+    return row == null ? null : herdModelFromDrift(row);
   }
 
   /// Deletes every row — used to wipe the local mirror on logout.

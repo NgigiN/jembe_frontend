@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/models/land_model.dart';
+import 'package:farm_tracker/features/farm/data/models/land_model_drift.dart';
 
 /// Drift-backed local data source for the land feature.
 ///
@@ -32,7 +33,7 @@ class LandLocalDataSource implements LocalSyncStore<LandModel> {
       ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId))
       ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]);
     return query.watch().map(
-      (rows) => rows.map(LandModel.fromDrift).toList(),
+      (rows) => rows.map(landModelFromDrift).toList(),
     );
   }
 
@@ -92,7 +93,7 @@ class LandLocalDataSource implements LocalSyncStore<LandModel> {
     final row = await (_db.select(
       _db.lands,
     )..where((r) => r.clientUuid.equals(clientUuid))).getSingleOrNull();
-    return row == null ? null : LandModel.fromDrift(row);
+    return row == null ? null : landModelFromDrift(row);
   }
 
   /// The land with the given server [serverId], or `null` if no such row
@@ -102,7 +103,7 @@ class LandLocalDataSource implements LocalSyncStore<LandModel> {
     final row = await (_db.select(
       _db.lands,
     )..where((r) => r.serverId.equals(serverId))).getSingleOrNull();
-    return row == null ? null : LandModel.fromDrift(row);
+    return row == null ? null : landModelFromDrift(row);
   }
 
   /// Deletes every row — used to wipe the local mirror on logout.

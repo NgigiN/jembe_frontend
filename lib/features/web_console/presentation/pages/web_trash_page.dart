@@ -96,7 +96,7 @@ class _WebTrashPageState extends State<WebTrashPage> {
     return ConsoleTable(
       columns: const [
         ConsoleColumn('Record', flex: 4),
-        ConsoleColumn('Deleted', flex: 2),
+        ConsoleColumn('Deleted', flex: 2, dropBelow: 560),
         ConsoleColumn('', width: 110, alignEnd: true),
       ],
       rows: [

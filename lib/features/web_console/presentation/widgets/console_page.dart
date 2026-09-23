@@ -47,13 +47,21 @@ class ConsolePage extends StatelessWidget {
         final sideBySide =
             rail != null &&
             constraints.maxWidth >= ConsoleMetrics.railStackBreakpoint;
+        final narrow = constraints.maxWidth < ConsoleMetrics.narrowBreakpoint;
 
         return SingleChildScrollView(
-          padding: ConsoleMetrics.mainPadding,
+          padding: narrow
+              ? ConsoleMetrics.mainPaddingNarrow
+              : ConsoleMetrics.mainPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Header(title: title, subtitle: subtitle, actions: actions),
+              _Header(
+                title: title,
+                subtitle: subtitle,
+                actions: actions,
+                stacked: narrow,
+              ),
               const SizedBox(height: ConsoleMetrics.gridGap),
               if (aboveContent != null) ...[
                 aboveContent!,
@@ -88,44 +96,64 @@ class _Header extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.actions,
+    required this.stacked,
   });
 
   final String title;
   final String? subtitle;
   final List<Widget> actions;
 
+  /// On a narrow window the actions move under the title instead of
+  /// competing with it for the same line.
+  final bool stacked;
+
   @override
   Widget build(BuildContext context) {
     final console = context.console;
 
+    final heading = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(title, style: AppTypography.pageTitle),
+        if (subtitle != null) ...[
+          const SizedBox(height: 3),
+          Text(
+            subtitle!,
+            style: AppTypography.bodyDense.copyWith(color: console.muted),
+          ),
+        ],
+      ],
+    );
+
+    final actionRow = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: stacked ? WrapAlignment.start : WrapAlignment.end,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: actions,
+    );
+
+    if (stacked) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          heading,
+          if (actions.isNotEmpty) ...[const SizedBox(height: 14), actionRow],
+        ],
+      );
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(title, style: AppTypography.pageTitle),
-              if (subtitle != null) ...[
-                const SizedBox(height: 3),
-                Text(
-                  subtitle!,
-                  style: AppTypography.bodyDense.copyWith(color: console.muted),
-                ),
-              ],
-            ],
-          ),
-        ),
+        Expanded(child: heading),
         if (actions.isNotEmpty) ...[
           const SizedBox(width: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.end,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: actions,
-          ),
+          // Flexible, so a long action row wraps instead of squeezing the
+          // title out of its own header.
+          Flexible(child: actionRow),
         ],
       ],
     );

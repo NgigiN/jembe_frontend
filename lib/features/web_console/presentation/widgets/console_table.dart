@@ -19,6 +19,7 @@ class ConsoleColumn {
     this.alignEnd = false,
     this.sort = SortDirection.none,
     this.onSort,
+    this.dropBelow,
   }) : assert(
          width == null || flex == 1,
          'A fixed-width column ignores flex — set one or the other',
@@ -35,6 +36,14 @@ class ConsoleColumn {
 
   final SortDirection sort;
   final VoidCallback? onSort;
+
+  /// The table width below which this column is dropped entirely.
+  ///
+  /// Squeezing eight columns into a phone-width window makes all of them
+  /// unreadable; dropping the least important ones keeps the rest legible.
+  /// Null means the column is always shown — the identifying column and
+  /// the one the page exists for should never carry this.
+  final double? dropBelow;
 }
 
 /// One row of a [ConsoleTable] — either a row of cells, or a full-width
@@ -63,6 +72,19 @@ class ConsoleRow {
   /// A summary row such as "Season total": no bottom border, and it sits
   /// above the pager rather than among the data.
   final bool emphasised;
+
+  /// The same row with only the cells at [indices], in that order — how a
+  /// table drops a column on a narrow window without the remaining cells
+  /// sliding into the wrong columns.
+  ConsoleRow keeping(List<int> indices) {
+    if (indices.length == cells.length) return this;
+    return ConsoleRow(
+      [for (final i in indices) if (i < cells.length) cells[i]],
+      tint: tint,
+      onTap: onTap,
+      emphasised: emphasised,
+    );
+  }
 }
 
 /// The console's table (DESIGN_SPEC §3), shared by Dashboard, Feed,
@@ -94,25 +116,47 @@ class ConsoleTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _HeaderRow(columns: columns, dense: dense),
-        // No keys: rows are positional and are rebuilt wholesale on every
-        // data change, so the default position-plus-type matching is what
-        // keeps a hovered row hovered across a rebuild.
-        for (final row in rows)
-          _DataRow(columns: columns, row: row, dense: dense),
-        if (footer != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: DefaultTextStyle.merge(
-              style: AppTypography.meta.copyWith(color: context.console.muted),
-              child: footer!,
-            ),
-          ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Cells are positional, so a dropped column has to be dropped by
+        // the same index from every row — hence the index list rather than
+        // filtering the columns and the cells separately.
+        final kept = <int>[
+          for (var i = 0; i < columns.length; i++)
+            if (columns[i].dropBelow == null ||
+                constraints.maxWidth >= columns[i].dropBelow!)
+              i,
+        ];
+        final visible = [for (final i in kept) columns[i]];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _HeaderRow(columns: visible, dense: dense),
+            // No keys: rows are positional and are rebuilt wholesale on
+            // every data change, so the default position-plus-type
+            // matching is what keeps a hovered row hovered across a
+            // rebuild.
+            for (final row in rows)
+              _DataRow(
+                columns: visible,
+                row: row.group != null ? row : row.keeping(kept),
+                dense: dense,
+              ),
+            if (footer != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: DefaultTextStyle.merge(
+                  style: AppTypography.meta.copyWith(
+                    color: context.console.muted,
+                  ),
+                  child: footer!,
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
