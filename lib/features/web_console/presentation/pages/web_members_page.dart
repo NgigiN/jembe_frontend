@@ -265,7 +265,9 @@ class MembersView extends StatelessWidget {
         const ConsoleColumn('Email', flex: 6),
         const ConsoleColumn('Role', width: 118),
         const ConsoleColumn('Joined', flex: 2),
-        if (_isStaff) const ConsoleColumn('', width: 150, alignEnd: true),
+        // Wide enough for Resend + Revoke side by side, with slack for a
+        // fallback font that measures wider than Work Sans.
+        if (_isStaff) const ConsoleColumn('', width: 176, alignEnd: true),
       ],
       rows: [
         for (final member in members!) _memberRow(context, member),
@@ -368,20 +370,31 @@ class MembersView extends StatelessWidget {
             color: context.statusColors.warning,
           ),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton(
-              onPressed: onResend == null ? null : () => onResend!(invitation),
-              style: _inlineTextButton(Theme.of(context).colorScheme.primary),
-              child: const Text('Resend'),
-            ),
-            TextButton(
-              onPressed: onRevoke == null ? null : () => onRevoke!(invitation),
-              style: _inlineTextButton(Theme.of(context).colorScheme.error),
-              child: const Text('Revoke'),
-            ),
-          ],
+        // The two actions sit in a fixed-width cell, so they scale down
+        // rather than overflow it when the text measures wider than Work
+        // Sans does — a fallback font, or a longer translation.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerRight,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton(
+                onPressed: onResend == null
+                    ? null
+                    : () => onResend!(invitation),
+                style: _inlineTextButton(Theme.of(context).colorScheme.primary),
+                child: const Text('Resend'),
+              ),
+              TextButton(
+                onPressed: onRevoke == null
+                    ? null
+                    : () => onRevoke!(invitation),
+                style: _inlineTextButton(Theme.of(context).colorScheme.error),
+                child: const Text('Revoke'),
+              ),
+            ],
+          ),
         ),
       ],
       tint: console.surfaceLow,
@@ -440,7 +453,7 @@ class MembersView extends StatelessWidget {
 ButtonStyle _inlineTextButton(Color foreground) => TextButton.styleFrom(
   foregroundColor: foreground,
   minimumSize: const Size(0, ConsoleMetrics.inlineButtonHeight),
-  padding: const EdgeInsets.symmetric(horizontal: 8),
+  padding: const EdgeInsets.symmetric(horizontal: 6),
   textStyle: AppTypography.cell.copyWith(fontWeight: FontWeight.w500),
 );
 

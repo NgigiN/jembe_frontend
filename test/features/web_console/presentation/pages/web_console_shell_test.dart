@@ -65,41 +65,63 @@ Widget _harness(FarmRole role, {AuthBloc? authBloc}) {
   );
 }
 
+/// Pumps the shell at a width where the sidebar shows its labels. Below
+/// ConsoleMetrics.shellBreakpoint it collapses to icons, and the default
+/// 800x600 test surface would hide every label under test.
+Future<void> _pumpShell(
+  WidgetTester tester,
+  FarmRole role, {
+  AuthBloc? authBloc,
+}) async {
+  await tester.binding.setSurfaceSize(const Size(1280, 900));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+  await tester.pumpWidget(_harness(role, authBloc: authBloc));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUpAll(() => registerFallbackValue(LogoutEvent()));
 
-  testWidgets('owner sees all four destinations', (tester) async {
-    await tester.pumpWidget(_harness(FarmRole.owner));
-    await tester.pumpAndSettle();
+
+  testWidgets('owner sees every destination', (tester) async {
+    await _pumpShell(tester, FarmRole.owner);
     expect(find.text('Dashboard'), findsOneWidget);
     expect(find.text('Feed'), findsOneWidget);
     expect(find.text('Members'), findsOneWidget);
     expect(find.text('Reports'), findsOneWidget);
+    expect(find.text('Farms'), findsOneWidget);
+    expect(find.text('Trash'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
   });
 
-  testWidgets('worker sees Feed and Members only', (tester) async {
-    await tester.pumpWidget(_harness(FarmRole.worker));
-    await tester.pumpAndSettle();
+  testWidgets('a worker does not see the staff-only destinations', (
+    tester,
+  ) async {
+    await _pumpShell(tester, FarmRole.worker);
     expect(find.text('Feed'), findsOneWidget);
     expect(find.text('Members'), findsOneWidget);
+    expect(find.text('Farms'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
+    // Absent, not greyed out (DESIGN_SPEC §5).
     expect(find.text('Dashboard'), findsNothing);
     expect(find.text('Reports'), findsNothing);
+    expect(find.text('Trash'), findsNothing);
   });
 
-  testWidgets('shows the current farm name in the app bar', (tester) async {
-    final authBloc = MockAuthBloc();
-    whenListen(authBloc, const Stream<AuthState>.empty(), initialState: AuthInitial());
-    await tester.pumpWidget(_harness(FarmRole.owner, authBloc: authBloc));
-    await tester.pumpAndSettle();
+  testWidgets('the farm switcher names the current farm and role', (
+    tester,
+  ) async {
+    await _pumpShell(tester, FarmRole.owner);
 
-    expect(find.text('Farm'), findsOneWidget); // _farm() in this file names it 'Farm'
+    // _farm() in this file names it 'Farm'.
+    expect(find.text('Farm'), findsOneWidget);
+    expect(find.textContaining('Owner'), findsWidgets);
   });
 
   testWidgets('sign-out button dispatches LogoutEvent', (tester) async {
     final authBloc = MockAuthBloc();
     whenListen(authBloc, const Stream<AuthState>.empty(), initialState: AuthInitial());
-    await tester.pumpWidget(_harness(FarmRole.owner, authBloc: authBloc));
-    await tester.pumpAndSettle();
+    await _pumpShell(tester, FarmRole.owner, authBloc: authBloc);
 
     await tester.tap(find.byTooltip('Sign out'));
     await tester.pump();

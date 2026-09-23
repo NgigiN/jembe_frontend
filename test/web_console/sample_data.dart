@@ -3,11 +3,11 @@
 import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
 import 'package:farm_tracker/features/farm/domain/entities/dashboard.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
+import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_invitation.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_member.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
-import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 import 'package:farm_tracker/features/feed/domain/entities/feed_entry.dart';
 
 const sampleCounts = DashboardCounts(
@@ -51,7 +51,7 @@ final sampleFeed = [
   _entry('activity', 'Vaccination — Broilers (120)', 'Wanjiku', 'Njeri', 2, 10),
   _entry('activity', 'Top-dressing — Maize, East Plot', 'Otieno', 'Baraka', 3, 8),
   _entry('harvest', 'Maize harvest — West Plot', 'Kamau', 'Owner', 4, 12),
-  _entry('input', 'CAN fertilizer 50 kg', 'Kamau', 'Owner', 5, 9),
+  _entry('input', 'CAN fertilizer 50 kg', 'Kamau', 'Owner', 5),
 ];
 
 const sampleBreakdown = [

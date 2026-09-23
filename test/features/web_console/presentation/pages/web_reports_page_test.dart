@@ -1,169 +1,157 @@
-import 'package:bloc_test/bloc_test.dart';
+import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
 import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
-import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/web_console/presentation/pages/web_reports_page.dart';
+import 'package:farm_tracker/features/web_console/presentation/theme/web_console_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
 
-class MockAnalysisBloc extends MockBloc<AnalysisEvent, AnalysisState>
-    implements AnalysisBloc {}
+/// Exercises [ReportsView] rather than the page: the page is bloc
+/// plumbing, and the tabs, the season total and the CSV payload are all
+/// functions of the data it is handed.
+Future<void> _pump(WidgetTester tester, Widget view) async {
+  await tester.binding.setSurfaceSize(const Size(1280, 900));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+  await tester.pumpWidget(
+    MaterialApp(theme: WebConsoleTheme.light(), home: Scaffold(body: view)),
+  );
+  await tester.pump();
+}
 
-void main() {
-  setUpAll(() {
-    registerFallbackValue(const LoadTotalCostsBySeason());
-    registerFallbackValue(const LoadCostBreakdown());
-    registerFallbackValue(LoadAnnualCostSummary(DateTime(2026), DateTime(2027)));
-  });
-
-  final detail = CostDetail(
+final _details = [
+  CostDetail(
     type: 'plant',
     id: 1,
     name: 'Maize Season 1',
-    category: 'Crop',
-    location: 'North Field',
-    startDate: DateTime(2026),
-    inputCost: 100,
-    activityCost: 50,
-    totalCost: 150,
-  );
+    category: 'Fertilizer',
+    location: 'West Plot',
+    startDate: DateTime(2026, 3, 14),
+    inputCost: 11300,
+    activityCost: 0,
+    totalCost: 11300,
+  ),
+];
 
-  final loaded = AnalysisState(
-    detailedCosts: AnalysisSlice(data: FarmDetailedCost(details: [detail])),
-  );
+const _breakdowns = [
+  CostBreakdown(
+    category: 'Fertilizer',
+    type: 'plant',
+    origin: 'Long rains 2026',
+    totalCost: 11300,
+    percentage: 100,
+  ),
+];
 
-  testWidgets('renders a real field from the loaded state', (tester) async {
-    final bloc = MockAnalysisBloc();
-    whenListen(bloc, const Stream<AnalysisState>.empty(), initialState: loaded);
+const _noBreakdown = MonthlySummaryBreakdown(
+  costs: MonthlyCostBreakdown(plant: 0, animal: 0, infrastructure: 0),
+  revenue: MonthlyRevenueBreakdown(plant: 0, animal: 0),
+);
 
-    await tester.pumpWidget(
-      BlocProvider<AnalysisBloc>.value(
-        value: bloc, child: const MaterialApp(home: WebReportsPage()),
+const _months = [
+  MonthlySummary(
+    month: 'Jan 2026',
+    totalCosts: 100,
+    totalRevenue: 400,
+    profit: 300,
+    breakdown: _noBreakdown,
+  ),
+];
+
+void main() {
+  testWidgets('cost details open first, with a season total', (tester) async {
+    await _pump(
+      tester,
+      ReportsView(
+        farmName: 'Keringet',
+        year: 2026,
+        details: _details,
+        breakdowns: _breakdowns,
+        summaries: _months,
       ),
     );
-    await tester.pumpAndSettle();
 
     expect(find.text('Maize Season 1'), findsOneWidget);
+    expect(find.text('Season total'), findsOneWidget);
   });
 
-  testWidgets('dispatches the analysis load events on init', (tester) async {
-    final bloc = MockAnalysisBloc();
-    whenListen(
-      bloc, const Stream<AnalysisState>.empty(),
-      initialState: const AnalysisState(),
-    );
-
-    await tester.pumpWidget(
-      BlocProvider<AnalysisBloc>.value(
-        value: bloc, child: const MaterialApp(home: WebReportsPage()),
+  testWidgets('the annual summary tab shows a month row', (tester) async {
+    await _pump(
+      tester,
+      ReportsView(
+        farmName: 'Keringet',
+        year: 2026,
+        details: _details,
+        breakdowns: _breakdowns,
+        summaries: _months,
+        tabIndex: 2,
       ),
     );
-    await tester.pump();
 
-    verify(
-      () => bloc.add(any(that: isA<LoadTotalCostsBySeason>())),
-    ).called(1);
-    verify(() => bloc.add(any(that: isA<LoadCostBreakdown>()))).called(1);
-    verify(
-      () => bloc.add(any(that: isA<LoadAnnualCostSummary>())),
-    ).called(1);
+    expect(find.text('Jan 2026'), findsWidgets);
   });
 
-  testWidgets('renders a monthly summary row from the loaded state', (
+  testWidgets('Export CSV is disabled until there is something to export', (
     tester,
   ) async {
-    final bloc = MockAnalysisBloc();
-    final withSummary = AnalysisState(
-      detailedCosts: AnalysisSlice(data: FarmDetailedCost(details: [detail])),
-      summaries: const AnalysisSlice(
-        data: [
-          MonthlySummary(
-            month: 'Jan 2026',
-            totalCosts: 200,
-            totalRevenue: 500,
-            profit: 300,
-            breakdown: MonthlySummaryBreakdown(
-              costs: MonthlyCostBreakdown(plant: 100, animal: 100, infrastructure: 0),
-              revenue: MonthlyRevenueBreakdown(plant: 500, animal: 0),
-            ),
-          ),
-        ],
+    await _pump(
+      tester,
+      const ReportsView(
+        farmName: 'Keringet',
+        year: 2026,
+        details: [],
+        breakdowns: [],
+        summaries: [],
       ),
     );
-    whenListen(
-      bloc, const Stream<AnalysisState>.empty(), initialState: withSummary,
-    );
 
-    await tester.pumpWidget(
-      BlocProvider<AnalysisBloc>.value(
-        value: bloc, child: const MaterialApp(home: WebReportsPage()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Jan 2026'), findsOneWidget);
-    expect(find.text('300.00'), findsOneWidget);
-  });
-
-  testWidgets('Export CSV button is disabled when no cost data is loaded', (
-    tester,
-  ) async {
-    final bloc = MockAnalysisBloc();
-    whenListen(
-      bloc, const Stream<AnalysisState>.empty(),
-      initialState: const AnalysisState(),
-    );
-
-    await tester.pumpWidget(
-      BlocProvider<AnalysisBloc>.value(
-        value: bloc, child: const MaterialApp(home: WebReportsPage()),
-      ),
-    );
-    await tester.pump();
-
-    final button = find.widgetWithText(ElevatedButton, 'Export CSV');
+    final button = find.widgetWithText(OutlinedButton, 'Export CSV');
     expect(button, findsOneWidget);
-    expect(tester.widget<ElevatedButton>(button).onPressed, isNull);
+    expect(tester.widget<OutlinedButton>(button).onPressed, isNull);
   });
 
-  testWidgets(
-    'Export CSV button is enabled when data is loaded and invokes the '
-    'injected download callback with CSV rows, without throwing',
-    (tester) async {
-      final bloc = MockAnalysisBloc();
-      whenListen(
-        bloc, const Stream<AnalysisState>.empty(), initialState: loaded,
-      );
-      String? capturedFilename;
-      String? capturedCsv;
+  testWidgets('Export CSV hands the rows to the injected download', (
+    tester,
+  ) async {
+    String? filename;
+    String? csv;
 
-      await tester.pumpWidget(
-        BlocProvider<AnalysisBloc>.value(
-          value: bloc,
-          child: MaterialApp(
-            home: WebReportsPage(
-              onExportCsv: (filename, csv) {
-                capturedFilename = filename;
-                capturedCsv = csv;
-              },
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
+    await _pump(
+      tester,
+      ReportsView(
+        farmName: 'Keringet',
+        year: 2026,
+        details: _details,
+        breakdowns: _breakdowns,
+        summaries: _months,
+        onExportCsv: (name, content) {
+          filename = name;
+          csv = content;
+        },
+      ),
+    );
 
-      final button = find.widgetWithText(ElevatedButton, 'Export CSV');
-      expect(button, findsOneWidget);
-      expect(tester.widget<ElevatedButton>(button).onPressed, isNotNull);
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Export CSV'));
+    await tester.pump();
 
-      await tester.tap(button);
-      await tester.pump();
+    expect(filename, endsWith('.csv'));
+    expect(csv, contains('Maize Season 1'));
+  });
 
-      expect(capturedFilename, isNotNull);
-      expect(capturedFilename, endsWith('.csv'));
-      expect(capturedCsv, contains('Maize Season 1'));
-    },
-  );
+  test('the CSV quotes a field containing a comma', () {
+    final csv = costDetailsToCsv([
+      CostDetail(
+        type: 'plant',
+        id: 2,
+        name: 'Maize, West Plot',
+        category: 'Fertilizer',
+        location: '',
+        startDate: DateTime(2026, 3, 14),
+        inputCost: 1,
+        activityCost: 2,
+        totalCost: 3,
+      ),
+    ]);
+
+    expect(csv, contains('"Maize, West Plot"'));
+  });
 }

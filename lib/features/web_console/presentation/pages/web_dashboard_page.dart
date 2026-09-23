@@ -1,5 +1,6 @@
 import 'package:farm_tracker/core/theme/app_typography.dart';
 import 'package:farm_tracker/core/theme/console_colors.dart';
+import 'package:farm_tracker/core/theme/console_metrics.dart';
 import 'package:farm_tracker/core/utils/console_dates.dart';
 import 'package:farm_tracker/core/utils/kes.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
@@ -145,13 +146,29 @@ class DashboardView extends StatelessWidget {
       );
     }
 
+    // A farm with nothing in it gets the first-run screen, not an empty
+    // version of the working one (DESIGN_SPEC §6): the quick-log buttons
+    // dim until there is a plot to log against, and the main card becomes
+    // a checklist rather than an empty table.
+    final firstRun = counts != null && _isBlank(counts!);
+
     return ConsolePage(
       title: farmName,
       subtitle: subtitle,
-      actions: const [
-        LogOnAndroidButton(label: 'Log activity'),
-        LogOnAndroidButton(label: 'Log input'),
-        LogOnAndroidButton(label: 'Log revenue', variant: LogButton.filled),
+      actions: [
+        LogOnAndroidButton(label: 'Log activity', enabled: !firstRun),
+        LogOnAndroidButton(label: 'Log input', enabled: !firstRun),
+        if (firstRun)
+          const LogOnAndroidButton(
+            label: 'Add a plot',
+            variant: LogButton.filled,
+            icon: Icons.add,
+          )
+        else
+          const LogOnAndroidButton(
+            label: 'Log revenue',
+            variant: LogButton.filled,
+          ),
       ],
       rail: ConsoleRail(
         children: [
@@ -159,32 +176,48 @@ class DashboardView extends StatelessWidget {
             costs: totals?.totalCosts ?? 0,
             revenue: totals?.totalRevenue ?? 0,
             profit: totals?.profit,
-            muted: totals == null,
+            muted: totals == null || firstRun,
           ),
-          _CostBreakdownCard(breakdown: breakdown),
+          if (firstRun)
+            const _AndroidNudgeCard()
+          else
+            _CostBreakdownCard(breakdown: breakdown),
         ],
       ),
       aboveContent: _CountRow(counts: counts),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ConsoleCard(
-            title: 'Season log',
-            titleTrailing: ConsoleChips(
-              labels: _filters,
-              selectedIndex: filterIndex,
-              onSelected: onFilterChanged ?? (_) {},
+          if (firstRun)
+            _FirstRunCard(farmName: farmName)
+          else
+            ConsoleCard(
+              title: 'Season log',
+              titleTrailing: ConsoleChips(
+                labels: _filters,
+                selectedIndex: filterIndex,
+                onSelected: onFilterChanged ?? (_) {},
+              ),
+              padding: const EdgeInsets.fromLTRB(6, 14, 6, 12),
+              child: _SeasonLog(
+                entries: entries,
+                entityType: _filterTypes[filterIndex],
+              ),
             ),
-            padding: const EdgeInsets.fromLTRB(6, 14, 6, 12),
-            child: _SeasonLog(
-              entries: entries,
-              entityType: _filterTypes[filterIndex],
-            ),
-          ),
         ],
       ),
     );
   }
+
+  /// Nothing has been created on this farm yet — not "the request failed",
+  /// which is what the error state is for.
+  static bool _isBlank(DashboardCounts counts) =>
+      counts.lands == 0 &&
+      counts.plants == 0 &&
+      counts.seasons == 0 &&
+      counts.harvests == 0 &&
+      counts.animalTypes == 0 &&
+      counts.herds == 0;
 }
 
 class _CountRow extends StatelessWidget {
@@ -384,6 +417,154 @@ class _CostBreakdownCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The first-run screen's main card (DESIGN_SPEC §6, screen 07): a warm
+/// line about the farm being empty, then the four steps that fill it.
+class _FirstRunCard extends StatelessWidget {
+  const _FirstRunCard({required this.farmName});
+
+  final String farmName;
+
+  @override
+  Widget build(BuildContext context) {
+    final console = context.console;
+
+    const steps = [
+      (label: 'Create the farm', done: true, cta: false),
+      (label: 'Add your first land plot', done: false, cta: true),
+      (label: 'Start a season on it', done: false, cta: false),
+      (label: 'Invite your team', done: false, cta: false),
+    ];
+
+    return ConsoleCard(
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            "$farmName is a blank field. Let's put something on it.",
+            style: AppTypography.amount(22).copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Four steps and the console has something to show you.',
+            style: AppTypography.bodyDense.copyWith(color: console.muted),
+          ),
+          const SizedBox(height: 18),
+          Container(
+            height: 90,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: console.surfaceLow,
+              borderRadius: BorderRadius.circular(ConsoleMetrics.radiusTile),
+            ),
+            child: Icon(
+              Icons.grass_outlined,
+              size: 34,
+              color: console.outline,
+            ),
+          ),
+          const SizedBox(height: 18),
+          for (final step in steps)
+            _Step(label: step.label, done: step.done, cta: step.cta),
+        ],
+      ),
+    );
+  }
+}
+
+class _Step extends StatelessWidget {
+  const _Step({required this.label, required this.done, required this.cta});
+
+  final String label;
+  final bool done;
+  final bool cta;
+
+  @override
+  Widget build(BuildContext context) {
+    final console = context.console;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: console.outline)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            done ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 18,
+            color: done ? scheme.primary : console.outline,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: AppTypography.body.copyWith(
+                color: done ? console.muted : scheme.onSurface,
+                decoration: done ? TextDecoration.lineThrough : null,
+                decorationColor: console.muted,
+              ),
+            ),
+          ),
+          if (cta)
+            const LogOnAndroidButton(
+              label: 'Add a plot',
+              variant: LogButton.filled,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The first-run rail's second card: the console is the reading end of a
+/// phone that may already have data on it.
+class _AndroidNudgeCard extends StatelessWidget {
+  const _AndroidNudgeCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final console = context.console;
+    return ConsoleCard(
+      color: console.surfaceLow,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.phone_android, size: 20, color: console.onSurface2),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Already logging on Android?',
+                  style: AppTypography.bodyDense.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Open the app and let it sync. Whatever is on the phone '
+                  'appears here within seconds.',
+                  style: AppTypography.meta.copyWith(
+                    color: console.onSurface2,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
