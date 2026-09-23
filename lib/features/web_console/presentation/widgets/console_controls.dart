@@ -257,3 +257,61 @@ class ConsoleSelect<T> extends StatelessWidget {
     );
   }
 }
+
+/// The Reports page's tab strip (DESIGN_SPEC §4): a 2px primary underline
+/// under the active label, nothing else.
+///
+/// Not Material's [TabBar]: that brings an indicator animation, a ripple
+/// and a minimum height the mockups don't have, and it wants a
+/// [TabController] the page has no other use for.
+class ConsoleTabs extends StatelessWidget {
+  const ConsoleTabs({
+    required this.labels,
+    required this.selectedIndex,
+    required this.onSelected,
+    super.key,
+  });
+
+  final List<String> labels;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final console = context.console;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < labels.length; i++)
+          InkWell(
+            onTap: () => onSelected(i),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(2, 6, 2, 9),
+              margin: EdgeInsets.only(right: i == labels.length - 1 ? 0 : 18),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: i == selectedIndex
+                        ? scheme.primary
+                        : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+              ),
+              child: Text(
+                labels[i],
+                style: AppTypography.navItem.copyWith(
+                  fontWeight: i == selectedIndex
+                      ? FontWeight.w600
+                      : FontWeight.w500,
+                  color: i == selectedIndex ? scheme.onSurface : console.muted,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}

@@ -16,6 +16,7 @@ class ConsolePage extends StatelessWidget {
     this.subtitle,
     this.actions = const [],
     this.rail,
+    this.aboveContent,
     super.key,
   });
 
@@ -30,8 +31,14 @@ class ConsolePage extends StatelessWidget {
 
   final Widget child;
 
-  /// The 320px right column. Stacks under [child] below 1100px.
+  /// The 320px right column. Stacks under [child] on a narrow page.
   final Widget? rail;
+
+  /// A band that spans the full width beneath the header, above the
+  /// content/rail split — the Dashboard's six count tiles, which the
+  /// reference screen runs edge to edge rather than squeezing beside the
+  /// rail.
+  final Widget? aboveContent;
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +55,10 @@ class ConsolePage extends StatelessWidget {
             children: [
               _Header(title: title, subtitle: subtitle, actions: actions),
               const SizedBox(height: ConsoleMetrics.gridGap),
+              if (aboveContent != null) ...[
+                aboveContent!,
+                const SizedBox(height: ConsoleMetrics.gridGap),
+              ],
               if (sideBySide)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,

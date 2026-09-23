@@ -80,11 +80,16 @@ class ConsoleCard extends StatelessWidget {
     }
 
     if (titleTrailing == null) return label;
+    // The label is laid out at its own width and only the trailing widget
+    // is flexible. Making both flexible splits the row evenly regardless of
+    // what either needs, which wraps a chip set that had room to sit on one
+    // line. Card titles are two or three words, so the label's intrinsic
+    // width is safe to grant.
     return Row(
       children: [
-        Flexible(child: label),
+        label,
         const SizedBox(width: 12),
-        Flexible(
+        Expanded(
           child: Align(alignment: Alignment.centerRight, child: titleTrailing),
         ),
       ],

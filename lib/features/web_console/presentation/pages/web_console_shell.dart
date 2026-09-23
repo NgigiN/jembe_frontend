@@ -47,7 +47,11 @@ class _WebConsoleShellState extends State<WebConsoleShell> {
           final user = snapshot.data;
           return LayoutBuilder(
             builder: (context, constraints) {
+              // stretch, not the Row's default centre: a page whose content
+              // is shorter than the window would otherwise float in the
+              // middle of it instead of starting under the header.
               return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   ConsoleSidebar(
                     location: location,

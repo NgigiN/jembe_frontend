@@ -42,7 +42,11 @@ abstract final class ConsoleMetrics {
 
   /// Below this the rail stacks under the main column instead of beside it
   /// (DESIGN_SPEC §2, "Responsive").
-  static const double railStackBreakpoint = 1100;
+  ///
+  /// Measured on the main column's own width, not the window's: at the
+  /// mockups' 1280px the sidebar and page padding leave 1048px here, and
+  /// the reference screens show the rail beside the content at that size.
+  static const double railStackBreakpoint = 900;
 
   /// Below this the custom console shell hands off to the app's existing
   /// `adaptive_scaffold_plus` behaviour (rail, then bottom nav).
