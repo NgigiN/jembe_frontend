@@ -29,6 +29,7 @@ import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecas
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/farm/data/datasources/activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/analysis_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/animal_type_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/cost_category_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/dashboard_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/harvest_remote_data_source.dart';
@@ -36,6 +37,7 @@ import 'package:farm_tracker/features/farm/data/datasources/herd_activity_remote
 import 'package:farm_tracker/features/farm/data/datasources/herd_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/input_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/land_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/plant_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/season_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/trash_remote_data_source.dart';
@@ -135,6 +137,12 @@ Future<void> initWebDependencies() async {
     ..registerLazySingleton<CostCategoryRemoteDataSource>(
       () => CostCategoryRemoteDataSourceImpl(dio: webSl()),
     )
+    ..registerLazySingleton<PlantRemoteDataSource>(
+      () => PlantRemoteDataSourceImpl(dio: webSl()),
+    )
+    ..registerLazySingleton<AnimalTypeRemoteDataSource>(
+      () => AnimalTypeRemoteDataSourceImpl(dio: webSl()),
+    )
     ..registerLazySingleton(
       () => ConsoleLogService(
         activities: webSl(),
@@ -146,6 +154,8 @@ Future<void> initWebDependencies() async {
         lands: webSl(),
         herds: webSl(),
         categories: webSl(),
+        plants: webSl(),
+        animalTypes: webSl(),
         currentUserId: UserStorageService.getUserId,
       ),
     )

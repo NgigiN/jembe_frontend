@@ -1,7 +1,9 @@
 // A LogWriter with no server behind it, for previews and widget tests.
+import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 import 'package:farm_tracker/features/web_console/data/console_log_service.dart';
 
@@ -135,6 +137,45 @@ class FakeLogWriter implements LogWriter {
     'tenureType': tenureType,
   });
 
+  @override
+  Future<void> addPlant({required String name, String? variety}) =>
+      _record('plant', {'name': name, 'variety': variety});
+
+  @override
+  Future<void> addAnimalType({required String name, String? notes}) =>
+      _record('animalType', {'name': name, 'notes': notes});
+
+  @override
+  Future<void> addSeason({
+    required String name,
+    required String plantId,
+    required String landId,
+    required DateTime startDate,
+    DateTime? endDate,
+  }) => _record('season', {
+    'name': name,
+    'plantId': plantId,
+    'landId': landId,
+    'startDate': startDate,
+    'endDate': endDate,
+  });
+
+  @override
+  Future<void> addHerd({
+    required String name,
+    required String animalTypeId,
+    required String location,
+    required int initialHeadCount,
+    required DateTime startDate,
+  }) => _record('herd', {
+    'name': name,
+    'animalTypeId': animalTypeId,
+    'location': location,
+    'initialHeadCount': initialHeadCount,
+    'startDate': startDate,
+  });
+
+
 }
 
 /// The mockups' sample farm (DESIGN_SPEC §8) as a reference set.
@@ -173,6 +214,25 @@ final sampleLogReference = LogReference(
       initialHeadCount: 6,
       currentHeadCount: 6,
       startDate: DateTime(2026),
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    ),
+  ],
+  plants: [
+    Plant(
+      id: 'pl1',
+      userId: 'u1',
+      name: 'Maize',
+      variety: 'H614',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    ),
+  ],
+  animalTypes: [
+    AnimalType(
+      id: 'at1',
+      userId: 'u1',
+      name: 'Dairy cow',
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
     ),

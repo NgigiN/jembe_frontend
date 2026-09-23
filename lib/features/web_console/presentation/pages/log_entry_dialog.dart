@@ -18,7 +18,11 @@ enum LogEntryKind {
   revenue,
   harvest,
   herdActivity,
-  land;
+  land,
+  plant,
+  animalType,
+  season,
+  herd;
 
   String get title => switch (this) {
     LogEntryKind.activity => 'Log an activity',
@@ -27,6 +31,10 @@ enum LogEntryKind {
     LogEntryKind.harvest => 'Log a harvest',
     LogEntryKind.herdActivity => 'Log a herd event',
     LogEntryKind.land => 'Add a plot',
+    LogEntryKind.plant => 'Add a crop',
+    LogEntryKind.animalType => 'Add an animal type',
+    LogEntryKind.season => 'Start a season',
+    LogEntryKind.herd => 'Add a herd',
   };
 
   String get submitLabel => switch (this) {
@@ -36,6 +44,10 @@ enum LogEntryKind {
     LogEntryKind.harvest => 'Log harvest',
     LogEntryKind.herdActivity => 'Log event',
     LogEntryKind.land => 'Add plot',
+    LogEntryKind.plant => 'Add crop',
+    LogEntryKind.animalType => 'Add type',
+    LogEntryKind.season => 'Start season',
+    LogEntryKind.herd => 'Add herd',
   };
 
   String get blurb => switch (this) {
@@ -48,6 +60,12 @@ enum LogEntryKind {
     LogEntryKind.herdActivity => 'A birth or a loss in one of your herds.',
     LogEntryKind.land =>
       'A field or paddock. Seasons and herds are set up against it.',
+    LogEntryKind.plant => 'Something you grow. A season plants one of these.',
+    LogEntryKind.animalType => 'A kind of animal. A herd is made of one.',
+    LogEntryKind.season =>
+      'One crop on one plot, over a stretch of time. Work and inputs are '
+          'logged against it.',
+    LogEntryKind.herd => 'A group of animals kept together.',
   };
 
   /// Whether the user picks between a season and a herd. A harvest is
@@ -58,9 +76,16 @@ enum LogEntryKind {
       this == LogEntryKind.input ||
       this == LogEntryKind.revenue;
 
-  /// A plot is the one thing logged against nothing — it is what seasons
-  /// and herds are later set up against.
-  bool get needsSource => this != LogEntryKind.land;
+  /// The setup records stand on their own; only the logging kinds are
+  /// recorded against a season or a herd.
+  bool get needsSource => switch (this) {
+    LogEntryKind.land ||
+    LogEntryKind.plant ||
+    LogEntryKind.animalType ||
+    LogEntryKind.season ||
+    LogEntryKind.herd => false,
+    _ => true,
+  };
 }
 
 /// Opens the log form for [kind]. Resolves to true when something was
@@ -117,6 +142,10 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
   bool _sourceTouched = false;
   String _herdEvent = 'birth';
   String _tenure = 'owned';
+  String? _plantId;
+  String? _landId;
+  String? _animalTypeId;
+  DateTime? _endDate;
   DateTime _date = DateTime.now();
   bool _submitting = false;
   String? _failure;
@@ -203,7 +232,8 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
             final ready =
                 snapshot.connectionState == ConnectionState.done &&
                 !snapshot.hasError &&
-                _hasSource(snapshot.data ?? const LogReference.empty());
+                _blockedReason(snapshot.data ?? const LogReference.empty()) ==
+                    null;
             return ConsoleButton.filled(
               label: _submitting ? 'Saving…' : widget.kind.submitLabel,
               onPressed: !ready || _submitting ? null : _submit,
@@ -214,12 +244,44 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
     );
   }
 
-  /// Whether the farm has anything to log this kind against.
-  bool _hasSource(LogReference reference) {
-    if (!widget.kind.needsSource) return true;
-    return _source == 'plant'
-        ? reference.hasPlantSource
-        : reference.hasAnimalSource;
+  /// Why this form cannot be filled in yet, or null when it can.
+  ///
+  /// Both the body and the submit button read this, so a disabled button
+  /// and the explanation above it can never disagree.
+  String? _blockedReason(LogReference reference) {
+    switch (widget.kind) {
+      case LogEntryKind.season:
+        if (reference.plants.isEmpty && reference.lands.isEmpty) {
+          return 'A season is one crop on one plot, so it needs both first. '
+              'Add a plot and a crop, then come back.';
+        }
+        if (reference.lands.isEmpty) return 'Add a plot first.';
+        if (reference.plants.isEmpty) return 'Add a crop first.';
+        return null;
+      case LogEntryKind.herd:
+        if (reference.animalTypes.isEmpty) {
+          return 'Add an animal type first — a herd is made of one.';
+        }
+        return null;
+      case LogEntryKind.land:
+      case LogEntryKind.plant:
+      case LogEntryKind.animalType:
+        return null;
+      case LogEntryKind.activity:
+      case LogEntryKind.input:
+      case LogEntryKind.revenue:
+      case LogEntryKind.harvest:
+      case LogEntryKind.herdActivity:
+        final has = _source == 'plant'
+            ? reference.hasPlantSource
+            : reference.hasAnimalSource;
+        if (has) return null;
+        return _source == 'plant'
+            ? 'Start a season first, then this form has something to log '
+                  'against.'
+            : 'Add a herd first, then this form has something to log '
+                  'against.';
+    }
   }
 
   Widget _form(BuildContext context, LogReference reference) {
@@ -235,17 +297,10 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
       _source = 'animal';
     }
 
-    // Nothing to log against yet — say which thing is missing rather than
-    // showing a form whose first field has no options.
-    if (!_hasSource(reference)) {
-      final wants = _source == 'plant' ? 'a season' : 'a herd';
-      return _Problem(
-        text:
-            'Start $wants first — on the Android app, or on the phone of '
-            'whoever set this farm up. Then this form has something to log '
-            'against.',
-      );
-    }
+    // Say which thing is missing rather than showing a form whose first
+    // field has no options.
+    final blocked = _blockedReason(reference);
+    if (blocked != null) return _Problem(text: blocked);
 
     final kind = widget.kind;
     // The picker's options and the held selection have to come from the
@@ -286,7 +341,7 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
               const SizedBox(height: 14),
             ],
             ..._kindFields(reference),
-            if (kind != LogEntryKind.land)
+            if (kind.needsSource)
               ConsoleField(
                 label: 'Notes',
                 child: ConsoleTextField(
@@ -535,6 +590,186 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
           const SizedBox(height: 14),
         ];
 
+      case LogEntryKind.plant:
+        return [
+          ConsoleFieldRow(
+            left: ConsoleField(
+              label: 'Crop',
+              child: ConsoleTextField(
+                controller: _type,
+                autofocus: true,
+                hintText: 'Maize',
+                validator: (value) => requiredText(value, 'crop name'),
+              ),
+            ),
+            right: ConsoleField(
+              label: 'Variety',
+              child: ConsoleTextField(
+                controller: _details,
+                hintText: 'H614 (optional)',
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ];
+
+      case LogEntryKind.animalType:
+        return [
+          ConsoleField(
+            label: 'Animal type',
+            child: ConsoleTextField(
+              controller: _type,
+              autofocus: true,
+              hintText: 'Dairy cow, broiler',
+              validator: (value) => requiredText(value, 'animal type'),
+            ),
+          ),
+          const SizedBox(height: 14),
+          ConsoleField(
+            label: 'Notes',
+            child: ConsoleTextField(
+              controller: _details,
+              hintText: 'Anything worth remembering (optional)',
+            ),
+          ),
+          const SizedBox(height: 14),
+        ];
+
+      case LogEntryKind.season:
+        return [
+          ConsoleField(
+            label: 'Season name',
+            child: ConsoleTextField(
+              controller: _type,
+              autofocus: true,
+              hintText: 'Long rains 2026',
+              validator: (value) => requiredText(value, 'season name'),
+            ),
+          ),
+          const SizedBox(height: 14),
+          ConsoleFieldRow(
+            left: ConsoleField(
+              label: 'Crop',
+              child: ConsoleFormDropdown<String>(
+                value: _plantId,
+                items: [for (final plant in reference.plants) plant.id],
+                labelBuilder: (id) =>
+                    reference.plants
+                        .where((p) => p.id == id)
+                        .firstOrNull
+                        ?.name ??
+                    'Unknown crop',
+                hintText: 'Pick a crop',
+                validator: (value) => value == null ? 'Pick a crop.' : null,
+                onChanged: (value) => setState(() => _plantId = value),
+              ),
+            ),
+            right: ConsoleField(
+              label: 'Plot',
+              child: ConsoleFormDropdown<String>(
+                value: _landId,
+                items: [for (final land in reference.lands) land.id],
+                labelBuilder: (id) =>
+                    reference.lands.where((l) => l.id == id).firstOrNull?.name ??
+                    'Unknown plot',
+                hintText: 'Pick a plot',
+                validator: (value) => value == null ? 'Pick a plot.' : null,
+                onChanged: (value) => setState(() => _landId = value),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          ConsoleFieldRow(
+            left: ConsoleField(
+              label: 'Starts',
+              child: ConsoleDateField(
+                value: _date,
+                // A season can be planned ahead, unlike a logged entry.
+                lastDate: DateTime.now().add(const Duration(days: 730)),
+                onChanged: (value) => setState(() => _date = value),
+              ),
+            ),
+            right: ConsoleField(
+              label: 'Ends',
+              hint: _endDate == null ? 'Leave it open if you do not know' : null,
+              child: _endDate == null
+                  ? ConsoleButton.outlined(
+                      label: 'Set an end date',
+                      onPressed: () => setState(
+                        () => _endDate = _date.add(const Duration(days: 180)),
+                      ),
+                    )
+                  : ConsoleDateField(
+                      value: _endDate!,
+                      firstDate: _date,
+                      lastDate: DateTime.now().add(const Duration(days: 1095)),
+                      onChanged: (value) => setState(() => _endDate = value),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ];
+
+      case LogEntryKind.herd:
+        return [
+          ConsoleFieldRow(
+            left: ConsoleField(
+              label: 'Herd name',
+              child: ConsoleTextField(
+                controller: _type,
+                autofocus: true,
+                hintText: 'Dairy cows',
+                validator: (value) => requiredText(value, 'herd name'),
+              ),
+            ),
+            right: ConsoleField(
+              label: 'Animal type',
+              child: ConsoleFormDropdown<String>(
+                value: _animalTypeId,
+                items: [for (final type in reference.animalTypes) type.id],
+                labelBuilder: (id) =>
+                    reference.animalTypes
+                        .where((t) => t.id == id)
+                        .firstOrNull
+                        ?.name ??
+                    'Unknown type',
+                hintText: 'Pick a type',
+                validator: (value) =>
+                    value == null ? 'Pick an animal type.' : null,
+                onChanged: (value) => setState(() => _animalTypeId = value),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          ConsoleFieldRow(
+            left: ConsoleField(
+              label: 'Where it is kept',
+              child: ConsoleTextField(
+                controller: _details,
+                hintText: 'Home paddock',
+                validator: (value) => requiredText(value, 'location'),
+              ),
+            ),
+            right: ConsoleField(
+              label: 'How many animals',
+              child: ConsoleTextField.number(
+                controller: _count,
+                hintText: '6',
+                validator: (value) => requiredCount(value, 'head count'),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          ConsoleField(
+            label: 'Kept since',
+            child: ConsoleDateField(
+              value: _date,
+              onChanged: (value) => setState(() => _date = value),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ];
+
       case LogEntryKind.herdActivity:
         return [
           ConsoleField(
@@ -642,6 +877,32 @@ class _LogEntryDialogState extends State<LogEntryDialog> {
                 : _details.text.trim(),
             soilType: _unit.text.trim().isEmpty ? null : _unit.text.trim(),
             tenureType: _tenure,
+          );
+        case LogEntryKind.plant:
+          await widget.service.addPlant(
+            name: _type.text.trim(),
+            variety: _details.text.trim().isEmpty ? null : _details.text.trim(),
+          );
+        case LogEntryKind.animalType:
+          await widget.service.addAnimalType(
+            name: _type.text.trim(),
+            notes: _details.text.trim().isEmpty ? null : _details.text.trim(),
+          );
+        case LogEntryKind.season:
+          await widget.service.addSeason(
+            name: _type.text.trim(),
+            plantId: _plantId!,
+            landId: _landId!,
+            startDate: _date,
+            endDate: _endDate,
+          );
+        case LogEntryKind.herd:
+          await widget.service.addHerd(
+            name: _type.text.trim(),
+            animalTypeId: _animalTypeId!,
+            location: _details.text.trim(),
+            initialHeadCount: int.parse(_count.text.trim()),
+            startDate: _date,
           );
         case LogEntryKind.herdActivity:
           await widget.service.addHerdActivity(

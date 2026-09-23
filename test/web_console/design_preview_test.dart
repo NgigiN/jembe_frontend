@@ -242,6 +242,8 @@ void main() {
     (LogEntryKind.revenue, 'log-revenue'),
     (LogEntryKind.herdActivity, 'log-herd-event'),
     (LogEntryKind.land, 'log-plot'),
+    (LogEntryKind.season, 'log-season'),
+    (LogEntryKind.herd, 'log-herd'),
   ]) {
     testWidgets(name, (tester) async {
       await capture(

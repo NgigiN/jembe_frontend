@@ -39,7 +39,7 @@ import 'package:farm_tracker/features/farms/data/services/farm_storage_service.d
 /// server id. [updateAnimalType] and [deleteAnimalType] therefore treat the
 /// incoming `id` as a `clientUuid`, never a server id. The drift row's
 /// nullable `serverId` is used ONLY by the syncer (via
-/// `AnimalTypeModel.fromDrift`) to build server URLs — it never surfaces
+/// `animalTypeModelFromDrift`) to build server URLs — it never surfaces
 /// through this repository's presentation.
 class AnimalTypeRepositoryImpl
     with OfflineRepositoryMixin

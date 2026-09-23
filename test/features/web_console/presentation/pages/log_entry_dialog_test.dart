@@ -167,4 +167,76 @@ void main() {
     expect(call['size'], 0.8);
     expect(call['tenureType'], 'rented');
   });
+
+  testWidgets('a season is created against the chosen crop and plot', (
+    tester,
+  ) async {
+    final writer = FakeLogWriter();
+    await _pump(tester, LogEntryKind.season, writer);
+
+    await tester.enterText(_field('Long rains 2026'), 'Short rains 2026');
+    // Both pickers start empty: a season's crop and plot are decisions, not
+    // defaults to be accepted by accident.
+    await tester.tap(find.text('Pick a crop'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Maize').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pick a plot'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('West Plot').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Start season'));
+    await tester.pumpAndSettle();
+
+    final call = writer.calls.single;
+    expect(call['kind'], 'season');
+    expect(call['name'], 'Short rains 2026');
+    expect(call['plantId'], 'pl1');
+    expect(call['landId'], 'l1');
+    // Left open unless an end date is deliberately set.
+    expect(call['endDate'], isNull);
+  });
+
+  testWidgets('a season needs a crop and a plot before it can be started', (
+    tester,
+  ) async {
+    final writer = FakeLogWriter(data: const LogReference.empty());
+    await _pump(tester, LogEntryKind.season, writer);
+
+    expect(find.textContaining('needs both first'), findsOneWidget);
+    final button = find.widgetWithText(FilledButton, 'Start season');
+    expect(tester.widget<FilledButton>(button).onPressed, isNull);
+  });
+
+  testWidgets('a herd says which record is missing, not just "no"', (
+    tester,
+  ) async {
+    final writer = FakeLogWriter(
+      data: LogReference(
+        seasons: const [],
+        lands: sampleLogReference.lands,
+        herds: const [],
+        categories: const [],
+      ),
+    );
+    await _pump(tester, LogEntryKind.herd, writer);
+
+    expect(find.textContaining('Add an animal type first'), findsOneWidget);
+  });
+
+  testWidgets('a crop is created with its variety', (tester) async {
+    final writer = FakeLogWriter();
+    await _pump(tester, LogEntryKind.plant, writer);
+
+    await tester.enterText(_field('Maize'), 'Beans');
+    await tester.enterText(_field('H614 (optional)'), 'Rosecoco');
+    await tester.tap(find.text('Add crop'));
+    await tester.pumpAndSettle();
+
+    final call = writer.calls.single;
+    expect(call['kind'], 'plant');
+    expect(call['name'], 'Beans');
+    expect(call['variety'], 'Rosecoco');
+  });
 }

@@ -1,5 +1,3 @@
-import 'package:drift/drift.dart' show Value;
-import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
 import 'package:farm_tracker/core/utils/json_parsing.dart';
@@ -52,28 +50,6 @@ class PlantModel extends Plant implements SyncableModel {
     );
   }
 
-  /// Rehydrates a model from a local drift row. The row's nullable
-  /// `serverId` becomes the model's `id` when present, else `''`
-  /// (mirroring the server-unknown placeholder used by `.create()`).
-  ///
-  /// Also carries over the row's local sync-state flags ([pending],
-  /// [deletedLocally]) — the sync pipeline (`PlantSyncer`) needs them to
-  /// decide LWW / delete-wins outcomes on pull, since they otherwise only
-  /// live on the drift row, not on a bare [PlantModel].
-  factory PlantModel.fromDrift(PlantRow row) {
-    return PlantModel(
-      id: row.serverId ?? '',
-      clientUuid: row.clientUuid,
-      userId: row.userId,
-      name: row.name,
-      variety: row.variety,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      pending: row.pending,
-      deletedLocally: row.deletedLocally,
-    );
-  }
-
   /// Local-only identity used by the offline outbox/pull pipeline to
   /// track this plant before (and independently of) the server-assigned
   /// [Plant.id]. Lives on the data model only — the domain `Plant` entity
@@ -103,28 +79,6 @@ class PlantModel extends Plant implements SyncableModel {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
-
-  /// Converts this model into a drift insert/update companion for the
-  /// `Plants` table. `serverId` is `null` while the server hasn't
-  /// assigned an `id` yet (i.e. `id` is empty).
-  PlantsCompanion toCompanion({
-    required bool pending,
-    bool deletedLocally = false,
-    int farmId = 1,
-  }) {
-    return PlantsCompanion(
-      clientUuid: Value(clientUuid),
-      serverId: Value(id.isEmpty ? null : id),
-      userId: Value(userId),
-      name: Value(name),
-      variety: Value(variety),
-      createdAt: Value(createdAt),
-      updatedAt: Value(updatedAt),
-      pending: Value(pending),
-      deletedLocally: Value(deletedLocally),
-      farmId: Value(farmId),
-    );
   }
 
   // --- SyncableModel: the read-only sync fields BaseEntitySyncer reads off

@@ -453,11 +453,13 @@ class _FirstRunCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final console = context.console;
 
+    // Every step is reachable from here — a checklist whose items only
+    // work on the phone is a list of instructions, not a checklist.
     const steps = [
-      (label: 'Create the farm', done: true, cta: false),
-      (label: 'Add your first land plot', done: false, cta: true),
-      (label: 'Start a season on it', done: false, cta: false),
-      (label: 'Invite your team', done: false, cta: false),
+      (label: 'Create the farm', done: true, kind: null),
+      (label: 'Add your first land plot', done: false, kind: LogEntryKind.land),
+      (label: 'Add a crop to grow', done: false, kind: LogEntryKind.plant),
+      (label: 'Start a season on the plot', done: false, kind: LogEntryKind.season),
     ];
 
     return ConsoleCard(
@@ -493,7 +495,7 @@ class _FirstRunCard extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           for (final step in steps)
-            _Step(label: step.label, done: step.done, cta: step.cta),
+            _Step(label: step.label, done: step.done, kind: step.kind),
         ],
       ),
     );
@@ -501,11 +503,13 @@ class _FirstRunCard extends StatelessWidget {
 }
 
 class _Step extends StatelessWidget {
-  const _Step({required this.label, required this.done, required this.cta});
+  const _Step({required this.label, required this.done, required this.kind});
 
   final String label;
   final bool done;
-  final bool cta;
+
+  /// The form this step opens, or null for a step already behind you.
+  final LogEntryKind? kind;
 
   @override
   Widget build(BuildContext context) {
@@ -535,11 +539,11 @@ class _Step extends StatelessWidget {
               ),
             ),
           ),
-          if (cta)
-            const LogEntryButton(
-              label: 'Add a plot',
-              kind: LogEntryKind.land,
-              variant: LogButton.filled,
+          if (kind != null)
+            LogEntryButton(
+              label: _actionLabel(kind!),
+              kind: kind!,
+              variant: LogButton.outlined,
             ),
         ],
       ),
@@ -590,3 +594,11 @@ class _AndroidNudgeCard extends StatelessWidget {
     );
   }
 }
+
+/// The short verb on a first-run checklist row.
+String _actionLabel(LogEntryKind kind) => switch (kind) {
+  LogEntryKind.land => 'Add a plot',
+  LogEntryKind.plant => 'Add a crop',
+  LogEntryKind.season => 'Start it',
+  _ => kind.submitLabel,
+};

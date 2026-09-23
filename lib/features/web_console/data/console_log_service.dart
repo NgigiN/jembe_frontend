@@ -1,21 +1,29 @@
 import 'package:farm_tracker/features/farm/data/datasources/activity_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/animal_type_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/cost_category_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/harvest_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/herd_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/input_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/land_remote_data_source.dart';
+import 'package:farm_tracker/features/farm/data/datasources/plant_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/revenue_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/season_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
+import 'package:farm_tracker/features/farm/data/models/animal_type_model.dart';
 import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_activity_model.dart';
+import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
 import 'package:farm_tracker/features/farm/data/models/input_model.dart';
 import 'package:farm_tracker/features/farm/data/models/land_model.dart';
+import 'package:farm_tracker/features/farm/data/models/plant_model.dart';
 import 'package:farm_tracker/features/farm/data/models/revenue_model.dart';
+import 'package:farm_tracker/features/farm/data/models/season_model.dart';
+import 'package:farm_tracker/features/farm/domain/entities/animal_type.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
+import 'package:farm_tracker/features/farm/domain/entities/plant.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
 
 /// The lists a log form needs to fill its pickers, fetched together.
@@ -25,13 +33,17 @@ class LogReference {
     required this.lands,
     required this.herds,
     required this.categories,
+    this.plants = const [],
+    this.animalTypes = const [],
   });
 
   const LogReference.empty()
     : seasons = const [],
       lands = const [],
       herds = const [],
-      categories = const [];
+      categories = const [],
+      plants = const [],
+      animalTypes = const [];
 
   final List<Season> seasons;
 
@@ -44,6 +56,11 @@ class LogReference {
   /// The farm's activity and input types, which the type field suggests
   /// from rather than making people retype "Fertilizer" every time.
   final List<CostCategory> categories;
+
+  /// What a season can be planted with, and what a herd can be made of.
+  /// Only the setup forms read these.
+  final List<Plant> plants;
+  final List<AnimalType> animalTypes;
 
   bool get hasPlantSource => seasons.isNotEmpty;
   bool get hasAnimalSource => herds.isNotEmpty;
@@ -122,6 +139,26 @@ abstract interface class LogWriter {
     String? soilType,
     String? tenureType,
   });
+
+  Future<void> addPlant({required String name, String? variety});
+
+  Future<void> addAnimalType({required String name, String? notes});
+
+  Future<void> addSeason({
+    required String name,
+    required String plantId,
+    required String landId,
+    required DateTime startDate,
+    DateTime? endDate,
+  });
+
+  Future<void> addHerd({
+    required String name,
+    required String animalTypeId,
+    required String location,
+    required int initialHeadCount,
+    required DateTime startDate,
+  });
 }
 
 /// The console's write path for the things an office logs: a purchase, a
@@ -143,6 +180,8 @@ class ConsoleLogService implements LogWriter {
     required this.lands,
     required this.herds,
     required this.categories,
+    required this.plants,
+    required this.animalTypes,
     required this.currentUserId,
   });
 
@@ -155,6 +194,8 @@ class ConsoleLogService implements LogWriter {
   final LandRemoteDataSource lands;
   final HerdRemoteDataSource herds;
   final CostCategoryRemoteDataSource categories;
+  final PlantRemoteDataSource plants;
+  final AnimalTypeRemoteDataSource animalTypes;
 
   /// A plot is owned by a user, and the server expects that id on the way
   /// in. Injected rather than read from storage here so the service stays
@@ -181,12 +222,16 @@ class ConsoleLogService implements LogWriter {
         lands.getLands(),
         herds.getHerds(),
         categories.getCostCategories(),
+        plants.getPlants(),
+        animalTypes.getAnimalTypes(),
       ]);
       return LogReference(
         seasons: results[0].cast<Season>(),
         lands: results[1].cast<Land>(),
         herds: results[2].cast<Herd>(),
         categories: results[3].cast<CostCategory>(),
+        plants: results[4].cast<Plant>(),
+        animalTypes: results[5].cast<AnimalType>(),
       );
     } catch (_) {
       // A failed fetch must not be cached as the answer — the next form
@@ -312,13 +357,9 @@ class ConsoleLogService implements LogWriter {
     String? soilType,
     String? tenureType,
   }) async {
-    final userId = await currentUserId();
-    if (userId == null || userId.isEmpty) {
-      throw StateError('No signed-in user to own the plot');
-    }
     await lands.addLand(
       LandModel.create(
-        userId: userId,
+        userId: await _requireUserId(),
         name: name,
         size: size,
         location: location,
@@ -328,5 +369,80 @@ class ConsoleLogService implements LogWriter {
     );
     // The new plot belongs in the next form's season labels.
     invalidateReference();
+  }
+
+  @override
+  Future<void> addPlant({required String name, String? variety}) async {
+    await plants.addPlant(
+      PlantModel.create(
+        userId: await _requireUserId(),
+        name: name,
+        variety: variety,
+      ),
+    );
+    invalidateReference();
+  }
+
+  @override
+  Future<void> addAnimalType({required String name, String? notes}) async {
+    await animalTypes.addAnimalType(
+      AnimalTypeModel.create(
+        userId: await _requireUserId(),
+        name: name,
+        notes: notes,
+      ),
+    );
+    invalidateReference();
+  }
+
+  @override
+  Future<void> addSeason({
+    required String name,
+    required String plantId,
+    required String landId,
+    required DateTime startDate,
+    DateTime? endDate,
+  }) async {
+    await seasons.addSeason(
+      SeasonModel.create(
+        userId: await _requireUserId(),
+        name: name,
+        plantId: plantId,
+        landId: landId,
+        startDate: startDate,
+        endDate: endDate,
+      ),
+    );
+    invalidateReference();
+  }
+
+  @override
+  Future<void> addHerd({
+    required String name,
+    required String animalTypeId,
+    required String location,
+    required int initialHeadCount,
+    required DateTime startDate,
+  }) async {
+    await herds.addHerd(
+      HerdModel.create(
+        userId: await _requireUserId(),
+        name: name,
+        animalTypeId: animalTypeId,
+        location: location,
+        initialHeadCount: initialHeadCount,
+        startDate: startDate,
+      ),
+    );
+    invalidateReference();
+  }
+
+  /// Every setup record is owned by a user and the server expects that id.
+  Future<String> _requireUserId() async {
+    final userId = await currentUserId();
+    if (userId == null || userId.isEmpty) {
+      throw StateError('No signed-in user to own this record');
+    }
+    return userId;
   }
 }
