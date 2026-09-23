@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:farm_tracker/core/sync/sync_engine.dart';
 import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_source.dart';
 import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm.dart';
@@ -9,7 +8,7 @@ import 'package:farm_tracker/features/farms/presentation/bloc/farm_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class FarmBloc extends Bloc<FarmEvent, FarmState> {
-  FarmBloc({required this.remote, required this.syncEngine}) : super(FarmInitial()) {
+  FarmBloc({required this.remote, required this.triggerSync}) : super(FarmInitial()) {
     on<LoadFarms>((event, emit) async {
       final cached = await FarmStorageService.getFarms();
       if (cached.isNotEmpty) {
@@ -31,12 +30,12 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
     on<SwitchFarm>((event, emit) async {
       await FarmStorageService.setCurrentFarmId(event.farmId);
       await _emitFromStorage(emit);
-      unawaited(syncEngine.syncNow());
+      unawaited(triggerSync());
     });
   }
 
   final FarmRemoteDataSource remote;
-  final SyncEngine syncEngine;
+  final Future<void> Function() triggerSync;
 
   Future<void> _emitFromStorage(Emitter<FarmState> emit) async {
     final farms = await FarmStorageService.getFarms();

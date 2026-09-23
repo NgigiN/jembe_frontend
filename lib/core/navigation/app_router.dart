@@ -1,5 +1,6 @@
 import 'package:animations/animations.dart';
 import 'package:farm_tracker/core/logging/logging_navigator.dart';
+import 'package:farm_tracker/core/navigation/app_route_path.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/google_login_page.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/onboarding_page.dart';
@@ -37,77 +38,7 @@ import 'package:farm_tracker/features/farms/presentation/pages/farms_list_page.d
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class AppRouteName {
-  static const splash = 'splash';
-  static const googleLogin = 'google-login';
-  static const onboarding = 'onboarding';
-  static const plantsDashboard = 'plants-dashboard';
-  static const analytics = 'analytics';
-  static const animalsDashboard = 'animals-dashboard';
-  static const revenue = 'revenue';
-  static const settings = 'settings';
-  static const lands = 'lands';
-  static const plants = 'plants';
-  static const seasons = 'seasons';
-  static const animalTypes = 'animal-types';
-  static const herds = 'herds';
-  static const animalsList = 'animals-list';
-  static const inputs = 'inputs';
-  static const activities = 'activities';
-  static const totalCosts = 'total-costs';
-  static const costBreakdown = 'cost-breakdown';
-  static const annualSummary = 'annual-summary';
-  static const streak = 'streak';
-  static const revenueAdd = 'revenue-add';
-  static const infrastructure = 'infrastructure';
-  static const herdActivities = 'herd-activities';
-  static const harvests = 'harvests';
-  static const contentTips = 'content-tips';
-  static const contentDetail = 'content-detail';
-  static const askQuestion = 'ask-question';
-  static const trash = 'trash';
-  static const farmsList = 'farms-list';
-  static const createFarm = 'create-farm';
-  static const farmManage = 'farm-manage';
-}
-
-class AppRoutePath {
-  static const splash = '/splash';
-  static const googleLogin = '/google-login';
-  static const onboarding = '/onboarding';
-  static const home = '/';
-  static const analytics = '/analytics';
-  static const animals = '/animals';
-  static const revenue = '/revenue';
-  static const settingsPage = '/settings';
-  static const lands = '/lands';
-  static const plants = '/plants';
-  static const seasons = '/seasons';
-  static const animalTypes = '/animal-types';
-  static const herds = '/herds';
-  static const animalsList = '/animals-list';
-  static const inputsTemplate = '/inputs/:sourceType';
-  static const activitiesTemplate = '/activities/:sourceType';
-  static const totalCosts = '/analytics/total-costs';
-  static const costBreakdown = '/analytics/cost-breakdown';
-  static const annualSummary = '/analytics/annual-summary';
-  static const streak = '/analytics/streak';
-  static const revenueAdd = '/revenue/add';
-  static const infrastructure = '/infrastructure';
-  static const herdActivities = '/herd-activities';
-  static const harvests = '/harvests';
-  static const contentTips = '/content';
-  static const contentDetailTemplate = '/content/:id';
-  static const askQuestion = '/ask-question';
-  static const trash = '/trash';
-  static const farmsList = '/farms';
-  static const createFarm = '/farms/create';
-  static const farmManage = '/farms/manage';
-
-  static String inputsFor(String sourceType) => '/inputs/$sourceType';
-  static String activitiesFor(String sourceType) => '/activities/$sourceType';
-  static String contentDetailFor(String id) => '/content/$id';
-}
+export 'package:farm_tracker/core/navigation/app_route_path.dart';
 
 class AppRouter {
   AppRouter();

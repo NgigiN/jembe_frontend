@@ -1,5 +1,3 @@
-import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/error/failures.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
@@ -11,13 +9,13 @@ import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecas
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
 import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
-import 'package:farm_tracker/injection_container.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart' as auth_google;
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  AuthBloc({required this.googleSignInUseCase}) : super(AuthInitial()) {
+  AuthBloc({required this.googleSignInUseCase, this.wipeLocalData, this.cleanCache})
+      : super(AuthInitial()) {
     on<GoogleSignInRequested>((event, emit) async {
       emit(AuthLoading());
       appLogger.logAuthEvent('Google Sign-In attempt');
@@ -46,26 +44,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           return;
         }
 
-        final result = await googleSignInUseCase(idToken);
-        
-        await result.fold(
-          (failure) async {
-            final message = resolveFailureMessage(failure, 'Google Sign-In failed');
-            appLogger.logAuthEvent(
-              'Google Sign-In failed',
-              details: {'error': message},
-            );
-            emit(AuthError(message));
-          },
-          (user) async {
-            appLogger.logAuthEvent(
-              'Google Sign-In successful',
-              userId: user.id,
-              details: {'email': user.email, 'name': user.fullName},
-            );
-            emit(AuthAuthenticated(user));
-          },
-        );
+        await _completeSignIn(idToken, emit);
       } catch (e) {
         if (isSignInCancellation(e)) {
           appLogger.logAuthEvent('Google Sign-In cancelled by user');
@@ -75,6 +54,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         appLogger.logError('GoogleSignInRequested', e);
         emit(AuthError('Google Sign-In failed. Please try again.'));
       }
+    });
+
+    on<GoogleSignInWebAccountReceived>((event, emit) async {
+      emit(AuthLoading());
+      appLogger.logAuthEvent('Google Sign-In attempt (web)');
+      await _completeSignIn(event.idToken, emit);
     });
 
     on<ResetAuthState>((event, emit) {
@@ -88,11 +73,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // so a failure here (e.g. a broken cache store) can never leave logout
       // half-done — the token clear, sign-out, and state emit below must
       // still run regardless.
-      if (sl.isRegistered<CacheStore>()) {
+      if (cleanCache != null) {
         try {
-          await sl<CacheStore>().clean();
+          await cleanCache!();
         } catch (e, st) {
-          appLogger.logError('AuthBloc.logout: CacheStore.clean', e, st);
+          appLogger.logError('AuthBloc.logout: cleanCache', e, st);
         }
       }
       // Offline-first wipe-on-logout (Task 10): flag-guarded, so this is a
@@ -101,13 +86,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // user's data (or queued mutation) survives on a shared device.
       // `SyncEngine` is a DI singleton and is intentionally NOT disposed
       // here — only its tables are cleared. Guarded for the same reason as
-      // `CacheStore.clean` above: a wipe failure must not block the rest of
+      // `cleanCache` above: a wipe failure must not block the rest of
       // logout.
-      if (OfflineConfig.enabled && sl.isRegistered<AppDatabase>()) {
+      if (OfflineConfig.enabled && wipeLocalData != null) {
         try {
-          await sl<AppDatabase>().wipeAll();
+          await wipeLocalData!();
         } catch (e, st) {
-          appLogger.logError('AuthBloc.logout: AppDatabase.wipeAll', e, st);
+          appLogger.logError('AuthBloc.logout: wipeLocalData', e, st);
         }
       }
       await UserStorageService.clearUserData();
@@ -159,7 +144,35 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     });
   }
   final GoogleSignInUseCase googleSignInUseCase;
+  final Future<void> Function()? wipeLocalData;
+  final Future<void> Function()? cleanCache;
 
+  // Web uses the separate GoogleSignInWebAccountReceived path instead
+  // (GIS's rendered button + authenticationEvents stream), since
+  // google_sign_in_web's authenticate() is unconditionally unimplemented.
   static bool get _supportsGoogleSignIn =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  Future<void> _completeSignIn(String idToken, Emitter<AuthState> emit) async {
+    final result = await googleSignInUseCase(idToken);
+
+    await result.fold(
+      (failure) async {
+        final message = resolveFailureMessage(failure, 'Google Sign-In failed');
+        appLogger.logAuthEvent(
+          'Google Sign-In failed',
+          details: {'error': message},
+        );
+        emit(AuthError(message));
+      },
+      (user) async {
+        appLogger.logAuthEvent(
+          'Google Sign-In successful',
+          userId: user.id,
+          details: {'email': user.email, 'name': user.fullName},
+        );
+        emit(AuthAuthenticated(user));
+      },
+    );
+  }
 }

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
+import 'package:farm_tracker/features/farm/data/models/harvest_model_drift.dart';
 
 /// Drift-backed local data source for the harvest feature.
 ///
@@ -50,7 +51,7 @@ class HarvestLocalDataSource implements LocalSyncStore<HarvestModel> {
     }
     query.orderBy([(row) => OrderingTerm.asc(row.createdAt)]);
     return query.watch().map(
-      (rows) => rows.map(HarvestModel.fromDrift).toList(),
+      (rows) => rows.map(harvestModelFromDrift).toList(),
     );
   }
 
@@ -113,7 +114,7 @@ class HarvestLocalDataSource implements LocalSyncStore<HarvestModel> {
     final row = await (_db.select(
       _db.harvests,
     )..where((r) => r.clientUuid.equals(clientUuid))).getSingleOrNull();
-    return row == null ? null : HarvestModel.fromDrift(row);
+    return row == null ? null : harvestModelFromDrift(row);
   }
 
   /// The harvest with the given server [serverId], or `null` if no such row
@@ -123,7 +124,7 @@ class HarvestLocalDataSource implements LocalSyncStore<HarvestModel> {
     final row = await (_db.select(
       _db.harvests,
     )..where((r) => r.serverId.equals(serverId))).getSingleOrNull();
-    return row == null ? null : HarvestModel.fromDrift(row);
+    return row == null ? null : harvestModelFromDrift(row);
   }
 
   /// Deletes every row — used to wipe the local mirror on logout.

@@ -40,7 +40,7 @@ import 'package:farm_tracker/features/farms/data/services/farm_storage_service.d
 /// server id. [updateHarvest] and [deleteHarvest] therefore treat the
 /// incoming `id`/`harvest.id` as a `clientUuid`, never a server id. The
 /// drift row's nullable `serverId` is used ONLY by the syncer (via
-/// `HarvestModel.fromDrift`) to build server URLs — it never surfaces
+/// `harvestModelFromDrift`) to build server URLs — it never surfaces
 /// through this repository's presentation.
 class HarvestRepositoryImpl
     with OfflineRepositoryMixin

@@ -1,3 +1,4 @@
+import 'package:farm_tracker/core/di/service_locator.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_source.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_invitation.dart';
@@ -6,18 +7,26 @@ import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_transfer.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_state.dart';
-import 'package:farm_tracker/injection_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class FarmManagePage extends StatefulWidget {
-  const FarmManagePage({super.key});
+  const FarmManagePage({super.key, this.remote});
+
+  /// Overrides the shared global `sl<FarmRemoteDataSource>()` lookup this
+  /// page otherwise falls back to. Mobile call sites omit this (unchanged
+  /// behavior, resolves via `sl`, which lib/injection_container.dart
+  /// populates); the web console passes its own `webSl<FarmRemoteDataSource>()`
+  /// explicitly instead of also registering onto the shared `sl` just for
+  /// this page to read from (web-console final-review finding I10).
+  final FarmRemoteDataSource? remote;
 
   @override
   State<FarmManagePage> createState() => _FarmManagePageState();
 }
 
 class _FarmManagePageState extends State<FarmManagePage> {
+  late final FarmRemoteDataSource _remote = widget.remote ?? sl<FarmRemoteDataSource>();
   List<FarmMember> _members = [];
   List<FarmInvitation> _invitations = [];
   FarmTransfer? _transfer;
@@ -30,7 +39,7 @@ class _FarmManagePageState extends State<FarmManagePage> {
   }
 
   Future<void> _load() async {
-    final remote = sl<FarmRemoteDataSource>();
+    final remote = _remote;
     final members = await remote.listMembers();
     final invitations = await remote.listInvitations();
     final transfer = await remote.getTransfer();
@@ -91,7 +100,7 @@ class _FarmManagePageState extends State<FarmManagePage> {
       ),
     );
     if (invited ?? false) {
-      await _runAction(() => sl<FarmRemoteDataSource>().createInvitation(emailController.text, role));
+      await _runAction(() => _remote.createInvitation(emailController.text, role));
     }
   }
 
@@ -117,7 +126,7 @@ class _FarmManagePageState extends State<FarmManagePage> {
       ),
     );
     if (chosen != null) {
-      await _runAction(() => sl<FarmRemoteDataSource>().nominateTransfer(chosen.userId));
+      await _runAction(() => _remote.nominateTransfer(chosen.userId));
     }
   }
 
@@ -163,14 +172,14 @@ class _FarmManagePageState extends State<FarmManagePage> {
                                   PopupMenuItem(value: FarmRole.worker, child: Text('Worker')),
                                 ],
                                 onSelected: (newRole) => _runAction(
-                                  () => sl<FarmRemoteDataSource>().updateMemberRole(member.userId, newRole),
+                                  () => _remote.updateMemberRole(member.userId, newRole),
                                 ),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.remove_circle_outline),
                                 tooltip: 'Remove',
                                 onPressed: () => _runAction(
-                                  () => sl<FarmRemoteDataSource>().removeMember(member.userId),
+                                  () => _remote.removeMember(member.userId),
                                 ),
                               ),
                             ],
@@ -188,7 +197,7 @@ class _FarmManagePageState extends State<FarmManagePage> {
                         icon: const Icon(Icons.cancel_outlined),
                         tooltip: 'Revoke',
                         onPressed: () => _runAction(
-                          () => sl<FarmRemoteDataSource>().revokeInvitation(invitation.id),
+                          () => _remote.revokeInvitation(invitation.id),
                         ),
                       ),
                     ),
@@ -210,7 +219,7 @@ class _FarmManagePageState extends State<FarmManagePage> {
                             key: const Key('cancel_transfer_button'),
                             icon: const Icon(Icons.cancel_outlined),
                             tooltip: 'Cancel Transfer',
-                            onPressed: () => _runAction(() => sl<FarmRemoteDataSource>().cancelTransfer()),
+                            onPressed: () => _runAction(() => _remote.cancelTransfer()),
                           ),
                   ),
                 ],

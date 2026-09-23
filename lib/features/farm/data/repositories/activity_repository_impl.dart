@@ -40,7 +40,7 @@ import 'package:farm_tracker/features/farms/data/services/farm_storage_service.d
 /// server id. [updateActivity] and [deleteActivity] therefore treat the
 /// incoming `id`/`activity.id` as a `clientUuid`, never a server id. The
 /// drift row's nullable `serverId` is used ONLY by the syncer (via
-/// `ActivityModel.fromDrift`) to build server URLs — it never surfaces
+/// `activityModelFromDrift`) to build server URLs — it never surfaces
 /// through this repository's presentation.
 class ActivityRepositoryImpl
     with OfflineRepositoryMixin

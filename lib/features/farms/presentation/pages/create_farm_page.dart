@@ -1,3 +1,4 @@
+import 'package:farm_tracker/core/di/service_locator.dart';
 import 'package:farm_tracker/core/validation/sanitize.dart';
 import 'package:farm_tracker/core/validation/validated_fields.dart';
 import 'package:farm_tracker/core/validation/validators.dart';
@@ -5,19 +6,27 @@ import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_source.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_event.dart';
-import 'package:farm_tracker/injection_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 class CreateFarmPage extends StatefulWidget {
-  const CreateFarmPage({super.key});
+  const CreateFarmPage({super.key, this.remote});
+
+  /// Overrides the shared global `sl<FarmRemoteDataSource>()` lookup this
+  /// page otherwise falls back to. Mobile call sites omit this (unchanged
+  /// behavior, resolves via `sl`, which lib/injection_container.dart
+  /// populates); the web console passes its own `webSl<FarmRemoteDataSource>()`
+  /// explicitly instead of also registering onto the shared `sl` just for
+  /// this page to read from (web-console final-review finding I10).
+  final FarmRemoteDataSource? remote;
 
   @override
   State<CreateFarmPage> createState() => _CreateFarmPageState();
 }
 
 class _CreateFarmPageState extends State<CreateFarmPage> {
+  late final FarmRemoteDataSource _remote = widget.remote ?? sl<FarmRemoteDataSource>();
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _locationController = TextEditingController();
@@ -35,7 +44,7 @@ class _CreateFarmPageState extends State<CreateFarmPage> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _submitting = true);
     try {
-      await sl<FarmRemoteDataSource>().createFarm(
+      await _remote.createFarm(
         name: sanitizeText(_nameController.text),
         location: sanitizeText(_locationController.text),
         fiscalYearStartMonth: _fiscalYearStartMonth,

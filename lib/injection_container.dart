@@ -3,6 +3,7 @@ import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/audio/sound_service.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/di/service_locator.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/network/connectivity_service.dart';
 import 'package:farm_tracker/core/network/dio_client.dart';
@@ -126,9 +127,8 @@ import 'package:farm_tracker/features/profile/domain/usecases/delete_account.dar
 import 'package:farm_tracker/features/profile/domain/usecases/get_profile.dart';
 import 'package:farm_tracker/features/profile/domain/usecases/update_profile.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
-import 'package:get_it/get_it.dart';
 
-final sl = GetIt.instance;
+export 'package:farm_tracker/core/di/service_locator.dart';
 
 /// Wires the DI container.
 ///
@@ -163,8 +163,8 @@ Future<void> init({AppDatabase? database}) async {
     // main.dart dispatches LogoutEvent onto and the one BlocProvider hands
     // to the widget tree, or a forced logout would land on an orphan bloc
     // the UI never sees.
-    ..registerLazySingleton(() => AuthBloc(googleSignInUseCase: sl()))
-    ..registerLazySingleton(() => FarmBloc(remote: sl(), syncEngine: sl()))
+    ..registerLazySingleton(() => AuthBloc(googleSignInUseCase: sl(), wipeLocalData: () => sl<AppDatabase>().wipeAll(), cleanCache: () => sl<CacheStore>().clean()))
+    ..registerLazySingleton(() => FarmBloc(remote: sl(), triggerSync: () => sl<SyncEngine>().syncNow()))
     // Feature-specific blocs (preferred)
     ..registerFactory(() => LandBloc(repository: sl()))
     ..registerFactory(() => PlantBloc(repository: sl()))

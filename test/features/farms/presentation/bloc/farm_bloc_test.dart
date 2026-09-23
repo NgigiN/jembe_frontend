@@ -37,7 +37,7 @@ void main() {
   test('LoadFarms emits FarmLoaded from cache when farms are already '
       'cached', () async {
     await FarmStorageService.saveFarms([_farm(1, isDefault: true)], defaultFarmId: 1);
-    final bloc = FarmBloc(remote: remote, syncEngine: syncEngine);
+    final bloc = FarmBloc(remote: remote, triggerSync: syncEngine.syncNow);
     addTearDown(bloc.close);
 
     bloc.add(LoadFarms());
@@ -53,7 +53,7 @@ void main() {
       '(spec §8 rollout case)', () async {
     when(() => remote.listFarms())
         .thenAnswer((_) async => [_farm(9, isDefault: true, role: FarmRole.manager)]);
-    final bloc = FarmBloc(remote: remote, syncEngine: syncEngine);
+    final bloc = FarmBloc(remote: remote, triggerSync: syncEngine.syncNow);
     addTearDown(bloc.close);
 
     bloc.add(LoadFarms());
@@ -71,7 +71,7 @@ void main() {
     when(() => remote.listFarms()).thenAnswer(
       (_) async => [_farm(1, isDefault: true), _farm(2, role: FarmRole.worker)],
     );
-    final bloc = FarmBloc(remote: remote, syncEngine: syncEngine);
+    final bloc = FarmBloc(remote: remote, triggerSync: syncEngine.syncNow);
     addTearDown(bloc.close);
 
     bloc.add(RefreshFarms());
@@ -86,7 +86,7 @@ void main() {
       'emitting FarmError over it', () async {
     await FarmStorageService.saveFarms([_farm(1, isDefault: true)], defaultFarmId: 1);
     when(() => remote.listFarms()).thenThrow(Exception('offline'));
-    final bloc = FarmBloc(remote: remote, syncEngine: syncEngine);
+    final bloc = FarmBloc(remote: remote, triggerSync: syncEngine.syncNow);
     addTearDown(bloc.close);
 
     bloc.add(LoadFarms());
@@ -105,7 +105,7 @@ void main() {
       [_farm(1, isDefault: true), _farm(2, role: FarmRole.worker)],
       defaultFarmId: 1,
     );
-    final bloc = FarmBloc(remote: remote, syncEngine: syncEngine);
+    final bloc = FarmBloc(remote: remote, triggerSync: syncEngine.syncNow);
     addTearDown(bloc.close);
     bloc.add(LoadFarms());
     await bloc.stream.firstWhere((s) => s is FarmLoaded);
