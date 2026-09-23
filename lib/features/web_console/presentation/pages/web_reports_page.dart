@@ -1,5 +1,7 @@
 import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
+import 'package:farm_tracker/features/farm/domain/entities/farm_year.dart';
+import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
 import 'package:farm_tracker/features/web_console/presentation/utils/csv_download.dart';
 import 'package:flutter/material.dart';
@@ -29,9 +31,15 @@ class _WebReportsPageState extends State<WebReportsPage> {
   @override
   void initState() {
     super.initState();
+    // No fiscal-year picker on the web console (spec parity note above) —
+    // the current calendar year (fiscal start month 1) is a reasonable v1
+    // default; a farm-configured fiscal year start is a mobile-only concept
+    // this page doesn't otherwise consume.
+    final farmYear = FarmYear.containing(DateTime.now(), 1);
     context.read<AnalysisBloc>()
       ..add(const LoadTotalCostsBySeason())
-      ..add(const LoadCostBreakdown());
+      ..add(const LoadCostBreakdown())
+      ..add(LoadAnnualCostSummary(farmYear.start, farmYear.end));
   }
 
   void _exportCsv(List<CostDetail> details) {
@@ -90,6 +98,13 @@ class _WebReportsPageState extends State<WebReportsPage> {
           ),
           const SizedBox(height: 8),
           _breakdownTable(breakdowns),
+          const SizedBox(height: 32),
+          Text(
+            'Monthly summary',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          _summaryTable(state.summaries.data ?? const []),
         ],
       ),
     );
@@ -152,6 +167,33 @@ class _WebReportsPageState extends State<WebReportsPage> {
                 DataCell(Text(b.origin)),
                 DataCell(Text(b.totalCost.toStringAsFixed(2))),
                 DataCell(Text('${b.percentage.toStringAsFixed(1)}%')),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+  Widget _summaryTable(List<MonthlySummary> summaries) {
+    if (summaries.isEmpty) {
+      return const Text('No monthly summary data for this selection.');
+    }
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columns: const [
+          DataColumn(label: Text('Month')),
+          DataColumn(label: Text('Total costs'), numeric: true),
+          DataColumn(label: Text('Total revenue'), numeric: true),
+          DataColumn(label: Text('Profit'), numeric: true),
+        ],
+        rows: [
+          for (final s in summaries)
+            DataRow(
+              cells: [
+                DataCell(Text(s.month)),
+                DataCell(Text(s.totalCosts.toStringAsFixed(2))),
+                DataCell(Text(s.totalRevenue.toStringAsFixed(2))),
+                DataCell(Text(s.profit.toStringAsFixed(2))),
               ],
             ),
         ],
