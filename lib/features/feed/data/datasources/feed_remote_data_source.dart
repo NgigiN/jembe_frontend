@@ -19,7 +19,7 @@ class FeedRemoteDataSourceImpl implements FeedRemoteDataSource {
   @override
   Future<FeedPage> getFeed({String? before, int limit = 20}) async {
     final response = await dio.get<Map<String, dynamic>>(
-      '/farms/current/feed',
+      '/api/v1/farms/current/feed',
       queryParameters: {
         'limit': limit,
         if (before != null) 'before': before,
