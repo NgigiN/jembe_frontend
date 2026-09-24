@@ -13,7 +13,9 @@ import 'package:farm_tracker/features/farm/data/datasources/herd_activity_local_
 import 'package:farm_tracker/features/farm/data/datasources/herd_activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_activity_model.dart';
 import 'package:farm_tracker/features/farm/data/repositories/herd_activity_repository_impl.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeHerdActivityRemoteDataSource implements HerdActivityRemoteDataSource {
   HerdActivityModel? lastAdded;
@@ -65,6 +67,8 @@ class _FakeSyncEngine implements SyncEngine {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   tearDown(() {
     OfflineConfig.enabled = false;
   });
@@ -154,8 +158,10 @@ void main() {
     late _FakeSyncEngine sync;
     late FakeHerdActivityRemoteDataSource remote;
 
-    setUp(() {
+    setUp(() async {
       OfflineConfig.enabled = true;
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      await FarmStorageService.setCurrentFarmId(1);
       db = AppDatabase.forTesting(NativeDatabase.memory());
       local = HerdActivityLocalDataSource(db);
       outbox = OutboxDao(db);

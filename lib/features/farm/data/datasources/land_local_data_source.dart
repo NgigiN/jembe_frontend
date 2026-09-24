@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/models/land_model.dart';
+import 'package:farm_tracker/features/farm/data/models/land_model_drift.dart';
 
 /// Drift-backed local data source for the land feature.
 ///
@@ -27,22 +28,22 @@ class LandLocalDataSource implements LocalSyncStore<LandModel> {
   ///
   /// Ordered by `createdAt` ascending (oldest first) — a stable order tied
   /// to when a land was first created locally, unaffected by later edits.
-  Stream<List<LandModel>> watchLands() {
+  Stream<List<LandModel>> watchLands({int farmId = 1}) {
     final query = _db.select(_db.lands)
-      ..where((row) => row.deletedLocally.equals(false))
+      ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId))
       ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]);
     return query.watch().map(
-      (rows) => rows.map(LandModel.fromDrift).toList(),
+      (rows) => rows.map(landModelFromDrift).toList(),
     );
   }
 
   /// Inserts [model], or replaces the existing row sharing its
   /// `clientUuid` (the primary key) if one already exists.
   @override
-  Future<void> upsert(LandModel model, {required bool pending}) {
+  Future<void> upsert(LandModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.lands)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:
@@ -92,7 +93,7 @@ class LandLocalDataSource implements LocalSyncStore<LandModel> {
     final row = await (_db.select(
       _db.lands,
     )..where((r) => r.clientUuid.equals(clientUuid))).getSingleOrNull();
-    return row == null ? null : LandModel.fromDrift(row);
+    return row == null ? null : landModelFromDrift(row);
   }
 
   /// The land with the given server [serverId], or `null` if no such row
@@ -102,7 +103,7 @@ class LandLocalDataSource implements LocalSyncStore<LandModel> {
     final row = await (_db.select(
       _db.lands,
     )..where((r) => r.serverId.equals(serverId))).getSingleOrNull();
-    return row == null ? null : LandModel.fromDrift(row);
+    return row == null ? null : landModelFromDrift(row);
   }
 
   /// Deletes every row — used to wipe the local mirror on logout.

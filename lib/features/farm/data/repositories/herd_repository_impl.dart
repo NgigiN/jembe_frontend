@@ -14,6 +14,7 @@ import 'package:farm_tracker/features/farm/data/datasources/herd_remote_data_sou
 import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/herd_repository.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 
 /// Live-HTTP (flag off) or local-first + outbox (flag on) implementation of
 /// [HerdRepository].
@@ -37,7 +38,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/herd_repository.d
 /// exists offline and never changes when the row later syncs and gains a
 /// server id. [updateHerd] and [deleteHerd] therefore treat the incoming
 /// `id` as a `clientUuid`, never a server id. The drift row's nullable
-/// `serverId` is used ONLY by the syncer (via `HerdModel.fromDrift`) to
+/// `serverId` is used ONLY by the syncer (via `herdModelFromDrift`) to
 /// build server URLs — it never surfaces through this repository's
 /// presentation.
 ///
@@ -92,7 +93,11 @@ class HerdRepositoryImpl with OfflineRepositoryMixin implements HerdRepository {
   @override
   Stream<List<Herd>> watchHerds() {
     if (OfflineConfig.enabled && local != null) {
-      return watchAsDomain(local!.watchHerds(), _toHerd);
+      return Stream.fromFuture(FarmStorageService.getCurrentFarmId()).asyncExpand(
+        (farmId) => farmId == null
+            ? Stream<List<Herd>>.value(const [])
+            : watchAsDomain(local!.watchHerds(farmId: farmId), _toHerd),
+      );
     }
     // Unused by the app while the flag is off (the bloc keeps its
     // remote-polling `GetHerdsEvent` path) — this only needs to compile and
@@ -113,7 +118,9 @@ class HerdRepositoryImpl with OfflineRepositoryMixin implements HerdRepository {
     if (_offlineFirst) {
       // Offline mirror shows the whole local store — pagination
       // ([limit]/[cursor]) is an online-only concern and is ignored here.
-      final models = await local!.watchHerds().first;
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Right([]);
+      final models = await local!.watchHerds(farmId: farmId).first;
       return Right(models.map(_toHerd).toList());
     }
     return guard(
@@ -133,6 +140,8 @@ class HerdRepositoryImpl with OfflineRepositoryMixin implements HerdRepository {
     DateTime? endDate,
   }) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       final model = HerdModel.create(
         userId: userId,
         name: name,
@@ -148,6 +157,7 @@ class HerdRepositoryImpl with OfflineRepositoryMixin implements HerdRepository {
         model,
         jsonEncode(model.toJson()),
         OutboxOp.create,
+        farmId: farmId,
       );
       return Right(_toHerd(model));
     }
@@ -177,6 +187,8 @@ class HerdRepositoryImpl with OfflineRepositoryMixin implements HerdRepository {
     DateTime? endDate,
   }) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `id` is a clientUuid (presentation identity) — see class docs.
       final existing = await local!.getByClientUuid(id);
       if (existing == null) {
@@ -202,6 +214,7 @@ class HerdRepositoryImpl with OfflineRepositoryMixin implements HerdRepository {
         updated,
         jsonEncode(updated.toJson()),
         OutboxOp.update,
+        farmId: farmId,
       );
       return Right(_toHerd(updated));
     }
@@ -229,8 +242,10 @@ class HerdRepositoryImpl with OfflineRepositoryMixin implements HerdRepository {
   @override
   Future<Either<Failure, void>> deleteHerd(String id) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `id` is a clientUuid (presentation identity) — see class docs.
-      await stageDelete(local!, id);
+      await stageDelete(local!, id, farmId: farmId);
       return const Right(null);
     }
 

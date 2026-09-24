@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/models/animal_type_model.dart';
+import 'package:farm_tracker/features/farm/data/models/animal_type_model_drift.dart';
 
 /// Drift-backed local data source for the animal_type feature.
 ///
@@ -29,22 +30,22 @@ class AnimalTypeLocalDataSource implements LocalSyncStore<AnimalTypeModel> {
   /// Ordered by `createdAt` ascending (oldest first) — a stable order tied
   /// to when an animal type was first created locally, unaffected by later
   /// edits.
-  Stream<List<AnimalTypeModel>> watchAnimalTypes() {
+  Stream<List<AnimalTypeModel>> watchAnimalTypes({int farmId = 1}) {
     final query = _db.select(_db.animalTypes)
-      ..where((row) => row.deletedLocally.equals(false))
+      ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId))
       ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]);
     return query.watch().map(
-      (rows) => rows.map(AnimalTypeModel.fromDrift).toList(),
+      (rows) => rows.map(animalTypeModelFromDrift).toList(),
     );
   }
 
   /// Inserts [model], or replaces the existing row sharing its
   /// `clientUuid` (the primary key) if one already exists.
   @override
-  Future<void> upsert(AnimalTypeModel model, {required bool pending}) {
+  Future<void> upsert(AnimalTypeModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.animalTypes)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:
@@ -97,7 +98,7 @@ class AnimalTypeLocalDataSource implements LocalSyncStore<AnimalTypeModel> {
     final row = await (_db.select(
       _db.animalTypes,
     )..where((r) => r.clientUuid.equals(clientUuid))).getSingleOrNull();
-    return row == null ? null : AnimalTypeModel.fromDrift(row);
+    return row == null ? null : animalTypeModelFromDrift(row);
   }
 
   /// The animal type with the given server [serverId], or `null` if no such
@@ -107,7 +108,7 @@ class AnimalTypeLocalDataSource implements LocalSyncStore<AnimalTypeModel> {
     final row = await (_db.select(
       _db.animalTypes,
     )..where((r) => r.serverId.equals(serverId))).getSingleOrNull();
-    return row == null ? null : AnimalTypeModel.fromDrift(row);
+    return row == null ? null : animalTypeModelFromDrift(row);
   }
 
   /// Deletes every row — used to wipe the local mirror on logout.

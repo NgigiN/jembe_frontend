@@ -12,6 +12,10 @@ import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/landing_page.dart';
+import 'package:farm_tracker/features/farms/domain/entities/farm.dart';
+import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,6 +29,23 @@ class MockAuthBloc extends MockBloc<AuthEvent, AuthState>
 class MockConnectivityService extends Mock implements ConnectivityService {}
 
 class MockSyncEngine extends Mock implements SyncEngine {}
+
+class _FakeFarmBloc extends Fake implements FarmBloc {
+  @override
+  FarmState get state => const FarmLoaded(
+    farms: [
+      Farm(
+        id: 1, name: 'Farm', location: '', fiscalYearStartMonth: 1,
+        ownerUserId: 1, successorUserId: null, maxMembers: 5,
+        role: FarmRole.owner, memberCount: 1, isDefault: true,
+      ),
+    ],
+    currentFarmId: 1,
+    currentRole: FarmRole.owner,
+  );
+  @override
+  Stream<FarmState> get stream => Stream.value(state);
+}
 
 const _fakeUser = User(
   id: 'user-1',
@@ -58,8 +79,11 @@ Widget _harness(AuthBloc authBloc) {
     ],
   );
 
-  return BlocProvider<AuthBloc>.value(
-    value: authBloc,
+  return MultiBlocProvider(
+    providers: [
+      BlocProvider<AuthBloc>.value(value: authBloc),
+      BlocProvider<FarmBloc>.value(value: _FakeFarmBloc()),
+    ],
     child: MaterialApp.router(routerConfig: router),
   );
 }

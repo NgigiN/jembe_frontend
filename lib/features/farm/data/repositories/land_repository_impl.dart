@@ -15,6 +15,7 @@ import 'package:farm_tracker/features/farm/data/datasources/land_remote_data_sou
 import 'package:farm_tracker/features/farm/data/models/land_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/land.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/land_repository.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 
 /// Live-HTTP (flag off) or local-first + outbox (flag on) implementation of
 /// [LandRepository].
@@ -38,7 +39,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/land_repository.d
 /// exists offline and never changes when the row later syncs and gains a
 /// server id. [updateLand] and [deleteLand] therefore treat the incoming
 /// `id`/`land.id` as a `clientUuid`, never a server id. The drift row's
-/// nullable `serverId` is used ONLY by the syncer (via `LandModel.fromDrift`)
+/// nullable `serverId` is used ONLY by the syncer (via `landModelFromDrift`)
 /// to build server URLs — it never surfaces through this repository's
 /// presentation.
 class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {
@@ -85,7 +86,11 @@ class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {
   @override
   Stream<List<Land>> watchLands() {
     if (OfflineConfig.enabled && local != null) {
-      return watchAsDomain(local!.watchLands(), _toLand);
+      return Stream.fromFuture(FarmStorageService.getCurrentFarmId()).asyncExpand(
+        (farmId) => farmId == null
+            ? Stream<List<Land>>.value(const [])
+            : watchAsDomain(local!.watchLands(farmId: farmId), _toLand),
+      );
     }
     // Unused by the app while the flag is off (the bloc keeps its
     // remote-polling `GetLandsEvent` path) — this only needs to compile and
@@ -106,7 +111,9 @@ class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {
     if (_offlineFirst) {
       // Offline mirror shows the whole local store — pagination
       // ([limit]/[cursor]) is an online-only concern and is ignored here.
-      final models = await local!.watchLands().first;
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Right([]);
+      final models = await local!.watchLands(farmId: farmId).first;
       return Right(models.map(_toLand).toList());
     }
     return guard(
@@ -117,6 +124,8 @@ class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {
   @override
   Future<Either<Failure, Land>> addLand(Land land) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       final model = LandModel.create(
         userId: land.userId,
         name: land.name,
@@ -131,6 +140,7 @@ class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {
         model,
         jsonEncode(model.toJson()),
         OutboxOp.create,
+        farmId: farmId,
       );
       return Right(_toLand(model));
     }
@@ -153,6 +163,8 @@ class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {
   @override
   Future<Either<Failure, Land>> updateLand(Land land) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `land.id` is a clientUuid (presentation identity) — see class docs.
       final existing = await local!.getByClientUuid(land.id);
       if (existing == null) {
@@ -176,6 +188,7 @@ class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {
         updated,
         jsonEncode(updated.toJson()),
         OutboxOp.update,
+        farmId: farmId,
       );
       return Right(land);
     }
@@ -201,8 +214,10 @@ class LandRepositoryImpl with OfflineRepositoryMixin implements LandRepository {
   @override
   Future<Either<Failure, void>> deleteLand(String id) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `id` is a clientUuid (presentation identity) — see class docs.
-      await stageDelete(local!, id);
+      await stageDelete(local!, id, farmId: farmId);
       return const Right(null);
     }
 

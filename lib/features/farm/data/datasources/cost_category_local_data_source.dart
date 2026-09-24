@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/models/cost_category_model.dart';
+import 'package:farm_tracker/features/farm/data/models/cost_category_model_drift.dart';
 
 /// Drift-backed local data source for the `cost_category` read-through
 /// cache — the P3 outlier with a BESPOKE syncer (see `cost_category_model.dart`
@@ -34,9 +35,10 @@ class CostCategoryLocalDataSource
   Future<List<CostCategoryModel>> getCostCategories({
     String? type,
     String? category,
+    int farmId = 1,
   }) async {
     final query = _db.select(_db.costCategories)
-      ..where((row) => row.deletedLocally.equals(false));
+      ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId));
     if (type != null) {
       query.where((row) => row.type.equals(type));
     }
@@ -45,16 +47,16 @@ class CostCategoryLocalDataSource
     }
     query.orderBy([(row) => OrderingTerm.asc(row.name)]);
     final rows = await query.get();
-    return rows.map(CostCategoryModel.fromDrift).toList();
+    return rows.map(costCategoryModelFromDrift).toList();
   }
 
   /// Inserts [model], or replaces the existing row sharing its `clientUuid`
   /// (the primary key) if one already exists.
   @override
-  Future<void> upsert(CostCategoryModel model, {required bool pending}) {
+  Future<void> upsert(CostCategoryModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.costCategories)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:
@@ -124,7 +126,7 @@ class CostCategoryLocalDataSource
     final row = await (_db.select(
       _db.costCategories,
     )..where((r) => r.clientUuid.equals(clientUuid))).getSingleOrNull();
-    return row == null ? null : CostCategoryModel.fromDrift(row);
+    return row == null ? null : costCategoryModelFromDrift(row);
   }
 
   /// The category with the given server [serverId], or `null` if no such row
@@ -134,7 +136,7 @@ class CostCategoryLocalDataSource
     final row = await (_db.select(
       _db.costCategories,
     )..where((r) => r.serverId.equals(serverId))).getSingleOrNull();
-    return row == null ? null : CostCategoryModel.fromDrift(row);
+    return row == null ? null : costCategoryModelFromDrift(row);
   }
 
   /// Full re-fetch reconciliation for `CostCategorySyncer.pull`: replaces
@@ -148,17 +150,18 @@ class CostCategoryLocalDataSource
   /// mirror half-replaced. Idempotent: re-running with the same
   /// [serverRows] deletes-and-reinserts to the same final state.
   Future<void> replaceAllFromServer(
-    List<CostCategoryModel> serverRows,
-  ) async {
+    List<CostCategoryModel> serverRows, {
+    int farmId = 1,
+  }) async {
     await _db.transaction(() async {
-      await (_db.delete(
-        _db.costCategories,
-      )..where((row) => row.pending.equals(false))).go();
+      await (_db.delete(_db.costCategories)
+            ..where((row) => row.pending.equals(false) & row.farmId.equals(farmId)))
+          .go();
       for (final server in serverRows) {
         final keyed = server.withSyncClientUuid('srv:${server.id}');
         await _db
             .into(_db.costCategories)
-            .insertOnConflictUpdate(keyed.toCompanion(pending: false));
+            .insertOnConflictUpdate(keyed.toCompanion(pending: false, farmId: farmId));
       }
     });
   }

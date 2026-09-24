@@ -1,5 +1,3 @@
-import 'package:drift/drift.dart' show Value;
-import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_category.dart';
@@ -67,28 +65,6 @@ class CostCategoryModel extends CostCategory implements SyncableModel {
     );
   }
 
-  /// Rehydrates a model from a local drift row. The row's nullable
-  /// `serverId` becomes the model's `id` when present, else `''` (mirroring
-  /// the server-unknown placeholder used by `.create()`).
-  ///
-  /// Carries over the row's local sync-state flags ([pending],
-  /// [deletedLocally]) — `CostCategorySyncer` needs them to decide what
-  /// survives a pull's full re-fetch. The row's `created_at`/`updated_at`
-  /// columns are deliberately NOT carried over — see class docs: they are
-  /// synthesized fresh wherever needed, never round-tripped.
-  factory CostCategoryModel.fromDrift(CostCategoryRow row) {
-    return CostCategoryModel(
-      id: row.serverId ?? '',
-      clientUuid: row.clientUuid,
-      name: row.name,
-      type: row.type,
-      category: row.category,
-      isDefault: row.isDefault,
-      pending: row.pending,
-      deletedLocally: row.deletedLocally,
-    );
-  }
-
   /// Local-only identity used by the offline outbox/pull pipeline to track
   /// this category before (and independently of) the server-assigned
   /// [CostCategory.id]. Lives on the data model only — the domain
@@ -120,30 +96,6 @@ class CostCategoryModel extends CostCategory implements SyncableModel {
       'category': category,
       'is_default': isDefault,
     };
-  }
-
-  /// Converts this model into a drift insert/update companion for the
-  /// `CostCategories` table. `serverId` is `null` while the server hasn't
-  /// assigned an `id` yet (i.e. `id` is empty). `createdAt`/`updatedAt` are
-  /// synthesized fresh here (see class docs) — this entity has no real
-  /// timestamps to preserve.
-  CostCategoriesCompanion toCompanion({
-    required bool pending,
-    bool deletedLocally = false,
-  }) {
-    final now = DateTime.now();
-    return CostCategoriesCompanion(
-      clientUuid: Value(clientUuid),
-      serverId: Value(id.isEmpty ? null : id),
-      name: Value(name),
-      type: Value(type),
-      category: Value(category),
-      isDefault: Value(isDefault),
-      createdAt: Value(now),
-      updatedAt: Value(now),
-      pending: Value(pending),
-      deletedLocally: Value(deletedLocally),
-    );
   }
 
   // --- SyncableModel: the read-only sync fields the offline pipeline reads

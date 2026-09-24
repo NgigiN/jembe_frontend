@@ -12,21 +12,25 @@ class SyncCursorDao {
 
   final AppDatabase _db;
 
-  /// The stored cursor for [entity], or null if it was never set.
-  Future<DateTime?> get(String entity) async {
-    final row =
-        await (_db.select(_db.syncCursor)
-              ..where((r) => r.entity.equals(entity)))
-            .getSingleOrNull();
+  /// The stored cursor for [entity] under [farmId], or null if never set.
+  /// Defaults to farmId 1 (see the plan's Global Constraints).
+  Future<DateTime?> get(String entity, {int farmId = 1}) async {
+    final row = await (_db.select(_db.syncCursor)
+          ..where((r) => r.entity.equals(entity) & r.farmId.equals(farmId)))
+        .getSingleOrNull();
     return row?.lastPulledAt;
   }
 
-  /// Upserts the cursor for [entity] to [at].
-  Future<void> set(String entity, DateTime at) async {
+  /// Upserts the cursor for [entity] under [farmId] to [at].
+  Future<void> set(String entity, DateTime at, {int farmId = 1}) async {
     await _db
         .into(_db.syncCursor)
         .insertOnConflictUpdate(
-          SyncCursorCompanion.insert(entity: entity, lastPulledAt: Value(at)),
+          SyncCursorCompanion.insert(
+            entity: entity,
+            lastPulledAt: Value(at),
+            farmId: Value(farmId),
+          ),
         );
   }
 }

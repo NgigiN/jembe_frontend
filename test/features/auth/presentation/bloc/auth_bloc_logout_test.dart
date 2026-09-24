@@ -6,6 +6,9 @@ import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecas
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
+import 'package:farm_tracker/features/farms/domain/entities/farm.dart';
+import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
 import 'package:farm_tracker/injection_container.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -65,14 +68,14 @@ void main() {
 
       final cacheStore = _ThrowingCacheStore();
       when(() => cacheStore.clean()).thenThrow(Exception('cache boom'));
-      sl.registerSingleton<CacheStore>(cacheStore);
 
       final db = _ThrowingAppDatabase();
       addTearDown(db.close);
-      sl.registerSingleton<AppDatabase>(db);
 
       final bloc = AuthBloc(
         googleSignInUseCase: _MockGoogleSignInUseCase(),
+        wipeLocalData: db.wipeAll,
+        cleanCache: cacheStore.clean,
       );
       addTearDown(bloc.close);
 
@@ -89,4 +92,25 @@ void main() {
       verify(() => cacheStore.clean()).called(1);
     },
   );
+
+  test('LogoutEvent clears FarmStorageService data', () async {
+    await FarmStorageService.saveFarms(
+      [
+        Farm(
+          id: 1, name: 'Farm', location: '', fiscalYearStartMonth: 1,
+          ownerUserId: 1, successorUserId: null, maxMembers: 5,
+          role: FarmRole.owner, memberCount: 1, isDefault: true,
+        ),
+      ],
+      defaultFarmId: 1,
+    );
+
+    final bloc = AuthBloc(googleSignInUseCase: _MockGoogleSignInUseCase());
+    addTearDown(bloc.close);
+
+    bloc.add(LogoutEvent());
+    await bloc.stream.firstWhere((s) => s is AuthInitial);
+
+    expect(await FarmStorageService.getFarms(), isEmpty);
+  });
 }

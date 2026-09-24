@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/models/input_model.dart';
+import 'package:farm_tracker/features/farm/data/models/input_model_drift.dart';
 
 /// Drift-backed local data source for the input feature.
 ///
@@ -32,25 +33,25 @@ class InputLocalDataSource implements LocalSyncStore<InputModel> {
   ///
   /// Ordered by `createdAt` ascending (oldest first) — a stable order tied
   /// to when an input was first created locally, unaffected by later edits.
-  Stream<List<InputModel>> watchInputs({String? sourceType}) {
+  Stream<List<InputModel>> watchInputs({String? sourceType, int farmId = 1}) {
     final query = _db.select(_db.inputs)
-      ..where((row) => row.deletedLocally.equals(false));
+      ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId));
     if (sourceType != null && sourceType.isNotEmpty) {
       query.where((row) => row.sourceType.equals(sourceType));
     }
     query.orderBy([(row) => OrderingTerm.asc(row.createdAt)]);
     return query.watch().map(
-      (rows) => rows.map(InputModel.fromDrift).toList(),
+      (rows) => rows.map(inputModelFromDrift).toList(),
     );
   }
 
   /// Inserts [model], or replaces the existing row sharing its
   /// `clientUuid` (the primary key) if one already exists.
   @override
-  Future<void> upsert(InputModel model, {required bool pending}) {
+  Future<void> upsert(InputModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.inputs)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:
@@ -103,7 +104,7 @@ class InputLocalDataSource implements LocalSyncStore<InputModel> {
     final row = await (_db.select(
       _db.inputs,
     )..where((r) => r.clientUuid.equals(clientUuid))).getSingleOrNull();
-    return row == null ? null : InputModel.fromDrift(row);
+    return row == null ? null : inputModelFromDrift(row);
   }
 
   /// The input with the given server [serverId], or `null` if no such row
@@ -113,7 +114,7 @@ class InputLocalDataSource implements LocalSyncStore<InputModel> {
     final row = await (_db.select(
       _db.inputs,
     )..where((r) => r.serverId.equals(serverId))).getSingleOrNull();
-    return row == null ? null : InputModel.fromDrift(row);
+    return row == null ? null : inputModelFromDrift(row);
   }
 
   /// Deletes every row — used to wipe the local mirror on logout.

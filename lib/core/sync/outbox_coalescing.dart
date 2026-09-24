@@ -23,15 +23,17 @@ class OutboxIntent extends Equatable {
     required this.clientUuid,
     required this.entity,
     this.payload,
+    this.farmId = 1,
   });
 
   final OutboxOp op;
   final String clientUuid;
   final String entity;
   final String? payload;
+  final int farmId;
 
   @override
-  List<Object?> get props => [op, clientUuid, entity, payload];
+  List<Object?> get props => [op, clientUuid, entity, payload, farmId];
 }
 
 /// Merges [incoming] into [pending], applying the outbox
@@ -76,6 +78,7 @@ List<OutboxIntent> coalesce(
         clientUuid: existing.clientUuid,
         entity: existing.entity,
         payload: incoming.payload,
+        farmId: existing.farmId,
       );
     case (OutboxOp.create, OutboxOp.delete):
       result.removeAt(existingIndex);
@@ -85,12 +88,14 @@ List<OutboxIntent> coalesce(
         clientUuid: existing.clientUuid,
         entity: existing.entity,
         payload: incoming.payload,
+        farmId: existing.farmId,
       );
     case (OutboxOp.update, OutboxOp.delete):
       result[existingIndex] = OutboxIntent(
         op: OutboxOp.delete,
         clientUuid: existing.clientUuid,
         entity: existing.entity,
+        farmId: existing.farmId,
       );
     case (OutboxOp.delete, _):
       // A delete is terminal for this clientUuid. Nothing should realistically
@@ -107,6 +112,7 @@ List<OutboxIntent> coalesce(
         clientUuid: existing.clientUuid,
         entity: existing.entity,
         payload: incoming.payload,
+        farmId: existing.farmId,
       );
   }
 

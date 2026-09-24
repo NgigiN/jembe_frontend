@@ -3,6 +3,7 @@ import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/audio/sound_service.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/di/service_locator.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/network/connectivity_service.dart';
 import 'package:farm_tracker/core/network/dio_client.dart';
@@ -18,6 +19,9 @@ import 'package:farm_tracker/features/auth/data/services/user_storage_service.da
 import 'package:farm_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_source.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/content/data/datasources/content_local_data_source.dart';
 import 'package:farm_tracker/features/content/data/datasources/question_remote_data_source.dart';
 import 'package:farm_tracker/features/content/data/repositories/content_repository_impl.dart';
@@ -123,9 +127,8 @@ import 'package:farm_tracker/features/profile/domain/usecases/delete_account.dar
 import 'package:farm_tracker/features/profile/domain/usecases/get_profile.dart';
 import 'package:farm_tracker/features/profile/domain/usecases/update_profile.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
-import 'package:get_it/get_it.dart';
 
-final sl = GetIt.instance;
+export 'package:farm_tracker/core/di/service_locator.dart';
 
 /// Wires the DI container.
 ///
@@ -160,7 +163,8 @@ Future<void> init({AppDatabase? database}) async {
     // main.dart dispatches LogoutEvent onto and the one BlocProvider hands
     // to the widget tree, or a forced logout would land on an orphan bloc
     // the UI never sees.
-    ..registerLazySingleton(() => AuthBloc(googleSignInUseCase: sl()))
+    ..registerLazySingleton(() => AuthBloc(googleSignInUseCase: sl(), wipeLocalData: () => sl<AppDatabase>().wipeAll(), cleanCache: () => sl<CacheStore>().clean()))
+    ..registerLazySingleton(() => FarmBloc(remote: sl(), triggerSync: () => sl<SyncEngine>().syncNow()))
     // Feature-specific blocs (preferred)
     ..registerFactory(() => LandBloc(repository: sl()))
     ..registerFactory(() => PlantBloc(repository: sl()))
@@ -325,6 +329,9 @@ Future<void> init({AppDatabase? database}) async {
     // Data Sources
     ..registerLazySingleton<AuthRemoteDataSource>(
       () => AuthRemoteDataSourceImpl(dio: sl()),
+    )
+    ..registerLazySingleton<FarmRemoteDataSource>(
+      () => FarmRemoteDataSourceImpl(dio: sl()),
     )
     ..registerLazySingleton<LandRemoteDataSource>(
       () => LandRemoteDataSourceImpl(dio: sl()),
@@ -497,6 +504,9 @@ Future<void> init({AppDatabase? database}) async {
         // token stored >24h ago is treated as unauthenticated, not just an
         // absent one, so a stale session can't slip a pass through either.
         isAuthenticated: () => UserStorageService.isLoggedIn(),
+        // V2 sub-project 3: resolves the farm every pass is scoped to from
+        // the same persisted store the UI reads/writes on switch.
+        currentFarmId: () => FarmStorageService.getCurrentFarmId(),
         // Pre-flip hardening: surface an otherwise-swallowed non-transient
         // pass failure (see SyncEngine's "Error logging" doc) via the app
         // logger instead of silently ending the pass in `SyncPhase.error`.

@@ -27,9 +27,10 @@ abstract class EntitySyncer {
   Future<void> push(OutboxRow entry, FkResolver resolver);
 
   /// Fetches server changes strictly after [since] (null = full pull),
-  /// upserts them into the local mirror, and returns the greatest
+  /// upserts them into the local mirror under [farmId] (defaults to `1` —
+  /// see the plan's Global Constraints), and returns the greatest
   /// `updatedAt` observed (the new cursor), or null if nothing changed.
-  Future<DateTime?> pull(DateTime? since);
+  Future<DateTime?> pull(DateTime? since, {int farmId = 1});
 
   /// `true` = this syncer advances a per-entity pull cursor (delta sync).
   /// `false` = it never returns a cursor (full re-fetch / no-op pull), so

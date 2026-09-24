@@ -1,5 +1,3 @@
-import 'package:drift/drift.dart' show Value;
-import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
 import 'package:farm_tracker/core/utils/json_parsing.dart';
@@ -84,33 +82,6 @@ class ActivityModel extends Activity implements SyncableModel {
     );
   }
 
-  /// Rehydrates a model from a local drift row. The row's nullable
-  /// `serverId` becomes the model's `id` when present, else `''`
-  /// (mirroring the server-unknown placeholder used by `.create()`).
-  ///
-  /// Also carries over the row's local sync-state flags ([pending],
-  /// [deletedLocally]) — the sync pipeline (`ActivitySyncer`) needs them to
-  /// decide LWW / delete-wins outcomes on pull, since they otherwise only
-  /// live on the drift row, not on a bare [ActivityModel].
-  factory ActivityModel.fromDrift(ActivityRow row) {
-    return ActivityModel(
-      id: row.serverId ?? '',
-      clientUuid: row.clientUuid,
-      sourceType: row.sourceType,
-      sourceId: row.sourceId,
-      animalId: row.animalId,
-      type: row.type,
-      details: row.details,
-      cost: row.cost,
-      date: row.date,
-      notes: row.notes,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      pending: row.pending,
-      deletedLocally: row.deletedLocally,
-    );
-  }
-
   /// Local-only identity used by the offline outbox/pull pipeline to
   /// track this activity before (and independently of) the server-assigned
   /// [Activity.id]. Lives on the data model only — the domain `Activity`
@@ -149,31 +120,6 @@ class ActivityModel extends Activity implements SyncableModel {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
-
-  /// Converts this model into a drift insert/update companion for the
-  /// `Activities` table. `serverId` is `null` while the server hasn't
-  /// assigned an `id` yet (i.e. `id` is empty).
-  ActivitiesCompanion toCompanion({
-    required bool pending,
-    bool deletedLocally = false,
-  }) {
-    return ActivitiesCompanion(
-      clientUuid: Value(clientUuid),
-      serverId: Value(id.isEmpty ? null : id),
-      sourceType: Value(sourceType),
-      sourceId: Value(sourceId),
-      animalId: Value(animalId),
-      type: Value(type),
-      details: Value(details),
-      cost: Value(cost),
-      date: Value(date),
-      notes: Value(notes),
-      createdAt: Value(createdAt),
-      updatedAt: Value(updatedAt),
-      pending: Value(pending),
-      deletedLocally: Value(deletedLocally),
-    );
   }
 
   // --- SyncableModel: the read-only sync fields BaseEntitySyncer reads off

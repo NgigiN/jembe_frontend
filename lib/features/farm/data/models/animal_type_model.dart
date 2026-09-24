@@ -1,5 +1,3 @@
-import 'package:drift/drift.dart' show Value;
-import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
 import 'package:farm_tracker/core/utils/json_parsing.dart';
@@ -51,28 +49,6 @@ class AnimalTypeModel extends AnimalType implements SyncableModel {
     );
   }
 
-  /// Rehydrates a model from a local drift row. The row's nullable
-  /// `serverId` becomes the model's `id` when present, else `''`
-  /// (mirroring the server-unknown placeholder used by `.create()`).
-  ///
-  /// Also carries over the row's local sync-state flags ([pending],
-  /// [deletedLocally]) — the sync pipeline (`AnimalTypeSyncer`) needs them
-  /// to decide LWW / delete-wins outcomes on pull, since they otherwise only
-  /// live on the drift row, not on a bare [AnimalTypeModel].
-  factory AnimalTypeModel.fromDrift(AnimalTypeRow row) {
-    return AnimalTypeModel(
-      id: row.serverId ?? '',
-      clientUuid: row.clientUuid,
-      userId: row.userId,
-      name: row.name,
-      notes: row.notes,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      pending: row.pending,
-      deletedLocally: row.deletedLocally,
-    );
-  }
-
   /// Local-only identity used by the offline outbox/pull pipeline to
   /// track this animal type before (and independently of) the
   /// server-assigned [AnimalType.id]. Lives on the data model only — the
@@ -97,26 +73,6 @@ class AnimalTypeModel extends AnimalType implements SyncableModel {
       'name': name,
       if (notes != null && notes!.isNotEmpty) 'notes': notes,
     };
-  }
-
-  /// Converts this model into a drift insert/update companion for the
-  /// `AnimalTypes` table. `serverId` is `null` while the server hasn't
-  /// assigned an `id` yet (i.e. `id` is empty).
-  AnimalTypesCompanion toCompanion({
-    required bool pending,
-    bool deletedLocally = false,
-  }) {
-    return AnimalTypesCompanion(
-      clientUuid: Value(clientUuid),
-      serverId: Value(id.isEmpty ? null : id),
-      userId: Value(userId),
-      name: Value(name),
-      notes: Value(notes),
-      createdAt: Value(createdAt),
-      updatedAt: Value(updatedAt),
-      pending: Value(pending),
-      deletedLocally: Value(deletedLocally),
-    );
   }
 
   // --- SyncableModel: the read-only sync fields BaseEntitySyncer reads off

@@ -5,6 +5,7 @@ import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
@@ -13,8 +14,42 @@ final _sensitiveLogPattern = RegExp(
   caseSensitive: false,
 );
 
+// pretty_dio_logger prints one logical block (a Headers section, a Body
+// dump, etc.) as many separate logPrint calls bounded by a '╔'-prefixed
+// open line and a '╚'-prefixed close line, wrapping long values — e.g. the
+// Authorization header's Bearer token — across several of those calls.
+// Matching line-by-line missed continuation lines that don't repeat the
+// word that tripped the match on the first line, leaking the raw token.
+// Buffer each block and redact it as a whole if any line in it is
+// sensitive, so a wrapped value can't slip through on its later lines.
+final List<String> _logBlockBuffer = [];
+bool _inLogBlock = false;
+
 void _redactedLogPrint(Object object) {
   final message = object.toString();
+
+  if (message.startsWith('╔')) {
+    _inLogBlock = true;
+    _logBlockBuffer
+      ..clear()
+      ..add(message);
+    return;
+  }
+
+  if (_inLogBlock) {
+    _logBlockBuffer.add(message);
+    if (message.startsWith('╚')) {
+      _inLogBlock = false;
+      if (_logBlockBuffer.any(_sensitiveLogPattern.hasMatch)) {
+        debugPrint('[REDACTED HTTP LOG — contains sensitive auth data]');
+      } else {
+        _logBlockBuffer.forEach(debugPrint);
+      }
+      _logBlockBuffer.clear();
+    }
+    return;
+  }
+
   if (_sensitiveLogPattern.hasMatch(message)) {
     debugPrint('[REDACTED HTTP LOG — contains sensitive auth data]');
     return;
@@ -123,6 +158,12 @@ class _AuthInterceptor extends Interceptor {
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
+
+    final farmId = await FarmStorageService.getCurrentFarmId();
+    if (farmId != null) {
+      options.headers['X-Farm-ID'] = farmId.toString();
+    }
+
     handler.next(options);
   }
 

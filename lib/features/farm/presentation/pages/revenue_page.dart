@@ -1,6 +1,7 @@
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/theme/app_typography.dart';
 import 'package:farm_tracker/core/utils/responsive_utils.dart';
 import 'package:farm_tracker/core/utils/safe_layout_utils.dart';
 import 'package:farm_tracker/core/validation/parse.dart';
@@ -263,15 +264,21 @@ class _RevenuePageState extends State<RevenuePage> {
                 children: [
                   Text(
                     'KES ${revenue.total.toStringAsFixed(0)}',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
+                    style: AppTypography.money(
+                      Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ) ??
+                          const TextStyle(),
                     ),
                   ),
                   Text(
                     '@${revenue.unitPrice.toStringAsFixed(0)}',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    style: AppTypography.money(
+                      Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ) ??
+                          const TextStyle(),
                     ),
                   ),
                 ],
@@ -424,12 +431,14 @@ class RevenueDetailsSheet extends StatelessWidget {
             context,
             'Unit Price',
             'KES ${revenue.unitPrice.toStringAsFixed(2)}',
+            isMonetary: true,
           ),
           _buildDetailItem(
             context,
             'Total Amount',
             'KES ${revenue.total.toStringAsFixed(2)}',
             isPrimary: true,
+            isMonetary: true,
           ),
           _buildDetailItem(
             context,
@@ -486,7 +495,13 @@ class RevenueDetailsSheet extends StatelessWidget {
     String label,
     String value, {
     bool isPrimary = false,
+    bool isMonetary = false,
   }) {
+    final valueStyle = Theme.of(context).textTheme.bodyLarge?.copyWith(
+      fontWeight: isPrimary ? FontWeight.bold : FontWeight.w500,
+      color: isPrimary ? Theme.of(context).colorScheme.primary : null,
+      fontSize: isPrimary ? 18 : null,
+    );
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -500,11 +515,9 @@ class RevenueDetailsSheet extends StatelessWidget {
           ),
           Text(
             value,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              fontWeight: isPrimary ? FontWeight.bold : FontWeight.w500,
-              color: isPrimary ? Theme.of(context).colorScheme.primary : null,
-              fontSize: isPrimary ? 18 : null,
-            ),
+            style: isMonetary && valueStyle != null
+                ? AppTypography.money(valueStyle)
+                : valueStyle,
           ),
         ],
       ),
@@ -816,11 +829,14 @@ class _AddRevenuePageState extends State<AddRevenuePage> {
                         ),
                         Text(
                           _calculateTotal(),
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
+                          style: AppTypography.money(
+                            Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).colorScheme.primary,
+                                    ) ??
+                                const TextStyle(),
+                          ),
                         ),
                       ],
                     ),

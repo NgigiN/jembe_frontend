@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_model.dart';
+import 'package:farm_tracker/features/farm/data/models/herd_model_drift.dart';
 
 /// Drift-backed local data source for the herd feature.
 ///
@@ -27,20 +28,20 @@ class HerdLocalDataSource implements LocalSyncStore<HerdModel> {
   ///
   /// Ordered by `createdAt` ascending (oldest first) — a stable order tied
   /// to when a herd was first created locally, unaffected by later edits.
-  Stream<List<HerdModel>> watchHerds() {
+  Stream<List<HerdModel>> watchHerds({int farmId = 1}) {
     final query = _db.select(_db.herds)
-      ..where((row) => row.deletedLocally.equals(false))
+      ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId))
       ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]);
-    return query.watch().map((rows) => rows.map(HerdModel.fromDrift).toList());
+    return query.watch().map((rows) => rows.map(herdModelFromDrift).toList());
   }
 
   /// Inserts [model], or replaces the existing row sharing its
   /// `clientUuid` (the primary key) if one already exists.
   @override
-  Future<void> upsert(HerdModel model, {required bool pending}) {
+  Future<void> upsert(HerdModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.herds)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:
@@ -90,7 +91,7 @@ class HerdLocalDataSource implements LocalSyncStore<HerdModel> {
     final row = await (_db.select(
       _db.herds,
     )..where((r) => r.clientUuid.equals(clientUuid))).getSingleOrNull();
-    return row == null ? null : HerdModel.fromDrift(row);
+    return row == null ? null : herdModelFromDrift(row);
   }
 
   /// The herd with the given server [serverId], or `null` if no such row
@@ -100,7 +101,7 @@ class HerdLocalDataSource implements LocalSyncStore<HerdModel> {
     final row = await (_db.select(
       _db.herds,
     )..where((r) => r.serverId.equals(serverId))).getSingleOrNull();
-    return row == null ? null : HerdModel.fromDrift(row);
+    return row == null ? null : herdModelFromDrift(row);
   }
 
   /// Deletes every row — used to wipe the local mirror on logout.

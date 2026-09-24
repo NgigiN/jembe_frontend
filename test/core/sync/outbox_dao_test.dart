@@ -161,4 +161,34 @@ void main() {
       expect(row.attempts, 1);
     });
   });
+
+  group('OutboxDao farm scoping', () {
+    test('peekAll only returns rows for the given farmId', () async {
+      await dao.enqueue(const OutboxIntent(
+        op: OutboxOp.create, clientUuid: 'a', entity: 'land',
+        payload: '{}', farmId: 1,
+      ));
+      await dao.enqueue(const OutboxIntent(
+        op: OutboxOp.create, clientUuid: 'b', entity: 'land',
+        payload: '{}', farmId: 2,
+      ));
+
+      final farm1Rows = await dao.peekAll(farmId: 1);
+      final farm2Rows = await dao.peekAll(farmId: 2);
+
+      expect(farm1Rows.map((r) => r.clientUuid), ['a']);
+      expect(farm2Rows.map((r) => r.clientUuid), ['b']);
+    });
+
+    test('peekAll defaults to farmId 1 when not specified (back-compat)',
+        () async {
+      await dao.enqueue(const OutboxIntent(
+        op: OutboxOp.create, clientUuid: 'c', entity: 'land', payload: '{}',
+      ));
+
+      final rows = await dao.peekAll();
+
+      expect(rows.map((r) => r.clientUuid), ['c']);
+    });
+  });
 }

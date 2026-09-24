@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_activity_model.dart';
+import 'package:farm_tracker/features/farm/data/models/herd_activity_model_drift.dart';
 
 /// Drift-backed local data source for the `herd_activity` create-only
 /// offline outlier (see `herd_activity_model.dart` and
@@ -23,10 +24,10 @@ class HerdActivityLocalDataSource implements LocalSyncStore<HerdActivityModel> {
   /// Inserts [model], or replaces the existing row sharing its `clientUuid`
   /// (the primary key) if one already exists.
   @override
-  Future<void> upsert(HerdActivityModel model, {required bool pending}) {
+  Future<void> upsert(HerdActivityModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.herdActivities)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone. Part of the
@@ -82,7 +83,7 @@ class HerdActivityLocalDataSource implements LocalSyncStore<HerdActivityModel> {
     final row = await (_db.select(
       _db.herdActivities,
     )..where((r) => r.clientUuid.equals(clientUuid))).getSingleOrNull();
-    return row == null ? null : HerdActivityModel.fromDrift(row);
+    return row == null ? null : herdActivityModelFromDrift(row);
   }
 
   /// The activity with the given server [serverId], or `null` if no such
@@ -92,7 +93,7 @@ class HerdActivityLocalDataSource implements LocalSyncStore<HerdActivityModel> {
     final row = await (_db.select(
       _db.herdActivities,
     )..where((r) => r.serverId.equals(serverId))).getSingleOrNull();
-    return row == null ? null : HerdActivityModel.fromDrift(row);
+    return row == null ? null : herdActivityModelFromDrift(row);
   }
 
   /// Deletes every row — used to wipe the local mirror on logout.

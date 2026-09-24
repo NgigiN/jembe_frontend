@@ -30,7 +30,7 @@ class _Store implements LocalSyncStore<SyncableModel> {
   @override
   Future<SyncableModel?> getByServerId(String serverId) async => null;
   @override
-  Future<void> upsert(SyncableModel model, {required bool pending}) async {}
+  Future<void> upsert(SyncableModel model, {required bool pending, int farmId = 1}) async {}
   @override
   Future<void> hardDelete(String clientUuid) async {}
   @override

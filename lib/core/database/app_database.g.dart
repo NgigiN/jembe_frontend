@@ -142,6 +142,16 @@ class $LandsTable extends Lands with TableInfo<$LandsTable, LandRow> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _farmIdMeta = const VerificationMeta('farmId');
+  @override
+  late final GeneratedColumn<int> farmId = GeneratedColumn<int>(
+    'farm_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientUuid,
@@ -156,6 +166,7 @@ class $LandsTable extends Lands with TableInfo<$LandsTable, LandRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -254,6 +265,12 @@ class $LandsTable extends Lands with TableInfo<$LandsTable, LandRow> {
         ),
       );
     }
+    if (data.containsKey('farm_id')) {
+      context.handle(
+        _farmIdMeta,
+        farmId.isAcceptableOrUnknown(data['farm_id']!, _farmIdMeta),
+      );
+    }
     return context;
   }
 
@@ -311,6 +328,10 @@ class $LandsTable extends Lands with TableInfo<$LandsTable, LandRow> {
         DriftSqlType.bool,
         data['${effectivePrefix}deleted_locally'],
       )!,
+      farmId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}farm_id'],
+      )!,
     );
   }
 
@@ -333,6 +354,7 @@ class LandRow extends DataClass implements Insertable<LandRow> {
   final DateTime updatedAt;
   final bool pending;
   final bool deletedLocally;
+  final int farmId;
   const LandRow({
     required this.clientUuid,
     this.serverId,
@@ -346,6 +368,7 @@ class LandRow extends DataClass implements Insertable<LandRow> {
     required this.updatedAt,
     required this.pending,
     required this.deletedLocally,
+    required this.farmId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -372,6 +395,7 @@ class LandRow extends DataClass implements Insertable<LandRow> {
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['pending'] = Variable<bool>(pending);
     map['deleted_locally'] = Variable<bool>(deletedLocally);
+    map['farm_id'] = Variable<int>(farmId);
     return map;
   }
 
@@ -397,6 +421,7 @@ class LandRow extends DataClass implements Insertable<LandRow> {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 
@@ -418,6 +443,7 @@ class LandRow extends DataClass implements Insertable<LandRow> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       pending: serializer.fromJson<bool>(json['pending']),
       deletedLocally: serializer.fromJson<bool>(json['deletedLocally']),
+      farmId: serializer.fromJson<int>(json['farmId']),
     );
   }
   @override
@@ -436,6 +462,7 @@ class LandRow extends DataClass implements Insertable<LandRow> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'pending': serializer.toJson<bool>(pending),
       'deletedLocally': serializer.toJson<bool>(deletedLocally),
+      'farmId': serializer.toJson<int>(farmId),
     };
   }
 
@@ -452,6 +479,7 @@ class LandRow extends DataClass implements Insertable<LandRow> {
     DateTime? updatedAt,
     bool? pending,
     bool? deletedLocally,
+    int? farmId,
   }) => LandRow(
     clientUuid: clientUuid ?? this.clientUuid,
     serverId: serverId.present ? serverId.value : this.serverId,
@@ -465,6 +493,7 @@ class LandRow extends DataClass implements Insertable<LandRow> {
     updatedAt: updatedAt ?? this.updatedAt,
     pending: pending ?? this.pending,
     deletedLocally: deletedLocally ?? this.deletedLocally,
+    farmId: farmId ?? this.farmId,
   );
   LandRow copyWithCompanion(LandsCompanion data) {
     return LandRow(
@@ -486,6 +515,7 @@ class LandRow extends DataClass implements Insertable<LandRow> {
       deletedLocally: data.deletedLocally.present
           ? data.deletedLocally.value
           : this.deletedLocally,
+      farmId: data.farmId.present ? data.farmId.value : this.farmId,
     );
   }
 
@@ -503,7 +533,8 @@ class LandRow extends DataClass implements Insertable<LandRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
-          ..write('deletedLocally: $deletedLocally')
+          ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId')
           ..write(')'))
         .toString();
   }
@@ -522,6 +553,7 @@ class LandRow extends DataClass implements Insertable<LandRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   );
   @override
   bool operator ==(Object other) =>
@@ -538,7 +570,8 @@ class LandRow extends DataClass implements Insertable<LandRow> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.pending == this.pending &&
-          other.deletedLocally == this.deletedLocally);
+          other.deletedLocally == this.deletedLocally &&
+          other.farmId == this.farmId);
 }
 
 class LandsCompanion extends UpdateCompanion<LandRow> {
@@ -554,6 +587,7 @@ class LandsCompanion extends UpdateCompanion<LandRow> {
   final Value<DateTime> updatedAt;
   final Value<bool> pending;
   final Value<bool> deletedLocally;
+  final Value<int> farmId;
   final Value<int> rowid;
   const LandsCompanion({
     this.clientUuid = const Value.absent(),
@@ -568,6 +602,7 @@ class LandsCompanion extends UpdateCompanion<LandRow> {
     this.updatedAt = const Value.absent(),
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   LandsCompanion.insert({
@@ -583,6 +618,7 @@ class LandsCompanion extends UpdateCompanion<LandRow> {
     required DateTime updatedAt,
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientUuid = Value(clientUuid),
        userId = Value(userId),
@@ -602,6 +638,7 @@ class LandsCompanion extends UpdateCompanion<LandRow> {
     Expression<DateTime>? updatedAt,
     Expression<bool>? pending,
     Expression<bool>? deletedLocally,
+    Expression<int>? farmId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -617,6 +654,7 @@ class LandsCompanion extends UpdateCompanion<LandRow> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (pending != null) 'pending': pending,
       if (deletedLocally != null) 'deleted_locally': deletedLocally,
+      if (farmId != null) 'farm_id': farmId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -634,6 +672,7 @@ class LandsCompanion extends UpdateCompanion<LandRow> {
     Value<DateTime>? updatedAt,
     Value<bool>? pending,
     Value<bool>? deletedLocally,
+    Value<int>? farmId,
     Value<int>? rowid,
   }) {
     return LandsCompanion(
@@ -649,6 +688,7 @@ class LandsCompanion extends UpdateCompanion<LandRow> {
       updatedAt: updatedAt ?? this.updatedAt,
       pending: pending ?? this.pending,
       deletedLocally: deletedLocally ?? this.deletedLocally,
+      farmId: farmId ?? this.farmId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -692,6 +732,9 @@ class LandsCompanion extends UpdateCompanion<LandRow> {
     if (deletedLocally.present) {
       map['deleted_locally'] = Variable<bool>(deletedLocally.value);
     }
+    if (farmId.present) {
+      map['farm_id'] = Variable<int>(farmId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -713,6 +756,7 @@ class LandsCompanion extends UpdateCompanion<LandRow> {
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
           ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -827,6 +871,16 @@ class $PlantsTable extends Plants with TableInfo<$PlantsTable, PlantRow> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _farmIdMeta = const VerificationMeta('farmId');
+  @override
+  late final GeneratedColumn<int> farmId = GeneratedColumn<int>(
+    'farm_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientUuid,
@@ -838,6 +892,7 @@ class $PlantsTable extends Plants with TableInfo<$PlantsTable, PlantRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -918,6 +973,12 @@ class $PlantsTable extends Plants with TableInfo<$PlantsTable, PlantRow> {
         ),
       );
     }
+    if (data.containsKey('farm_id')) {
+      context.handle(
+        _farmIdMeta,
+        farmId.isAcceptableOrUnknown(data['farm_id']!, _farmIdMeta),
+      );
+    }
     return context;
   }
 
@@ -963,6 +1024,10 @@ class $PlantsTable extends Plants with TableInfo<$PlantsTable, PlantRow> {
         DriftSqlType.bool,
         data['${effectivePrefix}deleted_locally'],
       )!,
+      farmId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}farm_id'],
+      )!,
     );
   }
 
@@ -982,6 +1047,7 @@ class PlantRow extends DataClass implements Insertable<PlantRow> {
   final DateTime updatedAt;
   final bool pending;
   final bool deletedLocally;
+  final int farmId;
   const PlantRow({
     required this.clientUuid,
     this.serverId,
@@ -992,6 +1058,7 @@ class PlantRow extends DataClass implements Insertable<PlantRow> {
     required this.updatedAt,
     required this.pending,
     required this.deletedLocally,
+    required this.farmId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1009,6 +1076,7 @@ class PlantRow extends DataClass implements Insertable<PlantRow> {
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['pending'] = Variable<bool>(pending);
     map['deleted_locally'] = Variable<bool>(deletedLocally);
+    map['farm_id'] = Variable<int>(farmId);
     return map;
   }
 
@@ -1027,6 +1095,7 @@ class PlantRow extends DataClass implements Insertable<PlantRow> {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 
@@ -1045,6 +1114,7 @@ class PlantRow extends DataClass implements Insertable<PlantRow> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       pending: serializer.fromJson<bool>(json['pending']),
       deletedLocally: serializer.fromJson<bool>(json['deletedLocally']),
+      farmId: serializer.fromJson<int>(json['farmId']),
     );
   }
   @override
@@ -1060,6 +1130,7 @@ class PlantRow extends DataClass implements Insertable<PlantRow> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'pending': serializer.toJson<bool>(pending),
       'deletedLocally': serializer.toJson<bool>(deletedLocally),
+      'farmId': serializer.toJson<int>(farmId),
     };
   }
 
@@ -1073,6 +1144,7 @@ class PlantRow extends DataClass implements Insertable<PlantRow> {
     DateTime? updatedAt,
     bool? pending,
     bool? deletedLocally,
+    int? farmId,
   }) => PlantRow(
     clientUuid: clientUuid ?? this.clientUuid,
     serverId: serverId.present ? serverId.value : this.serverId,
@@ -1083,6 +1155,7 @@ class PlantRow extends DataClass implements Insertable<PlantRow> {
     updatedAt: updatedAt ?? this.updatedAt,
     pending: pending ?? this.pending,
     deletedLocally: deletedLocally ?? this.deletedLocally,
+    farmId: farmId ?? this.farmId,
   );
   PlantRow copyWithCompanion(PlantsCompanion data) {
     return PlantRow(
@@ -1099,6 +1172,7 @@ class PlantRow extends DataClass implements Insertable<PlantRow> {
       deletedLocally: data.deletedLocally.present
           ? data.deletedLocally.value
           : this.deletedLocally,
+      farmId: data.farmId.present ? data.farmId.value : this.farmId,
     );
   }
 
@@ -1113,7 +1187,8 @@ class PlantRow extends DataClass implements Insertable<PlantRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
-          ..write('deletedLocally: $deletedLocally')
+          ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId')
           ..write(')'))
         .toString();
   }
@@ -1129,6 +1204,7 @@ class PlantRow extends DataClass implements Insertable<PlantRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   );
   @override
   bool operator ==(Object other) =>
@@ -1142,7 +1218,8 @@ class PlantRow extends DataClass implements Insertable<PlantRow> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.pending == this.pending &&
-          other.deletedLocally == this.deletedLocally);
+          other.deletedLocally == this.deletedLocally &&
+          other.farmId == this.farmId);
 }
 
 class PlantsCompanion extends UpdateCompanion<PlantRow> {
@@ -1155,6 +1232,7 @@ class PlantsCompanion extends UpdateCompanion<PlantRow> {
   final Value<DateTime> updatedAt;
   final Value<bool> pending;
   final Value<bool> deletedLocally;
+  final Value<int> farmId;
   final Value<int> rowid;
   const PlantsCompanion({
     this.clientUuid = const Value.absent(),
@@ -1166,6 +1244,7 @@ class PlantsCompanion extends UpdateCompanion<PlantRow> {
     this.updatedAt = const Value.absent(),
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PlantsCompanion.insert({
@@ -1178,6 +1257,7 @@ class PlantsCompanion extends UpdateCompanion<PlantRow> {
     required DateTime updatedAt,
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientUuid = Value(clientUuid),
        userId = Value(userId),
@@ -1194,6 +1274,7 @@ class PlantsCompanion extends UpdateCompanion<PlantRow> {
     Expression<DateTime>? updatedAt,
     Expression<bool>? pending,
     Expression<bool>? deletedLocally,
+    Expression<int>? farmId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1206,6 +1287,7 @@ class PlantsCompanion extends UpdateCompanion<PlantRow> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (pending != null) 'pending': pending,
       if (deletedLocally != null) 'deleted_locally': deletedLocally,
+      if (farmId != null) 'farm_id': farmId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1220,6 +1302,7 @@ class PlantsCompanion extends UpdateCompanion<PlantRow> {
     Value<DateTime>? updatedAt,
     Value<bool>? pending,
     Value<bool>? deletedLocally,
+    Value<int>? farmId,
     Value<int>? rowid,
   }) {
     return PlantsCompanion(
@@ -1232,6 +1315,7 @@ class PlantsCompanion extends UpdateCompanion<PlantRow> {
       updatedAt: updatedAt ?? this.updatedAt,
       pending: pending ?? this.pending,
       deletedLocally: deletedLocally ?? this.deletedLocally,
+      farmId: farmId ?? this.farmId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1266,6 +1350,9 @@ class PlantsCompanion extends UpdateCompanion<PlantRow> {
     if (deletedLocally.present) {
       map['deleted_locally'] = Variable<bool>(deletedLocally.value);
     }
+    if (farmId.present) {
+      map['farm_id'] = Variable<int>(farmId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1284,6 +1371,7 @@ class PlantsCompanion extends UpdateCompanion<PlantRow> {
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
           ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1429,6 +1517,16 @@ class $SeasonsTable extends Seasons with TableInfo<$SeasonsTable, SeasonRow> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _farmIdMeta = const VerificationMeta('farmId');
+  @override
+  late final GeneratedColumn<int> farmId = GeneratedColumn<int>(
+    'farm_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientUuid,
@@ -1443,6 +1541,7 @@ class $SeasonsTable extends Seasons with TableInfo<$SeasonsTable, SeasonRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1547,6 +1646,12 @@ class $SeasonsTable extends Seasons with TableInfo<$SeasonsTable, SeasonRow> {
         ),
       );
     }
+    if (data.containsKey('farm_id')) {
+      context.handle(
+        _farmIdMeta,
+        farmId.isAcceptableOrUnknown(data['farm_id']!, _farmIdMeta),
+      );
+    }
     return context;
   }
 
@@ -1604,6 +1709,10 @@ class $SeasonsTable extends Seasons with TableInfo<$SeasonsTable, SeasonRow> {
         DriftSqlType.bool,
         data['${effectivePrefix}deleted_locally'],
       )!,
+      farmId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}farm_id'],
+      )!,
     );
   }
 
@@ -1626,6 +1735,7 @@ class SeasonRow extends DataClass implements Insertable<SeasonRow> {
   final DateTime updatedAt;
   final bool pending;
   final bool deletedLocally;
+  final int farmId;
   const SeasonRow({
     required this.clientUuid,
     this.serverId,
@@ -1639,6 +1749,7 @@ class SeasonRow extends DataClass implements Insertable<SeasonRow> {
     required this.updatedAt,
     required this.pending,
     required this.deletedLocally,
+    required this.farmId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1659,6 +1770,7 @@ class SeasonRow extends DataClass implements Insertable<SeasonRow> {
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['pending'] = Variable<bool>(pending);
     map['deleted_locally'] = Variable<bool>(deletedLocally);
+    map['farm_id'] = Variable<int>(farmId);
     return map;
   }
 
@@ -1680,6 +1792,7 @@ class SeasonRow extends DataClass implements Insertable<SeasonRow> {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 
@@ -1701,6 +1814,7 @@ class SeasonRow extends DataClass implements Insertable<SeasonRow> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       pending: serializer.fromJson<bool>(json['pending']),
       deletedLocally: serializer.fromJson<bool>(json['deletedLocally']),
+      farmId: serializer.fromJson<int>(json['farmId']),
     );
   }
   @override
@@ -1719,6 +1833,7 @@ class SeasonRow extends DataClass implements Insertable<SeasonRow> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'pending': serializer.toJson<bool>(pending),
       'deletedLocally': serializer.toJson<bool>(deletedLocally),
+      'farmId': serializer.toJson<int>(farmId),
     };
   }
 
@@ -1735,6 +1850,7 @@ class SeasonRow extends DataClass implements Insertable<SeasonRow> {
     DateTime? updatedAt,
     bool? pending,
     bool? deletedLocally,
+    int? farmId,
   }) => SeasonRow(
     clientUuid: clientUuid ?? this.clientUuid,
     serverId: serverId.present ? serverId.value : this.serverId,
@@ -1748,6 +1864,7 @@ class SeasonRow extends DataClass implements Insertable<SeasonRow> {
     updatedAt: updatedAt ?? this.updatedAt,
     pending: pending ?? this.pending,
     deletedLocally: deletedLocally ?? this.deletedLocally,
+    farmId: farmId ?? this.farmId,
   );
   SeasonRow copyWithCompanion(SeasonsCompanion data) {
     return SeasonRow(
@@ -1767,6 +1884,7 @@ class SeasonRow extends DataClass implements Insertable<SeasonRow> {
       deletedLocally: data.deletedLocally.present
           ? data.deletedLocally.value
           : this.deletedLocally,
+      farmId: data.farmId.present ? data.farmId.value : this.farmId,
     );
   }
 
@@ -1784,7 +1902,8 @@ class SeasonRow extends DataClass implements Insertable<SeasonRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
-          ..write('deletedLocally: $deletedLocally')
+          ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId')
           ..write(')'))
         .toString();
   }
@@ -1803,6 +1922,7 @@ class SeasonRow extends DataClass implements Insertable<SeasonRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   );
   @override
   bool operator ==(Object other) =>
@@ -1819,7 +1939,8 @@ class SeasonRow extends DataClass implements Insertable<SeasonRow> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.pending == this.pending &&
-          other.deletedLocally == this.deletedLocally);
+          other.deletedLocally == this.deletedLocally &&
+          other.farmId == this.farmId);
 }
 
 class SeasonsCompanion extends UpdateCompanion<SeasonRow> {
@@ -1835,6 +1956,7 @@ class SeasonsCompanion extends UpdateCompanion<SeasonRow> {
   final Value<DateTime> updatedAt;
   final Value<bool> pending;
   final Value<bool> deletedLocally;
+  final Value<int> farmId;
   final Value<int> rowid;
   const SeasonsCompanion({
     this.clientUuid = const Value.absent(),
@@ -1849,6 +1971,7 @@ class SeasonsCompanion extends UpdateCompanion<SeasonRow> {
     this.updatedAt = const Value.absent(),
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SeasonsCompanion.insert({
@@ -1864,6 +1987,7 @@ class SeasonsCompanion extends UpdateCompanion<SeasonRow> {
     required DateTime updatedAt,
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientUuid = Value(clientUuid),
        userId = Value(userId),
@@ -1886,6 +2010,7 @@ class SeasonsCompanion extends UpdateCompanion<SeasonRow> {
     Expression<DateTime>? updatedAt,
     Expression<bool>? pending,
     Expression<bool>? deletedLocally,
+    Expression<int>? farmId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1901,6 +2026,7 @@ class SeasonsCompanion extends UpdateCompanion<SeasonRow> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (pending != null) 'pending': pending,
       if (deletedLocally != null) 'deleted_locally': deletedLocally,
+      if (farmId != null) 'farm_id': farmId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1918,6 +2044,7 @@ class SeasonsCompanion extends UpdateCompanion<SeasonRow> {
     Value<DateTime>? updatedAt,
     Value<bool>? pending,
     Value<bool>? deletedLocally,
+    Value<int>? farmId,
     Value<int>? rowid,
   }) {
     return SeasonsCompanion(
@@ -1933,6 +2060,7 @@ class SeasonsCompanion extends UpdateCompanion<SeasonRow> {
       updatedAt: updatedAt ?? this.updatedAt,
       pending: pending ?? this.pending,
       deletedLocally: deletedLocally ?? this.deletedLocally,
+      farmId: farmId ?? this.farmId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1976,6 +2104,9 @@ class SeasonsCompanion extends UpdateCompanion<SeasonRow> {
     if (deletedLocally.present) {
       map['deleted_locally'] = Variable<bool>(deletedLocally.value);
     }
+    if (farmId.present) {
+      map['farm_id'] = Variable<int>(farmId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1997,6 +2128,7 @@ class SeasonsCompanion extends UpdateCompanion<SeasonRow> {
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
           ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2152,6 +2284,16 @@ class $AnimalsTable extends Animals with TableInfo<$AnimalsTable, AnimalRow> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _farmIdMeta = const VerificationMeta('farmId');
+  @override
+  late final GeneratedColumn<int> farmId = GeneratedColumn<int>(
+    'farm_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientUuid,
@@ -2167,6 +2309,7 @@ class $AnimalsTable extends Animals with TableInfo<$AnimalsTable, AnimalRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2283,6 +2426,12 @@ class $AnimalsTable extends Animals with TableInfo<$AnimalsTable, AnimalRow> {
         ),
       );
     }
+    if (data.containsKey('farm_id')) {
+      context.handle(
+        _farmIdMeta,
+        farmId.isAcceptableOrUnknown(data['farm_id']!, _farmIdMeta),
+      );
+    }
     return context;
   }
 
@@ -2344,6 +2493,10 @@ class $AnimalsTable extends Animals with TableInfo<$AnimalsTable, AnimalRow> {
         DriftSqlType.bool,
         data['${effectivePrefix}deleted_locally'],
       )!,
+      farmId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}farm_id'],
+      )!,
     );
   }
 
@@ -2367,6 +2520,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
   final DateTime updatedAt;
   final bool pending;
   final bool deletedLocally;
+  final int farmId;
   const AnimalRow({
     required this.clientUuid,
     this.serverId,
@@ -2381,6 +2535,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     required this.updatedAt,
     required this.pending,
     required this.deletedLocally,
+    required this.farmId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2404,6 +2559,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['pending'] = Variable<bool>(pending);
     map['deleted_locally'] = Variable<bool>(deletedLocally);
+    map['farm_id'] = Variable<int>(farmId);
     return map;
   }
 
@@ -2426,6 +2582,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 
@@ -2450,6 +2607,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       pending: serializer.fromJson<bool>(json['pending']),
       deletedLocally: serializer.fromJson<bool>(json['deletedLocally']),
+      farmId: serializer.fromJson<int>(json['farmId']),
     );
   }
   @override
@@ -2469,6 +2627,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'pending': serializer.toJson<bool>(pending),
       'deletedLocally': serializer.toJson<bool>(deletedLocally),
+      'farmId': serializer.toJson<int>(farmId),
     };
   }
 
@@ -2486,6 +2645,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     DateTime? updatedAt,
     bool? pending,
     bool? deletedLocally,
+    int? farmId,
   }) => AnimalRow(
     clientUuid: clientUuid ?? this.clientUuid,
     serverId: serverId.present ? serverId.value : this.serverId,
@@ -2502,6 +2662,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     updatedAt: updatedAt ?? this.updatedAt,
     pending: pending ?? this.pending,
     deletedLocally: deletedLocally ?? this.deletedLocally,
+    farmId: farmId ?? this.farmId,
   );
   AnimalRow copyWithCompanion(AnimalsCompanion data) {
     return AnimalRow(
@@ -2526,6 +2687,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       deletedLocally: data.deletedLocally.present
           ? data.deletedLocally.value
           : this.deletedLocally,
+      farmId: data.farmId.present ? data.farmId.value : this.farmId,
     );
   }
 
@@ -2544,7 +2706,8 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
-          ..write('deletedLocally: $deletedLocally')
+          ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId')
           ..write(')'))
         .toString();
   }
@@ -2564,6 +2727,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   );
   @override
   bool operator ==(Object other) =>
@@ -2581,7 +2745,8 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.pending == this.pending &&
-          other.deletedLocally == this.deletedLocally);
+          other.deletedLocally == this.deletedLocally &&
+          other.farmId == this.farmId);
 }
 
 class AnimalsCompanion extends UpdateCompanion<AnimalRow> {
@@ -2598,6 +2763,7 @@ class AnimalsCompanion extends UpdateCompanion<AnimalRow> {
   final Value<DateTime> updatedAt;
   final Value<bool> pending;
   final Value<bool> deletedLocally;
+  final Value<int> farmId;
   final Value<int> rowid;
   const AnimalsCompanion({
     this.clientUuid = const Value.absent(),
@@ -2613,6 +2779,7 @@ class AnimalsCompanion extends UpdateCompanion<AnimalRow> {
     this.updatedAt = const Value.absent(),
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AnimalsCompanion.insert({
@@ -2629,6 +2796,7 @@ class AnimalsCompanion extends UpdateCompanion<AnimalRow> {
     required DateTime updatedAt,
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientUuid = Value(clientUuid),
        userId = Value(userId),
@@ -2652,6 +2820,7 @@ class AnimalsCompanion extends UpdateCompanion<AnimalRow> {
     Expression<DateTime>? updatedAt,
     Expression<bool>? pending,
     Expression<bool>? deletedLocally,
+    Expression<int>? farmId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2668,6 +2837,7 @@ class AnimalsCompanion extends UpdateCompanion<AnimalRow> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (pending != null) 'pending': pending,
       if (deletedLocally != null) 'deleted_locally': deletedLocally,
+      if (farmId != null) 'farm_id': farmId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2686,6 +2856,7 @@ class AnimalsCompanion extends UpdateCompanion<AnimalRow> {
     Value<DateTime>? updatedAt,
     Value<bool>? pending,
     Value<bool>? deletedLocally,
+    Value<int>? farmId,
     Value<int>? rowid,
   }) {
     return AnimalsCompanion(
@@ -2702,6 +2873,7 @@ class AnimalsCompanion extends UpdateCompanion<AnimalRow> {
       updatedAt: updatedAt ?? this.updatedAt,
       pending: pending ?? this.pending,
       deletedLocally: deletedLocally ?? this.deletedLocally,
+      farmId: farmId ?? this.farmId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2748,6 +2920,9 @@ class AnimalsCompanion extends UpdateCompanion<AnimalRow> {
     if (deletedLocally.present) {
       map['deleted_locally'] = Variable<bool>(deletedLocally.value);
     }
+    if (farmId.present) {
+      map['farm_id'] = Variable<int>(farmId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2770,6 +2945,7 @@ class AnimalsCompanion extends UpdateCompanion<AnimalRow> {
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
           ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2916,6 +3092,16 @@ class $HarvestsTable extends Harvests
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _farmIdMeta = const VerificationMeta('farmId');
+  @override
+  late final GeneratedColumn<int> farmId = GeneratedColumn<int>(
+    'farm_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientUuid,
@@ -2930,6 +3116,7 @@ class $HarvestsTable extends Harvests
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3032,6 +3219,12 @@ class $HarvestsTable extends Harvests
         ),
       );
     }
+    if (data.containsKey('farm_id')) {
+      context.handle(
+        _farmIdMeta,
+        farmId.isAcceptableOrUnknown(data['farm_id']!, _farmIdMeta),
+      );
+    }
     return context;
   }
 
@@ -3089,6 +3282,10 @@ class $HarvestsTable extends Harvests
         DriftSqlType.bool,
         data['${effectivePrefix}deleted_locally'],
       )!,
+      farmId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}farm_id'],
+      )!,
     );
   }
 
@@ -3111,6 +3308,7 @@ class HarvestRow extends DataClass implements Insertable<HarvestRow> {
   final DateTime updatedAt;
   final bool pending;
   final bool deletedLocally;
+  final int farmId;
   const HarvestRow({
     required this.clientUuid,
     this.serverId,
@@ -3124,6 +3322,7 @@ class HarvestRow extends DataClass implements Insertable<HarvestRow> {
     required this.updatedAt,
     required this.pending,
     required this.deletedLocally,
+    required this.farmId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3146,6 +3345,7 @@ class HarvestRow extends DataClass implements Insertable<HarvestRow> {
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['pending'] = Variable<bool>(pending);
     map['deleted_locally'] = Variable<bool>(deletedLocally);
+    map['farm_id'] = Variable<int>(farmId);
     return map;
   }
 
@@ -3169,6 +3369,7 @@ class HarvestRow extends DataClass implements Insertable<HarvestRow> {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 
@@ -3190,6 +3391,7 @@ class HarvestRow extends DataClass implements Insertable<HarvestRow> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       pending: serializer.fromJson<bool>(json['pending']),
       deletedLocally: serializer.fromJson<bool>(json['deletedLocally']),
+      farmId: serializer.fromJson<int>(json['farmId']),
     );
   }
   @override
@@ -3208,6 +3410,7 @@ class HarvestRow extends DataClass implements Insertable<HarvestRow> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'pending': serializer.toJson<bool>(pending),
       'deletedLocally': serializer.toJson<bool>(deletedLocally),
+      'farmId': serializer.toJson<int>(farmId),
     };
   }
 
@@ -3224,6 +3427,7 @@ class HarvestRow extends DataClass implements Insertable<HarvestRow> {
     DateTime? updatedAt,
     bool? pending,
     bool? deletedLocally,
+    int? farmId,
   }) => HarvestRow(
     clientUuid: clientUuid ?? this.clientUuid,
     serverId: serverId.present ? serverId.value : this.serverId,
@@ -3237,6 +3441,7 @@ class HarvestRow extends DataClass implements Insertable<HarvestRow> {
     updatedAt: updatedAt ?? this.updatedAt,
     pending: pending ?? this.pending,
     deletedLocally: deletedLocally ?? this.deletedLocally,
+    farmId: farmId ?? this.farmId,
   );
   HarvestRow copyWithCompanion(HarvestsCompanion data) {
     return HarvestRow(
@@ -3256,6 +3461,7 @@ class HarvestRow extends DataClass implements Insertable<HarvestRow> {
       deletedLocally: data.deletedLocally.present
           ? data.deletedLocally.value
           : this.deletedLocally,
+      farmId: data.farmId.present ? data.farmId.value : this.farmId,
     );
   }
 
@@ -3273,7 +3479,8 @@ class HarvestRow extends DataClass implements Insertable<HarvestRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
-          ..write('deletedLocally: $deletedLocally')
+          ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId')
           ..write(')'))
         .toString();
   }
@@ -3292,6 +3499,7 @@ class HarvestRow extends DataClass implements Insertable<HarvestRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   );
   @override
   bool operator ==(Object other) =>
@@ -3308,7 +3516,8 @@ class HarvestRow extends DataClass implements Insertable<HarvestRow> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.pending == this.pending &&
-          other.deletedLocally == this.deletedLocally);
+          other.deletedLocally == this.deletedLocally &&
+          other.farmId == this.farmId);
 }
 
 class HarvestsCompanion extends UpdateCompanion<HarvestRow> {
@@ -3324,6 +3533,7 @@ class HarvestsCompanion extends UpdateCompanion<HarvestRow> {
   final Value<DateTime> updatedAt;
   final Value<bool> pending;
   final Value<bool> deletedLocally;
+  final Value<int> farmId;
   final Value<int> rowid;
   const HarvestsCompanion({
     this.clientUuid = const Value.absent(),
@@ -3338,6 +3548,7 @@ class HarvestsCompanion extends UpdateCompanion<HarvestRow> {
     this.updatedAt = const Value.absent(),
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   HarvestsCompanion.insert({
@@ -3353,6 +3564,7 @@ class HarvestsCompanion extends UpdateCompanion<HarvestRow> {
     required DateTime updatedAt,
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientUuid = Value(clientUuid),
        seasonId = Value(seasonId),
@@ -3374,6 +3586,7 @@ class HarvestsCompanion extends UpdateCompanion<HarvestRow> {
     Expression<DateTime>? updatedAt,
     Expression<bool>? pending,
     Expression<bool>? deletedLocally,
+    Expression<int>? farmId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3389,6 +3602,7 @@ class HarvestsCompanion extends UpdateCompanion<HarvestRow> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (pending != null) 'pending': pending,
       if (deletedLocally != null) 'deleted_locally': deletedLocally,
+      if (farmId != null) 'farm_id': farmId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3406,6 +3620,7 @@ class HarvestsCompanion extends UpdateCompanion<HarvestRow> {
     Value<DateTime>? updatedAt,
     Value<bool>? pending,
     Value<bool>? deletedLocally,
+    Value<int>? farmId,
     Value<int>? rowid,
   }) {
     return HarvestsCompanion(
@@ -3421,6 +3636,7 @@ class HarvestsCompanion extends UpdateCompanion<HarvestRow> {
       updatedAt: updatedAt ?? this.updatedAt,
       pending: pending ?? this.pending,
       deletedLocally: deletedLocally ?? this.deletedLocally,
+      farmId: farmId ?? this.farmId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3464,6 +3680,9 @@ class HarvestsCompanion extends UpdateCompanion<HarvestRow> {
     if (deletedLocally.present) {
       map['deleted_locally'] = Variable<bool>(deletedLocally.value);
     }
+    if (farmId.present) {
+      map['farm_id'] = Variable<int>(farmId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3485,6 +3704,7 @@ class HarvestsCompanion extends UpdateCompanion<HarvestRow> {
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
           ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3650,6 +3870,16 @@ class $InputsTable extends Inputs with TableInfo<$InputsTable, InputRow> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _farmIdMeta = const VerificationMeta('farmId');
+  @override
+  late final GeneratedColumn<int> farmId = GeneratedColumn<int>(
+    'farm_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientUuid,
@@ -3666,6 +3896,7 @@ class $InputsTable extends Inputs with TableInfo<$InputsTable, InputRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3782,6 +4013,12 @@ class $InputsTable extends Inputs with TableInfo<$InputsTable, InputRow> {
         ),
       );
     }
+    if (data.containsKey('farm_id')) {
+      context.handle(
+        _farmIdMeta,
+        farmId.isAcceptableOrUnknown(data['farm_id']!, _farmIdMeta),
+      );
+    }
     return context;
   }
 
@@ -3847,6 +4084,10 @@ class $InputsTable extends Inputs with TableInfo<$InputsTable, InputRow> {
         DriftSqlType.bool,
         data['${effectivePrefix}deleted_locally'],
       )!,
+      farmId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}farm_id'],
+      )!,
     );
   }
 
@@ -3871,6 +4112,7 @@ class InputRow extends DataClass implements Insertable<InputRow> {
   final DateTime updatedAt;
   final bool pending;
   final bool deletedLocally;
+  final int farmId;
   const InputRow({
     required this.clientUuid,
     this.serverId,
@@ -3886,6 +4128,7 @@ class InputRow extends DataClass implements Insertable<InputRow> {
     required this.updatedAt,
     required this.pending,
     required this.deletedLocally,
+    required this.farmId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3912,6 +4155,7 @@ class InputRow extends DataClass implements Insertable<InputRow> {
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['pending'] = Variable<bool>(pending);
     map['deleted_locally'] = Variable<bool>(deletedLocally);
+    map['farm_id'] = Variable<int>(farmId);
     return map;
   }
 
@@ -3939,6 +4183,7 @@ class InputRow extends DataClass implements Insertable<InputRow> {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 
@@ -3962,6 +4207,7 @@ class InputRow extends DataClass implements Insertable<InputRow> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       pending: serializer.fromJson<bool>(json['pending']),
       deletedLocally: serializer.fromJson<bool>(json['deletedLocally']),
+      farmId: serializer.fromJson<int>(json['farmId']),
     );
   }
   @override
@@ -3982,6 +4228,7 @@ class InputRow extends DataClass implements Insertable<InputRow> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'pending': serializer.toJson<bool>(pending),
       'deletedLocally': serializer.toJson<bool>(deletedLocally),
+      'farmId': serializer.toJson<int>(farmId),
     };
   }
 
@@ -4000,6 +4247,7 @@ class InputRow extends DataClass implements Insertable<InputRow> {
     DateTime? updatedAt,
     bool? pending,
     bool? deletedLocally,
+    int? farmId,
   }) => InputRow(
     clientUuid: clientUuid ?? this.clientUuid,
     serverId: serverId.present ? serverId.value : this.serverId,
@@ -4015,6 +4263,7 @@ class InputRow extends DataClass implements Insertable<InputRow> {
     updatedAt: updatedAt ?? this.updatedAt,
     pending: pending ?? this.pending,
     deletedLocally: deletedLocally ?? this.deletedLocally,
+    farmId: farmId ?? this.farmId,
   );
   InputRow copyWithCompanion(InputsCompanion data) {
     return InputRow(
@@ -4038,6 +4287,7 @@ class InputRow extends DataClass implements Insertable<InputRow> {
       deletedLocally: data.deletedLocally.present
           ? data.deletedLocally.value
           : this.deletedLocally,
+      farmId: data.farmId.present ? data.farmId.value : this.farmId,
     );
   }
 
@@ -4057,7 +4307,8 @@ class InputRow extends DataClass implements Insertable<InputRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
-          ..write('deletedLocally: $deletedLocally')
+          ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId')
           ..write(')'))
         .toString();
   }
@@ -4078,6 +4329,7 @@ class InputRow extends DataClass implements Insertable<InputRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   );
   @override
   bool operator ==(Object other) =>
@@ -4096,7 +4348,8 @@ class InputRow extends DataClass implements Insertable<InputRow> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.pending == this.pending &&
-          other.deletedLocally == this.deletedLocally);
+          other.deletedLocally == this.deletedLocally &&
+          other.farmId == this.farmId);
 }
 
 class InputsCompanion extends UpdateCompanion<InputRow> {
@@ -4114,6 +4367,7 @@ class InputsCompanion extends UpdateCompanion<InputRow> {
   final Value<DateTime> updatedAt;
   final Value<bool> pending;
   final Value<bool> deletedLocally;
+  final Value<int> farmId;
   final Value<int> rowid;
   const InputsCompanion({
     this.clientUuid = const Value.absent(),
@@ -4130,6 +4384,7 @@ class InputsCompanion extends UpdateCompanion<InputRow> {
     this.updatedAt = const Value.absent(),
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   InputsCompanion.insert({
@@ -4147,6 +4402,7 @@ class InputsCompanion extends UpdateCompanion<InputRow> {
     required DateTime updatedAt,
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientUuid = Value(clientUuid),
        sourceType = Value(sourceType),
@@ -4171,6 +4427,7 @@ class InputsCompanion extends UpdateCompanion<InputRow> {
     Expression<DateTime>? updatedAt,
     Expression<bool>? pending,
     Expression<bool>? deletedLocally,
+    Expression<int>? farmId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4188,6 +4445,7 @@ class InputsCompanion extends UpdateCompanion<InputRow> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (pending != null) 'pending': pending,
       if (deletedLocally != null) 'deleted_locally': deletedLocally,
+      if (farmId != null) 'farm_id': farmId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4207,6 +4465,7 @@ class InputsCompanion extends UpdateCompanion<InputRow> {
     Value<DateTime>? updatedAt,
     Value<bool>? pending,
     Value<bool>? deletedLocally,
+    Value<int>? farmId,
     Value<int>? rowid,
   }) {
     return InputsCompanion(
@@ -4224,6 +4483,7 @@ class InputsCompanion extends UpdateCompanion<InputRow> {
       updatedAt: updatedAt ?? this.updatedAt,
       pending: pending ?? this.pending,
       deletedLocally: deletedLocally ?? this.deletedLocally,
+      farmId: farmId ?? this.farmId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4273,6 +4533,9 @@ class InputsCompanion extends UpdateCompanion<InputRow> {
     if (deletedLocally.present) {
       map['deleted_locally'] = Variable<bool>(deletedLocally.value);
     }
+    if (farmId.present) {
+      map['farm_id'] = Variable<int>(farmId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4296,6 +4559,7 @@ class InputsCompanion extends UpdateCompanion<InputRow> {
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
           ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4462,6 +4726,16 @@ class $ActivitiesTable extends Activities
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _farmIdMeta = const VerificationMeta('farmId');
+  @override
+  late final GeneratedColumn<int> farmId = GeneratedColumn<int>(
+    'farm_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientUuid,
@@ -4478,6 +4752,7 @@ class $ActivitiesTable extends Activities
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4594,6 +4869,12 @@ class $ActivitiesTable extends Activities
         ),
       );
     }
+    if (data.containsKey('farm_id')) {
+      context.handle(
+        _farmIdMeta,
+        farmId.isAcceptableOrUnknown(data['farm_id']!, _farmIdMeta),
+      );
+    }
     return context;
   }
 
@@ -4659,6 +4940,10 @@ class $ActivitiesTable extends Activities
         DriftSqlType.bool,
         data['${effectivePrefix}deleted_locally'],
       )!,
+      farmId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}farm_id'],
+      )!,
     );
   }
 
@@ -4683,6 +4968,7 @@ class ActivityRow extends DataClass implements Insertable<ActivityRow> {
   final DateTime updatedAt;
   final bool pending;
   final bool deletedLocally;
+  final int farmId;
   const ActivityRow({
     required this.clientUuid,
     this.serverId,
@@ -4698,6 +4984,7 @@ class ActivityRow extends DataClass implements Insertable<ActivityRow> {
     required this.updatedAt,
     required this.pending,
     required this.deletedLocally,
+    required this.farmId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4724,6 +5011,7 @@ class ActivityRow extends DataClass implements Insertable<ActivityRow> {
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['pending'] = Variable<bool>(pending);
     map['deleted_locally'] = Variable<bool>(deletedLocally);
+    map['farm_id'] = Variable<int>(farmId);
     return map;
   }
 
@@ -4751,6 +5039,7 @@ class ActivityRow extends DataClass implements Insertable<ActivityRow> {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 
@@ -4774,6 +5063,7 @@ class ActivityRow extends DataClass implements Insertable<ActivityRow> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       pending: serializer.fromJson<bool>(json['pending']),
       deletedLocally: serializer.fromJson<bool>(json['deletedLocally']),
+      farmId: serializer.fromJson<int>(json['farmId']),
     );
   }
   @override
@@ -4794,6 +5084,7 @@ class ActivityRow extends DataClass implements Insertable<ActivityRow> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'pending': serializer.toJson<bool>(pending),
       'deletedLocally': serializer.toJson<bool>(deletedLocally),
+      'farmId': serializer.toJson<int>(farmId),
     };
   }
 
@@ -4812,6 +5103,7 @@ class ActivityRow extends DataClass implements Insertable<ActivityRow> {
     DateTime? updatedAt,
     bool? pending,
     bool? deletedLocally,
+    int? farmId,
   }) => ActivityRow(
     clientUuid: clientUuid ?? this.clientUuid,
     serverId: serverId.present ? serverId.value : this.serverId,
@@ -4827,6 +5119,7 @@ class ActivityRow extends DataClass implements Insertable<ActivityRow> {
     updatedAt: updatedAt ?? this.updatedAt,
     pending: pending ?? this.pending,
     deletedLocally: deletedLocally ?? this.deletedLocally,
+    farmId: farmId ?? this.farmId,
   );
   ActivityRow copyWithCompanion(ActivitiesCompanion data) {
     return ActivityRow(
@@ -4850,6 +5143,7 @@ class ActivityRow extends DataClass implements Insertable<ActivityRow> {
       deletedLocally: data.deletedLocally.present
           ? data.deletedLocally.value
           : this.deletedLocally,
+      farmId: data.farmId.present ? data.farmId.value : this.farmId,
     );
   }
 
@@ -4869,7 +5163,8 @@ class ActivityRow extends DataClass implements Insertable<ActivityRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
-          ..write('deletedLocally: $deletedLocally')
+          ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId')
           ..write(')'))
         .toString();
   }
@@ -4890,6 +5185,7 @@ class ActivityRow extends DataClass implements Insertable<ActivityRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   );
   @override
   bool operator ==(Object other) =>
@@ -4908,7 +5204,8 @@ class ActivityRow extends DataClass implements Insertable<ActivityRow> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.pending == this.pending &&
-          other.deletedLocally == this.deletedLocally);
+          other.deletedLocally == this.deletedLocally &&
+          other.farmId == this.farmId);
 }
 
 class ActivitiesCompanion extends UpdateCompanion<ActivityRow> {
@@ -4926,6 +5223,7 @@ class ActivitiesCompanion extends UpdateCompanion<ActivityRow> {
   final Value<DateTime> updatedAt;
   final Value<bool> pending;
   final Value<bool> deletedLocally;
+  final Value<int> farmId;
   final Value<int> rowid;
   const ActivitiesCompanion({
     this.clientUuid = const Value.absent(),
@@ -4942,6 +5240,7 @@ class ActivitiesCompanion extends UpdateCompanion<ActivityRow> {
     this.updatedAt = const Value.absent(),
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ActivitiesCompanion.insert({
@@ -4959,6 +5258,7 @@ class ActivitiesCompanion extends UpdateCompanion<ActivityRow> {
     required DateTime updatedAt,
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientUuid = Value(clientUuid),
        sourceType = Value(sourceType),
@@ -4983,6 +5283,7 @@ class ActivitiesCompanion extends UpdateCompanion<ActivityRow> {
     Expression<DateTime>? updatedAt,
     Expression<bool>? pending,
     Expression<bool>? deletedLocally,
+    Expression<int>? farmId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -5000,6 +5301,7 @@ class ActivitiesCompanion extends UpdateCompanion<ActivityRow> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (pending != null) 'pending': pending,
       if (deletedLocally != null) 'deleted_locally': deletedLocally,
+      if (farmId != null) 'farm_id': farmId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -5019,6 +5321,7 @@ class ActivitiesCompanion extends UpdateCompanion<ActivityRow> {
     Value<DateTime>? updatedAt,
     Value<bool>? pending,
     Value<bool>? deletedLocally,
+    Value<int>? farmId,
     Value<int>? rowid,
   }) {
     return ActivitiesCompanion(
@@ -5036,6 +5339,7 @@ class ActivitiesCompanion extends UpdateCompanion<ActivityRow> {
       updatedAt: updatedAt ?? this.updatedAt,
       pending: pending ?? this.pending,
       deletedLocally: deletedLocally ?? this.deletedLocally,
+      farmId: farmId ?? this.farmId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -5085,6 +5389,9 @@ class ActivitiesCompanion extends UpdateCompanion<ActivityRow> {
     if (deletedLocally.present) {
       map['deleted_locally'] = Variable<bool>(deletedLocally.value);
     }
+    if (farmId.present) {
+      map['farm_id'] = Variable<int>(farmId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -5108,6 +5415,7 @@ class ActivitiesCompanion extends UpdateCompanion<ActivityRow> {
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
           ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5221,6 +5529,16 @@ class $AnimalTypesTable extends AnimalTypes
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _farmIdMeta = const VerificationMeta('farmId');
+  @override
+  late final GeneratedColumn<int> farmId = GeneratedColumn<int>(
+    'farm_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientUuid,
@@ -5232,6 +5550,7 @@ class $AnimalTypesTable extends AnimalTypes
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5312,6 +5631,12 @@ class $AnimalTypesTable extends AnimalTypes
         ),
       );
     }
+    if (data.containsKey('farm_id')) {
+      context.handle(
+        _farmIdMeta,
+        farmId.isAcceptableOrUnknown(data['farm_id']!, _farmIdMeta),
+      );
+    }
     return context;
   }
 
@@ -5357,6 +5682,10 @@ class $AnimalTypesTable extends AnimalTypes
         DriftSqlType.bool,
         data['${effectivePrefix}deleted_locally'],
       )!,
+      farmId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}farm_id'],
+      )!,
     );
   }
 
@@ -5376,6 +5705,7 @@ class AnimalTypeRow extends DataClass implements Insertable<AnimalTypeRow> {
   final DateTime updatedAt;
   final bool pending;
   final bool deletedLocally;
+  final int farmId;
   const AnimalTypeRow({
     required this.clientUuid,
     this.serverId,
@@ -5386,6 +5716,7 @@ class AnimalTypeRow extends DataClass implements Insertable<AnimalTypeRow> {
     required this.updatedAt,
     required this.pending,
     required this.deletedLocally,
+    required this.farmId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5403,6 +5734,7 @@ class AnimalTypeRow extends DataClass implements Insertable<AnimalTypeRow> {
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['pending'] = Variable<bool>(pending);
     map['deleted_locally'] = Variable<bool>(deletedLocally);
+    map['farm_id'] = Variable<int>(farmId);
     return map;
   }
 
@@ -5421,6 +5753,7 @@ class AnimalTypeRow extends DataClass implements Insertable<AnimalTypeRow> {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 
@@ -5439,6 +5772,7 @@ class AnimalTypeRow extends DataClass implements Insertable<AnimalTypeRow> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       pending: serializer.fromJson<bool>(json['pending']),
       deletedLocally: serializer.fromJson<bool>(json['deletedLocally']),
+      farmId: serializer.fromJson<int>(json['farmId']),
     );
   }
   @override
@@ -5454,6 +5788,7 @@ class AnimalTypeRow extends DataClass implements Insertable<AnimalTypeRow> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'pending': serializer.toJson<bool>(pending),
       'deletedLocally': serializer.toJson<bool>(deletedLocally),
+      'farmId': serializer.toJson<int>(farmId),
     };
   }
 
@@ -5467,6 +5802,7 @@ class AnimalTypeRow extends DataClass implements Insertable<AnimalTypeRow> {
     DateTime? updatedAt,
     bool? pending,
     bool? deletedLocally,
+    int? farmId,
   }) => AnimalTypeRow(
     clientUuid: clientUuid ?? this.clientUuid,
     serverId: serverId.present ? serverId.value : this.serverId,
@@ -5477,6 +5813,7 @@ class AnimalTypeRow extends DataClass implements Insertable<AnimalTypeRow> {
     updatedAt: updatedAt ?? this.updatedAt,
     pending: pending ?? this.pending,
     deletedLocally: deletedLocally ?? this.deletedLocally,
+    farmId: farmId ?? this.farmId,
   );
   AnimalTypeRow copyWithCompanion(AnimalTypesCompanion data) {
     return AnimalTypeRow(
@@ -5493,6 +5830,7 @@ class AnimalTypeRow extends DataClass implements Insertable<AnimalTypeRow> {
       deletedLocally: data.deletedLocally.present
           ? data.deletedLocally.value
           : this.deletedLocally,
+      farmId: data.farmId.present ? data.farmId.value : this.farmId,
     );
   }
 
@@ -5507,7 +5845,8 @@ class AnimalTypeRow extends DataClass implements Insertable<AnimalTypeRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
-          ..write('deletedLocally: $deletedLocally')
+          ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId')
           ..write(')'))
         .toString();
   }
@@ -5523,6 +5862,7 @@ class AnimalTypeRow extends DataClass implements Insertable<AnimalTypeRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   );
   @override
   bool operator ==(Object other) =>
@@ -5536,7 +5876,8 @@ class AnimalTypeRow extends DataClass implements Insertable<AnimalTypeRow> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.pending == this.pending &&
-          other.deletedLocally == this.deletedLocally);
+          other.deletedLocally == this.deletedLocally &&
+          other.farmId == this.farmId);
 }
 
 class AnimalTypesCompanion extends UpdateCompanion<AnimalTypeRow> {
@@ -5549,6 +5890,7 @@ class AnimalTypesCompanion extends UpdateCompanion<AnimalTypeRow> {
   final Value<DateTime> updatedAt;
   final Value<bool> pending;
   final Value<bool> deletedLocally;
+  final Value<int> farmId;
   final Value<int> rowid;
   const AnimalTypesCompanion({
     this.clientUuid = const Value.absent(),
@@ -5560,6 +5902,7 @@ class AnimalTypesCompanion extends UpdateCompanion<AnimalTypeRow> {
     this.updatedAt = const Value.absent(),
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AnimalTypesCompanion.insert({
@@ -5572,6 +5915,7 @@ class AnimalTypesCompanion extends UpdateCompanion<AnimalTypeRow> {
     required DateTime updatedAt,
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientUuid = Value(clientUuid),
        userId = Value(userId),
@@ -5588,6 +5932,7 @@ class AnimalTypesCompanion extends UpdateCompanion<AnimalTypeRow> {
     Expression<DateTime>? updatedAt,
     Expression<bool>? pending,
     Expression<bool>? deletedLocally,
+    Expression<int>? farmId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -5600,6 +5945,7 @@ class AnimalTypesCompanion extends UpdateCompanion<AnimalTypeRow> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (pending != null) 'pending': pending,
       if (deletedLocally != null) 'deleted_locally': deletedLocally,
+      if (farmId != null) 'farm_id': farmId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -5614,6 +5960,7 @@ class AnimalTypesCompanion extends UpdateCompanion<AnimalTypeRow> {
     Value<DateTime>? updatedAt,
     Value<bool>? pending,
     Value<bool>? deletedLocally,
+    Value<int>? farmId,
     Value<int>? rowid,
   }) {
     return AnimalTypesCompanion(
@@ -5626,6 +5973,7 @@ class AnimalTypesCompanion extends UpdateCompanion<AnimalTypeRow> {
       updatedAt: updatedAt ?? this.updatedAt,
       pending: pending ?? this.pending,
       deletedLocally: deletedLocally ?? this.deletedLocally,
+      farmId: farmId ?? this.farmId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -5660,6 +6008,9 @@ class AnimalTypesCompanion extends UpdateCompanion<AnimalTypeRow> {
     if (deletedLocally.present) {
       map['deleted_locally'] = Variable<bool>(deletedLocally.value);
     }
+    if (farmId.present) {
+      map['farm_id'] = Variable<int>(farmId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -5678,6 +6029,7 @@ class AnimalTypesCompanion extends UpdateCompanion<AnimalTypeRow> {
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
           ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5847,6 +6199,16 @@ class $HerdsTable extends Herds with TableInfo<$HerdsTable, HerdRow> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _farmIdMeta = const VerificationMeta('farmId');
+  @override
+  late final GeneratedColumn<int> farmId = GeneratedColumn<int>(
+    'farm_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientUuid,
@@ -5863,6 +6225,7 @@ class $HerdsTable extends Herds with TableInfo<$HerdsTable, HerdRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5992,6 +6355,12 @@ class $HerdsTable extends Herds with TableInfo<$HerdsTable, HerdRow> {
         ),
       );
     }
+    if (data.containsKey('farm_id')) {
+      context.handle(
+        _farmIdMeta,
+        farmId.isAcceptableOrUnknown(data['farm_id']!, _farmIdMeta),
+      );
+    }
     return context;
   }
 
@@ -6057,6 +6426,10 @@ class $HerdsTable extends Herds with TableInfo<$HerdsTable, HerdRow> {
         DriftSqlType.bool,
         data['${effectivePrefix}deleted_locally'],
       )!,
+      farmId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}farm_id'],
+      )!,
     );
   }
 
@@ -6081,6 +6454,7 @@ class HerdRow extends DataClass implements Insertable<HerdRow> {
   final DateTime updatedAt;
   final bool pending;
   final bool deletedLocally;
+  final int farmId;
   const HerdRow({
     required this.clientUuid,
     this.serverId,
@@ -6096,6 +6470,7 @@ class HerdRow extends DataClass implements Insertable<HerdRow> {
     required this.updatedAt,
     required this.pending,
     required this.deletedLocally,
+    required this.farmId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -6118,6 +6493,7 @@ class HerdRow extends DataClass implements Insertable<HerdRow> {
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['pending'] = Variable<bool>(pending);
     map['deleted_locally'] = Variable<bool>(deletedLocally);
+    map['farm_id'] = Variable<int>(farmId);
     return map;
   }
 
@@ -6141,6 +6517,7 @@ class HerdRow extends DataClass implements Insertable<HerdRow> {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 
@@ -6164,6 +6541,7 @@ class HerdRow extends DataClass implements Insertable<HerdRow> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       pending: serializer.fromJson<bool>(json['pending']),
       deletedLocally: serializer.fromJson<bool>(json['deletedLocally']),
+      farmId: serializer.fromJson<int>(json['farmId']),
     );
   }
   @override
@@ -6184,6 +6562,7 @@ class HerdRow extends DataClass implements Insertable<HerdRow> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'pending': serializer.toJson<bool>(pending),
       'deletedLocally': serializer.toJson<bool>(deletedLocally),
+      'farmId': serializer.toJson<int>(farmId),
     };
   }
 
@@ -6202,6 +6581,7 @@ class HerdRow extends DataClass implements Insertable<HerdRow> {
     DateTime? updatedAt,
     bool? pending,
     bool? deletedLocally,
+    int? farmId,
   }) => HerdRow(
     clientUuid: clientUuid ?? this.clientUuid,
     serverId: serverId.present ? serverId.value : this.serverId,
@@ -6217,6 +6597,7 @@ class HerdRow extends DataClass implements Insertable<HerdRow> {
     updatedAt: updatedAt ?? this.updatedAt,
     pending: pending ?? this.pending,
     deletedLocally: deletedLocally ?? this.deletedLocally,
+    farmId: farmId ?? this.farmId,
   );
   HerdRow copyWithCompanion(HerdsCompanion data) {
     return HerdRow(
@@ -6244,6 +6625,7 @@ class HerdRow extends DataClass implements Insertable<HerdRow> {
       deletedLocally: data.deletedLocally.present
           ? data.deletedLocally.value
           : this.deletedLocally,
+      farmId: data.farmId.present ? data.farmId.value : this.farmId,
     );
   }
 
@@ -6263,7 +6645,8 @@ class HerdRow extends DataClass implements Insertable<HerdRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
-          ..write('deletedLocally: $deletedLocally')
+          ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId')
           ..write(')'))
         .toString();
   }
@@ -6284,6 +6667,7 @@ class HerdRow extends DataClass implements Insertable<HerdRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   );
   @override
   bool operator ==(Object other) =>
@@ -6302,7 +6686,8 @@ class HerdRow extends DataClass implements Insertable<HerdRow> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.pending == this.pending &&
-          other.deletedLocally == this.deletedLocally);
+          other.deletedLocally == this.deletedLocally &&
+          other.farmId == this.farmId);
 }
 
 class HerdsCompanion extends UpdateCompanion<HerdRow> {
@@ -6320,6 +6705,7 @@ class HerdsCompanion extends UpdateCompanion<HerdRow> {
   final Value<DateTime> updatedAt;
   final Value<bool> pending;
   final Value<bool> deletedLocally;
+  final Value<int> farmId;
   final Value<int> rowid;
   const HerdsCompanion({
     this.clientUuid = const Value.absent(),
@@ -6336,6 +6722,7 @@ class HerdsCompanion extends UpdateCompanion<HerdRow> {
     this.updatedAt = const Value.absent(),
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   HerdsCompanion.insert({
@@ -6353,6 +6740,7 @@ class HerdsCompanion extends UpdateCompanion<HerdRow> {
     required DateTime updatedAt,
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientUuid = Value(clientUuid),
        userId = Value(userId),
@@ -6379,6 +6767,7 @@ class HerdsCompanion extends UpdateCompanion<HerdRow> {
     Expression<DateTime>? updatedAt,
     Expression<bool>? pending,
     Expression<bool>? deletedLocally,
+    Expression<int>? farmId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -6396,6 +6785,7 @@ class HerdsCompanion extends UpdateCompanion<HerdRow> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (pending != null) 'pending': pending,
       if (deletedLocally != null) 'deleted_locally': deletedLocally,
+      if (farmId != null) 'farm_id': farmId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -6415,6 +6805,7 @@ class HerdsCompanion extends UpdateCompanion<HerdRow> {
     Value<DateTime>? updatedAt,
     Value<bool>? pending,
     Value<bool>? deletedLocally,
+    Value<int>? farmId,
     Value<int>? rowid,
   }) {
     return HerdsCompanion(
@@ -6432,6 +6823,7 @@ class HerdsCompanion extends UpdateCompanion<HerdRow> {
       updatedAt: updatedAt ?? this.updatedAt,
       pending: pending ?? this.pending,
       deletedLocally: deletedLocally ?? this.deletedLocally,
+      farmId: farmId ?? this.farmId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -6481,6 +6873,9 @@ class HerdsCompanion extends UpdateCompanion<HerdRow> {
     if (deletedLocally.present) {
       map['deleted_locally'] = Variable<bool>(deletedLocally.value);
     }
+    if (farmId.present) {
+      map['farm_id'] = Variable<int>(farmId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -6504,6 +6899,7 @@ class HerdsCompanion extends UpdateCompanion<HerdRow> {
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
           ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6655,6 +7051,16 @@ class $InfrastructuresTable extends Infrastructures
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _farmIdMeta = const VerificationMeta('farmId');
+  @override
+  late final GeneratedColumn<int> farmId = GeneratedColumn<int>(
+    'farm_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientUuid,
@@ -6670,6 +7076,7 @@ class $InfrastructuresTable extends Infrastructures
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -6784,6 +7191,12 @@ class $InfrastructuresTable extends Infrastructures
         ),
       );
     }
+    if (data.containsKey('farm_id')) {
+      context.handle(
+        _farmIdMeta,
+        farmId.isAcceptableOrUnknown(data['farm_id']!, _farmIdMeta),
+      );
+    }
     return context;
   }
 
@@ -6845,6 +7258,10 @@ class $InfrastructuresTable extends Infrastructures
         DriftSqlType.bool,
         data['${effectivePrefix}deleted_locally'],
       )!,
+      farmId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}farm_id'],
+      )!,
     );
   }
 
@@ -6869,6 +7286,7 @@ class InfrastructureRow extends DataClass
   final DateTime updatedAt;
   final bool pending;
   final bool deletedLocally;
+  final int farmId;
   const InfrastructureRow({
     required this.clientUuid,
     this.serverId,
@@ -6883,6 +7301,7 @@ class InfrastructureRow extends DataClass
     required this.updatedAt,
     required this.pending,
     required this.deletedLocally,
+    required this.farmId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -6902,6 +7321,7 @@ class InfrastructureRow extends DataClass
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['pending'] = Variable<bool>(pending);
     map['deleted_locally'] = Variable<bool>(deletedLocally);
+    map['farm_id'] = Variable<int>(farmId);
     return map;
   }
 
@@ -6922,6 +7342,7 @@ class InfrastructureRow extends DataClass
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 
@@ -6944,6 +7365,7 @@ class InfrastructureRow extends DataClass
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       pending: serializer.fromJson<bool>(json['pending']),
       deletedLocally: serializer.fromJson<bool>(json['deletedLocally']),
+      farmId: serializer.fromJson<int>(json['farmId']),
     );
   }
   @override
@@ -6963,6 +7385,7 @@ class InfrastructureRow extends DataClass
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'pending': serializer.toJson<bool>(pending),
       'deletedLocally': serializer.toJson<bool>(deletedLocally),
+      'farmId': serializer.toJson<int>(farmId),
     };
   }
 
@@ -6980,6 +7403,7 @@ class InfrastructureRow extends DataClass
     DateTime? updatedAt,
     bool? pending,
     bool? deletedLocally,
+    int? farmId,
   }) => InfrastructureRow(
     clientUuid: clientUuid ?? this.clientUuid,
     serverId: serverId.present ? serverId.value : this.serverId,
@@ -6994,6 +7418,7 @@ class InfrastructureRow extends DataClass
     updatedAt: updatedAt ?? this.updatedAt,
     pending: pending ?? this.pending,
     deletedLocally: deletedLocally ?? this.deletedLocally,
+    farmId: farmId ?? this.farmId,
   );
   InfrastructureRow copyWithCompanion(InfrastructuresCompanion data) {
     return InfrastructureRow(
@@ -7014,6 +7439,7 @@ class InfrastructureRow extends DataClass
       deletedLocally: data.deletedLocally.present
           ? data.deletedLocally.value
           : this.deletedLocally,
+      farmId: data.farmId.present ? data.farmId.value : this.farmId,
     );
   }
 
@@ -7032,7 +7458,8 @@ class InfrastructureRow extends DataClass
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
-          ..write('deletedLocally: $deletedLocally')
+          ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId')
           ..write(')'))
         .toString();
   }
@@ -7052,6 +7479,7 @@ class InfrastructureRow extends DataClass
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   );
   @override
   bool operator ==(Object other) =>
@@ -7069,7 +7497,8 @@ class InfrastructureRow extends DataClass
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.pending == this.pending &&
-          other.deletedLocally == this.deletedLocally);
+          other.deletedLocally == this.deletedLocally &&
+          other.farmId == this.farmId);
 }
 
 class InfrastructuresCompanion extends UpdateCompanion<InfrastructureRow> {
@@ -7086,6 +7515,7 @@ class InfrastructuresCompanion extends UpdateCompanion<InfrastructureRow> {
   final Value<DateTime> updatedAt;
   final Value<bool> pending;
   final Value<bool> deletedLocally;
+  final Value<int> farmId;
   final Value<int> rowid;
   const InfrastructuresCompanion({
     this.clientUuid = const Value.absent(),
@@ -7101,6 +7531,7 @@ class InfrastructuresCompanion extends UpdateCompanion<InfrastructureRow> {
     this.updatedAt = const Value.absent(),
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   InfrastructuresCompanion.insert({
@@ -7117,6 +7548,7 @@ class InfrastructuresCompanion extends UpdateCompanion<InfrastructureRow> {
     required DateTime updatedAt,
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientUuid = Value(clientUuid),
        userId = Value(userId),
@@ -7142,6 +7574,7 @@ class InfrastructuresCompanion extends UpdateCompanion<InfrastructureRow> {
     Expression<DateTime>? updatedAt,
     Expression<bool>? pending,
     Expression<bool>? deletedLocally,
+    Expression<int>? farmId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -7158,6 +7591,7 @@ class InfrastructuresCompanion extends UpdateCompanion<InfrastructureRow> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (pending != null) 'pending': pending,
       if (deletedLocally != null) 'deleted_locally': deletedLocally,
+      if (farmId != null) 'farm_id': farmId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -7176,6 +7610,7 @@ class InfrastructuresCompanion extends UpdateCompanion<InfrastructureRow> {
     Value<DateTime>? updatedAt,
     Value<bool>? pending,
     Value<bool>? deletedLocally,
+    Value<int>? farmId,
     Value<int>? rowid,
   }) {
     return InfrastructuresCompanion(
@@ -7192,6 +7627,7 @@ class InfrastructuresCompanion extends UpdateCompanion<InfrastructureRow> {
       updatedAt: updatedAt ?? this.updatedAt,
       pending: pending ?? this.pending,
       deletedLocally: deletedLocally ?? this.deletedLocally,
+      farmId: farmId ?? this.farmId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -7238,6 +7674,9 @@ class InfrastructuresCompanion extends UpdateCompanion<InfrastructureRow> {
     if (deletedLocally.present) {
       map['deleted_locally'] = Variable<bool>(deletedLocally.value);
     }
+    if (farmId.present) {
+      map['farm_id'] = Variable<int>(farmId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -7260,6 +7699,7 @@ class InfrastructuresCompanion extends UpdateCompanion<InfrastructureRow> {
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
           ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7433,6 +7873,16 @@ class $RevenuesTable extends Revenues
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _farmIdMeta = const VerificationMeta('farmId');
+  @override
+  late final GeneratedColumn<int> farmId = GeneratedColumn<int>(
+    'farm_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientUuid,
@@ -7450,6 +7900,7 @@ class $RevenuesTable extends Revenues
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -7578,6 +8029,12 @@ class $RevenuesTable extends Revenues
         ),
       );
     }
+    if (data.containsKey('farm_id')) {
+      context.handle(
+        _farmIdMeta,
+        farmId.isAcceptableOrUnknown(data['farm_id']!, _farmIdMeta),
+      );
+    }
     return context;
   }
 
@@ -7647,6 +8104,10 @@ class $RevenuesTable extends Revenues
         DriftSqlType.bool,
         data['${effectivePrefix}deleted_locally'],
       )!,
+      farmId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}farm_id'],
+      )!,
     );
   }
 
@@ -7672,6 +8133,7 @@ class RevenueRow extends DataClass implements Insertable<RevenueRow> {
   final DateTime updatedAt;
   final bool pending;
   final bool deletedLocally;
+  final int farmId;
   const RevenueRow({
     required this.clientUuid,
     this.serverId,
@@ -7688,6 +8150,7 @@ class RevenueRow extends DataClass implements Insertable<RevenueRow> {
     required this.updatedAt,
     required this.pending,
     required this.deletedLocally,
+    required this.farmId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -7711,6 +8174,7 @@ class RevenueRow extends DataClass implements Insertable<RevenueRow> {
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['pending'] = Variable<bool>(pending);
     map['deleted_locally'] = Variable<bool>(deletedLocally);
+    map['farm_id'] = Variable<int>(farmId);
     return map;
   }
 
@@ -7735,6 +8199,7 @@ class RevenueRow extends DataClass implements Insertable<RevenueRow> {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 
@@ -7759,6 +8224,7 @@ class RevenueRow extends DataClass implements Insertable<RevenueRow> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       pending: serializer.fromJson<bool>(json['pending']),
       deletedLocally: serializer.fromJson<bool>(json['deletedLocally']),
+      farmId: serializer.fromJson<int>(json['farmId']),
     );
   }
   @override
@@ -7780,6 +8246,7 @@ class RevenueRow extends DataClass implements Insertable<RevenueRow> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'pending': serializer.toJson<bool>(pending),
       'deletedLocally': serializer.toJson<bool>(deletedLocally),
+      'farmId': serializer.toJson<int>(farmId),
     };
   }
 
@@ -7799,6 +8266,7 @@ class RevenueRow extends DataClass implements Insertable<RevenueRow> {
     DateTime? updatedAt,
     bool? pending,
     bool? deletedLocally,
+    int? farmId,
   }) => RevenueRow(
     clientUuid: clientUuid ?? this.clientUuid,
     serverId: serverId.present ? serverId.value : this.serverId,
@@ -7815,6 +8283,7 @@ class RevenueRow extends DataClass implements Insertable<RevenueRow> {
     updatedAt: updatedAt ?? this.updatedAt,
     pending: pending ?? this.pending,
     deletedLocally: deletedLocally ?? this.deletedLocally,
+    farmId: farmId ?? this.farmId,
   );
   RevenueRow copyWithCompanion(RevenuesCompanion data) {
     return RevenueRow(
@@ -7837,6 +8306,7 @@ class RevenueRow extends DataClass implements Insertable<RevenueRow> {
       deletedLocally: data.deletedLocally.present
           ? data.deletedLocally.value
           : this.deletedLocally,
+      farmId: data.farmId.present ? data.farmId.value : this.farmId,
     );
   }
 
@@ -7857,7 +8327,8 @@ class RevenueRow extends DataClass implements Insertable<RevenueRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
-          ..write('deletedLocally: $deletedLocally')
+          ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId')
           ..write(')'))
         .toString();
   }
@@ -7879,6 +8350,7 @@ class RevenueRow extends DataClass implements Insertable<RevenueRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   );
   @override
   bool operator ==(Object other) =>
@@ -7898,7 +8370,8 @@ class RevenueRow extends DataClass implements Insertable<RevenueRow> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.pending == this.pending &&
-          other.deletedLocally == this.deletedLocally);
+          other.deletedLocally == this.deletedLocally &&
+          other.farmId == this.farmId);
 }
 
 class RevenuesCompanion extends UpdateCompanion<RevenueRow> {
@@ -7917,6 +8390,7 @@ class RevenuesCompanion extends UpdateCompanion<RevenueRow> {
   final Value<DateTime> updatedAt;
   final Value<bool> pending;
   final Value<bool> deletedLocally;
+  final Value<int> farmId;
   final Value<int> rowid;
   const RevenuesCompanion({
     this.clientUuid = const Value.absent(),
@@ -7934,6 +8408,7 @@ class RevenuesCompanion extends UpdateCompanion<RevenueRow> {
     this.updatedAt = const Value.absent(),
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RevenuesCompanion.insert({
@@ -7952,6 +8427,7 @@ class RevenuesCompanion extends UpdateCompanion<RevenueRow> {
     required DateTime updatedAt,
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientUuid = Value(clientUuid),
        userId = Value(userId),
@@ -7980,6 +8456,7 @@ class RevenuesCompanion extends UpdateCompanion<RevenueRow> {
     Expression<DateTime>? updatedAt,
     Expression<bool>? pending,
     Expression<bool>? deletedLocally,
+    Expression<int>? farmId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -7998,6 +8475,7 @@ class RevenuesCompanion extends UpdateCompanion<RevenueRow> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (pending != null) 'pending': pending,
       if (deletedLocally != null) 'deleted_locally': deletedLocally,
+      if (farmId != null) 'farm_id': farmId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -8018,6 +8496,7 @@ class RevenuesCompanion extends UpdateCompanion<RevenueRow> {
     Value<DateTime>? updatedAt,
     Value<bool>? pending,
     Value<bool>? deletedLocally,
+    Value<int>? farmId,
     Value<int>? rowid,
   }) {
     return RevenuesCompanion(
@@ -8036,6 +8515,7 @@ class RevenuesCompanion extends UpdateCompanion<RevenueRow> {
       updatedAt: updatedAt ?? this.updatedAt,
       pending: pending ?? this.pending,
       deletedLocally: deletedLocally ?? this.deletedLocally,
+      farmId: farmId ?? this.farmId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -8088,6 +8568,9 @@ class RevenuesCompanion extends UpdateCompanion<RevenueRow> {
     if (deletedLocally.present) {
       map['deleted_locally'] = Variable<bool>(deletedLocally.value);
     }
+    if (farmId.present) {
+      map['farm_id'] = Variable<int>(farmId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -8112,6 +8595,7 @@ class RevenuesCompanion extends UpdateCompanion<RevenueRow> {
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
           ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -8241,6 +8725,16 @@ class $CostCategoriesTable extends CostCategories
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _farmIdMeta = const VerificationMeta('farmId');
+  @override
+  late final GeneratedColumn<int> farmId = GeneratedColumn<int>(
+    'farm_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientUuid,
@@ -8253,6 +8747,7 @@ class $CostCategoriesTable extends CostCategories
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -8343,6 +8838,12 @@ class $CostCategoriesTable extends CostCategories
         ),
       );
     }
+    if (data.containsKey('farm_id')) {
+      context.handle(
+        _farmIdMeta,
+        farmId.isAcceptableOrUnknown(data['farm_id']!, _farmIdMeta),
+      );
+    }
     return context;
   }
 
@@ -8392,6 +8893,10 @@ class $CostCategoriesTable extends CostCategories
         DriftSqlType.bool,
         data['${effectivePrefix}deleted_locally'],
       )!,
+      farmId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}farm_id'],
+      )!,
     );
   }
 
@@ -8412,6 +8917,7 @@ class CostCategoryRow extends DataClass implements Insertable<CostCategoryRow> {
   final DateTime updatedAt;
   final bool pending;
   final bool deletedLocally;
+  final int farmId;
   const CostCategoryRow({
     required this.clientUuid,
     this.serverId,
@@ -8423,6 +8929,7 @@ class CostCategoryRow extends DataClass implements Insertable<CostCategoryRow> {
     required this.updatedAt,
     required this.pending,
     required this.deletedLocally,
+    required this.farmId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -8439,6 +8946,7 @@ class CostCategoryRow extends DataClass implements Insertable<CostCategoryRow> {
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['pending'] = Variable<bool>(pending);
     map['deleted_locally'] = Variable<bool>(deletedLocally);
+    map['farm_id'] = Variable<int>(farmId);
     return map;
   }
 
@@ -8456,6 +8964,7 @@ class CostCategoryRow extends DataClass implements Insertable<CostCategoryRow> {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 
@@ -8475,6 +8984,7 @@ class CostCategoryRow extends DataClass implements Insertable<CostCategoryRow> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       pending: serializer.fromJson<bool>(json['pending']),
       deletedLocally: serializer.fromJson<bool>(json['deletedLocally']),
+      farmId: serializer.fromJson<int>(json['farmId']),
     );
   }
   @override
@@ -8491,6 +9001,7 @@ class CostCategoryRow extends DataClass implements Insertable<CostCategoryRow> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'pending': serializer.toJson<bool>(pending),
       'deletedLocally': serializer.toJson<bool>(deletedLocally),
+      'farmId': serializer.toJson<int>(farmId),
     };
   }
 
@@ -8505,6 +9016,7 @@ class CostCategoryRow extends DataClass implements Insertable<CostCategoryRow> {
     DateTime? updatedAt,
     bool? pending,
     bool? deletedLocally,
+    int? farmId,
   }) => CostCategoryRow(
     clientUuid: clientUuid ?? this.clientUuid,
     serverId: serverId.present ? serverId.value : this.serverId,
@@ -8516,6 +9028,7 @@ class CostCategoryRow extends DataClass implements Insertable<CostCategoryRow> {
     updatedAt: updatedAt ?? this.updatedAt,
     pending: pending ?? this.pending,
     deletedLocally: deletedLocally ?? this.deletedLocally,
+    farmId: farmId ?? this.farmId,
   );
   CostCategoryRow copyWithCompanion(CostCategoriesCompanion data) {
     return CostCategoryRow(
@@ -8533,6 +9046,7 @@ class CostCategoryRow extends DataClass implements Insertable<CostCategoryRow> {
       deletedLocally: data.deletedLocally.present
           ? data.deletedLocally.value
           : this.deletedLocally,
+      farmId: data.farmId.present ? data.farmId.value : this.farmId,
     );
   }
 
@@ -8548,7 +9062,8 @@ class CostCategoryRow extends DataClass implements Insertable<CostCategoryRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
-          ..write('deletedLocally: $deletedLocally')
+          ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId')
           ..write(')'))
         .toString();
   }
@@ -8565,6 +9080,7 @@ class CostCategoryRow extends DataClass implements Insertable<CostCategoryRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   );
   @override
   bool operator ==(Object other) =>
@@ -8579,7 +9095,8 @@ class CostCategoryRow extends DataClass implements Insertable<CostCategoryRow> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.pending == this.pending &&
-          other.deletedLocally == this.deletedLocally);
+          other.deletedLocally == this.deletedLocally &&
+          other.farmId == this.farmId);
 }
 
 class CostCategoriesCompanion extends UpdateCompanion<CostCategoryRow> {
@@ -8593,6 +9110,7 @@ class CostCategoriesCompanion extends UpdateCompanion<CostCategoryRow> {
   final Value<DateTime> updatedAt;
   final Value<bool> pending;
   final Value<bool> deletedLocally;
+  final Value<int> farmId;
   final Value<int> rowid;
   const CostCategoriesCompanion({
     this.clientUuid = const Value.absent(),
@@ -8605,6 +9123,7 @@ class CostCategoriesCompanion extends UpdateCompanion<CostCategoryRow> {
     this.updatedAt = const Value.absent(),
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CostCategoriesCompanion.insert({
@@ -8618,6 +9137,7 @@ class CostCategoriesCompanion extends UpdateCompanion<CostCategoryRow> {
     required DateTime updatedAt,
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientUuid = Value(clientUuid),
        name = Value(name),
@@ -8637,6 +9157,7 @@ class CostCategoriesCompanion extends UpdateCompanion<CostCategoryRow> {
     Expression<DateTime>? updatedAt,
     Expression<bool>? pending,
     Expression<bool>? deletedLocally,
+    Expression<int>? farmId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -8650,6 +9171,7 @@ class CostCategoriesCompanion extends UpdateCompanion<CostCategoryRow> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (pending != null) 'pending': pending,
       if (deletedLocally != null) 'deleted_locally': deletedLocally,
+      if (farmId != null) 'farm_id': farmId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -8665,6 +9187,7 @@ class CostCategoriesCompanion extends UpdateCompanion<CostCategoryRow> {
     Value<DateTime>? updatedAt,
     Value<bool>? pending,
     Value<bool>? deletedLocally,
+    Value<int>? farmId,
     Value<int>? rowid,
   }) {
     return CostCategoriesCompanion(
@@ -8678,6 +9201,7 @@ class CostCategoriesCompanion extends UpdateCompanion<CostCategoryRow> {
       updatedAt: updatedAt ?? this.updatedAt,
       pending: pending ?? this.pending,
       deletedLocally: deletedLocally ?? this.deletedLocally,
+      farmId: farmId ?? this.farmId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -8715,6 +9239,9 @@ class CostCategoriesCompanion extends UpdateCompanion<CostCategoryRow> {
     if (deletedLocally.present) {
       map['deleted_locally'] = Variable<bool>(deletedLocally.value);
     }
+    if (farmId.present) {
+      map['farm_id'] = Variable<int>(farmId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -8734,6 +9261,7 @@ class CostCategoriesCompanion extends UpdateCompanion<CostCategoryRow> {
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
           ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -8867,6 +9395,16 @@ class $HerdActivitiesTable extends HerdActivities
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _farmIdMeta = const VerificationMeta('farmId');
+  @override
+  late final GeneratedColumn<int> farmId = GeneratedColumn<int>(
+    'farm_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientUuid,
@@ -8880,6 +9418,7 @@ class $HerdActivitiesTable extends HerdActivities
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -8979,6 +9518,12 @@ class $HerdActivitiesTable extends HerdActivities
         ),
       );
     }
+    if (data.containsKey('farm_id')) {
+      context.handle(
+        _farmIdMeta,
+        farmId.isAcceptableOrUnknown(data['farm_id']!, _farmIdMeta),
+      );
+    }
     return context;
   }
 
@@ -9032,6 +9577,10 @@ class $HerdActivitiesTable extends HerdActivities
         DriftSqlType.bool,
         data['${effectivePrefix}deleted_locally'],
       )!,
+      farmId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}farm_id'],
+      )!,
     );
   }
 
@@ -9053,6 +9602,7 @@ class HerdActivityRow extends DataClass implements Insertable<HerdActivityRow> {
   final DateTime updatedAt;
   final bool pending;
   final bool deletedLocally;
+  final int farmId;
   const HerdActivityRow({
     required this.clientUuid,
     this.serverId,
@@ -9065,6 +9615,7 @@ class HerdActivityRow extends DataClass implements Insertable<HerdActivityRow> {
     required this.updatedAt,
     required this.pending,
     required this.deletedLocally,
+    required this.farmId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -9084,6 +9635,7 @@ class HerdActivityRow extends DataClass implements Insertable<HerdActivityRow> {
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['pending'] = Variable<bool>(pending);
     map['deleted_locally'] = Variable<bool>(deletedLocally);
+    map['farm_id'] = Variable<int>(farmId);
     return map;
   }
 
@@ -9104,6 +9656,7 @@ class HerdActivityRow extends DataClass implements Insertable<HerdActivityRow> {
       updatedAt: Value(updatedAt),
       pending: Value(pending),
       deletedLocally: Value(deletedLocally),
+      farmId: Value(farmId),
     );
   }
 
@@ -9124,6 +9677,7 @@ class HerdActivityRow extends DataClass implements Insertable<HerdActivityRow> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       pending: serializer.fromJson<bool>(json['pending']),
       deletedLocally: serializer.fromJson<bool>(json['deletedLocally']),
+      farmId: serializer.fromJson<int>(json['farmId']),
     );
   }
   @override
@@ -9141,6 +9695,7 @@ class HerdActivityRow extends DataClass implements Insertable<HerdActivityRow> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'pending': serializer.toJson<bool>(pending),
       'deletedLocally': serializer.toJson<bool>(deletedLocally),
+      'farmId': serializer.toJson<int>(farmId),
     };
   }
 
@@ -9156,6 +9711,7 @@ class HerdActivityRow extends DataClass implements Insertable<HerdActivityRow> {
     DateTime? updatedAt,
     bool? pending,
     bool? deletedLocally,
+    int? farmId,
   }) => HerdActivityRow(
     clientUuid: clientUuid ?? this.clientUuid,
     serverId: serverId.present ? serverId.value : this.serverId,
@@ -9168,6 +9724,7 @@ class HerdActivityRow extends DataClass implements Insertable<HerdActivityRow> {
     updatedAt: updatedAt ?? this.updatedAt,
     pending: pending ?? this.pending,
     deletedLocally: deletedLocally ?? this.deletedLocally,
+    farmId: farmId ?? this.farmId,
   );
   HerdActivityRow copyWithCompanion(HerdActivitiesCompanion data) {
     return HerdActivityRow(
@@ -9188,6 +9745,7 @@ class HerdActivityRow extends DataClass implements Insertable<HerdActivityRow> {
       deletedLocally: data.deletedLocally.present
           ? data.deletedLocally.value
           : this.deletedLocally,
+      farmId: data.farmId.present ? data.farmId.value : this.farmId,
     );
   }
 
@@ -9204,7 +9762,8 @@ class HerdActivityRow extends DataClass implements Insertable<HerdActivityRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
-          ..write('deletedLocally: $deletedLocally')
+          ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId')
           ..write(')'))
         .toString();
   }
@@ -9222,6 +9781,7 @@ class HerdActivityRow extends DataClass implements Insertable<HerdActivityRow> {
     updatedAt,
     pending,
     deletedLocally,
+    farmId,
   );
   @override
   bool operator ==(Object other) =>
@@ -9237,7 +9797,8 @@ class HerdActivityRow extends DataClass implements Insertable<HerdActivityRow> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.pending == this.pending &&
-          other.deletedLocally == this.deletedLocally);
+          other.deletedLocally == this.deletedLocally &&
+          other.farmId == this.farmId);
 }
 
 class HerdActivitiesCompanion extends UpdateCompanion<HerdActivityRow> {
@@ -9252,6 +9813,7 @@ class HerdActivitiesCompanion extends UpdateCompanion<HerdActivityRow> {
   final Value<DateTime> updatedAt;
   final Value<bool> pending;
   final Value<bool> deletedLocally;
+  final Value<int> farmId;
   final Value<int> rowid;
   const HerdActivitiesCompanion({
     this.clientUuid = const Value.absent(),
@@ -9265,6 +9827,7 @@ class HerdActivitiesCompanion extends UpdateCompanion<HerdActivityRow> {
     this.updatedAt = const Value.absent(),
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   HerdActivitiesCompanion.insert({
@@ -9279,6 +9842,7 @@ class HerdActivitiesCompanion extends UpdateCompanion<HerdActivityRow> {
     required DateTime updatedAt,
     this.pending = const Value.absent(),
     this.deletedLocally = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientUuid = Value(clientUuid),
        herdId = Value(herdId),
@@ -9299,6 +9863,7 @@ class HerdActivitiesCompanion extends UpdateCompanion<HerdActivityRow> {
     Expression<DateTime>? updatedAt,
     Expression<bool>? pending,
     Expression<bool>? deletedLocally,
+    Expression<int>? farmId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -9313,6 +9878,7 @@ class HerdActivitiesCompanion extends UpdateCompanion<HerdActivityRow> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (pending != null) 'pending': pending,
       if (deletedLocally != null) 'deleted_locally': deletedLocally,
+      if (farmId != null) 'farm_id': farmId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -9329,6 +9895,7 @@ class HerdActivitiesCompanion extends UpdateCompanion<HerdActivityRow> {
     Value<DateTime>? updatedAt,
     Value<bool>? pending,
     Value<bool>? deletedLocally,
+    Value<int>? farmId,
     Value<int>? rowid,
   }) {
     return HerdActivitiesCompanion(
@@ -9343,6 +9910,7 @@ class HerdActivitiesCompanion extends UpdateCompanion<HerdActivityRow> {
       updatedAt: updatedAt ?? this.updatedAt,
       pending: pending ?? this.pending,
       deletedLocally: deletedLocally ?? this.deletedLocally,
+      farmId: farmId ?? this.farmId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -9383,6 +9951,9 @@ class HerdActivitiesCompanion extends UpdateCompanion<HerdActivityRow> {
     if (deletedLocally.present) {
       map['deleted_locally'] = Variable<bool>(deletedLocally.value);
     }
+    if (farmId.present) {
+      map['farm_id'] = Variable<int>(farmId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -9403,6 +9974,7 @@ class HerdActivitiesCompanion extends UpdateCompanion<HerdActivityRow> {
           ..write('updatedAt: $updatedAt, ')
           ..write('pending: $pending, ')
           ..write('deletedLocally: $deletedLocally, ')
+          ..write('farmId: $farmId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -9500,6 +10072,16 @@ class $OutboxTable extends Outbox with TableInfo<$OutboxTable, OutboxRow> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _farmIdMeta = const VerificationMeta('farmId');
+  @override
+  late final GeneratedColumn<int> farmId = GeneratedColumn<int>(
+    'farm_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     seq,
@@ -9510,6 +10092,7 @@ class $OutboxTable extends Outbox with TableInfo<$OutboxTable, OutboxRow> {
     attempts,
     state,
     updatedAt,
+    farmId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -9576,6 +10159,12 @@ class $OutboxTable extends Outbox with TableInfo<$OutboxTable, OutboxRow> {
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('farm_id')) {
+      context.handle(
+        _farmIdMeta,
+        farmId.isAcceptableOrUnknown(data['farm_id']!, _farmIdMeta),
+      );
+    }
     return context;
   }
 
@@ -9617,6 +10206,10 @@ class $OutboxTable extends Outbox with TableInfo<$OutboxTable, OutboxRow> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      farmId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}farm_id'],
+      )!,
     );
   }
 
@@ -9635,6 +10228,7 @@ class OutboxRow extends DataClass implements Insertable<OutboxRow> {
   final int attempts;
   final String state;
   final DateTime updatedAt;
+  final int farmId;
   const OutboxRow({
     required this.seq,
     required this.entity,
@@ -9644,6 +10238,7 @@ class OutboxRow extends DataClass implements Insertable<OutboxRow> {
     required this.attempts,
     required this.state,
     required this.updatedAt,
+    required this.farmId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -9658,6 +10253,7 @@ class OutboxRow extends DataClass implements Insertable<OutboxRow> {
     map['attempts'] = Variable<int>(attempts);
     map['state'] = Variable<String>(state);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['farm_id'] = Variable<int>(farmId);
     return map;
   }
 
@@ -9673,6 +10269,7 @@ class OutboxRow extends DataClass implements Insertable<OutboxRow> {
       attempts: Value(attempts),
       state: Value(state),
       updatedAt: Value(updatedAt),
+      farmId: Value(farmId),
     );
   }
 
@@ -9690,6 +10287,7 @@ class OutboxRow extends DataClass implements Insertable<OutboxRow> {
       attempts: serializer.fromJson<int>(json['attempts']),
       state: serializer.fromJson<String>(json['state']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      farmId: serializer.fromJson<int>(json['farmId']),
     );
   }
   @override
@@ -9704,6 +10302,7 @@ class OutboxRow extends DataClass implements Insertable<OutboxRow> {
       'attempts': serializer.toJson<int>(attempts),
       'state': serializer.toJson<String>(state),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'farmId': serializer.toJson<int>(farmId),
     };
   }
 
@@ -9716,6 +10315,7 @@ class OutboxRow extends DataClass implements Insertable<OutboxRow> {
     int? attempts,
     String? state,
     DateTime? updatedAt,
+    int? farmId,
   }) => OutboxRow(
     seq: seq ?? this.seq,
     entity: entity ?? this.entity,
@@ -9725,6 +10325,7 @@ class OutboxRow extends DataClass implements Insertable<OutboxRow> {
     attempts: attempts ?? this.attempts,
     state: state ?? this.state,
     updatedAt: updatedAt ?? this.updatedAt,
+    farmId: farmId ?? this.farmId,
   );
   OutboxRow copyWithCompanion(OutboxCompanion data) {
     return OutboxRow(
@@ -9738,6 +10339,7 @@ class OutboxRow extends DataClass implements Insertable<OutboxRow> {
       attempts: data.attempts.present ? data.attempts.value : this.attempts,
       state: data.state.present ? data.state.value : this.state,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      farmId: data.farmId.present ? data.farmId.value : this.farmId,
     );
   }
 
@@ -9751,7 +10353,8 @@ class OutboxRow extends DataClass implements Insertable<OutboxRow> {
           ..write('payload: $payload, ')
           ..write('attempts: $attempts, ')
           ..write('state: $state, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('farmId: $farmId')
           ..write(')'))
         .toString();
   }
@@ -9766,6 +10369,7 @@ class OutboxRow extends DataClass implements Insertable<OutboxRow> {
     attempts,
     state,
     updatedAt,
+    farmId,
   );
   @override
   bool operator ==(Object other) =>
@@ -9778,7 +10382,8 @@ class OutboxRow extends DataClass implements Insertable<OutboxRow> {
           other.payload == this.payload &&
           other.attempts == this.attempts &&
           other.state == this.state &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.farmId == this.farmId);
 }
 
 class OutboxCompanion extends UpdateCompanion<OutboxRow> {
@@ -9790,6 +10395,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxRow> {
   final Value<int> attempts;
   final Value<String> state;
   final Value<DateTime> updatedAt;
+  final Value<int> farmId;
   const OutboxCompanion({
     this.seq = const Value.absent(),
     this.entity = const Value.absent(),
@@ -9799,6 +10405,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxRow> {
     this.attempts = const Value.absent(),
     this.state = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.farmId = const Value.absent(),
   });
   OutboxCompanion.insert({
     this.seq = const Value.absent(),
@@ -9809,6 +10416,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxRow> {
     this.attempts = const Value.absent(),
     this.state = const Value.absent(),
     required DateTime updatedAt,
+    this.farmId = const Value.absent(),
   }) : entity = Value(entity),
        op = Value(op),
        clientUuid = Value(clientUuid),
@@ -9822,6 +10430,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxRow> {
     Expression<int>? attempts,
     Expression<String>? state,
     Expression<DateTime>? updatedAt,
+    Expression<int>? farmId,
   }) {
     return RawValuesInsertable({
       if (seq != null) 'seq': seq,
@@ -9832,6 +10441,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxRow> {
       if (attempts != null) 'attempts': attempts,
       if (state != null) 'state': state,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (farmId != null) 'farm_id': farmId,
     });
   }
 
@@ -9844,6 +10454,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxRow> {
     Value<int>? attempts,
     Value<String>? state,
     Value<DateTime>? updatedAt,
+    Value<int>? farmId,
   }) {
     return OutboxCompanion(
       seq: seq ?? this.seq,
@@ -9854,6 +10465,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxRow> {
       attempts: attempts ?? this.attempts,
       state: state ?? this.state,
       updatedAt: updatedAt ?? this.updatedAt,
+      farmId: farmId ?? this.farmId,
     );
   }
 
@@ -9884,6 +10496,9 @@ class OutboxCompanion extends UpdateCompanion<OutboxRow> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (farmId.present) {
+      map['farm_id'] = Variable<int>(farmId.value);
+    }
     return map;
   }
 
@@ -9897,7 +10512,8 @@ class OutboxCompanion extends UpdateCompanion<OutboxRow> {
           ..write('payload: $payload, ')
           ..write('attempts: $attempts, ')
           ..write('state: $state, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('farmId: $farmId')
           ..write(')'))
         .toString();
   }
@@ -9929,8 +10545,18 @@ class $SyncCursorTable extends SyncCursor
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _farmIdMeta = const VerificationMeta('farmId');
   @override
-  List<GeneratedColumn> get $columns => [entity, lastPulledAt];
+  late final GeneratedColumn<int> farmId = GeneratedColumn<int>(
+    'farm_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [entity, lastPulledAt, farmId];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -9960,11 +10586,17 @@ class $SyncCursorTable extends SyncCursor
         ),
       );
     }
+    if (data.containsKey('farm_id')) {
+      context.handle(
+        _farmIdMeta,
+        farmId.isAcceptableOrUnknown(data['farm_id']!, _farmIdMeta),
+      );
+    }
     return context;
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {entity};
+  Set<GeneratedColumn> get $primaryKey => {farmId, entity};
   @override
   SyncCursorRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -9977,6 +10609,10 @@ class $SyncCursorTable extends SyncCursor
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_pulled_at'],
       ),
+      farmId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}farm_id'],
+      )!,
     );
   }
 
@@ -9989,7 +10625,12 @@ class $SyncCursorTable extends SyncCursor
 class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
   final String entity;
   final DateTime? lastPulledAt;
-  const SyncCursorRow({required this.entity, this.lastPulledAt});
+  final int farmId;
+  const SyncCursorRow({
+    required this.entity,
+    this.lastPulledAt,
+    required this.farmId,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -9997,6 +10638,7 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
     if (!nullToAbsent || lastPulledAt != null) {
       map['last_pulled_at'] = Variable<DateTime>(lastPulledAt);
     }
+    map['farm_id'] = Variable<int>(farmId);
     return map;
   }
 
@@ -10006,6 +10648,7 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
       lastPulledAt: lastPulledAt == null && nullToAbsent
           ? const Value.absent()
           : Value(lastPulledAt),
+      farmId: Value(farmId),
     );
   }
 
@@ -10017,6 +10660,7 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
     return SyncCursorRow(
       entity: serializer.fromJson<String>(json['entity']),
       lastPulledAt: serializer.fromJson<DateTime?>(json['lastPulledAt']),
+      farmId: serializer.fromJson<int>(json['farmId']),
     );
   }
   @override
@@ -10025,15 +10669,18 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
     return <String, dynamic>{
       'entity': serializer.toJson<String>(entity),
       'lastPulledAt': serializer.toJson<DateTime?>(lastPulledAt),
+      'farmId': serializer.toJson<int>(farmId),
     };
   }
 
   SyncCursorRow copyWith({
     String? entity,
     Value<DateTime?> lastPulledAt = const Value.absent(),
+    int? farmId,
   }) => SyncCursorRow(
     entity: entity ?? this.entity,
     lastPulledAt: lastPulledAt.present ? lastPulledAt.value : this.lastPulledAt,
+    farmId: farmId ?? this.farmId,
   );
   SyncCursorRow copyWithCompanion(SyncCursorCompanion data) {
     return SyncCursorRow(
@@ -10041,6 +10688,7 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
       lastPulledAt: data.lastPulledAt.present
           ? data.lastPulledAt.value
           : this.lastPulledAt,
+      farmId: data.farmId.present ? data.farmId.value : this.farmId,
     );
   }
 
@@ -10048,43 +10696,50 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
   String toString() {
     return (StringBuffer('SyncCursorRow(')
           ..write('entity: $entity, ')
-          ..write('lastPulledAt: $lastPulledAt')
+          ..write('lastPulledAt: $lastPulledAt, ')
+          ..write('farmId: $farmId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(entity, lastPulledAt);
+  int get hashCode => Object.hash(entity, lastPulledAt, farmId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is SyncCursorRow &&
           other.entity == this.entity &&
-          other.lastPulledAt == this.lastPulledAt);
+          other.lastPulledAt == this.lastPulledAt &&
+          other.farmId == this.farmId);
 }
 
 class SyncCursorCompanion extends UpdateCompanion<SyncCursorRow> {
   final Value<String> entity;
   final Value<DateTime?> lastPulledAt;
+  final Value<int> farmId;
   final Value<int> rowid;
   const SyncCursorCompanion({
     this.entity = const Value.absent(),
     this.lastPulledAt = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SyncCursorCompanion.insert({
     required String entity,
     this.lastPulledAt = const Value.absent(),
+    this.farmId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : entity = Value(entity);
   static Insertable<SyncCursorRow> custom({
     Expression<String>? entity,
     Expression<DateTime>? lastPulledAt,
+    Expression<int>? farmId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (entity != null) 'entity': entity,
       if (lastPulledAt != null) 'last_pulled_at': lastPulledAt,
+      if (farmId != null) 'farm_id': farmId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -10092,11 +10747,13 @@ class SyncCursorCompanion extends UpdateCompanion<SyncCursorRow> {
   SyncCursorCompanion copyWith({
     Value<String>? entity,
     Value<DateTime?>? lastPulledAt,
+    Value<int>? farmId,
     Value<int>? rowid,
   }) {
     return SyncCursorCompanion(
       entity: entity ?? this.entity,
       lastPulledAt: lastPulledAt ?? this.lastPulledAt,
+      farmId: farmId ?? this.farmId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -10110,6 +10767,9 @@ class SyncCursorCompanion extends UpdateCompanion<SyncCursorRow> {
     if (lastPulledAt.present) {
       map['last_pulled_at'] = Variable<DateTime>(lastPulledAt.value);
     }
+    if (farmId.present) {
+      map['farm_id'] = Variable<int>(farmId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -10121,6 +10781,7 @@ class SyncCursorCompanion extends UpdateCompanion<SyncCursorRow> {
     return (StringBuffer('SyncCursorCompanion(')
           ..write('entity: $entity, ')
           ..write('lastPulledAt: $lastPulledAt, ')
+          ..write('farmId: $farmId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -10184,6 +10845,7 @@ typedef $$LandsTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 typedef $$LandsTableUpdateCompanionBuilder =
@@ -10200,6 +10862,7 @@ typedef $$LandsTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 
@@ -10268,6 +10931,11 @@ class $$LandsTableFilterComposer extends Composer<_$AppDatabase, $LandsTable> {
 
   ColumnFilters<bool> get deletedLocally => $composableBuilder(
     column: $table.deletedLocally,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get farmId => $composableBuilder(
+    column: $table.farmId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -10340,6 +11008,11 @@ class $$LandsTableOrderingComposer
     column: $table.deletedLocally,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get farmId => $composableBuilder(
+    column: $table.farmId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LandsTableAnnotationComposer
@@ -10392,6 +11065,9 @@ class $$LandsTableAnnotationComposer
     column: $table.deletedLocally,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get farmId =>
+      $composableBuilder(column: $table.farmId, builder: (column) => column);
 }
 
 class $$LandsTableTableManager
@@ -10434,6 +11110,7 @@ class $$LandsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LandsCompanion(
                 clientUuid: clientUuid,
@@ -10448,6 +11125,7 @@ class $$LandsTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -10464,6 +11142,7 @@ class $$LandsTableTableManager
                 required DateTime updatedAt,
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LandsCompanion.insert(
                 clientUuid: clientUuid,
@@ -10478,6 +11157,7 @@ class $$LandsTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -10513,6 +11193,7 @@ typedef $$PlantsTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 typedef $$PlantsTableUpdateCompanionBuilder =
@@ -10526,6 +11207,7 @@ typedef $$PlantsTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 
@@ -10580,6 +11262,11 @@ class $$PlantsTableFilterComposer
 
   ColumnFilters<bool> get deletedLocally => $composableBuilder(
     column: $table.deletedLocally,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get farmId => $composableBuilder(
+    column: $table.farmId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -10637,6 +11324,11 @@ class $$PlantsTableOrderingComposer
     column: $table.deletedLocally,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get farmId => $composableBuilder(
+    column: $table.farmId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PlantsTableAnnotationComposer
@@ -10678,6 +11370,9 @@ class $$PlantsTableAnnotationComposer
     column: $table.deletedLocally,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get farmId =>
+      $composableBuilder(column: $table.farmId, builder: (column) => column);
 }
 
 class $$PlantsTableTableManager
@@ -10717,6 +11412,7 @@ class $$PlantsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PlantsCompanion(
                 clientUuid: clientUuid,
@@ -10728,6 +11424,7 @@ class $$PlantsTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -10741,6 +11438,7 @@ class $$PlantsTableTableManager
                 required DateTime updatedAt,
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PlantsCompanion.insert(
                 clientUuid: clientUuid,
@@ -10752,6 +11450,7 @@ class $$PlantsTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -10790,6 +11489,7 @@ typedef $$SeasonsTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 typedef $$SeasonsTableUpdateCompanionBuilder =
@@ -10806,6 +11506,7 @@ typedef $$SeasonsTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 
@@ -10875,6 +11576,11 @@ class $$SeasonsTableFilterComposer
 
   ColumnFilters<bool> get deletedLocally => $composableBuilder(
     column: $table.deletedLocally,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get farmId => $composableBuilder(
+    column: $table.farmId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -10947,6 +11653,11 @@ class $$SeasonsTableOrderingComposer
     column: $table.deletedLocally,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get farmId => $composableBuilder(
+    column: $table.farmId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SeasonsTableAnnotationComposer
@@ -10997,6 +11708,9 @@ class $$SeasonsTableAnnotationComposer
     column: $table.deletedLocally,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get farmId =>
+      $composableBuilder(column: $table.farmId, builder: (column) => column);
 }
 
 class $$SeasonsTableTableManager
@@ -11039,6 +11753,7 @@ class $$SeasonsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SeasonsCompanion(
                 clientUuid: clientUuid,
@@ -11053,6 +11768,7 @@ class $$SeasonsTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -11069,6 +11785,7 @@ class $$SeasonsTableTableManager
                 required DateTime updatedAt,
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SeasonsCompanion.insert(
                 clientUuid: clientUuid,
@@ -11083,6 +11800,7 @@ class $$SeasonsTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -11122,6 +11840,7 @@ typedef $$AnimalsTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 typedef $$AnimalsTableUpdateCompanionBuilder =
@@ -11139,6 +11858,7 @@ typedef $$AnimalsTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 
@@ -11213,6 +11933,11 @@ class $$AnimalsTableFilterComposer
 
   ColumnFilters<bool> get deletedLocally => $composableBuilder(
     column: $table.deletedLocally,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get farmId => $composableBuilder(
+    column: $table.farmId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -11290,6 +12015,11 @@ class $$AnimalsTableOrderingComposer
     column: $table.deletedLocally,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get farmId => $composableBuilder(
+    column: $table.farmId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AnimalsTableAnnotationComposer
@@ -11347,6 +12077,9 @@ class $$AnimalsTableAnnotationComposer
     column: $table.deletedLocally,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get farmId =>
+      $composableBuilder(column: $table.farmId, builder: (column) => column);
 }
 
 class $$AnimalsTableTableManager
@@ -11390,6 +12123,7 @@ class $$AnimalsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AnimalsCompanion(
                 clientUuid: clientUuid,
@@ -11405,6 +12139,7 @@ class $$AnimalsTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -11422,6 +12157,7 @@ class $$AnimalsTableTableManager
                 required DateTime updatedAt,
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AnimalsCompanion.insert(
                 clientUuid: clientUuid,
@@ -11437,6 +12173,7 @@ class $$AnimalsTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -11475,6 +12212,7 @@ typedef $$HarvestsTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 typedef $$HarvestsTableUpdateCompanionBuilder =
@@ -11491,6 +12229,7 @@ typedef $$HarvestsTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 
@@ -11560,6 +12299,11 @@ class $$HarvestsTableFilterComposer
 
   ColumnFilters<bool> get deletedLocally => $composableBuilder(
     column: $table.deletedLocally,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get farmId => $composableBuilder(
+    column: $table.farmId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -11632,6 +12376,11 @@ class $$HarvestsTableOrderingComposer
     column: $table.deletedLocally,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get farmId => $composableBuilder(
+    column: $table.farmId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$HarvestsTableAnnotationComposer
@@ -11682,6 +12431,9 @@ class $$HarvestsTableAnnotationComposer
     column: $table.deletedLocally,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get farmId =>
+      $composableBuilder(column: $table.farmId, builder: (column) => column);
 }
 
 class $$HarvestsTableTableManager
@@ -11727,6 +12479,7 @@ class $$HarvestsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HarvestsCompanion(
                 clientUuid: clientUuid,
@@ -11741,6 +12494,7 @@ class $$HarvestsTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -11757,6 +12511,7 @@ class $$HarvestsTableTableManager
                 required DateTime updatedAt,
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HarvestsCompanion.insert(
                 clientUuid: clientUuid,
@@ -11771,6 +12526,7 @@ class $$HarvestsTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -11811,6 +12567,7 @@ typedef $$InputsTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 typedef $$InputsTableUpdateCompanionBuilder =
@@ -11829,6 +12586,7 @@ typedef $$InputsTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 
@@ -11908,6 +12666,11 @@ class $$InputsTableFilterComposer
 
   ColumnFilters<bool> get deletedLocally => $composableBuilder(
     column: $table.deletedLocally,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get farmId => $composableBuilder(
+    column: $table.farmId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -11990,6 +12753,11 @@ class $$InputsTableOrderingComposer
     column: $table.deletedLocally,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get farmId => $composableBuilder(
+    column: $table.farmId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$InputsTableAnnotationComposer
@@ -12048,6 +12816,9 @@ class $$InputsTableAnnotationComposer
     column: $table.deletedLocally,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get farmId =>
+      $composableBuilder(column: $table.farmId, builder: (column) => column);
 }
 
 class $$InputsTableTableManager
@@ -12092,6 +12863,7 @@ class $$InputsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => InputsCompanion(
                 clientUuid: clientUuid,
@@ -12108,6 +12880,7 @@ class $$InputsTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -12126,6 +12899,7 @@ class $$InputsTableTableManager
                 required DateTime updatedAt,
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => InputsCompanion.insert(
                 clientUuid: clientUuid,
@@ -12142,6 +12916,7 @@ class $$InputsTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -12182,6 +12957,7 @@ typedef $$ActivitiesTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 typedef $$ActivitiesTableUpdateCompanionBuilder =
@@ -12200,6 +12976,7 @@ typedef $$ActivitiesTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 
@@ -12279,6 +13056,11 @@ class $$ActivitiesTableFilterComposer
 
   ColumnFilters<bool> get deletedLocally => $composableBuilder(
     column: $table.deletedLocally,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get farmId => $composableBuilder(
+    column: $table.farmId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -12361,6 +13143,11 @@ class $$ActivitiesTableOrderingComposer
     column: $table.deletedLocally,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get farmId => $composableBuilder(
+    column: $table.farmId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ActivitiesTableAnnotationComposer
@@ -12419,6 +13206,9 @@ class $$ActivitiesTableAnnotationComposer
     column: $table.deletedLocally,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get farmId =>
+      $composableBuilder(column: $table.farmId, builder: (column) => column);
 }
 
 class $$ActivitiesTableTableManager
@@ -12466,6 +13256,7 @@ class $$ActivitiesTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ActivitiesCompanion(
                 clientUuid: clientUuid,
@@ -12482,6 +13273,7 @@ class $$ActivitiesTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -12500,6 +13292,7 @@ class $$ActivitiesTableTableManager
                 required DateTime updatedAt,
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ActivitiesCompanion.insert(
                 clientUuid: clientUuid,
@@ -12516,6 +13309,7 @@ class $$ActivitiesTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -12554,6 +13348,7 @@ typedef $$AnimalTypesTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 typedef $$AnimalTypesTableUpdateCompanionBuilder =
@@ -12567,6 +13362,7 @@ typedef $$AnimalTypesTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 
@@ -12621,6 +13417,11 @@ class $$AnimalTypesTableFilterComposer
 
   ColumnFilters<bool> get deletedLocally => $composableBuilder(
     column: $table.deletedLocally,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get farmId => $composableBuilder(
+    column: $table.farmId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -12678,6 +13479,11 @@ class $$AnimalTypesTableOrderingComposer
     column: $table.deletedLocally,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get farmId => $composableBuilder(
+    column: $table.farmId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AnimalTypesTableAnnotationComposer
@@ -12719,6 +13525,9 @@ class $$AnimalTypesTableAnnotationComposer
     column: $table.deletedLocally,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get farmId =>
+      $composableBuilder(column: $table.farmId, builder: (column) => column);
 }
 
 class $$AnimalTypesTableTableManager
@@ -12761,6 +13570,7 @@ class $$AnimalTypesTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AnimalTypesCompanion(
                 clientUuid: clientUuid,
@@ -12772,6 +13582,7 @@ class $$AnimalTypesTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -12785,6 +13596,7 @@ class $$AnimalTypesTableTableManager
                 required DateTime updatedAt,
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AnimalTypesCompanion.insert(
                 clientUuid: clientUuid,
@@ -12796,6 +13608,7 @@ class $$AnimalTypesTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -12839,6 +13652,7 @@ typedef $$HerdsTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 typedef $$HerdsTableUpdateCompanionBuilder =
@@ -12857,6 +13671,7 @@ typedef $$HerdsTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 
@@ -12935,6 +13750,11 @@ class $$HerdsTableFilterComposer extends Composer<_$AppDatabase, $HerdsTable> {
 
   ColumnFilters<bool> get deletedLocally => $composableBuilder(
     column: $table.deletedLocally,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get farmId => $composableBuilder(
+    column: $table.farmId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -13017,6 +13837,11 @@ class $$HerdsTableOrderingComposer
     column: $table.deletedLocally,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get farmId => $composableBuilder(
+    column: $table.farmId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$HerdsTableAnnotationComposer
@@ -13079,6 +13904,9 @@ class $$HerdsTableAnnotationComposer
     column: $table.deletedLocally,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get farmId =>
+      $composableBuilder(column: $table.farmId, builder: (column) => column);
 }
 
 class $$HerdsTableTableManager
@@ -13123,6 +13951,7 @@ class $$HerdsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HerdsCompanion(
                 clientUuid: clientUuid,
@@ -13139,6 +13968,7 @@ class $$HerdsTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -13157,6 +13987,7 @@ class $$HerdsTableTableManager
                 required DateTime updatedAt,
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HerdsCompanion.insert(
                 clientUuid: clientUuid,
@@ -13173,6 +14004,7 @@ class $$HerdsTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -13212,6 +14044,7 @@ typedef $$InfrastructuresTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 typedef $$InfrastructuresTableUpdateCompanionBuilder =
@@ -13229,6 +14062,7 @@ typedef $$InfrastructuresTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 
@@ -13303,6 +14137,11 @@ class $$InfrastructuresTableFilterComposer
 
   ColumnFilters<bool> get deletedLocally => $composableBuilder(
     column: $table.deletedLocally,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get farmId => $composableBuilder(
+    column: $table.farmId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -13380,6 +14219,11 @@ class $$InfrastructuresTableOrderingComposer
     column: $table.deletedLocally,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get farmId => $composableBuilder(
+    column: $table.farmId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$InfrastructuresTableAnnotationComposer
@@ -13433,6 +14277,9 @@ class $$InfrastructuresTableAnnotationComposer
     column: $table.deletedLocally,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get farmId =>
+      $composableBuilder(column: $table.farmId, builder: (column) => column);
 }
 
 class $$InfrastructuresTableTableManager
@@ -13485,6 +14332,7 @@ class $$InfrastructuresTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => InfrastructuresCompanion(
                 clientUuid: clientUuid,
@@ -13500,6 +14348,7 @@ class $$InfrastructuresTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -13517,6 +14366,7 @@ class $$InfrastructuresTableTableManager
                 required DateTime updatedAt,
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => InfrastructuresCompanion.insert(
                 clientUuid: clientUuid,
@@ -13532,6 +14382,7 @@ class $$InfrastructuresTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -13576,6 +14427,7 @@ typedef $$RevenuesTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 typedef $$RevenuesTableUpdateCompanionBuilder =
@@ -13595,6 +14447,7 @@ typedef $$RevenuesTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 
@@ -13679,6 +14532,11 @@ class $$RevenuesTableFilterComposer
 
   ColumnFilters<bool> get deletedLocally => $composableBuilder(
     column: $table.deletedLocally,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get farmId => $composableBuilder(
+    column: $table.farmId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -13766,6 +14624,11 @@ class $$RevenuesTableOrderingComposer
     column: $table.deletedLocally,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get farmId => $composableBuilder(
+    column: $table.farmId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$RevenuesTableAnnotationComposer
@@ -13825,6 +14688,9 @@ class $$RevenuesTableAnnotationComposer
     column: $table.deletedLocally,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get farmId =>
+      $composableBuilder(column: $table.farmId, builder: (column) => column);
 }
 
 class $$RevenuesTableTableManager
@@ -13873,6 +14739,7 @@ class $$RevenuesTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RevenuesCompanion(
                 clientUuid: clientUuid,
@@ -13890,6 +14757,7 @@ class $$RevenuesTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -13909,6 +14777,7 @@ class $$RevenuesTableTableManager
                 required DateTime updatedAt,
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RevenuesCompanion.insert(
                 clientUuid: clientUuid,
@@ -13926,6 +14795,7 @@ class $$RevenuesTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -13962,6 +14832,7 @@ typedef $$CostCategoriesTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 typedef $$CostCategoriesTableUpdateCompanionBuilder =
@@ -13976,6 +14847,7 @@ typedef $$CostCategoriesTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 
@@ -14035,6 +14907,11 @@ class $$CostCategoriesTableFilterComposer
 
   ColumnFilters<bool> get deletedLocally => $composableBuilder(
     column: $table.deletedLocally,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get farmId => $composableBuilder(
+    column: $table.farmId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -14097,6 +14974,11 @@ class $$CostCategoriesTableOrderingComposer
     column: $table.deletedLocally,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get farmId => $composableBuilder(
+    column: $table.farmId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CostCategoriesTableAnnotationComposer
@@ -14141,6 +15023,9 @@ class $$CostCategoriesTableAnnotationComposer
     column: $table.deletedLocally,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get farmId =>
+      $composableBuilder(column: $table.farmId, builder: (column) => column);
 }
 
 class $$CostCategoriesTableTableManager
@@ -14190,6 +15075,7 @@ class $$CostCategoriesTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CostCategoriesCompanion(
                 clientUuid: clientUuid,
@@ -14202,6 +15088,7 @@ class $$CostCategoriesTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -14216,6 +15103,7 @@ class $$CostCategoriesTableTableManager
                 required DateTime updatedAt,
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CostCategoriesCompanion.insert(
                 clientUuid: clientUuid,
@@ -14228,6 +15116,7 @@ class $$CostCategoriesTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -14268,6 +15157,7 @@ typedef $$HerdActivitiesTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 typedef $$HerdActivitiesTableUpdateCompanionBuilder =
@@ -14283,6 +15173,7 @@ typedef $$HerdActivitiesTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<bool> pending,
       Value<bool> deletedLocally,
+      Value<int> farmId,
       Value<int> rowid,
     });
 
@@ -14347,6 +15238,11 @@ class $$HerdActivitiesTableFilterComposer
 
   ColumnFilters<bool> get deletedLocally => $composableBuilder(
     column: $table.deletedLocally,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get farmId => $composableBuilder(
+    column: $table.farmId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -14414,6 +15310,11 @@ class $$HerdActivitiesTableOrderingComposer
     column: $table.deletedLocally,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get farmId => $composableBuilder(
+    column: $table.farmId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$HerdActivitiesTableAnnotationComposer
@@ -14463,6 +15364,9 @@ class $$HerdActivitiesTableAnnotationComposer
     column: $table.deletedLocally,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get farmId =>
+      $composableBuilder(column: $table.farmId, builder: (column) => column);
 }
 
 class $$HerdActivitiesTableTableManager
@@ -14513,6 +15417,7 @@ class $$HerdActivitiesTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HerdActivitiesCompanion(
                 clientUuid: clientUuid,
@@ -14526,6 +15431,7 @@ class $$HerdActivitiesTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -14541,6 +15447,7 @@ class $$HerdActivitiesTableTableManager
                 required DateTime updatedAt,
                 Value<bool> pending = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HerdActivitiesCompanion.insert(
                 clientUuid: clientUuid,
@@ -14554,6 +15461,7 @@ class $$HerdActivitiesTableTableManager
                 updatedAt: updatedAt,
                 pending: pending,
                 deletedLocally: deletedLocally,
+                farmId: farmId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -14591,6 +15499,7 @@ typedef $$OutboxTableCreateCompanionBuilder =
       Value<int> attempts,
       Value<String> state,
       required DateTime updatedAt,
+      Value<int> farmId,
     });
 typedef $$OutboxTableUpdateCompanionBuilder =
     OutboxCompanion Function({
@@ -14602,6 +15511,7 @@ typedef $$OutboxTableUpdateCompanionBuilder =
       Value<int> attempts,
       Value<String> state,
       Value<DateTime> updatedAt,
+      Value<int> farmId,
     });
 
 class $$OutboxTableFilterComposer
@@ -14650,6 +15560,11 @@ class $$OutboxTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get farmId => $composableBuilder(
+    column: $table.farmId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -14702,6 +15617,11 @@ class $$OutboxTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get farmId => $composableBuilder(
+    column: $table.farmId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$OutboxTableAnnotationComposer
@@ -14738,6 +15658,9 @@ class $$OutboxTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get farmId =>
+      $composableBuilder(column: $table.farmId, builder: (column) => column);
 }
 
 class $$OutboxTableTableManager
@@ -14776,6 +15699,7 @@ class $$OutboxTableTableManager
                 Value<int> attempts = const Value.absent(),
                 Value<String> state = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
               }) => OutboxCompanion(
                 seq: seq,
                 entity: entity,
@@ -14785,6 +15709,7 @@ class $$OutboxTableTableManager
                 attempts: attempts,
                 state: state,
                 updatedAt: updatedAt,
+                farmId: farmId,
               ),
           createCompanionCallback:
               ({
@@ -14796,6 +15721,7 @@ class $$OutboxTableTableManager
                 Value<int> attempts = const Value.absent(),
                 Value<String> state = const Value.absent(),
                 required DateTime updatedAt,
+                Value<int> farmId = const Value.absent(),
               }) => OutboxCompanion.insert(
                 seq: seq,
                 entity: entity,
@@ -14805,6 +15731,7 @@ class $$OutboxTableTableManager
                 attempts: attempts,
                 state: state,
                 updatedAt: updatedAt,
+                farmId: farmId,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -14832,12 +15759,14 @@ typedef $$SyncCursorTableCreateCompanionBuilder =
     SyncCursorCompanion Function({
       required String entity,
       Value<DateTime?> lastPulledAt,
+      Value<int> farmId,
       Value<int> rowid,
     });
 typedef $$SyncCursorTableUpdateCompanionBuilder =
     SyncCursorCompanion Function({
       Value<String> entity,
       Value<DateTime?> lastPulledAt,
+      Value<int> farmId,
       Value<int> rowid,
     });
 
@@ -14857,6 +15786,11 @@ class $$SyncCursorTableFilterComposer
 
   ColumnFilters<DateTime> get lastPulledAt => $composableBuilder(
     column: $table.lastPulledAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get farmId => $composableBuilder(
+    column: $table.farmId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -14879,6 +15813,11 @@ class $$SyncCursorTableOrderingComposer
     column: $table.lastPulledAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get farmId => $composableBuilder(
+    column: $table.farmId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SyncCursorTableAnnotationComposer
@@ -14897,6 +15836,9 @@ class $$SyncCursorTableAnnotationComposer
     column: $table.lastPulledAt,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get farmId =>
+      $composableBuilder(column: $table.farmId, builder: (column) => column);
 }
 
 class $$SyncCursorTableTableManager
@@ -14932,20 +15874,24 @@ class $$SyncCursorTableTableManager
               ({
                 Value<String> entity = const Value.absent(),
                 Value<DateTime?> lastPulledAt = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SyncCursorCompanion(
                 entity: entity,
                 lastPulledAt: lastPulledAt,
+                farmId: farmId,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
                 required String entity,
                 Value<DateTime?> lastPulledAt = const Value.absent(),
+                Value<int> farmId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SyncCursorCompanion.insert(
                 entity: entity,
                 lastPulledAt: lastPulledAt,
+                farmId: farmId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

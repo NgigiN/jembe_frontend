@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/models/season_model.dart';
+import 'package:farm_tracker/features/farm/data/models/season_model_drift.dart';
 
 /// Drift-backed local data source for the season feature.
 ///
@@ -27,22 +28,22 @@ class SeasonLocalDataSource implements LocalSyncStore<SeasonModel> {
   ///
   /// Ordered by `createdAt` ascending (oldest first) — a stable order tied
   /// to when a season was first created locally, unaffected by later edits.
-  Stream<List<SeasonModel>> watchSeasons() {
+  Stream<List<SeasonModel>> watchSeasons({int farmId = 1}) {
     final query = _db.select(_db.seasons)
-      ..where((row) => row.deletedLocally.equals(false))
+      ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId))
       ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]);
     return query.watch().map(
-      (rows) => rows.map(SeasonModel.fromDrift).toList(),
+      (rows) => rows.map(seasonModelFromDrift).toList(),
     );
   }
 
   /// Inserts [model], or replaces the existing row sharing its
   /// `clientUuid` (the primary key) if one already exists.
   @override
-  Future<void> upsert(SeasonModel model, {required bool pending}) {
+  Future<void> upsert(SeasonModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.seasons)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:
@@ -128,7 +129,7 @@ class SeasonLocalDataSource implements LocalSyncStore<SeasonModel> {
     final row = await (_db.select(
       _db.seasons,
     )..where((r) => r.clientUuid.equals(clientUuid))).getSingleOrNull();
-    return row == null ? null : SeasonModel.fromDrift(row);
+    return row == null ? null : seasonModelFromDrift(row);
   }
 
   /// The season with the given server [serverId], or `null` if no such row
@@ -138,7 +139,7 @@ class SeasonLocalDataSource implements LocalSyncStore<SeasonModel> {
     final row = await (_db.select(
       _db.seasons,
     )..where((r) => r.serverId.equals(serverId))).getSingleOrNull();
-    return row == null ? null : SeasonModel.fromDrift(row);
+    return row == null ? null : seasonModelFromDrift(row);
   }
 
   /// Deletes every row — used to wipe the local mirror on logout.

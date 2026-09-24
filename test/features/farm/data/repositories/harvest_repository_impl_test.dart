@@ -14,7 +14,9 @@ import 'package:farm_tracker/features/farm/data/datasources/harvest_remote_data_
 import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
 import 'package:farm_tracker/features/farm/data/repositories/harvest_repository_impl.dart';
 import 'package:farm_tracker/features/farm/domain/entities/harvest.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeHarvestRemoteDataSource implements HarvestRemoteDataSource {
   HarvestModel? lastAdded;
@@ -111,6 +113,8 @@ HarvestModel _harvest({
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   // Every test that flips the flag on must not leak it into the next test.
   tearDown(() {
     OfflineConfig.enabled = false;
@@ -307,8 +311,13 @@ void main() {
     late _FakeSyncEngine sync;
     late FakeHarvestRemoteDataSource remote;
 
-    setUp(() {
+    setUp(() async {
       OfflineConfig.enabled = true;
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      // Every pre-existing offline-path test in this group predates farm
+      // scoping and expects the success path — give it a current farm
+      // (id 1, matching every other farmId default in this plan).
+      await FarmStorageService.setCurrentFarmId(1);
       db = AppDatabase.forTesting(NativeDatabase.memory());
       local = HarvestLocalDataSource(db);
       outbox = OutboxDao(db);

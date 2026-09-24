@@ -15,6 +15,7 @@ import 'package:farm_tracker/features/farm/data/datasources/activity_remote_data
 import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/activity.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/activity_repository.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 
 /// Live-HTTP (flag off) or local-first + outbox (flag on) implementation of
 /// [ActivityRepository].
@@ -39,7 +40,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/activity_reposito
 /// server id. [updateActivity] and [deleteActivity] therefore treat the
 /// incoming `id`/`activity.id` as a `clientUuid`, never a server id. The
 /// drift row's nullable `serverId` is used ONLY by the syncer (via
-/// `ActivityModel.fromDrift`) to build server URLs — it never surfaces
+/// `activityModelFromDrift`) to build server URLs — it never surfaces
 /// through this repository's presentation.
 class ActivityRepositoryImpl
     with OfflineRepositoryMixin
@@ -105,9 +106,13 @@ class ActivityRepositoryImpl
   @override
   Stream<List<Activity>> watchActivities({String? sourceType}) {
     if (OfflineConfig.enabled && local != null) {
-      return watchAsDomain(
-        local!.watchActivities(sourceType: sourceType),
-        _toActivity,
+      return Stream.fromFuture(FarmStorageService.getCurrentFarmId()).asyncExpand(
+        (farmId) => farmId == null
+            ? Stream<List<Activity>>.value(const [])
+            : watchAsDomain(
+                local!.watchActivities(sourceType: sourceType, farmId: farmId),
+                _toActivity,
+              ),
       );
     }
     // Unused by the app while the flag is off (the bloc keeps its
@@ -131,8 +136,11 @@ class ActivityRepositoryImpl
     if (_offlineFirst) {
       // Offline mirror shows the whole local store — pagination
       // ([limit]/[cursor]) is an online-only concern and is ignored here.
-      final models =
-          await local!.watchActivities(sourceType: sourceType).first;
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Right([]);
+      final models = await local!
+          .watchActivities(sourceType: sourceType, farmId: farmId)
+          .first;
       return Right(models.map(_toActivity).toList());
     }
     return guard(
@@ -147,6 +155,8 @@ class ActivityRepositoryImpl
   @override
   Future<Either<Failure, Activity>> addActivity(Activity activity) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       final model = ActivityModel.create(
         sourceType: activity.sourceType,
         sourceId: activity.sourceId,
@@ -163,6 +173,7 @@ class ActivityRepositoryImpl
         model,
         jsonEncode(model.toJson()),
         OutboxOp.create,
+        farmId: farmId,
       );
       return Right(_toActivity(model));
     }
@@ -173,6 +184,8 @@ class ActivityRepositoryImpl
   @override
   Future<Either<Failure, Activity>> updateActivity(Activity activity) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `activity.id` is a clientUuid (presentation identity) — see class
       // docs.
       final existing = await local!.getByClientUuid(activity.id);
@@ -199,6 +212,7 @@ class ActivityRepositoryImpl
         updated,
         jsonEncode(updated.toJson()),
         OutboxOp.update,
+        farmId: farmId,
       );
       return Right(activity);
     }
@@ -209,8 +223,10 @@ class ActivityRepositoryImpl
   @override
   Future<Either<Failure, void>> deleteActivity(String id) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `id` is a clientUuid (presentation identity) — see class docs.
-      await stageDelete(local!, id);
+      await stageDelete(local!, id, farmId: farmId);
       return const Right(null);
     }
 

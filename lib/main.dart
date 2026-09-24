@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:dynamic_color/dynamic_color.dart';
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
@@ -15,6 +14,8 @@ import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_event.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/question_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/activity_bloc.dart';
@@ -135,6 +136,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       if (OfflineConfig.enabled) {
         unawaited(di.sl<SyncEngine>().syncNow());
       }
+      // Farm-membership/role-change discovery (V2 sub-project 3, spec §7):
+      // catches an invite accepted or a role changed elsewhere mid-session,
+      // without waiting for the 24h session expiry to force a re-login.
+      // Unlike the sync trigger above, this is NOT gated on
+      // OfflineConfig.enabled — farms/roles are live today, independent of
+      // the (still dark) offline pipeline.
+      di.sl<FarmBloc>().add(RefreshFarms());
     }
   }
 
@@ -143,6 +151,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(create: (_) => di.sl<AuthBloc>()),
+        BlocProvider<FarmBloc>(create: (_) => di.sl<FarmBloc>()..add(LoadFarms())),
         BlocProvider<LandBloc>(create: (_) => di.sl<LandBloc>()),
         BlocProvider<PlantBloc>(create: (_) => di.sl<PlantBloc>()),
         BlocProvider<SeasonBloc>(create: (_) => di.sl<SeasonBloc>()),
@@ -170,23 +179,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         BlocProvider<QuestionBloc>(create: (_) => di.sl<QuestionBloc>()),
         BlocProvider<ThemeBloc>(create: (_) => ThemeBloc()),
       ],
-      child: DynamicColorBuilder(
-        builder: (lightDynamic, darkDynamic) {
-          return BlocBuilder<ThemeBloc, ThemeState>(
-            builder: (context, themeState) {
-              return MaterialApp.router(
-                title: 'Shamba+',
-                theme: AppTheme.getLightTheme(
-                  lightDynamic ?? AppColors.lightColorScheme,
-                ),
-                darkTheme: AppTheme.getDarkTheme(
-                  darkDynamic ?? AppColors.darkColorScheme,
-                ),
-                themeMode: themeState.themeMode,
-                routerConfig: _appRouter.router,
-                debugShowCheckedModeBanner: false,
-              );
-            },
+      child: BlocBuilder<ThemeBloc, ThemeState>(
+        builder: (context, themeState) {
+          return MaterialApp.router(
+            title: 'Shamba+',
+            theme: AppTheme.getLightTheme(AppColors.lightColorScheme),
+            darkTheme: AppTheme.getDarkTheme(AppColors.darkColorScheme),
+            themeMode: themeState.themeMode,
+            routerConfig: _appRouter.router,
+            debugShowCheckedModeBanner: false,
           );
         },
       ),

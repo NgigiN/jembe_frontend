@@ -15,6 +15,7 @@ import 'package:farm_tracker/features/farm/data/models/revenue_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/analytics_scope.dart';
 import 'package:farm_tracker/features/farm/domain/entities/revenue.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/revenue_repository.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 
 /// Live-HTTP (flag off) or local-first + outbox (flag on) implementation of
 /// [RevenueRepository].
@@ -39,7 +40,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/revenue_repositor
 /// server id. [updateRevenue], [deleteRevenue] and [getRevenueById]
 /// therefore treat the incoming `id` as a `clientUuid`, never a server id.
 /// The drift row's nullable `serverId` is used ONLY by the syncer (via
-/// `RevenueModel.fromDrift`) to build server URLs — it never surfaces
+/// `revenueModelFromDrift`) to build server URLs — it never surfaces
 /// through this repository's presentation.
 ///
 /// ### FK note
@@ -115,7 +116,11 @@ class RevenueRepositoryImpl
   @override
   Stream<List<Revenue>> watchRevenues() {
     if (OfflineConfig.enabled && local != null) {
-      return watchAsDomain(local!.watchRevenues(), _toRevenue);
+      return Stream.fromFuture(FarmStorageService.getCurrentFarmId()).asyncExpand(
+        (farmId) => farmId == null
+            ? Stream<List<Revenue>>.value(const [])
+            : watchAsDomain(local!.watchRevenues(farmId: farmId), _toRevenue),
+      );
     }
     // Unused by the app while the flag is off (the bloc keeps its
     // remote-polling `LoadRevenues` path) — this only needs to compile and
@@ -140,7 +145,9 @@ class RevenueRepositoryImpl
     if (_offlineFirst) {
       // Offline mirror shows the whole (filtered) local store — pagination
       // ([limit]/[cursor]) is an online-only concern and is ignored here.
-      final models = await local!.watchRevenues().first;
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Right([]);
+      final models = await local!.watchRevenues(farmId: farmId).first;
       final revenues = models
           .map(_toRevenue)
           .where(
@@ -191,6 +198,8 @@ class RevenueRepositoryImpl
     String? notes,
   }) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       final model = RevenueModel.create(
         source: source,
         sourceId: sourceId,
@@ -207,6 +216,7 @@ class RevenueRepositoryImpl
         model,
         jsonEncode(model.toJson()),
         OutboxOp.create,
+        farmId: farmId,
       );
       return Right(_toRevenue(model));
     }
@@ -239,6 +249,8 @@ class RevenueRepositoryImpl
     String? notes,
   }) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `id` is a clientUuid (presentation identity) — see class docs.
       final existing = await local!.getByClientUuid(id);
       if (existing == null) {
@@ -265,6 +277,7 @@ class RevenueRepositoryImpl
         updated,
         jsonEncode(updated.toJson()),
         OutboxOp.update,
+        farmId: farmId,
       );
       return Right(_toRevenue(updated));
     }
@@ -291,8 +304,10 @@ class RevenueRepositoryImpl
   @override
   Future<Either<Failure, void>> deleteRevenue(String id) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `id` is a clientUuid (presentation identity) — see class docs.
-      await stageDelete(local!, id);
+      await stageDelete(local!, id, farmId: farmId);
       return const Right(null);
     }
 

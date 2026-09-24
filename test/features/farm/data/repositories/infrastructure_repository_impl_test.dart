@@ -13,7 +13,9 @@ import 'package:farm_tracker/features/farm/data/datasources/infrastructure_local
 import 'package:farm_tracker/features/farm/data/datasources/infrastructure_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/models/infrastructure_model.dart';
 import 'package:farm_tracker/features/farm/data/repositories/infrastructure_repository_impl.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeInfrastructureRemoteDataSource
     implements InfrastructureRemoteDataSource {
@@ -116,6 +118,8 @@ InfrastructureModel _infrastructure({
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   tearDown(() {
     OfflineConfig.enabled = false;
   });
@@ -321,8 +325,13 @@ void main() {
     late _FakeSyncEngine sync;
     late FakeInfrastructureRemoteDataSource remote;
 
-    setUp(() {
+    setUp(() async {
       OfflineConfig.enabled = true;
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      // Every pre-existing offline-path test in this group predates farm
+      // scoping and expects the success path — give it a current farm
+      // (id 1, matching every other farmId default in this plan).
+      await FarmStorageService.setCurrentFarmId(1);
       db = AppDatabase.forTesting(NativeDatabase.memory());
       local = InfrastructureLocalDataSource(db);
       outbox = OutboxDao(db);

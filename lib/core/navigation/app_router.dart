@@ -1,5 +1,6 @@
 import 'package:animations/animations.dart';
 import 'package:farm_tracker/core/logging/logging_navigator.dart';
+import 'package:farm_tracker/core/navigation/app_route_path.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/google_login_page.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/onboarding_page.dart';
@@ -29,74 +30,15 @@ import 'package:farm_tracker/features/farm/presentation/pages/revenue_page.dart'
 import 'package:farm_tracker/features/farm/presentation/pages/season_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/settings_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/trash_page.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
+import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
+import 'package:farm_tracker/features/farms/presentation/pages/create_farm_page.dart';
+import 'package:farm_tracker/features/farms/presentation/pages/farm_manage_page.dart';
+import 'package:farm_tracker/features/farms/presentation/pages/farms_list_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class AppRouteName {
-  static const splash = 'splash';
-  static const googleLogin = 'google-login';
-  static const onboarding = 'onboarding';
-  static const plantsDashboard = 'plants-dashboard';
-  static const analytics = 'analytics';
-  static const animalsDashboard = 'animals-dashboard';
-  static const revenue = 'revenue';
-  static const settings = 'settings';
-  static const lands = 'lands';
-  static const plants = 'plants';
-  static const seasons = 'seasons';
-  static const animalTypes = 'animal-types';
-  static const herds = 'herds';
-  static const animalsList = 'animals-list';
-  static const inputs = 'inputs';
-  static const activities = 'activities';
-  static const totalCosts = 'total-costs';
-  static const costBreakdown = 'cost-breakdown';
-  static const annualSummary = 'annual-summary';
-  static const streak = 'streak';
-  static const revenueAdd = 'revenue-add';
-  static const infrastructure = 'infrastructure';
-  static const herdActivities = 'herd-activities';
-  static const harvests = 'harvests';
-  static const contentTips = 'content-tips';
-  static const contentDetail = 'content-detail';
-  static const askQuestion = 'ask-question';
-  static const trash = 'trash';
-}
-
-class AppRoutePath {
-  static const splash = '/splash';
-  static const googleLogin = '/google-login';
-  static const onboarding = '/onboarding';
-  static const home = '/';
-  static const analytics = '/analytics';
-  static const animals = '/animals';
-  static const revenue = '/revenue';
-  static const settingsPage = '/settings';
-  static const lands = '/lands';
-  static const plants = '/plants';
-  static const seasons = '/seasons';
-  static const animalTypes = '/animal-types';
-  static const herds = '/herds';
-  static const animalsList = '/animals-list';
-  static const inputsTemplate = '/inputs/:sourceType';
-  static const activitiesTemplate = '/activities/:sourceType';
-  static const totalCosts = '/analytics/total-costs';
-  static const costBreakdown = '/analytics/cost-breakdown';
-  static const annualSummary = '/analytics/annual-summary';
-  static const streak = '/analytics/streak';
-  static const revenueAdd = '/revenue/add';
-  static const infrastructure = '/infrastructure';
-  static const herdActivities = '/herd-activities';
-  static const harvests = '/harvests';
-  static const contentTips = '/content';
-  static const contentDetailTemplate = '/content/:id';
-  static const askQuestion = '/ask-question';
-  static const trash = '/trash';
-
-  static String inputsFor(String sourceType) => '/inputs/$sourceType';
-  static String activitiesFor(String sourceType) => '/activities/$sourceType';
-  static String contentDetailFor(String id) => '/content/$id';
-}
+export 'package:farm_tracker/core/navigation/app_route_path.dart';
 
 class AppRouter {
   AppRouter();
@@ -121,15 +63,61 @@ class AppRouter {
     return AppRoutePath.googleLogin;
   }
 
+  /// Revenue/Analytics/Trash and their sub-routes — matches the real
+  /// `staff` (owner+manager) gate on `/revenue`, `/analytics`, `/trash` in
+  /// `internal/routes/routes.go`. A worker hitting these entirely
+  /// legitimately gets a flat 403 from the backend; this turns that into a
+  /// redirect before the request is ever made.
+  static const Set<String> _staffOnlyPaths = {
+    AppRoutePath.revenue,
+    AppRoutePath.revenueAdd,
+    AppRoutePath.analytics,
+    AppRoutePath.totalCosts,
+    AppRoutePath.costBreakdown,
+    AppRoutePath.annualSummary,
+    AppRoutePath.streak,
+    AppRoutePath.trash,
+  };
+
+  /// No dedicated owner-only ROUTE exists in this sub-project — the
+  /// successor/transfer controls live as a section inside `FarmManagePage`,
+  /// a page every role can open. Declared empty (rather than omitted) so a
+  /// future owner-only route has an obvious place to register itself.
+  static const Set<String> _ownerOnlyPaths = {};
+
+  /// Pure redirect decision (unit-tested): where to send a navigation given
+  /// the current farm [role], or null to allow it. Defense-in-depth exactly
+  /// like [authRedirectLocation] — the backend rejects the call regardless;
+  /// this turns "a 403 on every screen" into a redirect home. A `null`
+  /// [role] (farm data not loaded yet) never redirects — `FarmBloc` has its
+  /// own load lifecycle; this only gates once a role is actually known.
+  static String? staffOnlyRedirectLocation({
+    required FarmRole? role,
+    required String location,
+  }) {
+    if (role == null) return null;
+    if (_staffOnlyPaths.contains(location) && !role.isStaff) {
+      return AppRoutePath.home;
+    }
+    if (_ownerOnlyPaths.contains(location) && role != FarmRole.owner) {
+      return AppRoutePath.home;
+    }
+    return null;
+  }
+
   final GoRouter router = GoRouter(
     initialLocation: AppRoutePath.splash,
     observers: [LoggingGoRouterObserver()],
     redirect: (context, state) async {
       final loggedIn = await UserStorageService.isLoggedIn();
-      return authRedirectLocation(
+      final authRedirect = authRedirectLocation(
         loggedIn: loggedIn,
         location: state.matchedLocation,
       );
+      if (authRedirect != null) return authRedirect;
+
+      final role = await FarmStorageService.getCurrentRole();
+      return staffOnlyRedirectLocation(role: role, location: state.matchedLocation);
     },
     routes: [
       GoRoute(
@@ -195,6 +183,24 @@ class AppRouter {
                 _fadeThroughPage(const SettingsPage(), state),
           ),
         ],
+      ),
+      GoRoute(
+        name: AppRouteName.farmsList,
+        path: AppRoutePath.farmsList,
+        caseSensitive: false,
+        pageBuilder: (context, state) => _slidePage(const FarmsListPage(), state),
+      ),
+      GoRoute(
+        name: AppRouteName.createFarm,
+        path: AppRoutePath.createFarm,
+        caseSensitive: false,
+        pageBuilder: (context, state) => _slidePage(const CreateFarmPage(), state),
+      ),
+      GoRoute(
+        name: AppRouteName.farmManage,
+        path: AppRoutePath.farmManage,
+        caseSensitive: false,
+        pageBuilder: (context, state) => _slidePage(const FarmManagePage(), state),
       ),
       GoRoute(
         name: AppRouteName.lands,

@@ -15,6 +15,7 @@ import 'package:farm_tracker/features/farm/data/datasources/harvest_remote_data_
 import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/harvest.dart';
 import 'package:farm_tracker/features/farm/domain/repositories/harvest_repository.dart';
+import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 
 /// Live-HTTP (flag off) or local-first + outbox (flag on) implementation of
 /// [HarvestRepository].
@@ -39,7 +40,7 @@ import 'package:farm_tracker/features/farm/domain/repositories/harvest_repositor
 /// server id. [updateHarvest] and [deleteHarvest] therefore treat the
 /// incoming `id`/`harvest.id` as a `clientUuid`, never a server id. The
 /// drift row's nullable `serverId` is used ONLY by the syncer (via
-/// `HarvestModel.fromDrift`) to build server URLs — it never surfaces
+/// `harvestModelFromDrift`) to build server URLs — it never surfaces
 /// through this repository's presentation.
 class HarvestRepositoryImpl
     with OfflineRepositoryMixin
@@ -101,9 +102,13 @@ class HarvestRepositoryImpl
   @override
   Stream<List<Harvest>> watchHarvests({String? seasonId}) {
     if (OfflineConfig.enabled && local != null) {
-      return watchAsDomain(
-        local!.watchHarvests(seasonId: seasonId),
-        _toHarvest,
+      return Stream.fromFuture(FarmStorageService.getCurrentFarmId()).asyncExpand(
+        (farmId) => farmId == null
+            ? Stream<List<Harvest>>.value(const [])
+            : watchAsDomain(
+                local!.watchHarvests(seasonId: seasonId, farmId: farmId),
+                _toHarvest,
+              ),
       );
     }
     // Unused by the app while the flag is off (the bloc keeps its
@@ -126,7 +131,10 @@ class HarvestRepositoryImpl
     if (_offlineFirst) {
       // Offline mirror shows the whole local store — pagination
       // ([limit]/[cursor]) is an online-only concern and is ignored here.
-      final models = await local!.watchHarvests(seasonId: seasonId).first;
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Right([]);
+      final models =
+          await local!.watchHarvests(seasonId: seasonId, farmId: farmId).first;
       return Right(models.map(_toHarvest).toList());
     }
     return guard(
@@ -141,6 +149,8 @@ class HarvestRepositoryImpl
   @override
   Future<Either<Failure, Harvest>> addHarvest(Harvest harvest) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       final model = HarvestModel.create(
         seasonId: harvest.seasonId,
         quantity: harvest.quantity,
@@ -154,6 +164,7 @@ class HarvestRepositoryImpl
         model,
         jsonEncode(model.toJson()),
         OutboxOp.create,
+        farmId: farmId,
       );
       return Right(_toHarvest(model));
     }
@@ -164,6 +175,8 @@ class HarvestRepositoryImpl
   @override
   Future<Either<Failure, Harvest>> updateHarvest(Harvest harvest) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `harvest.id` is a clientUuid (presentation identity) — see class
       // docs.
       final existing = await local!.getByClientUuid(harvest.id);
@@ -188,6 +201,7 @@ class HarvestRepositoryImpl
         updated,
         jsonEncode(updated.toJson()),
         OutboxOp.update,
+        farmId: farmId,
       );
       return Right(harvest);
     }
@@ -198,8 +212,10 @@ class HarvestRepositoryImpl
   @override
   Future<Either<Failure, void>> deleteHarvest(String id) async {
     if (_offlineFirst) {
+      final farmId = await FarmStorageService.getCurrentFarmId();
+      if (farmId == null) return const Left(CacheFailure());
       // `id` is a clientUuid (presentation identity) — see class docs.
-      await stageDelete(local!, id);
+      await stageDelete(local!, id, farmId: farmId);
       return const Right(null);
     }
 

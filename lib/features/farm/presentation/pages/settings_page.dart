@@ -11,6 +11,8 @@ import 'package:farm_tracker/core/validation/validators.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_state.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_event.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_state.dart';
@@ -154,6 +156,10 @@ class _SettingsPageState extends State<SettingsPage> {
             _populateFields(profileState);
           }
 
+          final farmState = context.watch<FarmBloc>().state;
+          final isStaff = farmState is! FarmLoaded ||
+              (farmState.currentRole?.isStaff ?? true);
+
           return BlocBuilder<ThemeBloc, ThemeState>(
             builder: (context, themeState) {
               return ColoredBox(
@@ -214,31 +220,35 @@ class _SettingsPageState extends State<SettingsPage> {
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                                 const SizedBox(height: 12),
-                                SegmentedButton<ThemeMode>(
-                                  segments: const [
-                                    ButtonSegment(
-                                      value: ThemeMode.system,
-                                      icon: Icon(Icons.brightness_auto),
-                                      label: Text('System'),
-                                    ),
-                                    ButtonSegment(
-                                      value: ThemeMode.light,
-                                      icon: Icon(Icons.light_mode),
-                                      label: Text('Light'),
-                                    ),
-                                    ButtonSegment(
-                                      value: ThemeMode.dark,
-                                      icon: Icon(Icons.dark_mode),
-                                      label: Text('Dark'),
-                                    ),
-                                  ],
-                                  selected: {themeState.themeMode},
-                                  onSelectionChanged: (selection) {
-                                    HapticFeedback.selectionClick();
-                                    context.read<ThemeBloc>().add(
-                                      SetThemeModeEvent(selection.first),
-                                    );
-                                  },
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: SegmentedButton<ThemeMode>(
+                                    segments: const [
+                                      ButtonSegment(
+                                        value: ThemeMode.system,
+                                        icon: Icon(Icons.brightness_auto),
+                                        label: Text('System'),
+                                      ),
+                                      ButtonSegment(
+                                        value: ThemeMode.light,
+                                        icon: Icon(Icons.light_mode),
+                                        label: Text('Light'),
+                                      ),
+                                      ButtonSegment(
+                                        value: ThemeMode.dark,
+                                        icon: Icon(Icons.dark_mode),
+                                        label: Text('Dark'),
+                                      ),
+                                    ],
+                                    selected: {themeState.themeMode},
+                                    onSelectionChanged: (selection) {
+                                      HapticFeedback.selectionClick();
+                                      context.read<ThemeBloc>().add(
+                                        SetThemeModeEvent(selection.first),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ],
                             ),
@@ -365,45 +375,58 @@ class _SettingsPageState extends State<SettingsPage> {
                     const SizedBox(height: 24),
                     _buildSettingsCard(
                       context,
-                      title: 'Farm Year',
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: DropdownButtonFormField<int>(
-                          initialValue: _fiscalYearStartMonth,
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Our farm year starts in',
-                          ),
-                          items: const [
-                            DropdownMenuItem(value: 1, child: Text('January')),
-                            DropdownMenuItem(value: 2, child: Text('February')),
-                            DropdownMenuItem(value: 3, child: Text('March')),
-                            DropdownMenuItem(value: 4, child: Text('April')),
-                            DropdownMenuItem(value: 5, child: Text('May')),
-                            DropdownMenuItem(value: 6, child: Text('June')),
-                            DropdownMenuItem(value: 7, child: Text('July')),
-                            DropdownMenuItem(value: 8, child: Text('August')),
-                            DropdownMenuItem(value: 9, child: Text('September')),
-                            DropdownMenuItem(value: 10, child: Text('October')),
-                            DropdownMenuItem(value: 11, child: Text('November')),
-                            DropdownMenuItem(value: 12, child: Text('December')),
-                          ],
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setState(() => _fiscalYearStartMonth = value);
-                            context.read<ProfileBloc>().add(
-                              UpdateProfileEvent(
-                                firstName: _firstName,
-                                lastName: _lastName,
-                                fiscalYearStartMonth: value,
-                                farmName: sanitizeText(_farmNameController.text),
-                                location: sanitizeText(_locationController.text),
-                              ),
-                            );
-                          },
-                        ),
+                      title: 'Your Farms',
+                      child: ListTile(
+                        leading: const Icon(Icons.agriculture_outlined),
+                        title: const Text('Your Farms'),
+                        subtitle: const Text('Switch farms, invite members, manage roles'),
+                        onTap: () => context.push(AppRoutePath.farmsList),
                       ),
                     ),
+                    if (isStaff) ...[
+                      const SizedBox(height: 24),
+                      _buildSettingsCard(
+                        context,
+                        title: 'Farm Year',
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: DropdownButtonFormField<int>(
+                            initialValue: _fiscalYearStartMonth,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              labelText: 'Our farm year starts in',
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: 1, child: Text('January')),
+                              DropdownMenuItem(value: 2, child: Text('February')),
+                              DropdownMenuItem(value: 3, child: Text('March')),
+                              DropdownMenuItem(value: 4, child: Text('April')),
+                              DropdownMenuItem(value: 5, child: Text('May')),
+                              DropdownMenuItem(value: 6, child: Text('June')),
+                              DropdownMenuItem(value: 7, child: Text('July')),
+                              DropdownMenuItem(value: 8, child: Text('August')),
+                              DropdownMenuItem(value: 9, child: Text('September')),
+                              DropdownMenuItem(value: 10, child: Text('October')),
+                              DropdownMenuItem(value: 11, child: Text('November')),
+                              DropdownMenuItem(value: 12, child: Text('December')),
+                            ],
+                            onChanged: (value) {
+                              if (value == null) return;
+                              setState(() => _fiscalYearStartMonth = value);
+                              context.read<ProfileBloc>().add(
+                                UpdateProfileEvent(
+                                  firstName: _firstName,
+                                  lastName: _lastName,
+                                  fiscalYearStartMonth: value,
+                                  farmName: sanitizeText(_farmNameController.text),
+                                  location: sanitizeText(_locationController.text),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     _buildSettingsCard(
                       context,
@@ -419,16 +442,18 @@ class _SettingsPageState extends State<SettingsPage> {
                             onTap: () =>
                                 context.push(AppRoutePath.contentTips),
                           ),
-                          const Divider(height: 1),
-                          ListTile(
-                            leading: const Icon(Icons.delete_outline),
-                            title: const Text('Recently Deleted'),
-                            subtitle: const Text(
-                              'Restore lands, plants, animals and other '
-                              'deleted records',
+                          if (isStaff) ...[
+                            const Divider(height: 1),
+                            ListTile(
+                              leading: const Icon(Icons.delete_outline),
+                              title: const Text('Recently Deleted'),
+                              subtitle: const Text(
+                                'Restore lands, plants, animals and other '
+                                'deleted records',
+                              ),
+                              onTap: () => context.push(AppRoutePath.trash),
                             ),
-                            onTap: () => context.push(AppRoutePath.trash),
-                          ),
+                          ],
                         ],
                       ),
                     ),

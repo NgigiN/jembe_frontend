@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/models/activity_model.dart';
+import 'package:farm_tracker/features/farm/data/models/activity_model_drift.dart';
 
 /// Drift-backed local data source for the activity feature.
 ///
@@ -34,25 +35,25 @@ class ActivityLocalDataSource implements LocalSyncStore<ActivityModel> {
   /// Ordered by `createdAt` ascending (oldest first) — a stable order tied
   /// to when an activity was first created locally, unaffected by later
   /// edits.
-  Stream<List<ActivityModel>> watchActivities({String? sourceType}) {
+  Stream<List<ActivityModel>> watchActivities({String? sourceType, int farmId = 1}) {
     final query = _db.select(_db.activities)
-      ..where((row) => row.deletedLocally.equals(false));
+      ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId));
     if (sourceType != null && sourceType.isNotEmpty) {
       query.where((row) => row.sourceType.equals(sourceType));
     }
     query.orderBy([(row) => OrderingTerm.asc(row.createdAt)]);
     return query.watch().map(
-      (rows) => rows.map(ActivityModel.fromDrift).toList(),
+      (rows) => rows.map(activityModelFromDrift).toList(),
     );
   }
 
   /// Inserts [model], or replaces the existing row sharing its
   /// `clientUuid` (the primary key) if one already exists.
   @override
-  Future<void> upsert(ActivityModel model, {required bool pending}) {
+  Future<void> upsert(ActivityModel model, {required bool pending, int farmId = 1}) {
     return _db
         .into(_db.activities)
-        .insertOnConflictUpdate(model.toCompanion(pending: pending));
+        .insertOnConflictUpdate(model.toCompanion(pending: pending, farmId: farmId));
   }
 
   /// Marks the row for [clientUuid] as a tombstone awaiting delete-sync:
@@ -105,7 +106,7 @@ class ActivityLocalDataSource implements LocalSyncStore<ActivityModel> {
     final row = await (_db.select(
       _db.activities,
     )..where((r) => r.clientUuid.equals(clientUuid))).getSingleOrNull();
-    return row == null ? null : ActivityModel.fromDrift(row);
+    return row == null ? null : activityModelFromDrift(row);
   }
 
   /// The activity with the given server [serverId], or `null` if no such
@@ -115,7 +116,7 @@ class ActivityLocalDataSource implements LocalSyncStore<ActivityModel> {
     final row = await (_db.select(
       _db.activities,
     )..where((r) => r.serverId.equals(serverId))).getSingleOrNull();
-    return row == null ? null : ActivityModel.fromDrift(row);
+    return row == null ? null : activityModelFromDrift(row);
   }
 
   /// Deletes every row — used to wipe the local mirror on logout.

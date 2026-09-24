@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
 import 'package:farm_tracker/features/farm/data/models/land_model.dart';
+import 'package:farm_tracker/features/farm/data/models/land_model_drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FixedUuidGen extends UuidGen {
@@ -151,9 +152,10 @@ void main() {
         updatedAt: now,
         pending: false,
         deletedLocally: false,
+        farmId: 1,
       );
 
-      final land = LandModel.fromDrift(row);
+      final land = landModelFromDrift(row);
 
       expect(land.id, 'server-1');
       expect(land.clientUuid, 'client-uuid-1');
@@ -177,9 +179,10 @@ void main() {
         updatedAt: now,
         pending: true,
         deletedLocally: false,
+        farmId: 1,
       );
 
-      final land = LandModel.fromDrift(row);
+      final land = landModelFromDrift(row);
 
       expect(land.id, '');
       expect(land.clientUuid, 'client-uuid-1');
@@ -228,6 +231,22 @@ void main() {
       final companion = land.toCompanion(pending: true);
 
       expect(companion.serverId, const Value(null));
+    });
+
+    test('toCompanion writes the given farmId onto the companion', () {
+      final model = LandModel.create(userId: 'u1', name: 'North Field');
+
+      final companion = model.toCompanion(pending: true, farmId: 42);
+
+      expect(companion.farmId.value, 42);
+    });
+
+    test('toCompanion defaults farmId to 1 when not specified (back-compat)', () {
+      final model = LandModel.create(userId: 'u1', name: 'North Field');
+
+      final companion = model.toCompanion(pending: true);
+
+      expect(companion.farmId.value, 1);
     });
   });
 }

@@ -1,5 +1,6 @@
 import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/theme/app_colors.dart';
+import 'package:farm_tracker/core/theme/app_typography.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_empty_view.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
@@ -177,10 +178,12 @@ class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
         subtitle: Text('${detail.category} • ${detail.location}'),
         trailing: Text(
           'KES ${detail.totalCost.toStringAsFixed(0)}',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
-            fontSize: 16,
+          style: AppTypography.money(
+            TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+              fontSize: 16,
+            ),
           ),
         ),
         children: [
@@ -246,9 +249,11 @@ class _TotalCostsBySeasonPageState extends State<TotalCostsBySeasonPage> {
         ),
         Text(
           'KES ${value.toStringAsFixed(2)}',
-          style: TextStyle(
-            fontWeight: isBold ? FontWeight.bold : FontWeight.bold,
-            color: isBold ? Theme.of(context).colorScheme.primary : null,
+          style: AppTypography.money(
+            TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.bold,
+              color: isBold ? Theme.of(context).colorScheme.primary : null,
+            ),
           ),
         ),
       ],

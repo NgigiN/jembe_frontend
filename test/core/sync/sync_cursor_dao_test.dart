@@ -53,5 +53,25 @@ void main() {
       expect((await dao.get('land'))!.isAtSameMomentAs(landAt), isTrue);
       expect((await dao.get('crop'))!.isAtSameMomentAs(cropAt), isTrue);
     });
+
+    test('cursors are scoped per (farmId, entity) — two farms track the '
+        'same entity independently', () async {
+      final farm1Time = DateTime.utc(2026, 1, 1);
+      final farm2Time = DateTime.utc(2026, 2, 1);
+
+      await dao.set('land', farm1Time, farmId: 1);
+      await dao.set('land', farm2Time, farmId: 2);
+
+      expect((await dao.get('land', farmId: 1))!.isAtSameMomentAs(farm1Time), isTrue);
+      expect((await dao.get('land', farmId: 2))!.isAtSameMomentAs(farm2Time), isTrue);
+    });
+
+    test('get/set default to farmId 1 when not specified (back-compat)',
+        () async {
+      final time = DateTime.utc(2026, 1, 1);
+      await dao.set('land', time);
+
+      expect((await dao.get('land'))!.isAtSameMomentAs(time), isTrue);
+    });
   });
 }

@@ -8,6 +8,10 @@ import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/settings_page.dart';
+import 'package:farm_tracker/features/farms/domain/entities/farm.dart';
+import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_state.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_event.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_state.dart';
@@ -25,6 +29,28 @@ class MockThemeBloc extends MockBloc<ThemeEvent, ThemeState>
     implements ThemeBloc {}
 
 class MockAuthBloc extends MockBloc<AuthEvent, AuthState> implements AuthBloc {}
+
+class _FakeFarmBloc extends Fake implements FarmBloc {
+  _FakeFarmBloc(this._state);
+  final FarmState _state;
+  @override
+  FarmState get state => _state;
+  @override
+  Stream<FarmState> get stream => Stream.value(_state);
+}
+
+Farm _farm(FarmRole role) => Farm(
+  id: 1, name: 'Farm', location: '', fiscalYearStartMonth: 1,
+  ownerUserId: 1, successorUserId: null, maxMembers: 5,
+  role: role, memberCount: 1, isDefault: true,
+);
+
+BlocProvider<FarmBloc> _farmBlocProvider([FarmRole role = FarmRole.owner]) =>
+    BlocProvider<FarmBloc>.value(
+      value: _FakeFarmBloc(
+        FarmLoaded(farms: [_farm(role)], currentFarmId: 1, currentRole: role),
+      ),
+    );
 
 void main() {
   setUpAll(() {
@@ -68,6 +94,7 @@ void main() {
               BlocProvider<ProfileBloc>.value(value: profileBloc),
               BlocProvider<ThemeBloc>.value(value: themeBloc),
               BlocProvider<AuthBloc>.value(value: authBloc),
+              _farmBlocProvider(),
             ],
             child: const SettingsPage(),
           ),
@@ -144,6 +171,7 @@ void main() {
               BlocProvider<ProfileBloc>.value(value: profileBloc),
               BlocProvider<ThemeBloc>.value(value: themeBloc),
               BlocProvider<AuthBloc>.value(value: authBloc),
+              _farmBlocProvider(),
             ],
             child: const SettingsPage(),
           ),
@@ -233,6 +261,7 @@ void main() {
               BlocProvider<ProfileBloc>.value(value: profileBloc),
               BlocProvider<ThemeBloc>.value(value: themeBloc),
               BlocProvider<AuthBloc>.value(value: authBloc),
+              _farmBlocProvider(),
             ],
             child: const SettingsPage(),
           ),
@@ -307,6 +336,7 @@ void main() {
               BlocProvider<ProfileBloc>.value(value: profileBloc),
               BlocProvider<ThemeBloc>.value(value: themeBloc),
               BlocProvider<AuthBloc>.value(value: authBloc),
+              _farmBlocProvider(),
             ],
             child: const SettingsPage(),
           ),
@@ -333,4 +363,169 @@ void main() {
       expect(prefs.getBool(soundEffectsPrefsKey), isFalse);
     },
   );
+
+  testWidgets('shows a "Your Farms" entry that opens the farm switcher',
+      (tester) async {
+    final profileBloc = MockProfileBloc();
+    final themeBloc = MockThemeBloc();
+    final authBloc = MockAuthBloc();
+
+    const user = User(
+      id: '1',
+      email: 'a@example.com',
+      firstName: 'A',
+      lastName: 'B',
+      farmName: 'Green Acres',
+      location: 'Nakuru',
+      pictureUrl: '',
+    );
+
+    whenListen(
+      profileBloc,
+      Stream<ProfileState>.value(const ProfileLoaded(user: user)),
+      initialState: const ProfileLoaded(user: user),
+    );
+    whenListen(
+      themeBloc,
+      Stream<ThemeState>.value(const ThemeState(themeMode: ThemeMode.light)),
+      initialState: const ThemeState(themeMode: ThemeMode.light),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MultiBlocProvider(
+          providers: [
+            BlocProvider<ProfileBloc>.value(value: profileBloc),
+            BlocProvider<ThemeBloc>.value(value: themeBloc),
+            BlocProvider<AuthBloc>.value(value: authBloc),
+            _farmBlocProvider(),
+          ],
+          child: const SettingsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.dragUntilVisible(
+      find.text('Switch farms, invite members, manage roles'),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Switch farms, invite members, manage roles'), findsOneWidget);
+  });
+
+  testWidgets('a worker does not see Farm Year or Recently Deleted',
+      (tester) async {
+    // Tall surface so the whole ListView mounts at once — findsNothing on a
+    // virtualized ListView is only meaningful if the section would have
+    // been mounted were it present.
+    tester.view.physicalSize = const Size(400, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final profileBloc = MockProfileBloc();
+    final themeBloc = MockThemeBloc();
+    final authBloc = MockAuthBloc();
+
+    const user = User(
+      id: '1',
+      email: 'a@example.com',
+      firstName: 'A',
+      lastName: 'B',
+      farmName: 'Green Acres',
+      location: 'Nakuru',
+      pictureUrl: '',
+    );
+
+    whenListen(
+      profileBloc,
+      Stream<ProfileState>.value(const ProfileLoaded(user: user)),
+      initialState: const ProfileLoaded(user: user),
+    );
+    whenListen(
+      themeBloc,
+      Stream<ThemeState>.value(const ThemeState(themeMode: ThemeMode.light)),
+      initialState: const ThemeState(themeMode: ThemeMode.light),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MultiBlocProvider(
+          providers: [
+            BlocProvider<ProfileBloc>.value(value: profileBloc),
+            BlocProvider<ThemeBloc>.value(value: themeBloc),
+            BlocProvider<AuthBloc>.value(value: authBloc),
+            _farmBlocProvider(FarmRole.worker),
+          ],
+          child: const SettingsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Farm Year'), findsNothing);
+    expect(find.text('Recently Deleted'), findsNothing);
+    expect(find.text('Browse Farming Tips'), findsOneWidget);
+  });
+
+  testWidgets('an owner still sees Farm Year and Recently Deleted',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final profileBloc = MockProfileBloc();
+    final themeBloc = MockThemeBloc();
+    final authBloc = MockAuthBloc();
+
+    const user = User(
+      id: '1',
+      email: 'a@example.com',
+      firstName: 'A',
+      lastName: 'B',
+      farmName: 'Green Acres',
+      location: 'Nakuru',
+      pictureUrl: '',
+    );
+
+    whenListen(
+      profileBloc,
+      Stream<ProfileState>.value(const ProfileLoaded(user: user)),
+      initialState: const ProfileLoaded(user: user),
+    );
+    whenListen(
+      themeBloc,
+      Stream<ThemeState>.value(const ThemeState(themeMode: ThemeMode.light)),
+      initialState: const ThemeState(themeMode: ThemeMode.light),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MultiBlocProvider(
+          providers: [
+            BlocProvider<ProfileBloc>.value(value: profileBloc),
+            BlocProvider<ThemeBloc>.value(value: themeBloc),
+            BlocProvider<AuthBloc>.value(value: authBloc),
+            _farmBlocProvider(FarmRole.owner),
+          ],
+          child: const SettingsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.dragUntilVisible(
+      find.text('Farm Year'),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Farm Year'), findsOneWidget);
+    expect(find.text('Recently Deleted'), findsOneWidget);
+  });
 }
