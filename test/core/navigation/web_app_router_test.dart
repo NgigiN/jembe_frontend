@@ -17,10 +17,44 @@ void main() {
         isNull,
       );
     });
-    test('logged in -> always allow (null)', () {
+    test('logged in, already inside the console -> allow (null)', () {
+      for (final path in [
+        WebRoutePath.dashboard,
+        WebRoutePath.feed,
+        WebRoutePath.reports,
+        WebRoutePath.members,
+        WebRoutePath.farmsList,
+        WebRoutePath.trash,
+        WebRoutePath.settings,
+      ]) {
+        expect(
+          WebAppRouter.authRedirectLocation(loggedIn: true, location: path),
+          isNull,
+          reason: path,
+        );
+      }
+    });
+
+    // The console navigates by redirect alone — nothing pushes a route
+    // after a successful sign-in — so leaving a signed-in user on the
+    // sign-in page is how "I picked my account and nothing happened"
+    // happens, with the token already saved and the backend at 200.
+    test('logged in, still on the sign-in page -> into the console', () {
       expect(
-        WebAppRouter.authRedirectLocation(loggedIn: true, location: WebRoutePath.dashboard),
-        isNull,
+        WebAppRouter.authRedirectLocation(loggedIn: true, location: WebRoutePath.signIn),
+        WebRoutePath.dashboard,
+      );
+    });
+
+    test('a worker sent to the dashboard is bounced on to Feed', () {
+      // Second pass: the redirect above lands on /dashboard, and this is
+      // what runs for it.
+      expect(
+        WebAppRouter.staffOnlyRedirectLocation(
+          role: FarmRole.worker,
+          location: WebRoutePath.dashboard,
+        ),
+        WebRoutePath.feed,
       );
     });
   });
