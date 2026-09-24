@@ -61,11 +61,28 @@ jobs:
         # conditional exports to their VM-safe stub, which never touches
         # dart:ffi in the first place.
         #
+        # --dart-define=ENV=production is what puts AppConfig on
+        # Environment.remote, i.e. the real API host. Leaving it off is not
+        # a subtle degradation: AppConfig's default is `local`, so the
+        # deployed console called http://10.0.2.2:8080 — the Android
+        # emulator's host alias — from an HTTPS page, and the browser
+        # blocked it as mixed content. Every other release build in this
+        # workflow passes the same flag; this one did not.
+        #
+        # REMOTE_API_URL is deliberately not passed: AppConfig's default is
+        # already the production host, and naming it in two places is how
+        # the two drift apart.
+        #
         # --base-href=/console/ because the console is served under a path on the
         # existing API host (no CORS, no second certificate, and it inherits the
         # Cloudflare proxy that host already sits behind). Without it every asset
         # URL is rooted at / and the app loads nothing.
-        run: flutter build web -t lib/main_web.dart --base-href=/console/
+        run: |
+          flutter build web \
+            -t lib/main_web.dart \
+            --release \
+            --dart-define=ENV=production \
+            --base-href=/console/
 
       - name: Deploy web console
         # PUSH TO MAIN ONLY. This workflow also runs on pull_request, and this is a
