@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
 import 'package:farm_tracker/features/farm/data/models/animal_type_model.dart';
+import 'package:farm_tracker/features/farm/data/models/animal_type_model_drift.dart';
 
 /// Drift-backed local data source for the animal_type feature.
 ///
@@ -34,7 +35,7 @@ class AnimalTypeLocalDataSource implements LocalSyncStore<AnimalTypeModel> {
       ..where((row) => row.deletedLocally.equals(false) & row.farmId.equals(farmId))
       ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]);
     return query.watch().map(
-      (rows) => rows.map(AnimalTypeModel.fromDrift).toList(),
+      (rows) => rows.map(animalTypeModelFromDrift).toList(),
     );
   }
 
@@ -97,7 +98,7 @@ class AnimalTypeLocalDataSource implements LocalSyncStore<AnimalTypeModel> {
     final row = await (_db.select(
       _db.animalTypes,
     )..where((r) => r.clientUuid.equals(clientUuid))).getSingleOrNull();
-    return row == null ? null : AnimalTypeModel.fromDrift(row);
+    return row == null ? null : animalTypeModelFromDrift(row);
   }
 
   /// The animal type with the given server [serverId], or `null` if no such
@@ -107,7 +108,7 @@ class AnimalTypeLocalDataSource implements LocalSyncStore<AnimalTypeModel> {
     final row = await (_db.select(
       _db.animalTypes,
     )..where((r) => r.serverId.equals(serverId))).getSingleOrNull();
-    return row == null ? null : AnimalTypeModel.fromDrift(row);
+    return row == null ? null : animalTypeModelFromDrift(row);
   }
 
   /// Deletes every row — used to wipe the local mirror on logout.

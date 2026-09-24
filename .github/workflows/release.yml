@@ -60,7 +60,41 @@ jobs:
         # and flutter test alone don't catch this: they resolve web-only
         # conditional exports to their VM-safe stub, which never touches
         # dart:ffi in the first place.
-        run: flutter build web -t lib/main_web.dart
+        #
+        # --base-href=/console/ because the console is served under a path on the
+        # existing API host (no CORS, no second certificate, and it inherits the
+        # Cloudflare proxy that host already sits behind). Without it every asset
+        # URL is rooted at / and the app loads nothing.
+        run: flutter build web -t lib/main_web.dart --base-href=/console/
+
+      - name: Deploy web console
+        # PUSH TO MAIN ONLY. This workflow also runs on pull_request, and this is a
+        # public repository — a deploy step that did not check the event would try to
+        # run for every PR, including from forks.
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # The VPS key carries a forced command (infra-ops:
+        # vps-security/bin/ci-dispatch), so the only thing this may send is
+        # `deploy-console production`. Anything else is refused and logged.
+        #
+        # The bundle goes over STDIN because scp cannot run behind a forced command —
+        # its remote half is `scp -t`, which the dispatcher refuses.
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.CONSOLE_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+          # A build that produced no entry point is a failed build. index.html without
+          # main.dart.js serves a blank page with HTTP 200, which looks healthy to every
+          # monitor — so check for both here and again server-side.
+          test -f build/web/index.html   || { echo "::error::build produced no index.html"; exit 1; }
+          test -f build/web/main.dart.js || { echo "::error::build produced no main.dart.js"; exit 1; }
+
+          tar -czf - -C build/web . | ssh -i ~/.ssh/deploy_key \
+            -o IdentitiesOnly=yes -o BatchMode=yes \
+            -p "${{ secrets.SERVER_PORT }}" \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            "deploy-console production"
 
   build-size-check:
     name: Check Build Size

@@ -49,13 +49,15 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    // The console shows a placeholder shaped like the button rather than a
+    // spinner (DESIGN_SPEC §6).
+    expect(find.text('Preparing sign-in\u2026'), findsOneWidget);
     expect(find.byType(GoogleSignInButton), findsNothing);
 
     completer.complete();
     await tester.pumpAndSettle();
 
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('Preparing sign-in\u2026'), findsNothing);
     expect(find.byType(GoogleSignInButton), findsOneWidget);
   });
 
@@ -73,7 +75,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Sign-in is currently unavailable. Please try again shortly.'),
+      find.text(
+        'Sign-in is unavailable just now. Refresh the page and try again.',
+      ),
       findsOneWidget,
     );
     expect(find.byType(GoogleSignInButton), findsNothing);

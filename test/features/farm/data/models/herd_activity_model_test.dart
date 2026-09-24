@@ -1,5 +1,6 @@
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/features/farm/data/models/herd_activity_model.dart';
+import 'package:farm_tracker/features/farm/data/models/herd_activity_model_drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -84,7 +85,7 @@ void main() {
         farmId: 1,
       );
 
-      final model = HerdActivityModel.fromDrift(row);
+      final model = herdActivityModelFromDrift(row);
 
       expect(model.id, 'server-1');
       expect(model.herdId, 'herd-7');

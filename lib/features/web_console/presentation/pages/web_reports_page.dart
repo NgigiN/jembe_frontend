@@ -1,21 +1,32 @@
+import 'package:farm_tracker/core/theme/app_typography.dart';
+import 'package:farm_tracker/core/theme/console_colors.dart';
+import 'package:farm_tracker/core/utils/kes.dart';
 import 'package:farm_tracker/features/farm/domain/entities/cost_breakdown.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_detailed_cost.dart';
 import 'package:farm_tracker/features/farm/domain/entities/farm_year.dart';
 import 'package:farm_tracker/features/farm/domain/entities/monthly_summary.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/analysis_bloc.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_state.dart';
 import 'package:farm_tracker/features/web_console/presentation/utils/csv_download.dart';
+import 'package:farm_tracker/features/web_console/presentation/widgets/console_card.dart';
+import 'package:farm_tracker/features/web_console/presentation/widgets/console_controls.dart';
+import 'package:farm_tracker/features/web_console/presentation/widgets/console_empty.dart';
+import 'package:farm_tracker/features/web_console/presentation/widgets/console_page.dart';
+import 'package:farm_tracker/features/web_console/presentation/widgets/console_rail.dart';
+import 'package:farm_tracker/features/web_console/presentation/widgets/console_skeleton.dart';
+import 'package:farm_tracker/features/web_console/presentation/widgets/console_table.dart';
+import 'package:farm_tracker/features/web_console/presentation/widgets/console_text.dart';
+import 'package:farm_tracker/features/web_console/presentation/widgets/monthly_bar_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// Wide-layout web-console consumer of the existing `AnalysisBloc`: tables
-/// for the unified cost details and the cost breakdown, plus an "Export CSV"
-/// button that downloads the cost details as a CSV file. There is no mobile
-/// reports page to mirror one-to-one (mobile splits this across
-/// TotalCostsBySeasonPage / CostBreakdownPage / AnnualSummaryPage, each also
-/// wired to LandBloc/HerdBloc/ScopeChips for enterprise-level scoping); the
-/// web console's DI container (lib/web_injection_container.dart) registers
-/// neither LandBloc nor HerdBloc, so this page stays farm-wide and consumes
-/// only AnalysisBloc, same as its Interfaces contract says.
+/// Reports (DESIGN_SPEC §4, screen 04): three tabs over the same farm's
+/// figures, with the money position and the year's shape in the rail.
+///
+/// Farm-wide only: the web DI container registers neither LandBloc nor
+/// HerdBloc, so the per-enterprise scoping the mobile analytics pages offer
+/// has nothing to populate a picker from here.
 class WebReportsPage extends StatefulWidget {
   const WebReportsPage({super.key, this.onExportCsv = downloadCsv});
 
@@ -28,185 +39,425 @@ class WebReportsPage extends StatefulWidget {
 }
 
 class _WebReportsPageState extends State<WebReportsPage> {
+  int _tab = 0;
+  late final FarmYear _year = FarmYear.containing(DateTime.now(), 1);
+
   @override
   void initState() {
     super.initState();
-    // No fiscal-year picker on the web console (spec parity note above) —
-    // the current calendar year (fiscal start month 1) is a reasonable v1
-    // default; a farm-configured fiscal year start is a mobile-only concept
-    // this page doesn't otherwise consume.
-    final farmYear = FarmYear.containing(DateTime.now(), 1);
+    // No fiscal-year picker on the console: a farm-configured fiscal start
+    // is a mobile-only concept this page doesn't otherwise consume, so the
+    // current calendar year is the sensible default.
     context.read<AnalysisBloc>()
       ..add(const LoadTotalCostsBySeason())
       ..add(const LoadCostBreakdown())
-      ..add(LoadAnnualCostSummary(farmYear.start, farmYear.end));
-  }
-
-  void _exportCsv(List<CostDetail> details) {
-    widget.onExportCsv('cost_report.csv', _costDetailsToCsv(details));
+      ..add(LoadAnnualCostSummary(_year.start, _year.end));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reports'),
-        actions: [
-          BlocBuilder<AnalysisBloc, AnalysisState>(
-            builder: (context, state) {
-              final details = state.detailedCosts.data?.details ?? const [];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ElevatedButton.icon(
-                  onPressed: details.isEmpty
-                      ? null
-                      : () => _exportCsv(details),
-                  icon: const Icon(Icons.download),
-                  label: const Text('Export CSV'),
+    final state = context.watch<AnalysisBloc>().state;
+    final farmState = context.watch<FarmBloc>().state;
+
+    return ReportsView(
+      farmName: _farmName(farmState),
+      year: _year.start.year,
+      details: state.detailedCosts.data?.details,
+      detailsError: state.detailedCosts.error,
+      breakdowns: state.breakdowns.data,
+      summaries: state.summaries.data,
+      tabIndex: _tab,
+      onTabChanged: (index) => setState(() => _tab = index),
+      onExportCsv: widget.onExportCsv,
+      onRetry: () =>
+          context.read<AnalysisBloc>().add(const LoadTotalCostsBySeason()),
+    );
+  }
+
+  String _farmName(FarmState state) {
+    if (state is! FarmLoaded || state.currentFarmId == null) return 'Reports';
+    for (final farm in state.farms) {
+      if (farm.id == state.currentFarmId) return farm.name;
+    }
+    return 'Reports';
+  }
+}
+
+/// The Reports page's drawing, with no bloc in sight.
+class ReportsView extends StatelessWidget {
+  const ReportsView({
+    required this.farmName,
+    required this.year,
+    required this.details,
+    required this.breakdowns,
+    required this.summaries,
+    this.detailsError,
+    this.tabIndex = 0,
+    this.onTabChanged,
+    this.onExportCsv,
+    this.onRetry,
+    super.key,
+  });
+
+  final String farmName;
+  final int year;
+
+  /// Null while loading.
+  final List<CostDetail>? details;
+  final List<CostBreakdown>? breakdowns;
+  final List<MonthlySummary>? summaries;
+
+  final String? detailsError;
+  final int tabIndex;
+  final ValueChanged<int>? onTabChanged;
+  final void Function(String filename, String csvContent)? onExportCsv;
+  final VoidCallback? onRetry;
+
+  static const _tabs = ['Cost details', 'Cost breakdown', 'Annual summary'];
+
+  @override
+  Widget build(BuildContext context) {
+    if (detailsError != null && details == null) {
+      return ConsoleErrorState(
+        farmName: farmName,
+        subtitle: 'Reports',
+        detail: detailsError!,
+        onRetry: onRetry,
+      );
+    }
+
+    final rows = details ?? const <CostDetail>[];
+
+    return ConsolePage(
+      title: 'Reports',
+        subtitle: 'Costs, revenue and profit for $farmName',
+      actions: [
+        ConsoleButton.outlined(
+          label: 'Export CSV',
+          icon: Icons.download_outlined,
+          onPressed: rows.isEmpty || onExportCsv == null
+              ? null
+              : () => onExportCsv!(
+                  '${farmName.toLowerCase()}-costs.csv',
+                  costDetailsToCsv(rows),
                 ),
-              );
+        ),
+      ],
+      rail: ConsoleRail(
+        children: [
+          _RailTotals(summaries: summaries, details: details),
+          _BreakdownBars(breakdowns: breakdowns),
+          ConsoleCard(
+            kicker: 'Monthly, $year',
+            child: summaries == null
+                ? const Skeleton(height: 140, radius: 8)
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      MonthlyBarChart(months: summaries!),
+                      const SizedBox(height: 14),
+                      _MonthlyTable(months: summaries!),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ConsoleTabs(
+            labels: _tabs,
+            selectedIndex: tabIndex,
+            onSelected: onTabChanged ?? (_) {},
+          ),
+          const SizedBox(height: 12),
+          ConsoleCard(
+            title: _tabs[tabIndex],
+            titleTrailing: Text(
+              _cardMeta(tabIndex),
+              style: AppTypography.meta.copyWith(color: context.console.muted),
+            ),
+            padding: const EdgeInsets.fromLTRB(6, 14, 6, 12),
+            child: switch (tabIndex) {
+              1 => _BreakdownTable(breakdowns: breakdowns),
+              2 => _SummaryTable(summaries: summaries),
+              _ => _DetailsTable(details: details),
             },
           ),
         ],
       ),
-      body: BlocBuilder<AnalysisBloc, AnalysisState>(builder: _body),
     );
   }
 
-  Widget _body(BuildContext context, AnalysisState state) {
-    final costsSlice = state.detailedCosts;
-    if (costsSlice.data == null && costsSlice.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+  String _cardMeta(int tab) {
+    return switch (tab) {
+      1 => '${breakdowns?.length ?? 0} categories',
+      2 => '${summaries?.length ?? 0} months',
+      _ => '${details?.length ?? 0} sources \u00b7 farm-wide',
+    };
+  }
+}
+
+class _DetailsTable extends StatelessWidget {
+  const _DetailsTable({required this.details});
+
+  final List<CostDetail>? details;
+
+  @override
+  Widget build(BuildContext context) {
+    if (details == null) return const SkeletonRows(count: 7);
+    if (details!.isEmpty) {
+      return const ConsoleEmptyBlock(
+        icon: Icons.receipt_long_outlined,
+        title: 'No costs recorded',
+        body: 'Inputs and activities logged against a season or herd add up '
+            'here.',
+      );
     }
-    if (costsSlice.data == null && costsSlice.error != null) {
-      return Center(child: Text(costsSlice.error!));
+
+    final total = details!.fold<double>(0, (sum, d) => sum + d.totalCost);
+
+    return ConsoleTable(
+      columns: const [
+        ConsoleColumn('Source', flex: 4),
+        ConsoleColumn('Category', flex: 3, dropBelow: 820),
+        ConsoleColumn('Applied to', flex: 3, dropBelow: 700),
+        ConsoleColumn('Inputs', flex: 2, alignEnd: true, dropBelow: 980),
+        ConsoleColumn('Activities', flex: 3, alignEnd: true, dropBelow: 980),
+        ConsoleColumn('Total', flex: 2, alignEnd: true),
+      ],
+      rows: [
+        for (final detail in details!)
+          ConsoleRow([
+            EntryCell(
+              icon: detail.type == 'animal'
+                  ? Icons.pets_outlined
+                  : Icons.local_florist_outlined,
+              label: detail.name,
+              category: detail.type == 'animal'
+                  ? EntryCategory.animal
+                  : EntryCategory.plant,
+            ),
+            Text(detail.category),
+            Text(
+              detail.location.isEmpty ? '—' : detail.location,
+              style: AppTypography.cell.copyWith(
+                color: context.console.onSurface2,
+              ),
+            ),
+            MoneyText(detail.inputCost),
+            MoneyText(detail.activityCost),
+            MoneyText(detail.totalCost),
+          ]),
+        // The season total closes the table rather than floating beside it,
+        // which is where the eye is already looking after the last row.
+        ConsoleRow(
+          [
+            Text(
+              'Season total',
+              style: AppTypography.cellStrong.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox.shrink(),
+            const SizedBox.shrink(),
+            const SizedBox.shrink(),
+            const SizedBox.shrink(),
+            MoneyText(total),
+          ],
+          emphasised: true,
+          tint: context.console.surfaceLow,
+        ),
+      ],
+    );
+  }
+}
+
+class _BreakdownTable extends StatelessWidget {
+  const _BreakdownTable({required this.breakdowns});
+
+  final List<CostBreakdown>? breakdowns;
+
+  @override
+  Widget build(BuildContext context) {
+    if (breakdowns == null) return const SkeletonRows();
+    if (breakdowns!.isEmpty) {
+      return const ConsoleEmptyBlock(
+        icon: Icons.donut_small_outlined,
+        title: 'No breakdown yet',
+        body: 'Once inputs are logged, this shows where the money went.',
+      );
     }
-    final details = costsSlice.data?.details ?? const [];
-    final breakdowns = state.breakdowns.data ?? const [];
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+
+    return ConsoleTable(
+      columns: const [
+        ConsoleColumn('Category', flex: 3),
+        ConsoleColumn('Origin', flex: 3, dropBelow: 700),
+        ConsoleColumn('Type', flex: 2, dropBelow: 820),
+        ConsoleColumn('Cost', flex: 2, alignEnd: true),
+        ConsoleColumn('Share', width: 84, alignEnd: true, dropBelow: 560),
+      ],
+      rows: [
+        for (final row in breakdowns!)
+          ConsoleRow([
+            EntryCell(
+              icon: row.type == 'animal'
+                  ? Icons.pets_outlined
+                  : Icons.local_florist_outlined,
+              label: row.category,
+              category: row.type == 'animal'
+                  ? EntryCategory.animal
+                  : EntryCategory.plant,
+            ),
+            Text(row.origin),
+            Text(
+              row.type == 'animal' ? 'Animal' : 'Plant',
+              style: AppTypography.cell.copyWith(
+                color: context.console.onSurface2,
+              ),
+            ),
+            MoneyText(row.totalCost),
+            Text(
+              '${row.percentage.toStringAsFixed(1)}%',
+              style: AppTypography.cell.copyWith(
+                color: context.console.onSurface2,
+              ),
+            ),
+          ]),
+      ],
+    );
+  }
+}
+
+class _SummaryTable extends StatelessWidget {
+  const _SummaryTable({required this.summaries});
+
+  final List<MonthlySummary>? summaries;
+
+  @override
+  Widget build(BuildContext context) {
+    if (summaries == null) return const SkeletonRows();
+    if (summaries!.isEmpty) {
+      return const ConsoleEmptyBlock(
+        icon: Icons.calendar_month_outlined,
+        title: 'No months to summarise',
+        body: 'This fills in as costs and sales are logged through the year.',
+      );
+    }
+
+    return ConsoleTable(
+      columns: const [
+        ConsoleColumn('Month', flex: 2),
+        ConsoleColumn('Costs', flex: 2, alignEnd: true),
+        ConsoleColumn('Revenue', flex: 2, alignEnd: true),
+        ConsoleColumn('Profit', flex: 2, alignEnd: true),
+      ],
+      rows: [
+        for (final month in summaries!)
+          ConsoleRow([
+            Text(month.month),
+            MoneyText(month.totalCosts),
+            MoneyText(month.totalRevenue, tone: MoneyTone.positive),
+            MoneyText(month.profit, tone: MoneyTone.bySign),
+          ]),
+      ],
+    );
+  }
+}
+
+class _RailTotals extends StatelessWidget {
+  const _RailTotals({required this.summaries, required this.details});
+
+  final List<MonthlySummary>? summaries;
+  final List<CostDetail>? details;
+
+  @override
+  Widget build(BuildContext context) {
+    // The year's months are the only place the console can see revenue as
+    // well as costs, so the rail's totals come from there. Before they
+    // land, the cost side is still worth showing on its own.
+    final costs =
+        summaries?.fold<double>(0, (sum, m) => sum + m.totalCosts) ??
+        details?.fold<double>(0, (sum, d) => sum + d.totalCost) ??
+        0;
+    final revenue =
+        summaries?.fold<double>(0, (sum, m) => sum + m.totalRevenue) ?? 0;
+
+    return TotalsStack(
+      costs: costs,
+      revenue: revenue,
+      muted: summaries == null && details == null,
+    );
+  }
+}
+
+class _BreakdownBars extends StatelessWidget {
+  const _BreakdownBars({required this.breakdowns});
+
+  final List<CostBreakdown>? breakdowns;
+
+  @override
+  Widget build(BuildContext context) {
+    if (breakdowns == null) {
+      return const ConsoleCard(
+        kicker: 'Cost breakdown \u00b7 by input type',
+        child: Column(
+          children: [
+            Skeleton(height: 28),
+            SizedBox(height: 12),
+            Skeleton(height: 28),
+          ],
+        ),
+      );
+    }
+
+    final byCategory = <String, double>{};
+    for (final row in breakdowns!) {
+      byCategory[row.category] = (byCategory[row.category] ?? 0) + row.totalCost;
+    }
+    final total = byCategory.values.fold<double>(0, (sum, v) => sum + v);
+    final ranked = byCategory.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final shown = ranked.take(5).toList();
+
+    if (shown.isEmpty || total == 0) {
+      return ConsoleCard(
+        kicker: 'Cost breakdown \u00b7 by input type',
+        child: Text(
+          'No costs logged yet.',
+          style: AppTypography.bodyDense.copyWith(color: context.console.muted),
+        ),
+      );
+    }
+
+    return ConsoleCard(
+      kicker: 'Cost breakdown \u00b7 by input type',
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Cost details', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          _detailsTable(details),
-          const SizedBox(height: 32),
-          Text(
-            'Cost breakdown by input type',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          _breakdownTable(breakdowns),
-          const SizedBox(height: 32),
-          Text(
-            'Monthly summary',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          _summaryTable(state.summaries.data ?? const []),
-        ],
-      ),
-    );
-  }
-
-  Widget _detailsTable(List<CostDetail> details) {
-    if (details.isEmpty) {
-      return const Text('No cost data for this selection.');
-    }
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columns: const [
-          DataColumn(label: Text('Name')),
-          DataColumn(label: Text('Type')),
-          DataColumn(label: Text('Category')),
-          DataColumn(label: Text('Location')),
-          DataColumn(label: Text('Input cost'), numeric: true),
-          DataColumn(label: Text('Activity cost'), numeric: true),
-          DataColumn(label: Text('Total cost'), numeric: true),
-        ],
-        rows: [
-          for (final d in details)
-            DataRow(
-              cells: [
-                DataCell(Text(d.name)),
-                DataCell(Text(d.type)),
-                DataCell(Text(d.category)),
-                DataCell(Text(d.location)),
-                DataCell(Text(d.inputCost.toStringAsFixed(2))),
-                DataCell(Text(d.activityCost.toStringAsFixed(2))),
-                DataCell(Text(d.totalCost.toStringAsFixed(2))),
-              ],
+          for (var i = 0; i < shown.length; i++) ...[
+            if (i > 0) const SizedBox(height: 12),
+            ConsoleBarMeter(
+              label: shown[i].key,
+              fraction: shown[i].value / total,
+              trailing:
+                  '${formatKes(shown[i].value)} · '
+                  '${(shown[i].value / total * 100).round()}%',
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _breakdownTable(List<CostBreakdown> breakdowns) {
-    if (breakdowns.isEmpty) {
-      return const Text('No breakdown data for this selection.');
-    }
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columns: const [
-          DataColumn(label: Text('Category')),
-          DataColumn(label: Text('Type')),
-          DataColumn(label: Text('Origin')),
-          DataColumn(label: Text('Total cost'), numeric: true),
-          DataColumn(label: Text('Percentage'), numeric: true),
-        ],
-        rows: [
-          for (final b in breakdowns)
-            DataRow(
-              cells: [
-                DataCell(Text(b.category)),
-                DataCell(Text(b.type)),
-                DataCell(Text(b.origin)),
-                DataCell(Text(b.totalCost.toStringAsFixed(2))),
-                DataCell(Text('${b.percentage.toStringAsFixed(1)}%')),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-  Widget _summaryTable(List<MonthlySummary> summaries) {
-    if (summaries.isEmpty) {
-      return const Text('No monthly summary data for this selection.');
-    }
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columns: const [
-          DataColumn(label: Text('Month')),
-          DataColumn(label: Text('Total costs'), numeric: true),
-          DataColumn(label: Text('Total revenue'), numeric: true),
-          DataColumn(label: Text('Profit'), numeric: true),
-        ],
-        rows: [
-          for (final s in summaries)
-            DataRow(
-              cells: [
-                DataCell(Text(s.month)),
-                DataCell(Text(s.totalCosts.toStringAsFixed(2))),
-                DataCell(Text(s.totalRevenue.toStringAsFixed(2))),
-                DataCell(Text(s.profit.toStringAsFixed(2))),
-              ],
-            ),
+          ],
         ],
       ),
     );
   }
 }
 
-String _costDetailsToCsv(List<CostDetail> details) {
+/// The Export CSV payload. Public so a test can assert on it without
+/// driving the button.
+String costDetailsToCsv(List<CostDetail> details) {
   final buffer = StringBuffer()
-    ..writeln(
-      'Type,Name,Category,Location,Input Cost,Activity Cost,Total Cost',
-    );
+    ..writeln('Type,Name,Category,Location,Input Cost,Activity Cost,Total Cost');
   for (final d in details) {
     buffer.writeln(
       [
@@ -228,4 +479,34 @@ String _csvField(String value) {
     return '"${value.replaceAll('"', '""')}"';
   }
   return value;
+}
+
+/// The rail's month-by-month table under the chart (DESIGN_SPEC §4): 12px
+/// rows, profit coloured by sign.
+class _MonthlyTable extends StatelessWidget {
+  const _MonthlyTable({required this.months});
+
+  final List<MonthlySummary> months;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConsoleTable(
+      dense: true,
+      columns: const [
+        ConsoleColumn('Month', flex: 3),
+        ConsoleColumn('Costs', flex: 3, alignEnd: true),
+        ConsoleColumn('Revenue', flex: 3, alignEnd: true),
+        ConsoleColumn('Profit', flex: 3, alignEnd: true),
+      ],
+      rows: [
+        for (final month in months)
+          ConsoleRow([
+            Text(month.month, style: AppTypography.meta),
+            MoneyText(month.totalCosts, size: 13),
+            MoneyText(month.totalRevenue, size: 13),
+            MoneyText(month.profit, size: 13, tone: MoneyTone.bySign, signed: true),
+          ]),
+      ],
+    );
+  }
 }

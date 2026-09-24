@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:farm_tracker/core/database/app_database.dart';
 import 'package:farm_tracker/core/util/uuid_gen.dart';
 import 'package:farm_tracker/features/farm/data/models/land_model.dart';
+import 'package:farm_tracker/features/farm/data/models/land_model_drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FixedUuidGen extends UuidGen {
@@ -154,7 +155,7 @@ void main() {
         farmId: 1,
       );
 
-      final land = LandModel.fromDrift(row);
+      final land = landModelFromDrift(row);
 
       expect(land.id, 'server-1');
       expect(land.clientUuid, 'client-uuid-1');
@@ -181,7 +182,7 @@ void main() {
         farmId: 1,
       );
 
-      final land = LandModel.fromDrift(row);
+      final land = landModelFromDrift(row);
 
       expect(land.id, '');
       expect(land.clientUuid, 'client-uuid-1');
