@@ -635,6 +635,31 @@ void main() {
     expect(outbox.acked, [1]);
   });
 
+  test('stop(): regaining connectivity no longer triggers a sync - pulling '
+      'the server kill-switch has to actually stop background work, not '
+      'just point reads back at the network', () async {
+    engine = build(rows: [_row(1)])..start();
+
+    engine.stop();
+    connectivity.emit(true);
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+
+    expect(syncer.pushCount, 0);
+    expect(outbox.acked, isEmpty);
+  });
+
+  test('stop() is reversible - start() re-wires the trigger, where dispose() '
+      'is terminal. The flag can flip back on in the same session.', () async {
+    engine = build(rows: [_row(1)])..start();
+
+    engine.stop();
+    engine.start();
+    connectivity.emit(true);
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+
+    expect(syncer.pushCount, greaterThanOrEqualTo(1));
+  });
+
   test(
     'statusStream emits syncing then idle across a successful pass',
     () async {

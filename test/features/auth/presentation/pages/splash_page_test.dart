@@ -51,6 +51,9 @@ class _SpySyncEngine extends SyncEngine {
   void start() => calls.add('start');
 
   @override
+  void stop() => calls.add('stop');
+
+  @override
   Future<void> syncNow() async => calls.add('syncNow');
 }
 
@@ -181,7 +184,12 @@ void main() {
     );
 
     test(
-      'a rollback (on-to-off) decision calls neither start() nor syncNow()',
+      'a rollback (on-to-off) decision calls stop() - and never start() or '
+      'syncNow(). Clearing OfflineConfig.enabled only sends reads back to '
+      'the network; without stop() the engine would keep its '
+      'connectivity-regained trigger wired and go on syncing in the '
+      'background for the rest of the session, which is precisely what the '
+      'kill-switch is for.',
       () async {
         applyOfflineFlagSideEffects(
           const OfflineFlagDecision(changed: true, newlyEnabled: false),
@@ -189,11 +197,11 @@ void main() {
         );
         await pumpEventQueue();
 
-        expect(engine.calls, isEmpty);
+        expect(engine.calls, ['stop']);
       },
     );
 
-    test('an unchanged decision calls neither start() nor syncNow()', () async {
+    test('an unchanged decision calls nothing at all', () async {
       applyOfflineFlagSideEffects(
         const OfflineFlagDecision(changed: false, newlyEnabled: false),
         engine,
