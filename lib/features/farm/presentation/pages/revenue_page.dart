@@ -30,6 +30,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/herd_page.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/season_page.dart';
+import 'package:farm_tracker/features/farms/presentation/widgets/farm_switcher_title.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -99,7 +100,7 @@ class _RevenuePageState extends State<RevenuePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Revenue'),
+        title: const FarmSwitcherTitle(fallback: 'Revenue'),
         actions: [
           IconButton(onPressed: _loadRevenues, icon: const Icon(Icons.refresh)),
         ],

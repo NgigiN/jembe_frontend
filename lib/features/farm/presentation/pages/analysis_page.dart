@@ -2,6 +2,7 @@ import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/core/utils/responsive_utils.dart';
 import 'package:farm_tracker/core/widgets/lively_tap.dart';
 import 'package:farm_tracker/features/farm_activity/presentation/widgets/farm_activity_card.dart';
+import 'package:farm_tracker/features/farms/presentation/widgets/farm_switcher_title.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,7 +12,7 @@ class AnalysisPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Farm Analytics')),
+      appBar: AppBar(title: const FarmSwitcherTitle(fallback: 'Farm Analytics')),
       body: ColoredBox(
         color: Theme.of(context).colorScheme.surface,
         child: Padding(

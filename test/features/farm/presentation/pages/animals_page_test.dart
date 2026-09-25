@@ -14,10 +14,13 @@ import 'package:farm_tracker/features/farm/presentation/bloc/herd_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/animals_page.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../support/farm_bloc_stub.dart';
 
 class MockAnimalTypeBloc extends MockBloc<AnimalTypeEvent, AnimalTypeState>
     implements AnimalTypeBloc {}
@@ -50,6 +53,7 @@ void main() {
     return MaterialApp(
       home: MultiBlocProvider(
         providers: [
+          BlocProvider<FarmBloc>.value(value: stubFarmBloc()),
           BlocProvider<AnimalTypeBloc>.value(value: animalTypeBloc),
           BlocProvider<HerdBloc>.value(value: herdBloc),
           BlocProvider<ContentBloc>.value(value: contentBloc),

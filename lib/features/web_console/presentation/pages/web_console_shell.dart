@@ -1,4 +1,3 @@
-import 'package:farm_tracker/core/navigation/web_app_router.dart';
 import 'package:farm_tracker/core/theme/console_metrics.dart';
 import 'package:farm_tracker/features/auth/data/models/user_storage_model.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
@@ -13,6 +12,7 @@ import 'package:farm_tracker/features/farms/presentation/bloc/farm_state.dart';
 import 'package:farm_tracker/features/feed/presentation/bloc/feed_bloc.dart';
 import 'package:farm_tracker/features/feed/presentation/bloc/feed_event.dart';
 import 'package:farm_tracker/features/web_console/data/console_log_service.dart';
+import 'package:farm_tracker/features/web_console/presentation/widgets/console_farm_switcher.dart';
 import 'package:farm_tracker/features/web_console/presentation/widgets/console_log_scope.dart';
 import 'package:farm_tracker/features/web_console/presentation/widgets/console_sidebar.dart';
 import 'package:flutter/material.dart';
@@ -74,7 +74,7 @@ class _WebConsoleShellState extends State<WebConsoleShell> {
                     compact:
                         constraints.maxWidth < ConsoleMetrics.shellBreakpoint,
                     onNavigate: (route) => context.go(route),
-                    onSwitchFarm: () => context.go(WebRoutePath.farmsList),
+                    onSwitchFarm: () => showConsoleFarmSwitcher(context),
                     onSignOut: () =>
                         context.read<AuthBloc>().add(LogoutEvent()),
                   ),

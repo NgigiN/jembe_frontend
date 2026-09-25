@@ -44,6 +44,10 @@ dependencies:
   drift: ^2.32.0
   flutter_secure_storage: ^11.0.0
   flutter_bloc: ^9.1.1
+  # Already resolved transitively via flutter_bloc. Declared directly because
+  # FarmScopedBlocs names SingleChildWidget at its API boundary, and
+  # flutter_bloc re-exports only four provider symbols, not that one.
+  provider: ^6.1.5
   equatable: ^2.0.5
   go_router: ^18.0.0
   path: ^1.9.0

@@ -24,10 +24,13 @@ import 'package:farm_tracker/features/farm/presentation/bloc/season_bloc.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/season_state.dart';
 import 'package:farm_tracker/features/farm/presentation/pages/revenue_page.dart';
+import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../support/farm_bloc_stub.dart';
 
 class MockRevenueBloc extends MockBloc<RevenueEvent, RevenueState>
     implements RevenueBloc {}
@@ -79,6 +82,7 @@ Widget _wrap(RevenueBloc bloc) {
   );
   return MultiBlocProvider(
     providers: [
+      BlocProvider<FarmBloc>.value(value: stubFarmBloc()),
       BlocProvider<RevenueBloc>.value(value: bloc),
       BlocProvider<LandBloc>.value(value: lands),
       BlocProvider<HerdBloc>.value(value: herds),
