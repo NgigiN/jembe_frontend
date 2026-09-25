@@ -168,14 +168,29 @@ class SyncEngine {
     });
   }
 
-  /// Cancels subscriptions/timers and closes the status stream.
-  void dispose() {
-    if (_disposed) return;
-    _disposed = true;
+  /// Unwires what [start] wired, leaving the engine reusable.
+  ///
+  /// The inverse of [start], and deliberately NOT [dispose]: this is what a
+  /// server kill-switch flip (`offline_enabled` going true -> false) calls,
+  /// and the same session can see it flip back on, so the status stream stays
+  /// open and [start] can re-subscribe. [dispose] is terminal; this is not.
+  ///
+  /// An in-flight pass is left to finish on its own. It is already fully
+  /// guarded, and tearing one down mid-push risks an outbox row that reached
+  /// the server but never got acked — a duplicate on the next drain.
+  void stop() {
     _retryTimer?.cancel();
     _retryTimer = null;
     unawaited(_connectivitySub?.cancel());
     _connectivitySub = null;
+  }
+
+  /// Cancels subscriptions/timers and closes the status stream. Terminal —
+  /// see [stop] for the reversible form.
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    stop();
     unawaited(_statusController.close());
   }
 

@@ -63,6 +63,9 @@ class _FakeSyncEngine implements SyncEngine {
   void start() {}
 
   @override
+  void stop() {}
+
+  @override
   void dispose() {}
 }
 

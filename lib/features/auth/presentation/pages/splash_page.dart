@@ -221,8 +221,14 @@ OfflineFlagDecision decideOfflineFlagChange({
 }
 
 /// Applies the [SyncEngine] side effects of a [decision] (see
-/// [decideOfflineFlagChange]). Only an off-to-on transition
-/// ([OfflineFlagDecision.newlyEnabled]) does anything, and it mirrors
+/// [decideOfflineFlagChange]). An unchanged decision does nothing; a
+/// changed one goes one of two ways.
+///
+/// On-to-off calls [SyncEngine.stop], so pulling the server kill-switch
+/// really does stop background sync rather than only sending reads back to
+/// the network.
+///
+/// Off-to-on ([OfflineFlagDecision.newlyEnabled]) mirrors
 /// `main()`'s launch sequence exactly: `start()` FIRST (wires the
 /// connectivity-regained trigger — idempotent, see `SyncEngine.start`'s
 /// `_connectivitySub ??=` guard) THEN `syncNow()` (drains any pending outbox
@@ -239,7 +245,18 @@ void applyOfflineFlagSideEffects(
   OfflineFlagDecision decision,
   SyncEngine engine,
 ) {
-  if (!decision.newlyEnabled) return;
+  if (!decision.changed) return;
+  if (!decision.newlyEnabled) {
+    // The kill-switch was pulled (on -> off). `OfflineConfig.enabled` is
+    // already false by now, so reads and writes have gone back to the
+    // network — but without this the engine would keep its
+    // connectivity-regained trigger wired and carry on pushing and pulling
+    // in the background for the rest of the session, which is the exact
+    // behaviour the switch exists to stop. `stop()`, not `dispose()`, so a
+    // flip back on in this same session can re-wire it.
+    engine.stop();
+    return;
+  }
   engine.start();
   unawaited(engine.syncNow());
 }
