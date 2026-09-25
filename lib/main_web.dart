@@ -20,6 +20,7 @@
 import 'dart:async';
 
 import 'package:farm_tracker/core/config/app_config.dart';
+import 'package:farm_tracker/core/farm_scope/farm_scoped_blocs.dart';
 import 'package:farm_tracker/core/navigation/web_app_router.dart';
 import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
@@ -166,15 +167,13 @@ class _WebConsoleAppState extends State<_WebConsoleApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Identity-scoped blocs: they outlive a farm switch. FarmBloc in
+    // particular MUST stay above FarmScopedBlocs, which listens to it.
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(create: (_) => web_di.webSl<AuthBloc>()),
-        BlocProvider<DashboardBloc>(create: (_) => web_di.webSl<DashboardBloc>()),
-        BlocProvider<AnalysisBloc>(create: (_) => web_di.webSl<AnalysisBloc>()),
         BlocProvider<FarmBloc>(create: (_) => web_di.webSl<FarmBloc>()..add(LoadFarms())),
-        BlocProvider<FeedBloc>(create: (_) => web_di.webSl<FeedBloc>()),
         BlocProvider<ThemeBloc>(create: (_) => web_di.webSl<ThemeBloc>()),
-        BlocProvider<TrashBloc>(create: (_) => web_di.webSl<TrashBloc>()),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(
         builder: (context, themeState) {
@@ -185,6 +184,23 @@ class _WebConsoleAppState extends State<_WebConsoleApp> {
             themeMode: themeState.themeMode,
             routerConfig: _router,
             debugShowCheckedModeBanner: false,
+            // Rebuilt wholesale on a farm switch, so the console reloads
+            // the same way mobile does — see FarmScopedBlocs.
+            builder: (context, child) => FarmScopedBlocs(
+              providers: [
+                BlocProvider<DashboardBloc>(
+                  create: (_) => web_di.webSl<DashboardBloc>(),
+                ),
+                BlocProvider<AnalysisBloc>(
+                  create: (_) => web_di.webSl<AnalysisBloc>(),
+                ),
+                BlocProvider<FeedBloc>(create: (_) => web_di.webSl<FeedBloc>()),
+                BlocProvider<TrashBloc>(
+                  create: (_) => web_di.webSl<TrashBloc>(),
+                ),
+              ],
+              child: child ?? const SizedBox.shrink(),
+            ),
           );
         },
       ),

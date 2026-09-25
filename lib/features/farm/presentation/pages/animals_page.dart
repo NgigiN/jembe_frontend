@@ -16,6 +16,7 @@ import 'package:farm_tracker/features/farm/presentation/bloc/herd_event.dart';
 import 'package:farm_tracker/features/farm/presentation/bloc/herd_state.dart';
 import 'package:farm_tracker/features/farm/presentation/widgets/setup_step_card.dart';
 import 'package:farm_tracker/features/farm/presentation/widgets/step_connector.dart';
+import 'package:farm_tracker/features/farms/presentation/widgets/farm_switcher_title.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -65,7 +66,7 @@ class _AnimalsPageState extends State<AnimalsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Animals'),
+        title: const FarmSwitcherTitle(fallback: 'Animals'),
       ),
       body: ColoredBox(
         color: Theme.of(context).colorScheme.surface,
