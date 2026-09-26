@@ -1,11 +1,23 @@
 name: Release CI
 
+# PRs gate both branches; `push` is main only, because deploying is the one thing that
+# must happen AFTER a merge. Previously both triggers covered both branches, so every
+# change ran the whole workflow twice — once on the PR, once on the merge commit.
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   pull_request:
     branches: [main, dev]
 
+# REMOVED: the `build-size-check` job. It built a full release appbundle, checked it
+# against an 80 MB limit, then built the SAME appbundle a second time with
+# --analyze-size at continue-on-error, whose output nothing read. The .aab was never
+# uploaded, released or deployed — ~7 minutes per run, 87 runs in 30 days, for a file
+# that was deleted with the runner.
+#
+# The size gate itself is worth keeping, so it moved to `scripts/check_size.sh`, run
+# locally before a release. If a tag-driven release pipeline is added later, that is
+# where a CI size gate belongs — not on every push to a branch.
 jobs:
   analyze:
     name: Analyze Code
@@ -112,47 +124,3 @@ jobs:
             -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
             "deploy-console production"
-
-  build-size-check:
-    name: Check Build Size
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.47.2'
-          channel: 'stable'
-      - name: Install dependencies
-        run: flutter pub get
-      - name: Create debug keystore
-        run: |
-          mkdir -p ~/.config/.android
-          keytool -genkey -v \
-            -keystore ~/.config/.android/debug.keystore \
-            -storepass android -alias androiddebugkey -keypass android \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US"
-      - name: Build app bundle
-        run: |
-          flutter build appbundle \
-            --release \
-            --dart-define=ENV=production \
-            --obfuscate \
-            --split-debug-info=build/split-info \
-            --tree-shake-icons
-      - name: Check size limit
-        run: |
-          SIZE=$(du -sh build/app/outputs/bundle/release/app-release.aab | cut -f1)
-          echo "App bundle size: $SIZE"
-          # Fail if size exceeds 80MB (approximate check; this is the raw
-          # multi-ABI .aab, not the smaller per-device download size)
-          if [ $(du -m build/app/outputs/bundle/release/app-release.aab | cut -f1) -gt 80 ]; then
-            echo "ERROR: App bundle exceeds 80MB limit"
-            exit 1
-          fi
-
-
-      - name: Analyze size (informational)
-        run: |
-          flutter build appbundle --analyze-size --release
-        continue-on-error: true

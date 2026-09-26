@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Runs the local gate before anything reaches a runner. Installed by `tool/hooks.sh`,
+# which points core.hooksPath at this tracked directory — .git/hooks is not tracked, so a
+# hook living only there is one every fresh clone silently lacks.
+#
+# Bypass with `git push --no-verify`. The PR check is the unskippable one; this is the
+# fast-feedback layer.
+set -uo pipefail
+exec "$(git rev-parse --show-toplevel)/tool/check.sh"
