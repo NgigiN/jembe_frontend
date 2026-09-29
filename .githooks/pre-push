@@ -6,4 +6,15 @@
 # Bypass with `git push --no-verify`. The PR check is the unskippable one; this is the
 # fast-feedback layer.
 set -uo pipefail
-exec "$(git rev-parse --show-toplevel)/tool/check.sh"
+root="$(git rev-parse --show-toplevel)"
+
+# Git exports GIT_DIR and GIT_WORK_TREE to every hook. Any tool that shells out to git
+# for its OWN repository then reads THIS one instead — the Flutter SDK resolves its
+# version that way, so it reports 0.0.0-unknown and `pub get` refuses to solve, failing
+# all four checks for a reason that has nothing to do with the code. It hides in a normal
+# clone, where GIT_DIR is the relative ".git" and happens to resolve correctly from
+# inside the SDK, and only bites in a worktree, where GIT_DIR is absolute. Drop both so
+# child processes get a clean environment.
+unset GIT_DIR GIT_WORK_TREE
+
+exec "$root/tool/check.sh"
