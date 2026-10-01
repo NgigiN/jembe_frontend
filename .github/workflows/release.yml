@@ -85,16 +85,17 @@ jobs:
         # already the production host, and naming it in two places is how
         # the two drift apart.
         #
-        # --base-href=/console/ because the console is served under a path on the
-        # existing API host (no CORS, no second certificate, and it inherits the
-        # Cloudflare proxy that host already sits behind). Without it every asset
-        # URL is rooted at / and the app loads nothing.
+        # --base-href=/ because the console is served at the root of the existing
+        # API host (no CORS, no second certificate, and it inherits the Cloudflare
+        # proxy that host already sits behind) — the API itself now lives behind an
+        # explicit /api/ path so root is free for the app. Without --base-href=/
+        # every asset URL would assume a path prefix the server no longer serves.
         run: |
           flutter build web \
             -t lib/main_web.dart \
             --release \
             --dart-define=ENV=production \
-            --base-href=/console/
+            --base-href=/
 
       - name: Deploy web console
         # PUSH TO MAIN ONLY. This workflow also runs on pull_request, and this is a
