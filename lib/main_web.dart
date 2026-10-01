@@ -50,11 +50,17 @@ import 'package:farm_tracker/features/web_console/presentation/theme/web_console
 import 'package:farm_tracker/web_injection_container.dart' as web_di;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Path-based URLs (no "#"). Safe without a matching nginx rewrite because
+  // the server already falls back to index.html for any unknown path (see
+  // the console location block's try_files) — that's what makes a
+  // path-strategy SPA work at all on a real refresh/deep link.
+  usePathUrlStrategy();
   AppConfig.initialize();
 
   try {
