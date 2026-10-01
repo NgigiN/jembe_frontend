@@ -3,6 +3,10 @@ name: Release CI
 # PRs gate both branches; `push` is main only, because deploying is the one thing that
 # must happen AFTER a merge. Previously both triggers covered both branches, so every
 # change ran the whole workflow twice — once on the PR, once on the merge commit.
+# `analyze` and `test` moved to ci.yml (pull requests only) so they stop running
+# twice per change. This file keeps only Build Web Console, which needs BOTH
+# triggers: on a pull request it is the dart:ffi regression guard and a required
+# status check, and on a push to main the same job deploys the console.
 on:
   push:
     branches: [main]
@@ -19,40 +23,6 @@ on:
 # locally before a release. If a tag-driven release pipeline is added later, that is
 # where a CI size gate belongs — not on every push to a branch.
 jobs:
-  analyze:
-    name: Analyze Code
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.47.2'
-          channel: 'stable'
-      - name: Install dependencies
-        run: flutter pub get
-      - name: Verify dependencies
-        run: flutter pub run dependency_validator
-      - name: Analyze code
-        run: flutter analyze --no-fatal-infos
-
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.47.2'
-          channel: 'stable'
-      - name: Install dependencies
-        run: flutter pub get
-      - name: Run tests
-        run: flutter test --coverage
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          files: coverage/lcov.info
-
   build-web:
     name: Build Web Console
     runs-on: ubuntu-latest
