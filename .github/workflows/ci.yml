@@ -1,0 +1,54 @@
+name: CI
+
+# PULL REQUESTS ONLY. `analyze` and `test` moved here out of release.yml, which was
+# triggered on both push and pull_request and so ran them twice for every change:
+# once on the PR and again on the merge commit. GitHub runs pull_request checks
+# against the PR's MERGE with the base, not the branch tip, so the PR run has
+# already covered the tree that lands.
+#
+# `Build Web Console` deliberately stayed in release.yml. It is not duplication:
+# on a pull request it is the guard that catches a package:sqlite3 / dart:ffi
+# import re-entering lib/main_web.dart (which flutter analyze and flutter test
+# cannot see, because both resolve the web-only conditional export to its VM-safe
+# stub), and on a push to main the same job carries the deploy step.
+#
+# Job names are unchanged: 'Analyze Code' and 'Run Tests' are required status
+# checks on main.
+on:
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  analyze:
+    name: Analyze Code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: 'stable'
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Verify dependencies
+        run: flutter pub run dependency_validator
+      - name: Analyze code
+        run: flutter analyze --no-fatal-infos
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: 'stable'
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Run tests
+        run: flutter test --coverage
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage/lcov.info
