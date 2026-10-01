@@ -1,0 +1,65 @@
+#!/bin/sh
+# commit-msg — keep commit messages short, scoped and attribution-free.
+#
+# Two jobs:
+#
+#   1. Strip AI attribution trailers. Stripped, never rejected: a tool that appends
+#      one cannot block a commit, the trailer simply never lands.
+#
+#   2. Validate the subject line — at most 72 characters, a conventional prefix, no
+#      trailing period. The length limit is really a scope check: a subject that
+#      needs a ';' or an 'and' is describing a commit that should have been two.
+#      Keeping subjects short is what makes `git log --oneline` readable, and both
+#      GitHub and git's own tooling truncate past this width.
+#
+# Details that belong in a pull request rather than a commit body: verification
+# output, test/analyzer counts, and reviewer back-and-forth. Those go stale; the
+# commit message is permanent.
+#
+# This file is tracked and core.hooksPath points at its directory, so a fresh clone
+# gets it. Once hooksPath is set git ignores .git/hooks entirely.
+#
+# Bypass with `git commit --no-verify` when you genuinely need to.
+
+set -u
+msg="$1"
+
+# --- 1) Strip AI attribution trailers ----------------------------------------
+tmp="$msg.att.tmp"
+grep -viE '^(Claude-Session:|Co-Authored-By:.*[Cc]laude|.*[Gg]enerated with.*[Cc]laude)' \
+  "$msg" > "$tmp" 2>/dev/null || true
+mv "$tmp" "$msg"
+
+# --- 2) Validate the subject -------------------------------------------------
+# First line that is neither a git comment nor blank.
+subject=$(grep -vE '^[[:space:]]*#' "$msg" | sed '/^[[:space:]]*$/d' | head -1)
+
+# Git authors these itself; its wording is not ours to police.
+case "$subject" in
+  "Merge "*|"Revert "*|fixup!*|squash!*|amend!*) exit 0 ;;
+esac
+
+# An empty message is git's own business — it aborts the commit unaided.
+[ -n "$subject" ] || exit 0
+
+fail() {
+  printf '\ncommit-msg: %s\n\n  %s\n\n' "$1" "$subject" >&2
+  exit 1
+}
+
+# wc -m, not -c: subjects contain em dashes, and the limit is characters.
+len=$(printf '%s' "$subject" | wc -m | tr -d '[:space:]')
+if [ "$len" -gt 72 ]; then
+  fail "subject is $len chars, limit 72 (aim 50) — split it if it covers more than one change"
+fi
+
+if ! printf '%s' "$subject" \
+  | grep -qE '^(feat|fix|refactor|perf|docs|test|chore|ci|build|style|revert|hotfix)(\([a-z0-9._/-]+\))?!?: .'; then
+  fail "needs a conventional prefix, e.g. 'fix(feed): stop dropping null amounts'"
+fi
+
+case "$subject" in
+  *.) fail "drop the trailing period" ;;
+esac
+
+exit 0

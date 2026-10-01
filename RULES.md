@@ -88,3 +88,38 @@ scope SHARED by the three analytics pages and caches per scope (stale-while-reva
 own. The old `EnterprisePicker` sheet was deleted (2026-09) — do not re-introduce a per-page picker. Under the
 dark offline flag the revenue filter runs in memory via `AnalyticsScope.matchesRevenue`, with a land resolved to
 its season ids by the page from `SeasonBloc`.
+
+## 9. CI runs only what a laptop cannot — everything else is `tool/check.sh`
+
+`Release CI` was 87 runs in 30 days at ~13m24s each. The single biggest job,
+`build-size-check` at ~7 minutes, built a full release appbundle, checked it against an
+80 MB limit, then built the **same bundle a second time** with `--analyze-size` at
+`continue-on-error: true` — output nobody read. The `.aab` was never uploaded, released
+or deployed. It was deleted with the runner.
+
+**That job is gone.** The size gate moved to `tool/check_size.sh`, run before a
+release, where the number is actually about to matter. If a tag-driven release pipeline
+is added later, that is where a CI size gate belongs — not on every push to a branch.
+
+**The local gate is `tool/check.sh`**, wired to a tracked `pre-push` hook by
+`tool/hooks.sh`. Run it once per clone: it sets `core.hooksPath` to `.githooks/`,
+because `.git/hooks` is not tracked and a hook living only there is one every fresh clone
+silently lacks.
+
+**What legitimately stays on a runner:**
+
+| Kept | Why |
+|---|---|
+| `analyze` + `test` on PRs | Unskippable gate. `pre-push` can be bypassed with `--no-verify` |
+| `build-web` | Catches a class of bug analyze and test cannot — see below |
+| `build-web`'s deploy step | Needs the runner's network position and the deploy secret |
+
+`build-web` earns its runner time. A `package:sqlite3` / `dart:ffi` import creeping back
+into `lib/main_web.dart`'s dependency graph will not be caught by `flutter analyze` or
+`flutter test`: both resolve web-only conditional exports to their VM-safe stub, which
+never touches `dart:ffi`. Only an actual web build fails. Run `./tool/check.sh --web`
+locally before any PR that changes imports.
+
+**Triggers:** PRs gate both branches; `push` is `main` only, because deploying is the one
+thing that must happen *after* a merge. Both triggers covering both branches meant every
+change ran the whole workflow twice.
