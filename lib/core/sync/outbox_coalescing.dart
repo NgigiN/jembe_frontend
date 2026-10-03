@@ -37,7 +37,7 @@ class OutboxIntent extends Equatable {
 }
 
 /// Merges [incoming] into [pending], applying the outbox
-/// coalescing/annihilation rules (spec §3.2) against whichever entry in
+/// coalescing/annihilation rules against whichever entry in
 /// [pending] shares [incoming]'s `clientUuid`. Entries for other
 /// `clientUuid`s are returned untouched and in their original order.
 ///

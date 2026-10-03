@@ -1,6 +1,6 @@
 // lib/main_web.dart
 //
-// Web console entry point (spec §3) — separate from lib/main.dart (mobile).
+// Web console entry point — separate from lib/main.dart (mobile).
 // Never imports lib/injection_container.dart.
 //
 // The three reused sub-project 3 pages below (FarmsListPage, CreateFarmPage,

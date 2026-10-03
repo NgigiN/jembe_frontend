@@ -16,7 +16,7 @@ class FarmBloc extends Bloc<FarmEvent, FarmState> {
         return;
       }
       // Nothing cached yet — an already-logged-in device upgrading to this
-      // release for the first time (spec §8). The session token is still
+      // release for the first time. The session token is still
       // valid, so a live fetch works without forcing a re-login.
       await _refresh(emit, allowErrorState: true);
     });

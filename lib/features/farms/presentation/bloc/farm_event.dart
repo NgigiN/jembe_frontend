@@ -8,7 +8,7 @@ abstract class FarmEvent extends Equatable {
 
 /// Loads farm state from local cache, falling back to a live refresh when
 /// nothing is cached yet (e.g. an already-logged-in device upgrading to
-/// this release for the first time — spec §8).
+/// this release for the first time).
 class LoadFarms extends FarmEvent {}
 
 /// Refetches `GET /farms` and updates both storage and state. Fired on app

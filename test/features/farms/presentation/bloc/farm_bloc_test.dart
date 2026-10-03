@@ -50,7 +50,7 @@ void main() {
   });
 
   test('LoadFarms falls back to a live refresh when nothing is cached '
-      '(spec §8 rollout case)', () async {
+      '(first-run rollout case)', () async {
     when(() => remote.listFarms())
         .thenAnswer((_) async => [_farm(9, isDefault: true, role: FarmRole.manager)]);
     final bloc = FarmBloc(remote: remote, triggerSync: syncEngine.syncNow);
