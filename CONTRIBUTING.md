@@ -83,14 +83,32 @@ Before submitting a PR, ensure:
 
 ## Release Checklist
 
-1. Update version in `pubspec.yaml`
+`pubspec.yaml`'s `version:` is the single source of truth — Android reads
+`versionCode` and `versionName` straight from it, so nothing else declares the
+app version. The build number after `+` must increase on every Play upload and
+may never be reused or decreased.
+
+1. Bump `version:` in `pubspec.yaml` — the build name for a user-visible
+   release, the build number on every upload — in the release PR itself, so the
+   bump and the tag can never drift apart
 2. Run `flutter pub get`
 3. Run `flutter analyze`
 4. Run `flutter test --coverage`
 5. Build release: `./scripts/build_production.sh`
 6. Verify size: `flutter build appbundle --analyze-size`
-7. Test on physical device
-8. Update CHANGELOG.md
+7. Test on a physical device
+8. Merge the release PR. Once the build is actually live on Play, tag that
+   merge commit:
+   `git tag -a v<version> -m "<what shipped, and that it is live>"`.
+   The tag matches `pubspec.yaml` exactly, `+build` suffix included. A tag
+   means "this ran in production", so it is never placed at merge time.
+9. Raise the latest and minimum-supported app versions the API reports.
+   The app asks the API for those on launch and compares them against its own
+   version; leave them behind and the upgrade prompt stays silent for everyone
+   still on an old build.
+
+There is no `CHANGELOG.md` — annotated tag messages are the changelog. Read it
+with `git tag -l -n99 'v*'`.
 
 ## Verification Commands
 
