@@ -2,8 +2,8 @@ import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Single source of truth for the app's color identity (design-system-
-  // foundation spec §3) — everything else in this class and in app_theme.dart
+  // Single source of truth for the app's color identity — everything else
+  // in this class and in app_theme.dart
   // derives from or sits alongside this one seed. Changing the palette later
   // is a one-line edit here.
   static const Color brandSeed = Color(0xFF2E7D32);
@@ -28,7 +28,7 @@ class AppColors {
   ).toScheme;
 
   // Dark mode is the same seed run through FlexColorScheme.dark, not a
-  // second hand-picked palette (spec §3) — no explicit primary/surface/
+  // second hand-picked palette — no explicit primary/surface/
   // onSurface override here, unlike the light scheme. Research only
   // specifies the exact literal brandSeed for the light ("on white") case;
   // forcing that same mid-tone green as dark mode's primary would fail M3's
@@ -41,8 +41,8 @@ class AppColors {
     keyColors: const FlexKeyColors(),
   ).toScheme;
 
-  // Status tokens — fixed per theme brightness, never seed-derived (spec §3:
-  // green-for-good/red-for-bad must not shift with the palette). Re-picked
+  // Status tokens — fixed per theme brightness, never seed-derived, because
+  // green-for-good/red-for-bad must not shift with the palette. Re-picked
   // from the old Colors.green/.amber/.red shades to read correctly against
   // the new surfaces; contrast-verified in status_colors_contrast_test.dart
   // (Task 2). Values may be adjusted during the screen-review tasks
@@ -58,7 +58,7 @@ class AppColors {
   static const Color statusNegativeDark = Color(0xFFF2B8B5);
 
   // Identity colors for plant/animal categories — harmonized with
-  // brandSeed, not derived from it (spec §3, implementer judgment call,
+  // brandSeed, not derived from it (implementer judgment call,
   // called out in the PR). Muted teal-blue and warm terracotta: distinct
   // from the brand green and from each other, neither reads as a status
   // color (no green/amber/red).

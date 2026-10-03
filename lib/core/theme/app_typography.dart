@@ -31,8 +31,7 @@ class AppTypography {
   }
 
   /// Tabular figures so KES amounts align in columns (stat cards, list
-  /// totals). Targeted, not a TextTheme-wide change — see design-system-
-  /// foundation spec §4.
+  /// totals). Targeted, not a TextTheme-wide change.
   static TextStyle money(TextStyle style) {
     return style.copyWith(
       fontFeatures: [...?style.fontFeatures, const FontFeature.tabularFigures()],

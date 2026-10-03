@@ -75,9 +75,9 @@ them as load-bearing.
   with no list page.
 
 ---
-_Origin: pre-release audit `docs/audit/20-redundancy.md` §R2-05, plus decisions from remediation phases
-R2-01/R2-02/R2-06 and Phase 8 (dashboard/trash/pagination). This file lives in the repo so the decision
-travels with the code — the root `docs/` audit is local-only, and this repo's `docs/` is gitignored._
+_Origin: the pre-release redundancy audit, plus decisions from the R2-01/R2-02/R2-06
+remediation phases and Phase 8 (dashboard/trash/pagination). This file lives in the repo so
+the decision travels with the code, rather than pointing at an audit a fresh clone lacks._
 
 ## 8. `ScopeChips` is THE filter pattern (analytics + revenue)
 

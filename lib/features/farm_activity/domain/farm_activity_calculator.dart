@@ -42,8 +42,8 @@ class EnterpriseFreshness {
 }
 
 /// Pure, deterministic, no-ML computation over data already loaded
-/// elsewhere in the app. See the design spec's "Farm-health score +
-/// streak" section for the exact bucket cutoffs this mirrors (renamed
+/// elsewhere in the app. Bucket cutoffs mirror the original "Farm-health
+/// score + streak" design (renamed
 /// to "Farm Activity Score" post-implementation - this measures
 /// record-keeping freshness/cadence, not animal or crop health).
 class FarmActivityCalculator {

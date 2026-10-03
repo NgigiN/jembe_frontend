@@ -47,7 +47,7 @@ class WebAppRouter {
 
   /// Pure redirect decision (unit-tested), mirrors AppRouter.staffOnlyRedirectLocation.
   /// A worker landing on a staff-only path is sent to Feed — the first
-  /// destination actually available to them (spec §5).
+  /// destination actually available to them.
   static String? staffOnlyRedirectLocation({
     required FarmRole? role,
     required String location,
