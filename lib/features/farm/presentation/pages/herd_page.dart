@@ -265,12 +265,16 @@ class _HerdPageState extends State<HerdPage> {
   void initState() {
     super.initState();
     final herdBloc = context.read<HerdBloc>();
-    if (herdBloc.state is! HerdLoaded) {
-      if (OfflineConfig.enabled) {
-        herdBloc.add(WatchHerdsEvent());
-      } else {
-        herdBloc.add(GetHerdsEvent());
-      }
+    // Subscribing is what keeps this page live, so with the offline
+    // mirror on it must happen even when the bloc already holds a
+    // HerdLoaded — that cached list can be the EMPTY one produced by a
+    // read that landed before the first sync finished, and without a
+    // subscription the page would render it forever. The watch handler
+    // is idempotent, so a repeat dispatch is a no-op.
+    if (OfflineConfig.enabled) {
+      herdBloc.add(WatchHerdsEvent());
+    } else if (herdBloc.state is! HerdLoaded) {
+      herdBloc.add(GetHerdsEvent());
     }
     final animalTypeBloc = context.read<AnimalTypeBloc>();
     if (animalTypeBloc.state is! AnimalTypeLoaded) {

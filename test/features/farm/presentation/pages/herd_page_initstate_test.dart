@@ -144,7 +144,7 @@ void main() {
       ).called(1);
     });
 
-    testWidgets('does not re-watch when herds already loaded', (
+    testWidgets('still subscribes when herds are already loaded', (
       tester,
     ) async {
       OfflineConfig.enabled = true;
@@ -171,7 +171,9 @@ void main() {
 
       await tester.pumpWidget(_wrap(bloc, animalTypeBloc));
 
-      verifyNever(() => bloc.add(any(that: isA<WatchHerdsEvent>())));
+      verify(
+        () => bloc.add(any(that: isA<WatchHerdsEvent>())),
+      ).called(1);
       verifyNever(() => bloc.add(any(that: isA<GetHerdsEvent>())));
     });
   });

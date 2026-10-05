@@ -1,4 +1,5 @@
 import 'package:farm_tracker/core/database/app_database.dart';
+import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/sync/entity_syncer.dart';
 import 'package:farm_tracker/core/sync/fk_resolver.dart';
 import 'package:farm_tracker/core/sync/sync_contracts.dart';
@@ -214,9 +215,20 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
         ? server.syncClientUuid
         : (local?.syncClientUuid ?? '');
     if (clientUuid.isEmpty) {
-      // No way to key this row locally (shouldn't happen — P1 always
-      // echoes client_uuid on rows the client has ever seen) — skip rather
-      // than risk corrupting the mirror with an empty-keyed row.
+      // No way to key this row locally — skip rather than risk corrupting
+      // the mirror with an empty-keyed row.
+      //
+      // This was once commented "shouldn't happen". It happened: every row
+      // written before client_uuid existed carried the empty string, so with
+      // the offline path on, a user's whole history was skipped here and the
+      // app looked empty while the server still held everything. A silent
+      // `return` is what made that invisible, so it now reports itself.
+      appLogger.error(
+        LogCategory.general,
+        'Sync: skipped a pulled $entity row with no client_uuid — it will '
+        'never reach this device. Server rows are expected to carry one.',
+        StateError('empty client_uuid on pulled $entity row'),
+      );
       return;
     }
 
