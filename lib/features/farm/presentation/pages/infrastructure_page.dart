@@ -48,12 +48,16 @@ class _InfrastructurePageState extends State<InfrastructurePage> {
   void initState() {
     super.initState();
     final bloc = context.read<InfrastructureBloc>();
-    if (bloc.state is! InfrastructureLoaded) {
-      if (OfflineConfig.enabled) {
-        bloc.add(WatchInfrastructureEvent());
-      } else {
-        bloc.add(GetInfrastructuresEvent());
-      }
+    // Subscribing is what keeps this page live, so with the offline
+    // mirror on it must happen even when the bloc already holds a
+    // InfrastructureLoaded — that cached list can be the EMPTY one produced by a
+    // read that landed before the first sync finished, and without a
+    // subscription the page would render it forever. The watch handler
+    // is idempotent, so a repeat dispatch is a no-op.
+    if (OfflineConfig.enabled) {
+      bloc.add(WatchInfrastructureEvent());
+    } else if (bloc.state is! InfrastructureLoaded) {
+      bloc.add(GetInfrastructuresEvent());
     }
   }
 

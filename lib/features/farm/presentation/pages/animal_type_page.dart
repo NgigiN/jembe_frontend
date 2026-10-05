@@ -100,12 +100,16 @@ class _AnimalTypePageState extends State<AnimalTypePage> {
   void initState() {
     super.initState();
     final bloc = context.read<AnimalTypeBloc>();
-    if (bloc.state is! AnimalTypeLoaded) {
-      if (OfflineConfig.enabled) {
-        bloc.add(WatchAnimalTypesEvent());
-      } else {
-        bloc.add(GetAnimalTypesEvent());
-      }
+    // Subscribing is what keeps this page live, so with the offline
+    // mirror on it must happen even when the bloc already holds a
+    // AnimalTypeLoaded — that cached list can be the EMPTY one produced by a
+    // read that landed before the first sync finished, and without a
+    // subscription the page would render it forever. The watch handler
+    // is idempotent, so a repeat dispatch is a no-op.
+    if (OfflineConfig.enabled) {
+      bloc.add(WatchAnimalTypesEvent());
+    } else if (bloc.state is! AnimalTypeLoaded) {
+      bloc.add(GetAnimalTypesEvent());
     }
   }
 

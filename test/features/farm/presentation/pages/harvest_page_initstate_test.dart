@@ -137,7 +137,7 @@ void main() {
       },
     );
 
-    testWidgets('does not re-watch when harvests already loaded', (
+    testWidgets('still subscribes when harvests are already loaded', (
       tester,
     ) async {
       OfflineConfig.enabled = true;
@@ -165,7 +165,9 @@ void main() {
         _wrap(bloc, seasonBloc, seasonId: 'season-1'),
       );
 
-      verifyNever(() => bloc.add(any(that: isA<WatchHarvestsEvent>())));
+      verify(
+        () => bloc.add(any(that: isA<WatchHarvestsEvent>())),
+      ).called(1);
       verifyNever(() => bloc.add(any(that: isA<GetHarvestsEvent>())));
     });
   });

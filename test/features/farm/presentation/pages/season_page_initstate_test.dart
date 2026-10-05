@@ -194,7 +194,7 @@ void main() {
       verifyNever(() => seasonBloc.add(any(that: isA<GetSeasonsEvent>())));
     });
 
-    testWidgets('does not re-watch when seasons already loaded', (
+    testWidgets('still subscribes when seasons are already loaded', (
       tester,
     ) async {
       OfflineConfig.enabled = true;
@@ -234,7 +234,9 @@ void main() {
         _wrap(seasonBloc: seasonBloc, landBloc: landBloc, plantBloc: plantBloc),
       );
 
-      verifyNever(() => seasonBloc.add(any(that: isA<WatchSeasonsEvent>())));
+      verify(
+        () => seasonBloc.add(any(that: isA<WatchSeasonsEvent>())),
+      ).called(1);
       verifyNever(() => seasonBloc.add(any(that: isA<GetSeasonsEvent>())));
     });
   });

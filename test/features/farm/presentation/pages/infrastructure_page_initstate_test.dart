@@ -110,7 +110,7 @@ void main() {
       },
     );
 
-    testWidgets('does not re-watch when infrastructures already loaded', (
+    testWidgets('still subscribes when infrastructures are already loaded', (
       tester,
     ) async {
       OfflineConfig.enabled = true;
@@ -137,7 +137,9 @@ void main() {
 
       await tester.pumpWidget(_wrap(bloc));
 
-      verifyNever(() => bloc.add(any(that: isA<WatchInfrastructureEvent>())));
+      verify(
+        () => bloc.add(any(that: isA<WatchInfrastructureEvent>())),
+      ).called(1);
       verifyNever(() => bloc.add(any(that: isA<GetInfrastructuresEvent>())));
     });
   });

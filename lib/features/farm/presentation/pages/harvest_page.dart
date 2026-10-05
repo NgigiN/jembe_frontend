@@ -48,12 +48,16 @@ class _HarvestPageState extends State<HarvestPage> {
   void initState() {
     super.initState();
     final harvestBloc = context.read<HarvestBloc>();
-    if (harvestBloc.state is! HarvestLoaded) {
-      if (OfflineConfig.enabled) {
-        harvestBloc.add(WatchHarvestsEvent(seasonId: widget.seasonId));
-      } else {
-        harvestBloc.add(GetHarvestsEvent(seasonId: widget.seasonId));
-      }
+    // Subscribing is what keeps this page live, so with the offline
+    // mirror on it must happen even when the bloc already holds a
+    // HarvestLoaded — that cached list can be the EMPTY one produced by a
+    // read that landed before the first sync finished, and without a
+    // subscription the page would render it forever. The watch handler
+    // is idempotent, so a repeat dispatch is a no-op.
+    if (OfflineConfig.enabled) {
+      harvestBloc.add(WatchHarvestsEvent(seasonId: widget.seasonId));
+    } else if (harvestBloc.state is! HarvestLoaded) {
+      harvestBloc.add(GetHarvestsEvent(seasonId: widget.seasonId));
     }
     final seasonBloc = context.read<SeasonBloc>();
     if (seasonBloc.state is! SeasonLoaded) {

@@ -101,7 +101,7 @@ void main() {
       },
     );
 
-    testWidgets('does not re-watch when animal types already loaded', (
+    testWidgets('still subscribes when animal types are already loaded', (
       tester,
     ) async {
       OfflineConfig.enabled = true;
@@ -123,7 +123,9 @@ void main() {
 
       await tester.pumpWidget(_wrap(bloc));
 
-      verifyNever(() => bloc.add(any(that: isA<WatchAnimalTypesEvent>())));
+      verify(
+        () => bloc.add(any(that: isA<WatchAnimalTypesEvent>())),
+      ).called(1);
       verifyNever(() => bloc.add(any(that: isA<GetAnimalTypesEvent>())));
     });
   });

@@ -264,24 +264,32 @@ class _SeasonPageState extends State<SeasonPage> {
   void initState() {
     super.initState();
     final seasonBloc = context.read<SeasonBloc>();
-    if (seasonBloc.state is! SeasonLoaded) {
-      if (OfflineConfig.enabled) {
-        seasonBloc.add(WatchSeasonsEvent());
-      } else {
-        seasonBloc.add(GetSeasonsEvent());
-      }
+    // Subscribing is what keeps this page live, so with the offline
+    // mirror on it must happen even when the bloc already holds a
+    // SeasonLoaded — that cached list can be the EMPTY one produced by a
+    // read that landed before the first sync finished, and without a
+    // subscription the page would render it forever. The watch handler
+    // is idempotent, so a repeat dispatch is a no-op.
+    if (OfflineConfig.enabled) {
+      seasonBloc.add(WatchSeasonsEvent());
+    } else if (seasonBloc.state is! SeasonLoaded) {
+      seasonBloc.add(GetSeasonsEvent());
     }
     final landBloc = context.read<LandBloc>();
     if (landBloc.state is! LandLoaded) {
       landBloc.add(GetLandsEvent());
     }
     final plantBloc = context.read<PlantBloc>();
-    if (plantBloc.state is! PlantLoaded) {
-      if (OfflineConfig.enabled) {
-        plantBloc.add(WatchPlantsEvent());
-      } else {
-        plantBloc.add(GetPlantsEvent());
-      }
+    // Subscribing is what keeps this page live, so with the offline
+    // mirror on it must happen even when the bloc already holds a
+    // PlantLoaded — that cached list can be the EMPTY one produced by a
+    // read that landed before the first sync finished, and without a
+    // subscription the page would render it forever. The watch handler
+    // is idempotent, so a repeat dispatch is a no-op.
+    if (OfflineConfig.enabled) {
+      plantBloc.add(WatchPlantsEvent());
+    } else if (plantBloc.state is! PlantLoaded) {
+      plantBloc.add(GetPlantsEvent());
     }
   }
 

@@ -97,7 +97,7 @@ void main() {
       verifyNever(() => bloc.add(any(that: isA<GetPlantsEvent>())));
     });
 
-    testWidgets('does not re-watch when plants already loaded', (
+    testWidgets('still subscribes when plants are already loaded', (
       tester,
     ) async {
       OfflineConfig.enabled = true;
@@ -121,7 +121,9 @@ void main() {
 
       await tester.pumpWidget(_wrap(bloc));
 
-      verifyNever(() => bloc.add(any(that: isA<WatchPlantsEvent>())));
+      verify(
+        () => bloc.add(any(that: isA<WatchPlantsEvent>())),
+      ).called(1);
       verifyNever(() => bloc.add(any(that: isA<GetPlantsEvent>())));
     });
   });
