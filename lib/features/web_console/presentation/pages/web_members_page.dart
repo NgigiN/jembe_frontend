@@ -6,6 +6,7 @@ import 'package:farm_tracker/core/utils/console_dates.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_source.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm.dart';
+import 'package:farm_tracker/features/farms/data/models/farm_invitation_model.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_invitation.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_member.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
@@ -28,6 +29,23 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 /// list below it — an invitation is a person on their way in, and reading
 /// two lists to answer "who is on this farm" is the thing that design
 /// avoids.
+/// What to tell the person after an invitation is created.
+///
+/// Split out and kept pure so the wording can be asserted on without a widget
+/// harness. The distinction matters: an invitation works whether or not mail
+/// went out, because it is claimed by signing in with the invited address — so
+/// when nothing was emailed the only useful message is the one that tells the
+/// inviter to pass that on themselves.
+String invitationCreatedMessage(String email, {required bool emailed}) => emailed
+    ? 'Invited $email — we emailed them how to join.'
+    : 'Invited $email. No email was sent, so ask them to sign in with that '
+          'address.';
+
+/// What to tell the person after a resend.
+String invitationResentMessage(String email, {required bool emailed}) => emailed
+    ? 'Emailed $email again.'
+    : 'Renewed the invitation for $email, but no email was sent.';
+
 class WebMembersPage extends StatefulWidget {
   const WebMembersPage({required this.remote, super.key});
 
@@ -67,6 +85,40 @@ class _WebMembersPageState extends State<WebMembersPage> {
     }
   }
 
+  /// Runs an invitation action and reports what actually happened to the mail.
+  ///
+  /// The message comes from the server's own `email_sent`, because an
+  /// invitation is valid whether or not mail went out — it is claimed by
+  /// signing in with the invited address, not from the email. Announcing
+  /// "invitation sent" regardless is what made this screen misleading: for the
+  /// whole life of the feature no invitation email existed at all, and the
+  /// person inviting had no way to know.
+  Future<void> _runInvitation(
+    Future<FarmInvitationModel> Function() action,
+    String Function(bool emailed) success,
+  ) async {
+    try {
+      final invitation = await action();
+      if (!mounted) return;
+      // A null email_sent means the server did not say; treat it as not
+      // emailed rather than claiming delivery we cannot evidence.
+      final emailed = invitation.emailSent ?? false;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          emailed
+              ? AppSnackBar.success(context, success(true))
+              : AppSnackBar.info(context, success(false)),
+        );
+      await _load();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        AppSnackBar.error(context, "That didn't go through. Try again."),
+      );
+    }
+  }
+
   Future<void> _run(Future<void> Function() action, String success) async {
     try {
       await action();
@@ -98,13 +150,13 @@ class _WebMembersPageState extends State<WebMembersPage> {
       transferPending: _transfer != null,
       errorMessage: _error,
       onRetry: _load,
-      onInvite: (email, inviteRole) => _run(
+      onInvite: (email, inviteRole) => _runInvitation(
         () => widget.remote.createInvitation(email, inviteRole),
-        'Invitation sent to $email.',
+        (emailed) => invitationCreatedMessage(email, emailed: emailed),
       ),
-      onResend: (invitation) => _run(
-        () => widget.remote.createInvitation(invitation.email, invitation.role),
-        'Invitation sent again to ${invitation.email}.',
+      onResend: (invitation) => _runInvitation(
+        () => widget.remote.resendInvitation(invitation.id),
+        (emailed) => invitationResentMessage(invitation.email, emailed: emailed),
       ),
       onRevoke: (invitation) => _run(
         () => widget.remote.revokeInvitation(invitation.id),
@@ -349,7 +401,7 @@ class MembersView extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Invitation sent',
+                'Invitation pending',
                 style: AppTypography.cellStrong.copyWith(color: console.muted),
               ),
             ),

@@ -55,7 +55,9 @@ void main() {
       ),
     );
 
-    expect(find.text('Invitation sent'), findsOneWidget);
+    // Not "Invitation sent": a pending invitation says nothing about whether
+    // mail went out, and for the whole life of this feature none ever did.
+    expect(find.text('Invitation pending'), findsOneWidget);
     expect(find.text('achieng.m@gmail.com'), findsOneWidget);
     expect(find.textContaining('Expires in'), findsOneWidget);
     expect(find.text('Resend'), findsOneWidget);
@@ -81,7 +83,7 @@ void main() {
     expect(find.text('Invite member'), findsNothing);
     expect(find.text('INVITE BY EMAIL'), findsNothing);
     // Pending invitations are staff-only too.
-    expect(find.text('Invitation sent'), findsNothing);
+    expect(find.text('Invitation pending'), findsNothing);
   });
 
   testWidgets('only the owner is offered ownership transfer', (tester) async {
