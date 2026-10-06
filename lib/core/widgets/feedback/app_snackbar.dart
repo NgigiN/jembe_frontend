@@ -29,6 +29,25 @@ class AppSnackBar {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       );
 
+  /// An action that succeeded but leaves the person something to do — for
+  /// example an invitation that was created while no email could be sent.
+  ///
+  /// Longer-lived than [success] on purpose: it carries an instruction rather
+  /// than a confirmation, so three seconds is not enough to read it.
+  static SnackBar info(BuildContext context, String message) => SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.info_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: context.statusColors.warning,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        duration: const Duration(seconds: 6),
+      );
+
   static SnackBar network(
     BuildContext context,
     String message, {
