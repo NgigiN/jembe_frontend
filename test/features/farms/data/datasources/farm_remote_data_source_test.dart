@@ -108,4 +108,35 @@ void main() {
     expect(invitation.email, 'w@example.com');
     expect(invitation.role, FarmRole.worker);
   });
+
+  // email_sent is how the client learns whether mail actually went out. It is
+  // absent from the list response, and absent must never read as "sent".
+  test('createInvitation reads email_sent when the server reports it', () async {
+    final dio = Dio()
+      ..httpClientAdapter = _FixedJsonAdapter(
+        201,
+        '{"id":3,"email":"w@example.com","role":"worker","invited_by":1,'
+        '"expires_at":"2026-10-01T00:00:00Z","created_at":"2026-09-21T00:00:00Z",'
+        '"email_sent":true}',
+      );
+
+    final invitation =
+        await FarmRemoteDataSourceImpl(dio: dio).createInvitation('w@example.com', FarmRole.worker);
+
+    expect(invitation.emailSent, isTrue);
+  });
+
+  test('createInvitation leaves email_sent null when the server omits it', () async {
+    final dio = Dio()
+      ..httpClientAdapter = _FixedJsonAdapter(
+        201,
+        '{"id":3,"email":"w@example.com","role":"worker","invited_by":1,'
+        '"expires_at":"2026-10-01T00:00:00Z","created_at":"2026-09-21T00:00:00Z"}',
+      );
+
+    final invitation =
+        await FarmRemoteDataSourceImpl(dio: dio).createInvitation('w@example.com', FarmRole.worker);
+
+    expect(invitation.emailSent, isNull);
+  });
 }
