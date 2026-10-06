@@ -100,7 +100,39 @@ class _FarmManagePageState extends State<FarmManagePage> {
       ),
     );
     if (invited ?? false) {
-      await _runAction(() => _remote.createInvitation(emailController.text, role));
+      await _inviteAndReport(emailController.text, role);
+    }
+  }
+
+  /// Invites, then says what became of the email.
+  ///
+  /// Previously this path reported nothing at all on success: the new row just
+  /// appeared in the pending list, which reads as "sent" while no invitation
+  /// email existed anywhere in the product. Saying so plainly is the point —
+  /// the invite is claimed by signing in with the invited address, so when no
+  /// mail goes out somebody has to tell the person.
+  Future<void> _inviteAndReport(String email, FarmRole role) async {
+    try {
+      final invitation = await _remote.createInvitation(email, role);
+      await _load();
+      if (!mounted) return;
+      final emailed = invitation.emailSent ?? false;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          emailed
+              ? AppSnackBar.success(context, 'Invited $email — we emailed them how to join.')
+              : AppSnackBar.info(
+                  context,
+                  'Invited $email. No email was sent, so ask them to sign in '
+                  'with that address.',
+                ),
+        );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        AppSnackBar.error(context, 'That action could not be completed. Try again.'),
+      );
     }
   }
 

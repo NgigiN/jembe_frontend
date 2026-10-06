@@ -30,6 +30,36 @@ class _FixedJsonAdapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
+/// Records the request so a test can assert the method and path, which is the
+/// whole point of the resend endpoint existing separately.
+class _CapturingAdapter implements HttpClientAdapter {
+  _CapturingAdapter(this.statusCode, this.body);
+  final int statusCode;
+  final String body;
+  String? method;
+  String? path;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    method = options.method;
+    path = options.path;
+    return ResponseBody.fromString(
+      body,
+      statusCode,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
 const _farmJson = '{"id":7,"name":"Green Acres","location":"Nakuru",'
     '"fiscal_year_start_month":3,"owner_user_id":1,"successor_user_id":null,'
     '"max_members":10,"role":"owner","member_count":1,"is_default":true}';
@@ -107,5 +137,56 @@ void main() {
 
     expect(invitation.email, 'w@example.com');
     expect(invitation.role, FarmRole.worker);
+  });
+
+  // email_sent is how the client learns whether mail actually went out. It is
+  // absent from the list response, and absent must never read as "sent".
+  test('createInvitation reads email_sent when the server reports it', () async {
+    final dio = Dio()
+      ..httpClientAdapter = _FixedJsonAdapter(
+        201,
+        '{"id":3,"email":"w@example.com","role":"worker","invited_by":1,'
+        '"expires_at":"2026-10-01T00:00:00Z","created_at":"2026-09-21T00:00:00Z",'
+        '"email_sent":true}',
+      );
+
+    final invitation =
+        await FarmRemoteDataSourceImpl(dio: dio).createInvitation('w@example.com', FarmRole.worker);
+
+    expect(invitation.emailSent, isTrue);
+  });
+
+  test('createInvitation leaves email_sent null when the server omits it', () async {
+    final dio = Dio()
+      ..httpClientAdapter = _FixedJsonAdapter(
+        201,
+        '{"id":3,"email":"w@example.com","role":"worker","invited_by":1,'
+        '"expires_at":"2026-10-01T00:00:00Z","created_at":"2026-09-21T00:00:00Z"}',
+      );
+
+    final invitation =
+        await FarmRemoteDataSourceImpl(dio: dio).createInvitation('w@example.com', FarmRole.worker);
+
+    expect(invitation.emailSent, isNull);
+  });
+
+  // Resend used to re-POST the collection, which the server refuses as a
+  // duplicate while an invitation is pending — exactly when a resend happens.
+  // It must hit the dedicated route instead.
+  test('resendInvitation POSTs the invitation\'s own resend path', () async {
+    final adapter = _CapturingAdapter(
+      200,
+      '{"id":3,"email":"w@example.com","role":"worker","invited_by":1,'
+      '"expires_at":"2026-10-20T00:00:00Z","created_at":"2026-09-21T00:00:00Z",'
+      '"email_sent":false}',
+    );
+    final dio = Dio()..httpClientAdapter = adapter;
+
+    final invitation = await FarmRemoteDataSourceImpl(dio: dio).resendInvitation(3);
+
+    expect(adapter.method, 'POST');
+    expect(adapter.path, '/api/v1/farms/current/invitations/3/resend');
+    expect(invitation.id, 3);
+    expect(invitation.emailSent, isFalse);
   });
 }

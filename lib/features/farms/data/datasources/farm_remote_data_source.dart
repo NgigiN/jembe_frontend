@@ -22,6 +22,7 @@ abstract class FarmRemoteDataSource {
   Future<List<FarmInvitationModel>> listInvitations();
   Future<FarmInvitationModel> createInvitation(String email, FarmRole role);
   Future<void> revokeInvitation(int id);
+  Future<FarmInvitationModel> resendInvitation(int id);
   Future<void> setSuccessor(int? userId);
   Future<FarmTransferModel?> getTransfer();
   Future<FarmTransferModel> nominateTransfer(int userId);
@@ -143,6 +144,21 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
       options: _permissive,
     );
     _throwIfNotOk(response, {201});
+    return FarmInvitationModel.fromJson(response.data as Map<String, dynamic>);
+  });
+
+  /// Renews the pending invitation and emails it again.
+  ///
+  /// A dedicated endpoint because re-POSTing the collection is refused as a
+  /// duplicate while an invitation is pending — which is exactly when a
+  /// resend happens, so that route could only ever fail.
+  @override
+  Future<FarmInvitationModel> resendInvitation(int id) => _guard(() async {
+    final response = await dio.post<dynamic>(
+      '/api/v1/farms/current/invitations/$id/resend',
+      options: _permissive,
+    );
+    _throwIfNotOk(response, {200});
     return FarmInvitationModel.fromJson(response.data as Map<String, dynamic>);
   });
 
