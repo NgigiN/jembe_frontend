@@ -48,11 +48,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       } catch (e) {
         if (isSignInCancellation(e)) {
           appLogger.logAuthEvent('Google Sign-In cancelled by user');
-          emit(AuthInitial());
+          // Not silent any more. Dismissing the sheet — including the
+          // first-time "Allow Google to sign you in" consent step, which is
+          // easy to back out of by accident — used to drop the user back on
+          // this screen with no explanation at all.
+          emit(
+            AuthCancelled(
+              'Sign-in was not completed. Tap Continue with Google, pick your '
+              'account, and allow access to finish.',
+            ),
+          );
           return;
         }
         appLogger.logError('GoogleSignInRequested', e);
-        emit(AuthError('Google Sign-In failed. Please try again.'));
+        emit(AuthError(describeSignInFailure(e)));
       }
     });
 
