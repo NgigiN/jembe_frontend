@@ -136,6 +136,28 @@ void main() {
     expect(find.text('plants'), findsNothing);
   });
 
+  testWidgets(
+    'TAPPING a destination must not duplicate the shell navigator key',
+    (tester) async {
+      useDeviceMetrics(tester);
+      await tester.pumpWidget(_harness(authBloc));
+      await tester.pumpAndSettle();
+      expect(find.text('plants'), findsOneWidget);
+
+      // Drive it the way a finger does: through the navigation bar, not
+      // through the router. Tapping runs AdaptiveScaffoldPlus's own
+      // setState(_selectedIndex) BEFORE the route changes, which re-keys the
+      // KeyedSubtree inside its AnimatedSwitcher.
+      await tester.tap(find.byIcon(Icons.pets_outlined));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(tester.takeException(), isNull, reason: 'mid destination tap');
+
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'after destination tap');
+    },
+  );
+
   testWidgets('crossing a layout breakpoint throws nothing', (tester) async {
     useDeviceMetrics(tester);
     await tester.pumpWidget(_harness(authBloc));
