@@ -44,22 +44,35 @@ class SyncStatusIndicator extends StatelessWidget {
       initialData: syncEngine.status,
       builder: (context, snapshot) {
         final status = snapshot.data ?? const SyncStatus(phase: SyncPhase.idle);
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                _label(status),
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12, color: _color(context, status)),
+        // This row sits ABOVE the page's app bar, so nothing below it is
+        // reserving the status-bar inset on its behalf. Without this the
+        // label and the sync button paint straight over the clock, wifi and
+        // battery glyphs, leaving both unreadable — which is how it shipped.
+        // Only the top edge matters; the surrounding layout owns the rest.
+        return SafeArea(
+          bottom: false,
+          left: false,
+          right: false,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  _label(status),
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _color(context, status),
+                  ),
+                ),
               ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.sync, size: 18),
-              tooltip: 'Sync now',
-              onPressed: () => unawaited(syncEngine.syncNow()),
-            ),
-          ],
+              IconButton(
+                icon: const Icon(Icons.sync, size: 18),
+                tooltip: 'Sync now',
+                onPressed: () => unawaited(syncEngine.syncNow()),
+              ),
+            ],
+          ),
         );
       },
     );

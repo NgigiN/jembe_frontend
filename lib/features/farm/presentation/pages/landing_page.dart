@@ -1,5 +1,6 @@
 import 'package:adaptive_scaffold_plus/adaptive_scaffold_plus.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/widgets/offline_banner.dart';
 import 'package:farm_tracker/core/offline/widgets/sync_status_indicator.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
@@ -93,7 +94,26 @@ class LandingPage extends StatelessWidget {
                 child: SyncStatusIndicator(),
               ),
             ),
-            Expanded(child: child),
+            // The rows above have already taken the status-bar inset
+            // (SyncStatusIndicator wraps itself in a SafeArea). Every tab
+            // below brings its own Scaffold and AppBar, which reserves that
+            // same inset a second time — about 120 logical px of duplicated
+            // header, and why the bar read as a very big chin whenever the
+            // mirror was on.
+            //
+            // Guarded on the flag because that is exactly when the rows
+            // above paint. Flag-off they collapse to zero height and
+            // nothing has consumed the inset, so the tab must keep
+            // reserving it or its app bar slides under the clock.
+            Expanded(
+              child: OfflineConfig.enabled
+                  ? MediaQuery.removePadding(
+                      context: context,
+                      removeTop: true,
+                      child: child,
+                    )
+                  : child,
+            ),
           ],
         ),
       ),

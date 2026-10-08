@@ -158,6 +158,22 @@ void main() {
     });
 
     testWidgets(
+      'the tab below does not reserve the status-bar inset a second time - '
+      'the indicator above already took it, and reserving it twice is the '
+      'duplicated green that read as a very big chin',
+      (tester) async {
+        tester.view.padding = const FakeViewPadding(top: 360); // 120 logical
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(_harness(authBloc));
+        await tester.pumpAndSettle();
+
+        final ctx = tester.element(find.text('tab content'));
+        expect(MediaQuery.of(ctx).padding.top, 0);
+      },
+    );
+
+    testWidgets(
       'shows the offline banner and sync status above the active tab, '
       'in the shell (not per-page)',
       (tester) async {
