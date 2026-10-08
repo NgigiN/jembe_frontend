@@ -318,14 +318,10 @@ void main() {
         final cursor = await syncer.pull(null);
 
         // The drain loop always sends a non-null `updatedSince` (epoch on a
-        // first sync), then re-queries from the page's max `updatedAt`; this
-        // fake ignores its argument and returns the same fixed row every
-        // time, so the second page's max doesn't advance past the cursor it
-        // was queried with and the loop stops there — two calls total.
-        expect(remote.getLandsCalls, [
-          DateTime.utc(1970),
-          DateTime.utc(2026, 5),
-        ]);
+        // first sync). One call: the page came back shorter than the page
+        // size the drain asked for, which already proves nothing follows
+        // it, so the confirming re-query that used to come next is gone.
+        expect(remote.getLandsCalls, [DateTime.utc(1970)]);
         expect(cursor, isNotNull);
         expect(cursor!.isAtSameMomentAs(DateTime.utc(2026, 5)), isTrue);
 

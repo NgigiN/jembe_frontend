@@ -26,8 +26,8 @@ class AnimalRemoteAdapter implements RemoteSyncAdapter<AnimalModel> {
   Future<void> delete(String serverId) => _remote.deleteAnimal(serverId);
 
   @override
-  Future<List<AnimalModel>> getSince(DateTime? since) =>
-      _remote.getAnimals(updatedSince: since);
+  Future<List<AnimalModel>> getSince(DateTime? since, {required int limit}) =>
+      _remote.getAnimals(updatedSince: since, limit: limit);
 }
 
 /// Concrete [EntitySyncer] for the `animal` entity.

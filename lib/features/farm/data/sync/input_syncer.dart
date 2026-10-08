@@ -26,11 +26,11 @@ class InputRemoteAdapter implements RemoteSyncAdapter<InputModel> {
   Future<void> delete(String serverId) => _remote.deleteInput(serverId);
 
   @override
-  Future<List<InputModel>> getSince(DateTime? since) =>
+  Future<List<InputModel>> getSince(DateTime? since, {required int limit}) =>
       // The sync pull is unfiltered (all rows since the cursor) — the
       // `sourceType` app-level filter is a LOCAL read concern only (see
       // `InputLocalDataSource.watchInputs`), never a sync-pull concern.
-      _remote.getInputs(updatedSince: since);
+      _remote.getInputs(updatedSince: since, limit: limit);
 }
 
 /// Concrete [EntitySyncer] for the `input` entity.

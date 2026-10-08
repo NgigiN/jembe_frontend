@@ -25,8 +25,8 @@ class LandRemoteAdapter implements RemoteSyncAdapter<LandModel> {
   Future<void> delete(String serverId) => _remote.deleteLand(serverId);
 
   @override
-  Future<List<LandModel>> getSince(DateTime? since) =>
-      _remote.getLands(updatedSince: since);
+  Future<List<LandModel>> getSince(DateTime? since, {required int limit}) =>
+      _remote.getLands(updatedSince: since, limit: limit);
 }
 
 /// Concrete [EntitySyncer] for the `land` entity.
