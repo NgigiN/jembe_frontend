@@ -40,49 +40,41 @@ void main() {
     );
   }
 
-  /// A status-bar-sized top inset, as a real phone reports.
-  ///
-  /// Deliberately NOT inside a Scaffold: in the app this indicator sits in a
-  /// bare Column above each page's own Scaffold, so nothing has consumed the
-  /// inset by the time it builds. A Scaffold here would swallow the padding
-  /// and the test would pass without proving anything.
-  Widget harnessWithInset({double topInset = 120}) {
-    return MaterialApp(
-      home: MediaQuery(
-        data: MediaQueryData(padding: EdgeInsets.only(top: topInset)),
-        child: Align(
-          alignment: Alignment.topLeft,
-          child: SyncStatusIndicator(
-            syncEngine: syncEngine,
-            now: () => fixedNow,
-          ),
-        ),
-      ),
-    );
-  }
-
   testWidgets(
-    'keeps clear of the system status bar - this sits ABOVE the app bar, so '
-    'without a SafeArea its label and sync button paint on top of the clock, '
-    'wifi and battery glyphs, which is what shipped',
+    'floats as a small, see-through overlay - it sits ON TOP of page content '
+    'now rather than in a row above it, so it must stay compact and must not '
+    'paint a surface that hides what is underneath',
     (tester) async {
       OfflineConfig.enabled = true;
-      const topInset = 120.0;
-
-      await tester.pumpWidget(harnessWithInset());
+      await tester.pumpWidget(harness());
       await tester.pump();
 
-      final button = tester.getRect(find.byIcon(Icons.sync));
+      final size = tester.getSize(find.byType(SyncStatusIndicator));
       expect(
-        button.top,
-        greaterThanOrEqualTo(topInset),
-        reason: 'the sync button painted inside the status bar region',
+        size.height,
+        lessThan(48),
+        reason: 'taller than a standard row, so it is not a small overlay',
       );
-      final row = tester.getRect(find.byType(Row).first);
+
+      final backdrop = tester.widget<Material>(
+        find
+            .descendant(
+              of: find.byType(SyncStatusIndicator),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      final alpha = backdrop.color?.a ?? 1.0;
       expect(
-        row.top,
-        greaterThanOrEqualTo(topInset),
-        reason: 'the indicator row painted inside the status bar region',
+        alpha,
+        lessThan(1.0),
+        reason: 'a fully opaque backdrop hides the content it floats over',
+      );
+      expect(
+        alpha,
+        greaterThan(0.0),
+        reason: 'fully clear was tried and the label landed unreadable on '
+            "top of a card's own text",
       );
     },
   );

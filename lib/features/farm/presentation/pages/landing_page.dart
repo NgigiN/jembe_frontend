@@ -1,6 +1,5 @@
 import 'package:adaptive_scaffold_plus/adaptive_scaffold_plus.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
-import 'package:farm_tracker/core/offline/offline_config.dart';
 import 'package:farm_tracker/core/offline/widgets/offline_banner.dart';
 import 'package:farm_tracker/core/offline/widgets/sync_status_indicator.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
@@ -80,39 +79,27 @@ class LandingPage extends StatelessWidget {
             // flag-off. Sits above every tab's content (not inside it) so
             // the same banner shows regardless of which tab is active.
             const OfflineBanner(),
-            // Self-hides (SizedBox.shrink()) when OfflineConfig.enabled is
-            // false, so — like the banner above — this row collapses to
-            // zero height flag-off (only the horizontal padding survives,
-            // and it never paints anything without a visible child). A
-            // single, always-in-the-same-place status row (rather than
-            // per-tab app bar actions) keeps sync state visible no matter
-            // which tab the user is on.
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: SyncStatusIndicator(),
-              ),
-            ),
-            // The rows above have already taken the status-bar inset
-            // (SyncStatusIndicator wraps itself in a SafeArea). Every tab
-            // below brings its own Scaffold and AppBar, which reserves that
-            // same inset a second time — about 120 logical px of duplicated
-            // header, and why the bar read as a very big chin whenever the
-            // mirror was on.
+            // Sync status floats OVER the tab rather than sitting in a row
+            // above it. As a row it added its own height plus the
+            // status-bar inset to everything below, so enabling the mirror
+            // grew the header from 288px to 432px on a 1080x2372 phone —
+            // the same screen with two different headers depending on a
+            // server flag. Sync is background work and should not move the
+            // page at all.
             //
-            // Guarded on the flag because that is exactly when the rows
-            // above paint. Flag-off they collapse to zero height and
-            // nothing has consumed the inset, so the tab must keep
-            // reserving it or its app bar slides under the clock.
+            // Bottom left: revenue_page is the only top-level tab carrying
+            // a floating action button, and that sits bottom right.
             Expanded(
-              child: OfflineConfig.enabled
-                  ? MediaQuery.removePadding(
-                      context: context,
-                      removeTop: true,
-                      child: child,
-                    )
-                  : child,
+              child: Stack(
+                children: [
+                  child,
+                  const Positioned(
+                    left: 12,
+                    bottom: 12,
+                    child: SyncStatusIndicator(),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

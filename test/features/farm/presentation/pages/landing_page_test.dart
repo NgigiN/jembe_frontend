@@ -88,6 +88,25 @@ Widget _harness(AuthBloc authBloc) {
   );
 }
 
+/// Quiet stand-ins: this group exercises layout, not the sync pipeline.
+class _QuietConnectivity implements ConnectivityService {
+  @override
+  Stream<bool> get onlineChanges => const Stream<bool>.empty();
+  @override
+  Future<bool> isOnline() async => true;
+  @override
+  dynamic noSuchMethod(Invocation i) => super.noSuchMethod(i);
+}
+
+class _QuietSyncEngine implements SyncEngine {
+  @override
+  SyncStatus get status => const SyncStatus(phase: SyncPhase.idle);
+  @override
+  Stream<SyncStatus> get statusStream => const Stream<SyncStatus>.empty();
+  @override
+  dynamic noSuchMethod(Invocation i) => super.noSuchMethod(i);
+}
+
 void main() {
   late MockAuthBloc authBloc;
 
@@ -123,6 +142,49 @@ void main() {
     },
   );
 
+  /// The header must be the same height whether the mirror is on or off.
+  /// It was not: the sync indicator sat in the column above every tab, so
+  /// enabling the mirror pushed the whole page down and the bar grew from
+  /// 288px to 432px on the test phone - 12.1% of the screen to 18.2%. Sync
+  /// is a background concern, so it floats over the content instead of
+  /// taking a row of its own.
+  group('header height does not depend on the offline flag', () {
+    tearDown(() async {
+      OfflineConfig.enabled = false;
+      if (GetIt.instance.isRegistered<ConnectivityService>() ||
+          GetIt.instance.isRegistered<SyncEngine>()) {
+        await GetIt.instance.reset();
+      }
+    });
+
+    testWidgets('the tab content starts at the same offset either way', (
+      tester,
+    ) async {
+      tester.view.padding = const FakeViewPadding(top: 360); // 120 logical
+      addTearDown(tester.view.reset);
+
+      OfflineConfig.enabled = false;
+      await tester.pumpWidget(_harness(authBloc));
+      await tester.pumpAndSettle();
+      final whenOff = tester.getTopLeft(find.text('tab content')).dy;
+
+      GetIt.instance
+        ..registerSingleton<ConnectivityService>(_QuietConnectivity())
+        ..registerSingleton<SyncEngine>(_QuietSyncEngine());
+      OfflineConfig.enabled = true;
+      await tester.pumpWidget(_harness(authBloc));
+      await tester.pumpAndSettle();
+      final whenOn = tester.getTopLeft(find.text('tab content')).dy;
+
+      expect(
+        whenOn,
+        whenOff,
+        reason: 'enabling the mirror moved the page down, so the header is '
+            'not the same height in both states',
+      );
+    });
+  });
+
   group('flag ON', () {
     late StreamController<bool> onlineController;
     late StreamController<SyncStatus> statusController;
@@ -156,22 +218,6 @@ void main() {
       await statusController.close();
       await GetIt.instance.reset();
     });
-
-    testWidgets(
-      'the tab below does not reserve the status-bar inset a second time - '
-      'the indicator above already took it, and reserving it twice is the '
-      'duplicated green that read as a very big chin',
-      (tester) async {
-        tester.view.padding = const FakeViewPadding(top: 360); // 120 logical
-        addTearDown(tester.view.reset);
-
-        await tester.pumpWidget(_harness(authBloc));
-        await tester.pumpAndSettle();
-
-        final ctx = tester.element(find.text('tab content'));
-        expect(MediaQuery.of(ctx).padding.top, 0);
-      },
-    );
 
     testWidgets(
       'shows the offline banner and sync status above the active tab, '

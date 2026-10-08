@@ -44,34 +44,50 @@ class SyncStatusIndicator extends StatelessWidget {
       initialData: syncEngine.status,
       builder: (context, snapshot) {
         final status = snapshot.data ?? const SyncStatus(phase: SyncPhase.idle);
-        // This row sits ABOVE the page's app bar, so nothing below it is
-        // reserving the status-bar inset on its behalf. Without this the
-        // label and the sync button paint straight over the clock, wifi and
-        // battery glyphs, leaving both unreadable — which is how it shipped.
-        // Only the top edge matters; the surrounding layout owns the rest.
-        return SafeArea(
-          bottom: false,
-          left: false,
-          right: false,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  _label(status),
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _color(context, status),
-                  ),
+        final color = _color(context, status);
+        // Sync is background work, so this floats over the page content
+        // rather than occupying a row above it. In a row it changed the
+        // header's height whenever the mirror was on, which meant the same
+        // screen had two different headers depending on a server flag.
+        //
+        // Deliberately unfilled: no card, no surface, just the glyph and a
+        // short label at reduced opacity, so it reads as an overlay and
+        // hides as little of the page beneath it as possible.
+        // Translucent rather than fully clear. Clear was tried first and
+        // failed on contact: floating over a page, the label landed on top
+        // of a card's own text and neither could be read. The backdrop is
+        // see-through enough to show the content moving behind it while
+        // still separating the two layers.
+        return Material(
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.82),
+          borderRadius: BorderRadius.circular(18),
+          clipBehavior: Clip.antiAlias,
+          child: Tooltip(
+            message: 'Sync now',
+            child: InkWell(
+              onTap: () => unawaited(syncEngine.syncNow()),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.sync, size: 16, color: color),
+                    const SizedBox(width: 6),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 160),
+                      child: Text(
+                        _label(status),
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 11, color: color),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.sync, size: 18),
-                tooltip: 'Sync now',
-                onPressed: () => unawaited(syncEngine.syncNow()),
-              ),
-            ],
+            ),
           ),
         );
       },
