@@ -10,6 +10,13 @@ class AppConfig {
   // to "0.0.0" so any code path that runs before it is set degrades safely.
   static String appVersion = '0.0.0';
 
+  // The running build's versionCode / buildNumber (e.g. "10") — the half of
+  // the version a Play release actually increments, and the only one that
+  // tells a support reply which binary the reporter is on. Populated from the
+  // same PackageInfo read as [appVersion]; defaults to "0" so a failed
+  // lookup degrades to an obviously-unset value rather than a plausible one.
+  static String appBuildNumber = '0';
+
   static const String _defaultRemoteBaseUrl = 'https://farmtracker.samtama.lol';
   // Android emulator host loopback; override via --dart-define=LOCAL_API_HOST for devices
   static const String _defaultLocalApiHost = '10.0.2.2';

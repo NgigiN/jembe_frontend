@@ -1,6 +1,7 @@
 import 'package:farm_tracker/core/audio/sound_service.dart';
 import 'package:farm_tracker/core/feedback/success_feedback.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
+import 'package:farm_tracker/core/support/support_email.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_event.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
@@ -101,6 +102,18 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  /// Opens the mail app at a prefilled support message, and falls back to
+  /// showing the address when the phone has no mail client configured. A tap
+  /// that silently does nothing reads as a broken app, and the address is the
+  /// thing the user actually needs in that case.
+  Future<void> _contactSupport() async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (await launchSupportEmail()) return;
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Email us at $supportEmailAddress')),
+    );
+  }
+
   void _onLogout() {
     context.read<AuthBloc>().add(LogoutEvent());
   }
@@ -136,18 +149,18 @@ class _SettingsPageState extends State<SettingsPage> {
       body: BlocConsumer<ProfileBloc, ProfileState>(
         listener: (context, state) {
           if (state is ProfileOperationSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.success(context, state.message),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(AppSnackBar.success(context, state.message));
             context.read<ProfileBloc>().add(FetchProfileEvent());
           } else if (state is ProfileError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.error(context, state.message),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(AppSnackBar.error(context, state.message));
           } else if (state is AccountDeleted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              AppSnackBar.success(context, 'Account deleted'),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(AppSnackBar.success(context, 'Account deleted'));
             context.read<AuthBloc>().add(LogoutEvent());
           }
         },
@@ -157,7 +170,8 @@ class _SettingsPageState extends State<SettingsPage> {
           }
 
           final farmState = context.watch<FarmBloc>().state;
-          final isStaff = farmState is! FarmLoaded ||
+          final isStaff =
+              farmState is! FarmLoaded ||
               (farmState.currentRole?.isStaff ?? true);
 
           return BlocBuilder<ThemeBloc, ThemeState>(
@@ -173,325 +187,389 @@ class _SettingsPageState extends State<SettingsPage> {
                     );
                   },
                   child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    if (_pictureUrl.isNotEmpty) ...[
-                      Center(
-                        child: CircleAvatar(
-                          radius: 50,
-                          backgroundImage: NetworkImage(_pictureUrl),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      if (_pictureUrl.isNotEmpty) ...[
+                        Center(
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundImage: NetworkImage(_pictureUrl),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                    ] else ...[
-                      Center(
-                        child: CircleAvatar(
-                          radius: 50,
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          child: Text(
-                            _firstName.isNotEmpty ? _firstName[0] : 'U',
-                            style: TextStyle(
-                              fontSize: 40,
-                              color: Theme.of(context).colorScheme.onPrimary,
+                        const SizedBox(height: 16),
+                      ] else ...[
+                        Center(
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
+                            child: Text(
+                              _firstName.isNotEmpty ? _firstName[0] : 'U',
+                              style: TextStyle(
+                                fontSize: 40,
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
                             ),
                           ),
                         ),
+                        const SizedBox(height: 16),
+                      ],
+                      _buildSettingsCard(
+                        context,
+                        title: 'Appearance',
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Theme',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Choose how the app looks',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: SegmentedButton<ThemeMode>(
+                                      segments: const [
+                                        ButtonSegment(
+                                          value: ThemeMode.system,
+                                          icon: Icon(Icons.brightness_auto),
+                                          label: Text('System'),
+                                        ),
+                                        ButtonSegment(
+                                          value: ThemeMode.light,
+                                          icon: Icon(Icons.light_mode),
+                                          label: Text('Light'),
+                                        ),
+                                        ButtonSegment(
+                                          value: ThemeMode.dark,
+                                          icon: Icon(Icons.dark_mode),
+                                          label: Text('Dark'),
+                                        ),
+                                      ],
+                                      selected: {themeState.themeMode},
+                                      onSelectionChanged: (selection) {
+                                        HapticFeedback.selectionClick();
+                                        context.read<ThemeBloc>().add(
+                                          SetThemeModeEvent(selection.first),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Divider(height: 1),
+                            ListTile(
+                              leading: Icon(
+                                _soundEffectsEnabled
+                                    ? Icons.volume_up
+                                    : Icons.volume_off,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              title: Text(
+                                'Sound Effects',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              subtitle: Text(
+                                'Play a sound on save and other rewarding moments',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              trailing: Switch(
+                                value: _soundEffectsEnabled,
+                                onChanged: _onSoundEffectsChanged,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                    ],
-                    _buildSettingsCard(
-                      context,
-                      title: 'Appearance',
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(16),
+                      const SizedBox(height: 24),
+                      _buildSettingsCard(
+                        context,
+                        title: 'Profile Information',
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Form(
+                            key: _formKey,
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Text(
-                                  'Theme',
-                                  style: Theme.of(context).textTheme.titleMedium,
+                                TextFormField(
+                                  key: ValueKey('email_$_email'),
+                                  initialValue: _email,
+                                  readOnly: true,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Email Address',
+                                    filled: true,
+                                  ),
+                                  style: TextStyle(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.outline,
+                                  ),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Choose how the app looks',
-                                  style: Theme.of(context).textTheme.bodySmall,
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextFormField(
+                                        key: ValueKey('first_name_$_firstName'),
+                                        initialValue: _firstName,
+                                        readOnly: true,
+                                        decoration: const InputDecoration(
+                                          labelText: 'First Name',
+                                          filled: true,
+                                        ),
+                                        style: TextStyle(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.outline,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: TextFormField(
+                                        key: ValueKey('last_name_$_lastName'),
+                                        initialValue: _lastName,
+                                        readOnly: true,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Last Name',
+                                          filled: true,
+                                        ),
+                                        style: TextStyle(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.outline,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 12),
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: SegmentedButton<ThemeMode>(
-                                    segments: const [
-                                      ButtonSegment(
-                                        value: ThemeMode.system,
-                                        icon: Icon(Icons.brightness_auto),
-                                        label: Text('System'),
-                                      ),
-                                      ButtonSegment(
-                                        value: ThemeMode.light,
-                                        icon: Icon(Icons.light_mode),
-                                        label: Text('Light'),
-                                      ),
-                                      ButtonSegment(
-                                        value: ThemeMode.dark,
-                                        icon: Icon(Icons.dark_mode),
-                                        label: Text('Dark'),
-                                      ),
-                                    ],
-                                    selected: {themeState.themeMode},
-                                    onSelectionChanged: (selection) {
-                                      HapticFeedback.selectionClick();
-                                      context.read<ThemeBloc>().add(
-                                        SetThemeModeEvent(selection.first),
-                                      );
-                                    },
+                                const SizedBox(height: 16),
+                                ValidatedNameField(
+                                  controller: _farmNameController,
+                                  labelText: 'Farm Name',
+                                  validator: (value) => requiredName(
+                                    value,
+                                    fieldLabel: 'Farm name',
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                ValidatedLocationField(
+                                  controller: _locationController,
+                                  labelText: 'Location',
+                                  validator: requiredLocation,
+                                ),
+                                const SizedBox(height: 24),
+                                ElevatedButton.icon(
+                                  onPressed: profileState is ProfileLoading
+                                      ? null
+                                      : _onSaveProfile,
+                                  icon: profileState is ProfileLoading
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(Icons.save),
+                                  label: Text(
+                                    profileState is ProfileLoading
+                                        ? 'Saving...'
+                                        : 'Save Profile',
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const Divider(height: 1),
-                          ListTile(
-                            leading: Icon(
-                              _soundEffectsEnabled
-                                  ? Icons.volume_up
-                                  : Icons.volume_off,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            title: Text(
-                              'Sound Effects',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            subtitle: Text(
-                              'Play a sound on save and other rewarding moments',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            trailing: Switch(
-                              value: _soundEffectsEnabled,
-                              onChanged: _onSoundEffectsChanged,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    _buildSettingsCard(
-                      context,
-                      title: 'Profile Information',
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              TextFormField(
-                                key: ValueKey('email_$_email'),
-                                initialValue: _email,
-                                readOnly: true,
-                                decoration: const InputDecoration(
-                                  labelText: 'Email Address',
-                                  filled: true,
-                                ),
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.outline,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: TextFormField(
-                                      key: ValueKey('first_name_$_firstName'),
-                                      initialValue: _firstName,
-                                      readOnly: true,
-                                      decoration: const InputDecoration(
-                                        labelText: 'First Name',
-                                        filled: true,
-                                      ),
-                                      style: TextStyle(
-                                        color: Theme.of(context).colorScheme.outline,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: TextFormField(
-                                      key: ValueKey('last_name_$_lastName'),
-                                      initialValue: _lastName,
-                                      readOnly: true,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Last Name',
-                                        filled: true,
-                                      ),
-                                      style: TextStyle(
-                                        color: Theme.of(context).colorScheme.outline,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              ValidatedNameField(
-                                controller: _farmNameController,
-                                labelText: 'Farm Name',
-                                validator: (value) =>
-                                    requiredName(value, fieldLabel: 'Farm name'),
-                              ),
-                              const SizedBox(height: 16),
-                              ValidatedLocationField(
-                                controller: _locationController,
-                                labelText: 'Location',
-                                validator: requiredLocation,
-                              ),
-                              const SizedBox(height: 24),
-                              ElevatedButton.icon(
-                                onPressed: profileState is ProfileLoading
-                                    ? null
-                                    : _onSaveProfile,
-                                icon: profileState is ProfileLoading
-                                    ? const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Icon(Icons.save),
-                                label: Text(
-                                  profileState is ProfileLoading
-                                      ? 'Saving...'
-                                      : 'Save Profile',
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    _buildSettingsCard(
-                      context,
-                      title: 'Your Farms',
-                      child: ListTile(
-                        leading: const Icon(Icons.agriculture_outlined),
-                        title: const Text('Your Farms'),
-                        subtitle: const Text('Switch farms, invite members, manage roles'),
-                        onTap: () => context.push(AppRoutePath.farmsList),
-                      ),
-                    ),
-                    if (isStaff) ...[
                       const SizedBox(height: 24),
                       _buildSettingsCard(
                         context,
-                        title: 'Farm Year',
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: DropdownButtonFormField<int>(
-                            initialValue: _fiscalYearStartMonth,
-                            isExpanded: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Our farm year starts in',
-                            ),
-                            items: const [
-                              DropdownMenuItem(value: 1, child: Text('January')),
-                              DropdownMenuItem(value: 2, child: Text('February')),
-                              DropdownMenuItem(value: 3, child: Text('March')),
-                              DropdownMenuItem(value: 4, child: Text('April')),
-                              DropdownMenuItem(value: 5, child: Text('May')),
-                              DropdownMenuItem(value: 6, child: Text('June')),
-                              DropdownMenuItem(value: 7, child: Text('July')),
-                              DropdownMenuItem(value: 8, child: Text('August')),
-                              DropdownMenuItem(value: 9, child: Text('September')),
-                              DropdownMenuItem(value: 10, child: Text('October')),
-                              DropdownMenuItem(value: 11, child: Text('November')),
-                              DropdownMenuItem(value: 12, child: Text('December')),
-                            ],
-                            onChanged: (value) {
-                              if (value == null) return;
-                              setState(() => _fiscalYearStartMonth = value);
-                              context.read<ProfileBloc>().add(
-                                UpdateProfileEvent(
-                                  firstName: _firstName,
-                                  lastName: _lastName,
-                                  fiscalYearStartMonth: value,
-                                  farmName: sanitizeText(_farmNameController.text),
-                                  location: sanitizeText(_locationController.text),
-                                ),
-                              );
-                            },
+                        title: 'Your Farms',
+                        child: ListTile(
+                          leading: const Icon(Icons.agriculture_outlined),
+                          title: const Text('Your Farms'),
+                          subtitle: const Text(
+                            'Switch farms, invite members, manage roles',
                           ),
+                          onTap: () => context.push(AppRoutePath.farmsList),
+                        ),
+                      ),
+                      if (isStaff) ...[
+                        const SizedBox(height: 24),
+                        _buildSettingsCard(
+                          context,
+                          title: 'Farm Year',
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: DropdownButtonFormField<int>(
+                              initialValue: _fiscalYearStartMonth,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Our farm year starts in',
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 1,
+                                  child: Text('January'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 2,
+                                  child: Text('February'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 3,
+                                  child: Text('March'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 4,
+                                  child: Text('April'),
+                                ),
+                                DropdownMenuItem(value: 5, child: Text('May')),
+                                DropdownMenuItem(value: 6, child: Text('June')),
+                                DropdownMenuItem(value: 7, child: Text('July')),
+                                DropdownMenuItem(
+                                  value: 8,
+                                  child: Text('August'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 9,
+                                  child: Text('September'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 10,
+                                  child: Text('October'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 11,
+                                  child: Text('November'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 12,
+                                  child: Text('December'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value == null) return;
+                                setState(() => _fiscalYearStartMonth = value);
+                                context.read<ProfileBloc>().add(
+                                  UpdateProfileEvent(
+                                    firstName: _firstName,
+                                    lastName: _lastName,
+                                    fiscalYearStartMonth: value,
+                                    farmName: sanitizeText(
+                                      _farmNameController.text,
+                                    ),
+                                    location: sanitizeText(
+                                      _locationController.text,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      _buildSettingsCard(
+                        context,
+                        title: 'Resources',
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.menu_book_outlined),
+                              title: const Text('Browse Farming Tips'),
+                              subtitle: const Text(
+                                'Guides for your crops and animals',
+                              ),
+                              onTap: () =>
+                                  context.push(AppRoutePath.contentTips),
+                            ),
+                            if (isStaff) ...[
+                              const Divider(height: 1),
+                              ListTile(
+                                leading: const Icon(Icons.delete_outline),
+                                title: const Text('Recently Deleted'),
+                                subtitle: const Text(
+                                  'Restore lands, plants, animals and other '
+                                  'deleted records',
+                                ),
+                                onTap: () => context.push(AppRoutePath.trash),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      _buildSettingsCard(
+                        context,
+                        title: 'Help',
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.help_outline),
+                              title: const Text('Ask Us a Question'),
+                              subtitle: const Text(
+                                'Get help directly from the Jembe team',
+                              ),
+                              onTap: () =>
+                                  context.push(AppRoutePath.askQuestion),
+                            ),
+                            const Divider(height: 1),
+                            ListTile(
+                              leading: const Icon(Icons.mail_outline),
+                              title: const Text('Contact Support'),
+                              subtitle: const Text(
+                                'Email us - your app version is filled in for '
+                                'you',
+                              ),
+                              onTap: _contactSupport,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      _buildSettingsCard(
+                        context,
+                        title: 'Danger Zone',
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.delete_forever,
+                            color: context.statusColors.negative,
+                          ),
+                          title: Text(
+                            'Delete Account',
+                            style: TextStyle(
+                              color: context.statusColors.negative,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            'Permanently delete your account and all farm data',
+                          ),
+                          onTap: profileState is ProfileLoading
+                              ? null
+                              : _onDeleteAccount,
                         ),
                       ),
                     ],
-                    const SizedBox(height: 24),
-                    _buildSettingsCard(
-                      context,
-                      title: 'Resources',
-                      child: Column(
-                        children: [
-                          ListTile(
-                            leading: const Icon(Icons.menu_book_outlined),
-                            title: const Text('Browse Farming Tips'),
-                            subtitle: const Text(
-                              'Guides for your crops and animals',
-                            ),
-                            onTap: () =>
-                                context.push(AppRoutePath.contentTips),
-                          ),
-                          if (isStaff) ...[
-                            const Divider(height: 1),
-                            ListTile(
-                              leading: const Icon(Icons.delete_outline),
-                              title: const Text('Recently Deleted'),
-                              subtitle: const Text(
-                                'Restore lands, plants, animals and other '
-                                'deleted records',
-                              ),
-                              onTap: () => context.push(AppRoutePath.trash),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    _buildSettingsCard(
-                      context,
-                      title: 'Help',
-                      child: ListTile(
-                        leading: const Icon(Icons.help_outline),
-                        title: const Text('Ask Us a Question'),
-                        subtitle: const Text(
-                          'Get help directly from the Jembe team',
-                        ),
-                        onTap: () => context.push(AppRoutePath.askQuestion),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    _buildSettingsCard(
-                      context,
-                      title: 'Danger Zone',
-                      child: ListTile(
-                        leading: Icon(
-                          Icons.delete_forever,
-                          color: context.statusColors.negative,
-                        ),
-                        title: Text(
-                          'Delete Account',
-                          style: TextStyle(color: context.statusColors.negative),
-                        ),
-                        subtitle: const Text(
-                          'Permanently delete your account and all farm data',
-                        ),
-                        onTap: profileState is ProfileLoading
-                            ? null
-                            : _onDeleteAccount,
-                      ),
-                    ),
-                  ],
                   ),
                 ),
               );
@@ -515,9 +593,9 @@ class _SettingsPageState extends State<SettingsPage> {
           child: Text(
             title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         Card(elevation: 2, clipBehavior: Clip.antiAlias, child: child),
