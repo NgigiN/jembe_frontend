@@ -38,11 +38,35 @@ import 'package:farm_tracker/features/farm/presentation/bloc/trash_bloc.dart';
 import 'package:farm_tracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:farm_tracker/injection_container.dart' as di;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Edge-to-edge, declared rather than inherited. Android 15 (SDK 35) draws
+  // every app edge-to-edge by default and SDK 36 — which this app targets —
+  // removes the opt-out entirely, so the only question is whether the app
+  // states the mode it was laid out against or takes whatever the engine
+  // defaults to that release. Stating it keeps a Flutter upgrade from
+  // silently changing how the bars behave.
+  //
+  // Nothing moves as a result: every top-level page is a Scaffold with an
+  // AppBar, which already consumes the top inset, and AdaptiveScaffoldPlus
+  // puts the bottom bar inside a SafeArea. What changes is the bars
+  // themselves — transparent instead of holding a scrim, which is what
+  // "displays edge-to-edge" actually means. Icon brightness is deliberately
+  // left unset so each AppBar's own systemOverlayStyle still decides it per
+  // screen, light theme and dark.
+  unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+    ),
+  );
 
   // Initialize environment configuration
   AppConfig.initialize();
