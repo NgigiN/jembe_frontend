@@ -45,13 +45,15 @@ class _AnimalsPageState extends State<AnimalsPage> {
     }
 
     if (OfflineConfig.enabled) {
-      // Offline: herd count still comes from HerdBloc's own fetch —
-      // unchanged from the pre-dashboard behaviour (there is no offline
-      // mirror for the dashboard aggregate).
-      final herdBloc = context.read<HerdBloc>();
-      if (herdBloc.state is! HerdLoaded) {
-        herdBloc.add(GetHerdsEvent());
-      }
+      // Offline: the herd count comes from HerdBloc's own stream (there is
+      // no offline mirror for the dashboard aggregate).
+      //
+      // Subscribe unconditionally. A bloc already holding a loaded list is
+      // not a reason to skip: that list can be the EMPTY one left by a read
+      // that landed before the first sync finished, and without a
+      // subscription this page renders it forever. The watch handler is
+      // idempotent, so a repeat dispatch is a no-op.
+      context.read<HerdBloc>().add(WatchHerdsEvent());
     } else {
       // Online: one /dashboard call seeds the herd count instead of a
       // second list GET fired purely for a count.

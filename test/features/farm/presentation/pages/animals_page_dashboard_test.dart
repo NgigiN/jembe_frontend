@@ -213,7 +213,7 @@ void main() {
     );
   });
 
-  group('offline (OfflineConfig.enabled == true) - unchanged', () {
+  group('offline (OfflineConfig.enabled == true)', () {
     setUp(() {
       OfflineConfig.enabled = true;
       whenListen(
@@ -229,16 +229,33 @@ void main() {
     });
 
     testWidgets(
-      'dispatches the existing GetHerdsEvent and never touches the '
-      'DashboardBloc',
+      'subscribes with WatchHerdsEvent and never touches the DashboardBloc',
       (tester) async {
         await tester.pumpWidget(wrap());
         await tester.pump();
 
-        verify(() => herdBloc.add(any(that: isA<GetHerdsEvent>()))).called(1);
+        verify(() => herdBloc.add(any(that: isA<WatchHerdsEvent>()))).called(1);
+        verifyNever(() => herdBloc.add(any(that: isA<GetHerdsEvent>())));
         verifyNever(
           () => dashboardBloc.add(any(that: isA<GetDashboardEvent>())),
         );
+      },
+    );
+
+    testWidgets(
+      'subscribes even when HerdBloc already holds an EMPTY loaded list - a '
+      'one-shot read that beat the first sync must not strand this page',
+      (tester) async {
+        whenListen(
+          herdBloc,
+          const Stream<HerdState>.empty(),
+          initialState: const HerdLoaded([]),
+        );
+
+        await tester.pumpWidget(wrap());
+        await tester.pump();
+
+        verify(() => herdBloc.add(any(that: isA<WatchHerdsEvent>()))).called(1);
       },
     );
   });

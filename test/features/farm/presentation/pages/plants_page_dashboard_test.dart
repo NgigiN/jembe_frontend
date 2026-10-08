@@ -251,7 +251,7 @@ void main() {
     );
   });
 
-  group('offline (OfflineConfig.enabled == true) - unchanged', () {
+  group('offline (OfflineConfig.enabled == true)', () {
     setUp(() {
       OfflineConfig.enabled = true;
       whenListen(
@@ -277,13 +277,13 @@ void main() {
     });
 
     testWidgets(
-      'dispatches the existing Get/Watch* events and never touches the '
-      'DashboardBloc',
+      'subscribes to all three streams and never touches the DashboardBloc',
       (tester) async {
         await tester.pumpWidget(wrap());
         await tester.pump();
 
-        verify(() => landBloc.add(any(that: isA<GetLandsEvent>()))).called(1);
+        verify(() => landBloc.add(any(that: isA<WatchLandsEvent>()))).called(1);
+        verifyNever(() => landBloc.add(any(that: isA<GetLandsEvent>())));
         verify(
           () => seasonBloc.add(any(that: isA<WatchSeasonsEvent>())),
         ).called(1);

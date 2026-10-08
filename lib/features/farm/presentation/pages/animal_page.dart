@@ -277,12 +277,21 @@ class _AnimalPageState extends State<AnimalPage> {
     } else if (animalBloc.state is! AnimalLoaded) {
       animalBloc.add(GetAnimalsEvent());
     }
+    // The animal-type and herd dispatches below feed this page's two
+    // pickers, and they take the same rule as the animal dispatch above:
+    // they were left reading once, outside any flag branch, so with the
+    // mirror on they could read it before the first sync wrote anything and
+    // strand both pickers empty for the life of the page.
     final animalTypeBloc = context.read<AnimalTypeBloc>();
-    if (animalTypeBloc.state is! AnimalTypeLoaded) {
+    if (OfflineConfig.enabled) {
+      animalTypeBloc.add(WatchAnimalTypesEvent());
+    } else if (animalTypeBloc.state is! AnimalTypeLoaded) {
       animalTypeBloc.add(GetAnimalTypesEvent());
     }
     final herdBloc = context.read<HerdBloc>();
-    if (herdBloc.state is! HerdLoaded) {
+    if (OfflineConfig.enabled) {
+      herdBloc.add(WatchHerdsEvent());
+    } else if (herdBloc.state is! HerdLoaded) {
       herdBloc.add(GetHerdsEvent());
     }
   }
