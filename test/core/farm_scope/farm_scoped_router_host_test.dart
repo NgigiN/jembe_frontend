@@ -206,6 +206,58 @@ void main() {
     },
   );
 
+  testWidgets(
+    'a refreshListenable shared across routers still drives the replacement - '
+    'the web console hands one auth-stream listenable to every router it '
+    'builds, and if a replacement lost it the session-expiry redirect would '
+    'quietly stop working',
+    (tester) async {
+      final refresh = ChangeNotifier();
+      addTearDown(refresh.dispose);
+      var redirects = 0;
+
+      GoRouter shared(String initialLocation) => GoRouter(
+        initialLocation: initialLocation,
+        refreshListenable: refresh,
+        redirect: (_, __) {
+          redirects++;
+          return null;
+        },
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, __) => _CountingPage('plants', () => plantsMounts++),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [BlocProvider<FarmBloc>.value(value: farmBloc)],
+          child: FarmScopedRouterHost(
+            initialLocation: '/',
+            createRouter: shared,
+            builder: (context, router) =>
+                MaterialApp.router(routerConfig: router),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await emit(tester, _loaded(7));
+      await emit(tester, _loaded(9));
+
+      final before = redirects;
+      refresh.notifyListeners();
+      await tester.pumpAndSettle();
+
+      expect(
+        redirects,
+        greaterThan(before),
+        reason: 'the replacement router must still be listening',
+      );
+    },
+  );
+
   testWidgets('re-emitting the same farm id changes nothing', (tester) async {
     await tester.pumpWidget(harness());
     await tester.pumpAndSettle();

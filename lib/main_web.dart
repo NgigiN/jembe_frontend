@@ -21,6 +21,7 @@ import 'dart:async';
 
 import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/farm_scope/farm_scoped_blocs.dart';
+import 'package:farm_tracker/core/farm_scope/farm_scoped_router_host.dart';
 import 'package:farm_tracker/core/navigation/web_app_router.dart';
 import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
@@ -114,27 +115,46 @@ class _WebConsoleApp extends StatefulWidget {
 }
 
 class _WebConsoleAppState extends State<_WebConsoleApp> {
-  late final GoRouter _router;
   late final _GoRouterRefreshStream _refreshListenable;
 
   @override
   void initState() {
     super.initState();
-    _refreshListenable = _GoRouterRefreshStream(web_di.webSl<AuthBloc>().stream);
-    _router = GoRouter(
-      initialLocation: WebRoutePath.dashboard,
+    _refreshListenable = _GoRouterRefreshStream(
+      web_di.webSl<AuthBloc>().stream,
+    );
+  }
+
+  /// Builds a router for one farm generation.
+  ///
+  /// [_refreshListenable] is deliberately shared rather than rebuilt with each
+  /// router: GoRouter.dispose() disposes its information provider, and that
+  /// provider only removes its listener from the refresh listenable rather
+  /// than disposing it. One owner, disposed once below, is therefore both safe
+  /// and necessary - rebuilding it per router would leave the auth-driven
+  /// redirect listening to a stream nobody writes to.
+  GoRouter _createRouter(String initialLocation) {
+    return GoRouter(
+      initialLocation: initialLocation,
       refreshListenable: _refreshListenable,
       redirect: (context, state) async {
         final loggedIn = await UserStorageService.isLoggedIn();
         final authRedirect = WebAppRouter.authRedirectLocation(
-          loggedIn: loggedIn, location: state.matchedLocation,
+          loggedIn: loggedIn,
+          location: state.matchedLocation,
         );
         if (authRedirect != null) return authRedirect;
         final role = await FarmStorageService.getCurrentRole();
-        return WebAppRouter.staffOnlyRedirectLocation(role: role, location: state.matchedLocation);
+        return WebAppRouter.staffOnlyRedirectLocation(
+          role: role,
+          location: state.matchedLocation,
+        );
       },
       routes: [
-        GoRoute(path: WebRoutePath.signIn, builder: (_, __) => const WebSignInPage()),
+        GoRoute(
+          path: WebRoutePath.signIn,
+          builder: (_, __) => const WebSignInPage(),
+        ),
         // Everything past sign-in lives inside the shell: the sidebar is
         // where the farm context is stated, so a page without it would
         // leave you unsure which farm you are looking at.
@@ -144,9 +164,18 @@ class _WebConsoleAppState extends State<_WebConsoleApp> {
             child: child,
           ),
           routes: [
-            GoRoute(path: WebRoutePath.dashboard, builder: (_, __) => const WebDashboardPage()),
-            GoRoute(path: WebRoutePath.feed, builder: (_, __) => const FeedPage()),
-            GoRoute(path: WebRoutePath.reports, builder: (_, __) => const WebReportsPage()),
+            GoRoute(
+              path: WebRoutePath.dashboard,
+              builder: (_, __) => const WebDashboardPage(),
+            ),
+            GoRoute(
+              path: WebRoutePath.feed,
+              builder: (_, __) => const FeedPage(),
+            ),
+            GoRoute(
+              path: WebRoutePath.reports,
+              builder: (_, __) => const WebReportsPage(),
+            ),
             GoRoute(
               path: WebRoutePath.members,
               builder: (_, __) =>
@@ -157,8 +186,14 @@ class _WebConsoleAppState extends State<_WebConsoleApp> {
               builder: (_, __) =>
                   WebFarmsPage(remote: web_di.webSl<FarmRemoteDataSource>()),
             ),
-            GoRoute(path: WebRoutePath.trash, builder: (_, __) => const WebTrashPage()),
-            GoRoute(path: WebRoutePath.settings, builder: (_, __) => const WebSettingsPage()),
+            GoRoute(
+              path: WebRoutePath.trash,
+              builder: (_, __) => const WebTrashPage(),
+            ),
+            GoRoute(
+              path: WebRoutePath.settings,
+              builder: (_, __) => const WebSettingsPage(),
+            ),
           ],
         ),
       ],
@@ -178,34 +213,42 @@ class _WebConsoleAppState extends State<_WebConsoleApp> {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(create: (_) => web_di.webSl<AuthBloc>()),
-        BlocProvider<FarmBloc>(create: (_) => web_di.webSl<FarmBloc>()..add(LoadFarms())),
+        BlocProvider<FarmBloc>(
+          create: (_) => web_di.webSl<FarmBloc>()..add(LoadFarms()),
+        ),
         BlocProvider<ThemeBloc>(create: (_) => web_di.webSl<ThemeBloc>()),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(
         builder: (context, themeState) {
-          return MaterialApp.router(
-            title: 'Shamba+',
-            theme: WebConsoleTheme.light(),
-            darkTheme: WebConsoleTheme.dark(),
-            themeMode: themeState.themeMode,
-            routerConfig: _router,
-            debugShowCheckedModeBanner: false,
-            // Rebuilt wholesale on a farm switch, so the console reloads
-            // the same way mobile does — see FarmScopedBlocs.
-            builder: (context, child) => FarmScopedBlocs(
-              providers: [
-                BlocProvider<DashboardBloc>(
-                  create: (_) => web_di.webSl<DashboardBloc>(),
-                ),
-                BlocProvider<AnalysisBloc>(
-                  create: (_) => web_di.webSl<AnalysisBloc>(),
-                ),
-                BlocProvider<FeedBloc>(create: (_) => web_di.webSl<FeedBloc>()),
-                BlocProvider<TrashBloc>(
-                  create: (_) => web_di.webSl<TrashBloc>(),
-                ),
-              ],
-              child: child ?? const SizedBox.shrink(),
+          return FarmScopedRouterHost(
+            initialLocation: WebRoutePath.dashboard,
+            createRouter: _createRouter,
+            builder: (context, router) => MaterialApp.router(
+              title: 'Shamba+',
+              theme: WebConsoleTheme.light(),
+              darkTheme: WebConsoleTheme.dark(),
+              themeMode: themeState.themeMode,
+              routerConfig: router,
+              debugShowCheckedModeBanner: false,
+              // Rebuilt wholesale on a farm switch, so the console reloads
+              // the same way mobile does — see FarmScopedBlocs.
+              builder: (context, child) => FarmScopedBlocs(
+                providers: [
+                  BlocProvider<DashboardBloc>(
+                    create: (_) => web_di.webSl<DashboardBloc>(),
+                  ),
+                  BlocProvider<AnalysisBloc>(
+                    create: (_) => web_di.webSl<AnalysisBloc>(),
+                  ),
+                  BlocProvider<FeedBloc>(
+                    create: (_) => web_di.webSl<FeedBloc>(),
+                  ),
+                  BlocProvider<TrashBloc>(
+                    create: (_) => web_di.webSl<TrashBloc>(),
+                  ),
+                ],
+                child: child ?? const SizedBox.shrink(),
+              ),
             ),
           );
         },
