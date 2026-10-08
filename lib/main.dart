@@ -57,6 +57,9 @@ void main() async {
     if (info.version.isNotEmpty) {
       AppConfig.appVersion = info.version;
     }
+    if (info.buildNumber.isNotEmpty) {
+      AppConfig.appBuildNumber = info.buildNumber;
+    }
   } catch (_) {
     // Keep the "0.0.0" default; startup must never fail on version lookup.
   }
@@ -154,7 +157,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(create: (_) => di.sl<AuthBloc>()),
-        BlocProvider<FarmBloc>(create: (_) => di.sl<FarmBloc>()..add(LoadFarms())),
+        BlocProvider<FarmBloc>(
+          create: (_) => di.sl<FarmBloc>()..add(LoadFarms()),
+        ),
         BlocProvider<ProfileBloc>(create: (_) => di.sl<ProfileBloc>()),
         BlocProvider<ContentBloc>(create: (_) => di.sl<ContentBloc>()),
         BlocProvider<QuestionBloc>(create: (_) => di.sl<QuestionBloc>()),
@@ -178,7 +183,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 BlocProvider<LandBloc>(create: (_) => di.sl<LandBloc>()),
                 BlocProvider<PlantBloc>(create: (_) => di.sl<PlantBloc>()),
                 BlocProvider<SeasonBloc>(create: (_) => di.sl<SeasonBloc>()),
-                BlocProvider<ActivityBloc>(create: (_) => di.sl<ActivityBloc>()),
+                BlocProvider<ActivityBloc>(
+                  create: (_) => di.sl<ActivityBloc>(),
+                ),
                 BlocProvider<InputBloc>(create: (_) => di.sl<InputBloc>()),
                 BlocProvider<HarvestBloc>(create: (_) => di.sl<HarvestBloc>()),
                 BlocProvider<AnimalTypeBloc>(
@@ -192,7 +199,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 BlocProvider<InfrastructureBloc>(
                   create: (_) => di.sl<InfrastructureBloc>(),
                 ),
-                BlocProvider<AnalysisBloc>(create: (_) => di.sl<AnalysisBloc>()),
+                BlocProvider<AnalysisBloc>(
+                  create: (_) => di.sl<AnalysisBloc>(),
+                ),
                 BlocProvider<DashboardBloc>(
                   create: (_) => di.sl<DashboardBloc>(),
                 ),
