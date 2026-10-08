@@ -21,7 +21,13 @@ android {
     // flutter.compileSdkVersion currently resolves to 36; flutter_secure_storage
     // requires compiling against 37 (backward compatible), so pin it literally
     // rather than waiting on a Flutter SDK bump to move the default.
+    //
+    // The minor is explicit because platforms now ship as android-<major>.<minor>
+    // and the SDK publishes no plain android-37. AGP 8 resolved a bare 37 to the
+    // installed android-37.0 on its own; AGP 9 does not, and fails looking for a
+    // target that cannot be installed.
     compileSdk = 37
+    compileSdkMinor = 0
     ndkVersion = "28.2.13676358"
 
     signingConfigs {
