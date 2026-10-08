@@ -26,8 +26,8 @@ class HerdRemoteAdapter implements RemoteSyncAdapter<HerdModel> {
   Future<void> delete(String serverId) => _remote.deleteHerd(serverId);
 
   @override
-  Future<List<HerdModel>> getSince(DateTime? since) =>
-      _remote.getHerds(updatedSince: since);
+  Future<List<HerdModel>> getSince(DateTime? since, {required int limit}) =>
+      _remote.getHerds(updatedSince: since, limit: limit);
 }
 
 /// Concrete [EntitySyncer] for the `herd` entity.

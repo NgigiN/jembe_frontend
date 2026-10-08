@@ -40,6 +40,45 @@ void main() {
     );
   }
 
+  testWidgets(
+    'floats as a small, see-through overlay - it sits ON TOP of page content '
+    'now rather than in a row above it, so it must stay compact and must not '
+    'paint a surface that hides what is underneath',
+    (tester) async {
+      OfflineConfig.enabled = true;
+      await tester.pumpWidget(harness());
+      await tester.pump();
+
+      final size = tester.getSize(find.byType(SyncStatusIndicator));
+      expect(
+        size.height,
+        lessThan(48),
+        reason: 'taller than a standard row, so it is not a small overlay',
+      );
+
+      final backdrop = tester.widget<Material>(
+        find
+            .descendant(
+              of: find.byType(SyncStatusIndicator),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      final alpha = backdrop.color?.a ?? 1.0;
+      expect(
+        alpha,
+        lessThan(1.0),
+        reason: 'a fully opaque backdrop hides the content it floats over',
+      );
+      expect(
+        alpha,
+        greaterThan(0.0),
+        reason: 'fully clear was tried and the label landed unreadable on '
+            "top of a card's own text",
+      );
+    },
+  );
+
   testWidgets('flag ON + syncing ⇒ shows "Syncing…"', (tester) async {
     OfflineConfig.enabled = true;
     await tester.pumpWidget(harness());

@@ -79,21 +79,28 @@ class LandingPage extends StatelessWidget {
             // flag-off. Sits above every tab's content (not inside it) so
             // the same banner shows regardless of which tab is active.
             const OfflineBanner(),
-            // Self-hides (SizedBox.shrink()) when OfflineConfig.enabled is
-            // false, so — like the banner above — this row collapses to
-            // zero height flag-off (only the horizontal padding survives,
-            // and it never paints anything without a visible child). A
-            // single, always-in-the-same-place status row (rather than
-            // per-tab app bar actions) keeps sync state visible no matter
-            // which tab the user is on.
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: SyncStatusIndicator(),
+            // Sync status floats OVER the tab rather than sitting in a row
+            // above it. As a row it added its own height plus the
+            // status-bar inset to everything below, so enabling the mirror
+            // grew the header from 288px to 432px on a 1080x2372 phone —
+            // the same screen with two different headers depending on a
+            // server flag. Sync is background work and should not move the
+            // page at all.
+            //
+            // Bottom left: revenue_page is the only top-level tab carrying
+            // a floating action button, and that sits bottom right.
+            Expanded(
+              child: Stack(
+                children: [
+                  child,
+                  const Positioned(
+                    left: 12,
+                    bottom: 12,
+                    child: SyncStatusIndicator(),
+                  ),
+                ],
               ),
             ),
-            Expanded(child: child),
           ],
         ),
       ),

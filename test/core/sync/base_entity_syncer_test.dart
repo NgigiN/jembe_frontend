@@ -69,6 +69,7 @@ class _FakeRemote implements RemoteSyncAdapter<_FakeModel> {
   final List<_FakeModel> updateCalls = [];
   final List<String> deleteCalls = [];
   final List<DateTime?> getSinceCalls = [];
+  final List<int> limitsAsked = [];
 
   _FakeModel Function(_FakeModel sent)? onAdd;
   _FakeModel Function(_FakeModel sent)? onUpdate;
@@ -95,8 +96,9 @@ class _FakeRemote implements RemoteSyncAdapter<_FakeModel> {
   }
 
   @override
-  Future<List<_FakeModel>> getSince(DateTime? since) async {
+  Future<List<_FakeModel>> getSince(DateTime? since, {required int limit}) async {
     getSinceCalls.add(since);
+    limitsAsked.add(limit);
     if (throwOnGetSince != null) throw throwOnGetSince!;
     return (onGetSince ?? (_) => const <_FakeModel>[])(since);
   }
@@ -429,12 +431,10 @@ void main() {
         // sync, so the backend's ASC drain path is always hit), then
         // re-queries from the page's max `updatedAt`; this fake ignores its
         // `since` argument and returns the same fixed row every time, so the
-        // second page's max doesn't advance past the cursor it was queried
-        // with and the loop stops there — two calls total.
-        expect(remote.getSinceCalls, [
-          DateTime.utc(1970),
-          DateTime.utc(2026, 5),
-        ]);
+        // One call. The page came back shorter than the page size asked
+        // for, which already proves there is nothing behind it, so the
+        // confirming re-query that used to follow is gone.
+        expect(remote.getSinceCalls, [DateTime.utc(1970)]);
         expect(cursor!.isAtSameMomentAs(DateTime.utc(2026, 5)), isTrue);
         final row = local.byClientUuid['cu-1']!;
         expect(row.serverId, 'server-1');
@@ -469,27 +469,34 @@ void main() {
       'drains multiple pages, re-querying from each page\'s max updatedAt, '
       'until a page makes no forward progress',
       () async {
+        const limit = BaseEntitySyncer.syncDrainPageLimit;
         final t1 = DateTime.utc(2026, 1);
         final t2 = DateTime.utc(2026, 2);
         final t3 = DateTime.utc(2026, 3);
+
+        // FULL pages, deliberately. A short page now ends the drain, so a
+        // two-row page would prove only that the short-circuit works and
+        // would stop testing the thing this guards: that a farm with more
+        // rows than one page gets all of them.
+        List<_FakeModel> fullPageEndingAt(String tag, DateTime last) => [
+          for (var i = 0; i < limit - 1; i++)
+            _FakeModel(
+              clientUuid: '$tag-filler-$i',
+              serverId: '$tag-sf-$i',
+              updatedAt: t1,
+            ),
+          _FakeModel(clientUuid: tag, serverId: 's-$tag', updatedAt: last),
+        ];
+
         var calls = 0;
         remote.onGetSince = (since) {
           calls++;
-          if (calls == 1) {
-            // Page 1: two rows, t1 < t2.
-            return [
-              _FakeModel(clientUuid: 'cu-1', serverId: 's-1', updatedAt: t1),
-              _FakeModel(clientUuid: 'cu-2', serverId: 's-2', updatedAt: t2),
-            ];
-          }
-          if (calls == 2) {
-            // Page 2: one more row, t3 — still forward progress past t2.
-            return [
-              _FakeModel(clientUuid: 'cu-3', serverId: 's-3', updatedAt: t3),
-            ];
-          }
-          // Page 3: empty — no forward progress past t3, so the loop must
-          // stop here rather than re-querying forever.
+          // Page 1: a full page whose max is t2.
+          if (calls == 1) return fullPageEndingAt('cu-2', t2);
+          // Page 2: another full page, max t3 — forward progress past t2.
+          if (calls == 2) return fullPageEndingAt('cu-3', t3);
+          // Page 3: empty — nothing past t3, so the loop stops here rather
+          // than re-querying forever.
           return const <_FakeModel>[];
         };
 
@@ -499,9 +506,8 @@ void main() {
         // stops: exactly 3 calls, not a 4th.
         expect(remote.getSinceCalls, [DateTime.utc(1970), t2, t3]);
         expect(cursor!.isAtSameMomentAs(t3), isTrue);
-        expect(local.byClientUuid['cu-1']!.serverId, 's-1');
-        expect(local.byClientUuid['cu-2']!.serverId, 's-2');
-        expect(local.byClientUuid['cu-3']!.serverId, 's-3');
+        expect(local.byClientUuid['cu-2']!.serverId, 's-cu-2');
+        expect(local.byClientUuid['cu-3']!.serverId, 's-cu-3');
       },
     );
 
@@ -732,5 +738,73 @@ void main() {
 
       expect(local.lastUpsertFarmId, 1);
     });
+  });
+
+  // A page SHORTER than the size asked for cannot have more rows behind it,
+  // so the confirming re-query is wasted. The loop used to make it every
+  // time: it could only find the end by asking again and watching the cursor
+  // fail to advance. That doubled the request count on every entity -
+  // including entities holding one row, and entities returning nothing new.
+  // Thirteen entities, twice each, twice over on a cold start, came to about
+  // 50 requests on a metered connection.
+  //
+  // Soundness rests on the server honouring the limit rather than clamping
+  // it. ParsePagination clamps silently with no signal in the response, so a
+  // cap below this page size would make a FULL page look partial and the
+  // drain would stop early, skipping rows. The backend carries a tripwire
+  // for exactly that: TestMaxPageLimitLeavesRoomForTheOfflineDrain.
+  group('drain stops without a confirming re-query', () {
+    test('a short page ends the drain in ONE request', () async {
+      final t = DateTime.utc(2026, 5);
+      remote.onGetSince = (_) => [
+        _FakeModel(clientUuid: 'a', serverId: '1', updatedAt: t),
+      ];
+
+      await syncer.pull(null);
+
+      expect(
+        remote.getSinceCalls,
+        hasLength(1),
+        reason: 'one row is plainly a short page; asking again proves nothing',
+      );
+      expect(remote.limitsAsked.single, BaseEntitySyncer.syncDrainPageLimit);
+    });
+
+    test('an empty page ends the drain in ONE request', () async {
+      remote.onGetSince = (_) => const <_FakeModel>[];
+
+      await syncer.pull(null);
+
+      expect(remote.getSinceCalls, hasLength(1));
+    });
+
+    test(
+      'a FULL page is followed up - it may have more behind it, and '
+      'stopping there is how rows go missing',
+      () async {
+        const limit = BaseEntitySyncer.syncDrainPageLimit;
+        final first = List.generate(
+          limit,
+          (i) => _FakeModel(
+            clientUuid: 'a$i',
+            serverId: '$i',
+            updatedAt: DateTime.utc(2026, 5).add(Duration(minutes: i)),
+          ),
+        );
+        var call = 0;
+        remote.onGetSince = (_) {
+          call++;
+          return call == 1 ? first : const <_FakeModel>[];
+        };
+
+        await syncer.pull(null);
+
+        expect(
+          remote.getSinceCalls,
+          hasLength(2),
+          reason: 'a full page must be followed up or its tail is lost',
+        );
+      },
+    );
   });
 }

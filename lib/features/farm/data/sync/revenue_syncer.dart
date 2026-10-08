@@ -31,8 +31,8 @@ class RevenueRemoteAdapter implements RemoteSyncAdapter<RevenueModel> {
   Future<void> delete(String serverId) => _remote.deleteRevenue(serverId);
 
   @override
-  Future<List<RevenueModel>> getSince(DateTime? since) =>
-      _remote.getRevenues(updatedSince: since);
+  Future<List<RevenueModel>> getSince(DateTime? since, {required int limit}) =>
+      _remote.getRevenues(updatedSince: since, limit: limit);
 }
 
 /// Concrete [EntitySyncer] for the `revenue` entity.

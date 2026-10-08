@@ -29,8 +29,8 @@ class InfrastructureRemoteAdapter
       _remote.deleteInfrastructure(serverId);
 
   @override
-  Future<List<InfrastructureModel>> getSince(DateTime? since) =>
-      _remote.getInfrastructures(updatedSince: since);
+  Future<List<InfrastructureModel>> getSince(DateTime? since, {required int limit}) =>
+      _remote.getInfrastructures(updatedSince: since, limit: limit);
 }
 
 /// Concrete [EntitySyncer] for the `infrastructure` entity.

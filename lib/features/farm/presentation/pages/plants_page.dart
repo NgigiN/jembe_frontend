@@ -59,21 +59,24 @@ class _PlantsPageState extends State<PlantsPage> {
     }
 
     if (OfflineConfig.enabled) {
-      // Offline: land/season/harvest counts still come from their own
-      // fetch/Watch* streams — unchanged from the pre-dashboard behaviour
-      // (there is no offline mirror for the dashboard aggregate).
-      final landBloc = context.read<LandBloc>();
-      if (landBloc.state is! LandLoaded) {
-        landBloc.add(GetLandsEvent());
-      }
-      final seasonBloc = context.read<SeasonBloc>();
-      if (seasonBloc.state is! SeasonLoaded) {
-        seasonBloc.add(WatchSeasonsEvent());
-      }
-      final harvestBloc = context.read<HarvestBloc>();
-      if (harvestBloc.state is! HarvestLoaded) {
-        harvestBloc.add(WatchHarvestsEvent());
-      }
+      // Offline: land/season/harvest counts come from their own Watch*
+      // streams (there is no offline mirror for the dashboard aggregate).
+      //
+      // Subscribe, and subscribe unconditionally — the same rule as the
+      // plant subscription above. A bloc already holding a loaded list is
+      // not a reason to skip: that list can be the EMPTY one left by a read
+      // that landed before the first sync finished, and without a
+      // subscription the page renders it forever. Every watch handler is
+      // idempotent, so a repeat dispatch is a no-op.
+      //
+      // Lands read once here (GetLandsEvent) until 2026-10-08, when turning
+      // the mirror on in production showed "Register your farmland" on a
+      // farm holding four lands, while seasons and plants rendered and the
+      // indicator read "Synced just now" — the rows were in the mirror, the
+      // page had looked once, too early, and never again.
+      context.read<LandBloc>().add(WatchLandsEvent());
+      context.read<SeasonBloc>().add(WatchSeasonsEvent());
+      context.read<HarvestBloc>().add(WatchHarvestsEvent());
     } else {
       // Online: one /dashboard call seeds land/season/harvest counts
       // instead of three separate list GETs fired purely for a count.

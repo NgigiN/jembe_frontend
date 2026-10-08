@@ -624,10 +624,13 @@ void main() {
     });
   });
 
-  test('start(): regaining connectivity triggers a sync', () async {
+  test('start(): REGAINING connectivity triggers a sync', () async {
     engine = build(rows: [_row(1)])..start();
 
-    connectivity.emit(true);
+    // A transition: offline, then back. This is what the trigger is for.
+    connectivity
+      ..emit(false)
+      ..emit(true);
     // Let the stream event + the sync pass drain.
     await Future<void>.delayed(const Duration(milliseconds: 20));
 
@@ -635,12 +638,38 @@ void main() {
     expect(outbox.acked, [1]);
   });
 
+  test(
+    'start(): the first report of being online does NOT trigger a sync - '
+    'the platform stream reports current state on subscribe, so launching '
+    'online fired a second full pass on top of the one the caller just '
+    'asked for, roughly 50 requests instead of 25 on a cold start',
+    () async {
+      engine = build(rows: [_row(1)])..start();
+
+      connectivity.emit(true); // current state, not a transition
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(syncer.pushCount, 0);
+      expect(outbox.acked, isEmpty);
+    },
+  );
+
+  test('start(): a drop to offline never triggers a sync', () async {
+    engine = build(rows: [_row(1)])..start();
+
+    connectivity.emit(false);
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+
+    expect(syncer.pushCount, 0);
+  });
+
   test('stop(): regaining connectivity no longer triggers a sync - pulling '
       'the server kill-switch has to actually stop background work, not '
       'just point reads back at the network', () async {
-    engine = build(rows: [_row(1)])..start();
+    engine = build(rows: [_row(1)])
+      ..start()
+      ..stop();
 
-    engine.stop();
     connectivity.emit(true);
     await Future<void>.delayed(const Duration(milliseconds: 20));
 
@@ -650,11 +679,16 @@ void main() {
 
   test('stop() is reversible - start() re-wires the trigger, where dispose() '
       'is terminal. The flag can flip back on in the same session.', () async {
-    engine = build(rows: [_row(1)])..start();
+    engine = build(rows: [_row(1)])
+      ..start()
+      ..stop()
+      ..start();
 
-    engine.stop();
-    engine.start();
-    connectivity.emit(true);
+    // A restart takes its own first report as a baseline, same as a cold
+    // start, so drive a real transition to prove the trigger is re-wired.
+    connectivity
+      ..emit(false)
+      ..emit(true);
     await Future<void>.delayed(const Duration(milliseconds: 20));
 
     expect(syncer.pushCount, greaterThanOrEqualTo(1));

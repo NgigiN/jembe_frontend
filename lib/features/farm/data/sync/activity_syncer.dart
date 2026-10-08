@@ -28,12 +28,12 @@ class ActivityRemoteAdapter implements RemoteSyncAdapter<ActivityModel> {
   Future<void> delete(String serverId) => _remote.deleteActivity(serverId);
 
   @override
-  Future<List<ActivityModel>> getSince(DateTime? since) =>
+  Future<List<ActivityModel>> getSince(DateTime? since, {required int limit}) =>
       // The sync pull is unfiltered (all rows since the cursor) — the
       // `sourceType` app-level filter is a LOCAL read concern only (see
       // `ActivityLocalDataSource.watchActivities`), never a sync-pull
       // concern.
-      _remote.getActivities(updatedSince: since);
+      _remote.getActivities(updatedSince: since, limit: limit);
 }
 
 /// Concrete [EntitySyncer] for the `activity` entity.

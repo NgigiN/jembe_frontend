@@ -47,6 +47,8 @@ void main() {
   setUpAll(() {
     registerFallbackValue(GetAnimalsEvent());
     registerFallbackValue(WatchAnimalsEvent());
+    registerFallbackValue(GetAnimalTypesEvent());
+    registerFallbackValue(GetHerdsEvent());
   });
 
   setUp(() {
@@ -165,6 +167,50 @@ void main() {
         () => bloc.add(any(that: isA<WatchAnimalsEvent>())),
       ).called(1);
       verifyNever(() => bloc.add(any(that: isA<GetAnimalsEvent>())));
+    });
+
+    // The animal dispatch above was moved onto the watch stream by the
+    // first-run fix; the animal-type and herd dispatches below it were left
+    // reading once, outside any flag branch. Both blocs are seeded here with
+    // an EMPTY loaded list - the state a read that beat the first sync
+    // leaves behind - which is exactly when a one-shot read strands the page
+    // on an empty picker.
+    testWidgets('subscribes to animal types rather than reading once', (
+      tester,
+    ) async {
+      OfflineConfig.enabled = true;
+      final bloc = MockAnimalBloc();
+      whenListen(
+        bloc,
+        const Stream<AnimalState>.empty(),
+        initialState: AnimalInitial(),
+      );
+
+      await tester.pumpWidget(_wrap(bloc, animalTypeBloc, herdBloc));
+
+      verify(
+        () => animalTypeBloc.add(any(that: isA<WatchAnimalTypesEvent>())),
+      ).called(1);
+      verifyNever(
+        () => animalTypeBloc.add(any(that: isA<GetAnimalTypesEvent>())),
+      );
+    });
+
+    testWidgets('subscribes to herds rather than reading once', (
+      tester,
+    ) async {
+      OfflineConfig.enabled = true;
+      final bloc = MockAnimalBloc();
+      whenListen(
+        bloc,
+        const Stream<AnimalState>.empty(),
+        initialState: AnimalInitial(),
+      );
+
+      await tester.pumpWidget(_wrap(bloc, animalTypeBloc, herdBloc));
+
+      verify(() => herdBloc.add(any(that: isA<WatchHerdsEvent>()))).called(1);
+      verifyNever(() => herdBloc.add(any(that: isA<GetHerdsEvent>())));
     });
   });
 }

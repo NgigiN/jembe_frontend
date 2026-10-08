@@ -27,11 +27,11 @@ class HarvestRemoteAdapter implements RemoteSyncAdapter<HarvestModel> {
   Future<void> delete(String serverId) => _remote.deleteHarvest(serverId);
 
   @override
-  Future<List<HarvestModel>> getSince(DateTime? since) =>
+  Future<List<HarvestModel>> getSince(DateTime? since, {required int limit}) =>
       // The sync pull is unfiltered (all rows since the cursor) — the
       // `seasonId` app-level filter is a LOCAL read concern only (see
       // `HarvestLocalDataSource.watchHarvests`), never a sync-pull concern.
-      _remote.getHarvests(updatedSince: since);
+      _remote.getHarvests(updatedSince: since, limit: limit);
 }
 
 /// Concrete [EntitySyncer] for the `harvest` entity.

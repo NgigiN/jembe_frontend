@@ -138,6 +138,17 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
   /// no-forward-progress check has a bug — stop rather than loop forever.
   static const int _maxPullIterations = 10000;
 
+  /// Rows requested per drain page, and the number the loop compares
+  /// against to decide it has reached the end.
+  ///
+  /// Deliberately below the server's MaxPageLimit so the request is
+  /// honoured rather than clamped: ParsePagination clamps silently, with
+  /// nothing in the response to say it did, so a cap below this would turn
+  /// a FULL page into one that reads as partial and the drain would stop
+  /// early and skip the rest. The backend guards the relationship in
+  /// TestMaxPageLimitLeavesRoomForTheOfflineDrain.
+  static const int syncDrainPageLimit = 200;
+
   /// The cursor a first-ever pull starts from: old enough that every real
   /// row is strictly after it, so [getSince] always receives a non-null
   /// instant (see below).
@@ -170,7 +181,7 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
     DateTime? overallMax;
 
     for (var i = 0; i < _maxPullIterations; i++) {
-      final rows = await _remote.getSince(cursor);
+      final rows = await _remote.getSince(cursor, limit: syncDrainPageLimit);
 
       DateTime? pageMax;
       for (final server in rows) {
@@ -183,6 +194,15 @@ class BaseEntitySyncer<M extends SyncableModel> implements EntitySyncer {
       if (pageMax != null &&
           (overallMax == null || pageMax.isAfter(overallMax))) {
         overallMax = pageMax;
+      }
+
+      if (rows.length < syncDrainPageLimit) {
+        // Short page: the server had nothing more to give, so the usual
+        // confirming re-query would only fetch the boundary row again and
+        // discover what this already proves. Skipping it halves the request
+        // count on every entity, which on a cold start across thirteen
+        // entities is the difference between ~25 requests and ~13.
+        break;
       }
 
       if (pageMax == null || !pageMax.isAfter(cursor)) {

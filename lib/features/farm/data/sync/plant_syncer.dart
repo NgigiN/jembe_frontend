@@ -25,8 +25,8 @@ class PlantRemoteAdapter implements RemoteSyncAdapter<PlantModel> {
   Future<void> delete(String serverId) => _remote.deletePlant(serverId);
 
   @override
-  Future<List<PlantModel>> getSince(DateTime? since) =>
-      _remote.getPlants(updatedSince: since);
+  Future<List<PlantModel>> getSince(DateTime? since, {required int limit}) =>
+      _remote.getPlants(updatedSince: since, limit: limit);
 }
 
 /// Concrete [EntitySyncer] for the `plant` entity.

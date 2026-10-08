@@ -26,8 +26,8 @@ class SeasonRemoteAdapter implements RemoteSyncAdapter<SeasonModel> {
   Future<void> delete(String serverId) => _remote.deleteSeason(serverId);
 
   @override
-  Future<List<SeasonModel>> getSince(DateTime? since) =>
-      _remote.getSeasons(updatedSince: since);
+  Future<List<SeasonModel>> getSince(DateTime? since, {required int limit}) =>
+      _remote.getSeasons(updatedSince: since, limit: limit);
 }
 
 /// Concrete [EntitySyncer] for the `season` entity.

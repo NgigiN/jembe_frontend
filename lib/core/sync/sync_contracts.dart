@@ -69,7 +69,13 @@ abstract class RemoteSyncAdapter<M> {
   Future<void> delete(String serverId);
 
   /// Fetches rows changed strictly after [since] (or every row when null).
-  Future<List<M>> getSince(DateTime? since);
+  /// Fetches rows changed at or after [since], at most [limit] of them.
+  ///
+  /// [limit] is not advisory: the drain loop decides it has reached the end
+  /// of an entity when a page comes back shorter than it asked for, so an
+  /// implementation that quietly returns fewer rows than requested while
+  /// more exist will cause the client to stop early and skip the rest.
+  Future<List<M>> getSince(DateTime? since, {required int limit});
 }
 
 /// The local-mirror reads/writes `BaseEntitySyncer` performs for a single

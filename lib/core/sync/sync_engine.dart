@@ -116,6 +116,11 @@ class SyncEngine {
   int _backoffAttempt = 0;
   Timer? _retryTimer;
   StreamSubscription<bool>? _connectivitySub;
+
+  /// Last connectivity value seen by [start]'s listener. `null` until the
+  /// first report arrives, which is what makes that first report a baseline
+  /// rather than a transition.
+  bool? _lastOnline;
   bool _disposed = false;
 
   /// Live status transitions (broadcast; does not replay the last value —
@@ -156,13 +161,27 @@ class SyncEngine {
   // surface as an unhandled async error.
   void _swallowLoopError(Object error, StackTrace stackTrace) {}
 
-  /// Wires triggers: re-syncs whenever connectivity is (re)gained.
+  /// Wires triggers: re-syncs whenever connectivity is RE-gained.
   ///
   /// Launch/resume triggers are wired separately in Task 10; this only
   /// subscribes to the connectivity stream.
+  ///
+  /// A transition, not a report. The platform stream hands every new
+  /// subscriber the CURRENT state, so on a launch that is already online
+  /// this fired immediately — on top of the `syncNow()` the caller had just
+  /// made itself. The two coalesced into `_runAgain` and the whole
+  /// thirteen-entity cycle ran twice, about 50 requests on a cold start
+  /// where 25 would do, which is real money on a metered connection.
+  ///
+  /// Skipping that first report is safe because it is never the only
+  /// trigger: every `start()` call site pairs it with an explicit
+  /// `syncNow()` — `main()` at launch and `applyOfflineFlagSideEffects`
+  /// when the server turns the mirror on mid-session.
   void start() {
     _connectivitySub ??= _connectivity.onlineChanges.listen((online) {
-      if (online) {
+      final regained = online && _lastOnline == false;
+      _lastOnline = online;
+      if (regained) {
         unawaited(syncNow());
       }
     });
@@ -183,6 +202,9 @@ class SyncEngine {
     _retryTimer = null;
     unawaited(_connectivitySub?.cancel());
     _connectivitySub = null;
+    // Forget the baseline too, so a later start() treats its own first
+    // report as a baseline rather than inheriting a stale one.
+    _lastOnline = null;
   }
 
   /// Cancels subscriptions/timers and closes the status stream. Terminal —
