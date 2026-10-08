@@ -1,0 +1,11 @@
+Archived tip of feat/p8-frontend (superseded by main).
+
+Both commits' intent is already in main:
+- d0a40c4 theme-selector fit: landed as f670753; the test file is byte-identical.
+- ff95323 surface tiering / accent focus: superseded by the flex_color_scheme
+  seed generation, the WCAG-AA StatusColors re-pick, and the design-spec token
+  foundation.
+
+Kept as a branch so the commits survive gc. Was an annotated tag until
+2026-10-08; archive pointers are branches, so the v* tag namespace holds
+only releases.
