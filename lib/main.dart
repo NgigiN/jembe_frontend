@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:farm_tracker/core/analytics/analytics_service.dart';
 import 'package:farm_tracker/core/config/app_config.dart';
 import 'package:farm_tracker/core/farm_scope/farm_scoped_blocs.dart';
+import 'package:farm_tracker/core/farm_scope/farm_scoped_router_host.dart';
 import 'package:farm_tracker/core/logging/app_logger.dart';
 import 'package:farm_tracker/core/navigation/app_router.dart';
 import 'package:farm_tracker/core/network/session_expiry_notifier.dart';
@@ -136,8 +137,6 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
-  final AppRouter _appRouter = AppRouter();
-
   @override
   void initState() {
     super.initState();
@@ -191,51 +190,60 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(
         builder: (context, themeState) {
-          return MaterialApp.router(
-            title: 'Shamba+',
-            theme: AppTheme.getLightTheme(AppColors.lightColorScheme),
-            darkTheme: AppTheme.getDarkTheme(AppColors.darkColorScheme),
-            themeMode: themeState.themeMode,
-            routerConfig: _appRouter.router,
-            debugShowCheckedModeBanner: false,
-            // Farm-scoped blocs live below the Navigator so pushed routes
-            // get them too, and are rebuilt wholesale whenever the current
-            // farm changes — see FarmScopedBlocs for why that beats teaching
-            // sixteen blocs to reset themselves.
-            builder: (context, child) => FarmScopedBlocs(
-              providers: [
-                BlocProvider<LandBloc>(create: (_) => di.sl<LandBloc>()),
-                BlocProvider<PlantBloc>(create: (_) => di.sl<PlantBloc>()),
-                BlocProvider<SeasonBloc>(create: (_) => di.sl<SeasonBloc>()),
-                BlocProvider<ActivityBloc>(
-                  create: (_) => di.sl<ActivityBloc>(),
-                ),
-                BlocProvider<InputBloc>(create: (_) => di.sl<InputBloc>()),
-                BlocProvider<HarvestBloc>(create: (_) => di.sl<HarvestBloc>()),
-                BlocProvider<AnimalTypeBloc>(
-                  create: (_) => di.sl<AnimalTypeBloc>(),
-                ),
-                BlocProvider<HerdBloc>(create: (_) => di.sl<HerdBloc>()),
-                BlocProvider<AnimalBloc>(create: (_) => di.sl<AnimalBloc>()),
-                BlocProvider<HerdActivityBloc>(
-                  create: (_) => di.sl<HerdActivityBloc>(),
-                ),
-                BlocProvider<InfrastructureBloc>(
-                  create: (_) => di.sl<InfrastructureBloc>(),
-                ),
-                BlocProvider<AnalysisBloc>(
-                  create: (_) => di.sl<AnalysisBloc>(),
-                ),
-                BlocProvider<DashboardBloc>(
-                  create: (_) => di.sl<DashboardBloc>(),
-                ),
-                BlocProvider<RevenueBloc>(create: (_) => di.sl<RevenueBloc>()),
-                BlocProvider<CostCategoryBloc>(
-                  create: (_) => di.sl<CostCategoryBloc>(),
-                ),
-                BlocProvider<TrashBloc>(create: (_) => di.sl<TrashBloc>()),
-              ],
-              child: child ?? const SizedBox.shrink(),
+          return FarmScopedRouterHost(
+            initialLocation: AppRoutePath.splash,
+            createRouter: (initialLocation) =>
+                AppRouter(initialLocation: initialLocation).router,
+            builder: (context, router) => MaterialApp.router(
+              title: 'Shamba+',
+              theme: AppTheme.getLightTheme(AppColors.lightColorScheme),
+              darkTheme: AppTheme.getDarkTheme(AppColors.darkColorScheme),
+              themeMode: themeState.themeMode,
+              routerConfig: router,
+              debugShowCheckedModeBanner: false,
+              // Farm-scoped blocs live below the Navigator so pushed routes
+              // get them too, and are rebuilt wholesale whenever the current
+              // farm changes — see FarmScopedBlocs for why that beats teaching
+              // sixteen blocs to reset themselves.
+              builder: (context, child) => FarmScopedBlocs(
+                providers: [
+                  BlocProvider<LandBloc>(create: (_) => di.sl<LandBloc>()),
+                  BlocProvider<PlantBloc>(create: (_) => di.sl<PlantBloc>()),
+                  BlocProvider<SeasonBloc>(create: (_) => di.sl<SeasonBloc>()),
+                  BlocProvider<ActivityBloc>(
+                    create: (_) => di.sl<ActivityBloc>(),
+                  ),
+                  BlocProvider<InputBloc>(create: (_) => di.sl<InputBloc>()),
+                  BlocProvider<HarvestBloc>(
+                    create: (_) => di.sl<HarvestBloc>(),
+                  ),
+                  BlocProvider<AnimalTypeBloc>(
+                    create: (_) => di.sl<AnimalTypeBloc>(),
+                  ),
+                  BlocProvider<HerdBloc>(create: (_) => di.sl<HerdBloc>()),
+                  BlocProvider<AnimalBloc>(create: (_) => di.sl<AnimalBloc>()),
+                  BlocProvider<HerdActivityBloc>(
+                    create: (_) => di.sl<HerdActivityBloc>(),
+                  ),
+                  BlocProvider<InfrastructureBloc>(
+                    create: (_) => di.sl<InfrastructureBloc>(),
+                  ),
+                  BlocProvider<AnalysisBloc>(
+                    create: (_) => di.sl<AnalysisBloc>(),
+                  ),
+                  BlocProvider<DashboardBloc>(
+                    create: (_) => di.sl<DashboardBloc>(),
+                  ),
+                  BlocProvider<RevenueBloc>(
+                    create: (_) => di.sl<RevenueBloc>(),
+                  ),
+                  BlocProvider<CostCategoryBloc>(
+                    create: (_) => di.sl<CostCategoryBloc>(),
+                  ),
+                  BlocProvider<TrashBloc>(create: (_) => di.sl<TrashBloc>()),
+                ],
+                child: child ?? const SizedBox.shrink(),
+              ),
             ),
           );
         },

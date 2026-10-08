@@ -41,7 +41,12 @@ import 'package:go_router/go_router.dart';
 export 'package:farm_tracker/core/navigation/app_route_path.dart';
 
 class AppRouter {
-  AppRouter();
+  /// [initialLocation] is where a freshly built router starts. It is the
+  /// splash screen at launch, and the user's current tab when the router is
+  /// replaced on a farm switch — see FarmScopedRouterHost.
+  AppRouter({this.initialLocation = AppRoutePath.splash});
+
+  final String initialLocation;
 
   /// Routes reachable without a session.
   static const Set<String> _publicPaths = {
@@ -105,8 +110,8 @@ class AppRouter {
     return null;
   }
 
-  final GoRouter router = GoRouter(
-    initialLocation: AppRoutePath.splash,
+  late final GoRouter router = GoRouter(
+    initialLocation: initialLocation,
     observers: [LoggingGoRouterObserver()],
     redirect: (context, state) async {
       final loggedIn = await UserStorageService.isLoggedIn();
@@ -117,7 +122,10 @@ class AppRouter {
       if (authRedirect != null) return authRedirect;
 
       final role = await FarmStorageService.getCurrentRole();
-      return staffOnlyRedirectLocation(role: role, location: state.matchedLocation);
+      return staffOnlyRedirectLocation(
+        role: role,
+        location: state.matchedLocation,
+      );
     },
     routes: [
       GoRoute(
@@ -188,19 +196,22 @@ class AppRouter {
         name: AppRouteName.farmsList,
         path: AppRoutePath.farmsList,
         caseSensitive: false,
-        pageBuilder: (context, state) => _slidePage(const FarmsListPage(), state),
+        pageBuilder: (context, state) =>
+            _slidePage(const FarmsListPage(), state),
       ),
       GoRoute(
         name: AppRouteName.createFarm,
         path: AppRoutePath.createFarm,
         caseSensitive: false,
-        pageBuilder: (context, state) => _slidePage(const CreateFarmPage(), state),
+        pageBuilder: (context, state) =>
+            _slidePage(const CreateFarmPage(), state),
       ),
       GoRoute(
         name: AppRouteName.farmManage,
         path: AppRoutePath.farmManage,
         caseSensitive: false,
-        pageBuilder: (context, state) => _slidePage(const FarmManagePage(), state),
+        pageBuilder: (context, state) =>
+            _slidePage(const FarmManagePage(), state),
       ),
       GoRoute(
         name: AppRouteName.lands,
