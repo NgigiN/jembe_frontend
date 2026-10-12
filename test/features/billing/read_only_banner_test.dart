@@ -108,4 +108,15 @@ void main() {
     expect(find.textContaining('read-only'), findsOneWidget);
     expect(find.textContaining('nothing has been lost'), findsOneWidget);
   });
+
+  testWidgets('without an EntitlementCubit above it, renders nothing and '
+      'does not throw', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: ReadOnlyBanner())),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(SizedBox), findsWidgets);
+    expect(find.textContaining('read-only'), findsNothing);
+  });
 }

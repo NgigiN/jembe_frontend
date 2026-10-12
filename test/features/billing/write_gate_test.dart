@@ -114,4 +114,22 @@ void main() {
       reason: 'the write must never start — a 402 would kill the outbox row',
     );
   });
+
+  testWidgets('without an EntitlementCubit above it, allows writing '
+      '(unknown falls open)', (tester) async {
+    bool? seen;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WriteGate(
+          builder: (context, allowed) {
+            seen = allowed;
+            return const SizedBox();
+          },
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(seen, isTrue);
+  });
 }

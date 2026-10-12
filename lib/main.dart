@@ -16,6 +16,7 @@ import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
+import 'package:farm_tracker/features/billing/presentation/cubit/entitlement_cubit.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_event.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
@@ -182,6 +183,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         BlocProvider<AuthBloc>(create: (_) => di.sl<AuthBloc>()),
         BlocProvider<FarmBloc>(
           create: (_) => di.sl<FarmBloc>()..add(LoadFarms()),
+        ),
+        BlocProvider<EntitlementCubit>(
+          create: (_) => di.sl<EntitlementCubit>()..load(),
         ),
         BlocProvider<ProfileBloc>(create: (_) => di.sl<ProfileBloc>()),
         BlocProvider<ContentBloc>(create: (_) => di.sl<ContentBloc>()),

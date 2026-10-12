@@ -1,5 +1,6 @@
 import 'package:farm_tracker/features/billing/domain/entities/entitlement.dart';
 import 'package:farm_tracker/features/billing/presentation/cubit/entitlement_cubit.dart';
+import 'package:farm_tracker/features/billing/presentation/widgets/maybe_entitlement_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -34,7 +35,11 @@ class WriteGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cubit = maybeEntitlementCubit(context);
+    // No cubit means the entitlement is unknown, and unknown falls open.
+    if (cubit == null) return builder(context, true);
     return BlocBuilder<EntitlementCubit, EntitlementStatus>(
+      bloc: cubit,
       builder: (context, status) =>
           builder(context, allows(status.entitlement)),
     );
