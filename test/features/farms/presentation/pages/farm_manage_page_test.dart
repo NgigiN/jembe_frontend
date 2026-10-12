@@ -1,3 +1,4 @@
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_source.dart';
 import 'package:farm_tracker/features/farms/data/models/farm_invitation_model.dart';
 import 'package:farm_tracker/features/farms/data/models/farm_member_model.dart';
@@ -15,6 +16,7 @@ import 'package:get_it/get_it.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockRemote extends Mock implements FarmRemoteDataSource {}
+
 class _FakeFarmBloc extends Fake implements FarmBloc {
   _FakeFarmBloc(this._state);
   final FarmState _state;
@@ -27,15 +29,24 @@ class _FakeFarmBloc extends Fake implements FarmBloc {
 }
 
 Farm _farm(FarmRole role) => Farm(
-  id: 1, name: 'Farm', location: '', fiscalYearStartMonth: 1,
-  ownerUserId: 1, successorUserId: null, maxMembers: 5,
-  role: role, memberCount: 2, isDefault: true,
+  id: 1,
+  name: 'Farm',
+  location: '',
+  fiscalYearStartMonth: 1,
+  ownerUserId: 1,
+  successorUserId: null,
+  maxMembers: 5,
+  role: role,
+  memberCount: 2,
+  isDefault: true,
 );
 
 Future<void> _pump(WidgetTester tester, FarmRole role) async {
   await tester.pumpWidget(
     BlocProvider<FarmBloc>.value(
-      value: _FakeFarmBloc(FarmLoaded(farms: [_farm(role)], currentFarmId: 1, currentRole: role)),
+      value: _FakeFarmBloc(
+        FarmLoaded(farms: [_farm(role)], currentFarmId: 1, currentRole: role),
+      ),
       child: const MaterialApp(home: FarmManagePage()),
     ),
   );
@@ -49,17 +60,29 @@ void main() {
     await GetIt.instance.reset();
     remote = _MockRemote();
     sl.registerSingleton<FarmRemoteDataSource>(remote);
-    when(() => remote.listMembers()).thenAnswer((_) async => [
-      FarmMemberModel.fromJson({
-        'user_id': 1, 'first_name': 'Amina', 'last_name': 'Otieno',
-        'email': 'a@example.com', 'role': 'owner', 'joined_at': '2026-01-01T00:00:00Z',
-      }),
-      FarmMemberModel.fromJson({
-        'user_id': 2, 'first_name': 'Ben', 'last_name': 'Kamau',
-        'email': 'b@example.com', 'role': 'worker', 'joined_at': '2026-01-01T00:00:00Z',
-      }),
-    ]);
-    when(() => remote.listInvitations()).thenAnswer((_) async => <FarmInvitationModel>[]);
+    when(() => remote.listMembers()).thenAnswer(
+      (_) async => [
+        FarmMemberModel.fromJson({
+          'user_id': 1,
+          'first_name': 'Amina',
+          'last_name': 'Otieno',
+          'email': 'a@example.com',
+          'role': 'owner',
+          'joined_at': '2026-01-01T00:00:00Z',
+        }),
+        FarmMemberModel.fromJson({
+          'user_id': 2,
+          'first_name': 'Ben',
+          'last_name': 'Kamau',
+          'email': 'b@example.com',
+          'role': 'worker',
+          'joined_at': '2026-01-01T00:00:00Z',
+        }),
+      ],
+    );
+    when(
+      () => remote.listInvitations(),
+    ).thenAnswer((_) async => <FarmInvitationModel>[]);
     when(() => remote.getTransfer()).thenAnswer((_) async => null);
   });
 
@@ -88,16 +111,87 @@ void main() {
     expect(find.byKey(const Key('nominate_transfer_button')), findsOneWidget);
   });
 
-  testWidgets('owner sees a cancel control when a transfer is pending',
-      (tester) async {
-    when(() => remote.getTransfer()).thenAnswer((_) async => FarmTransferModel.fromJson({
-      'id': 1, 'farm_id': 1, 'from_user_id': 1, 'to_user_id': 2,
-      'expires_at': '2026-10-01T00:00:00Z', 'created_at': '2026-09-21T00:00:00Z',
-    }));
+  testWidgets('owner sees a cancel control when a transfer is pending', (
+    tester,
+  ) async {
+    when(() => remote.getTransfer()).thenAnswer(
+      (_) async => FarmTransferModel.fromJson({
+        'id': 1,
+        'farm_id': 1,
+        'from_user_id': 1,
+        'to_user_id': 2,
+        'expires_at': '2026-10-01T00:00:00Z',
+        'created_at': '2026-09-21T00:00:00Z',
+      }),
+    );
 
     await _pump(tester, FarmRole.owner);
 
     expect(find.text('Transfer pending'), findsOneWidget);
     expect(find.byKey(const Key('cancel_transfer_button')), findsOneWidget);
+  });
+
+  // _load() awaited three remote calls with no try/catch and set _loading to
+  // false only on the success path, so any one of them throwing left the page
+  // spinning forever. It is called unawaited from initState, so the exception
+  // was never surfaced either. This is the members/invitations/transfer page,
+  // which is how someone invites a person to a farm.
+
+  /// Pumped frame by frame rather than with pumpAndSettle, because a spinner
+  /// that never resolves makes pumpAndSettle time out instead of failing on
+  /// the assertion we actually care about.
+  Future<void> pumpFailing(WidgetTester tester) async {
+    await tester.pumpWidget(
+      BlocProvider<FarmBloc>.value(
+        value: _FakeFarmBloc(
+          FarmLoaded(
+            farms: [_farm(FarmRole.owner)],
+            currentFarmId: 1,
+            currentRole: FarmRole.owner,
+          ),
+        ),
+        child: const MaterialApp(home: FarmManagePage()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+
+  testWidgets(
+    'a load that fails shows the error and a retry, never an endless spinner',
+    (tester) async {
+      when(() => remote.listMembers()).thenThrow(Exception('network is down'));
+
+      await pumpFailing(tester);
+
+      expect(find.byType(EntityErrorView), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    },
+  );
+
+  testWidgets('the retry loads the members that failed the first time', (
+    tester,
+  ) async {
+    when(() => remote.listMembers()).thenThrow(Exception('network is down'));
+    await pumpFailing(tester);
+    expect(find.byType(EntityErrorView), findsOneWidget);
+
+    when(() => remote.listMembers()).thenAnswer(
+      (_) async => [
+        FarmMemberModel.fromJson(const {
+          'user_id': 1,
+          'first_name': 'Amina',
+          'last_name': 'Otieno',
+          'email': 'a@example.com',
+          'role': 'owner',
+          'joined_at': '2026-01-01T00:00:00Z',
+        }),
+      ],
+    );
+    await tester.tap(find.text('Try Again'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Amina Otieno'), findsOneWidget);
+    expect(find.byType(EntityErrorView), findsNothing);
   });
 }

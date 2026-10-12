@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:farm_tracker/core/di/service_locator.dart';
+import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_source.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_invitation.dart';
@@ -26,11 +29,13 @@ class FarmManagePage extends StatefulWidget {
 }
 
 class _FarmManagePageState extends State<FarmManagePage> {
-  late final FarmRemoteDataSource _remote = widget.remote ?? sl<FarmRemoteDataSource>();
+  late final FarmRemoteDataSource _remote =
+      widget.remote ?? sl<FarmRemoteDataSource>();
   List<FarmMember> _members = [];
   List<FarmInvitation> _invitations = [];
   FarmTransfer? _transfer;
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -38,18 +43,38 @@ class _FarmManagePageState extends State<FarmManagePage> {
     _load();
   }
 
+  /// Loads members, invitations and the pending transfer.
+  ///
+  /// The failure path matters more than the success one here. This used to
+  /// await three calls with no catch and clear [_loading] only after the last
+  /// one returned, so a single failure left the page spinning forever — and
+  /// because [initState] calls this without awaiting it, the exception went
+  /// nowhere anyone would see. On the page people use to invite someone.
+  ///
+  /// [_loading] is cleared in a `finally` deliberately: a later edit that adds
+  /// an early return cannot then reintroduce the permanent spinner.
   Future<void> _load() async {
     final remote = _remote;
-    final members = await remote.listMembers();
-    final invitations = await remote.listInvitations();
-    final transfer = await remote.getTransfer();
-    if (!mounted) return;
-    setState(() {
-      _members = members;
-      _invitations = invitations;
-      _transfer = transfer;
-      _loading = false;
-    });
+    if (mounted) setState(() => _error = null);
+    try {
+      final members = await remote.listMembers();
+      final invitations = await remote.listInvitations();
+      final transfer = await remote.getTransfer();
+      if (!mounted) return;
+      setState(() {
+        _members = members;
+        _invitations = invitations;
+        _transfer = transfer;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(
+        () => _error =
+            'We could not load this farm. Check your connection and try again.',
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   Future<void> _runAction(Future<void> Function() action) async {
@@ -59,7 +84,10 @@ class _FarmManagePageState extends State<FarmManagePage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        AppSnackBar.error(context, 'That action could not be completed. Try again.'),
+        AppSnackBar.error(
+          context,
+          'That action could not be completed. Try again.',
+        ),
       );
     }
   }
@@ -83,8 +111,14 @@ class _FarmManagePageState extends State<FarmManagePage> {
               DropdownButton<FarmRole>(
                 value: role,
                 items: const [
-                  DropdownMenuItem(value: FarmRole.worker, child: Text('Worker')),
-                  DropdownMenuItem(value: FarmRole.manager, child: Text('Manager')),
+                  DropdownMenuItem(
+                    value: FarmRole.worker,
+                    child: Text('Worker'),
+                  ),
+                  DropdownMenuItem(
+                    value: FarmRole.manager,
+                    child: Text('Manager'),
+                  ),
                 ],
                 onChanged: (value) {
                   if (value != null) setDialogState(() => role = value);
@@ -93,8 +127,14 @@ class _FarmManagePageState extends State<FarmManagePage> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-            TextButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Invite')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Invite'),
+            ),
           ],
         ),
       ),
@@ -121,7 +161,10 @@ class _FarmManagePageState extends State<FarmManagePage> {
         ..hideCurrentSnackBar()
         ..showSnackBar(
           emailed
-              ? AppSnackBar.success(context, 'Invited $email — we emailed them how to join.')
+              ? AppSnackBar.success(
+                  context,
+                  'Invited $email — we emailed them how to join.',
+                )
               : AppSnackBar.info(
                   context,
                   'Invited $email. No email was sent, so ask them to sign in '
@@ -131,7 +174,10 @@ class _FarmManagePageState extends State<FarmManagePage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        AppSnackBar.error(context, 'That action could not be completed. Try again.'),
+        AppSnackBar.error(
+          context,
+          'That action could not be completed. Try again.',
+        ),
       );
     }
   }
@@ -140,7 +186,10 @@ class _FarmManagePageState extends State<FarmManagePage> {
     final managers = _members.where((m) => m.role == FarmRole.manager).toList();
     if (managers.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        AppSnackBar.error(context, 'Promote a member to manager first — only a manager can be nominated.'),
+        AppSnackBar.error(
+          context,
+          'Promote a member to manager first — only a manager can be nominated.',
+        ),
       );
       return;
     }
@@ -184,6 +233,14 @@ class _FarmManagePageState extends State<FarmManagePage> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? EntityErrorView(
+              message: _error!,
+              onRetry: () {
+                setState(() => _loading = true);
+                unawaited(_load());
+              },
+            )
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -191,7 +248,9 @@ class _FarmManagePageState extends State<FarmManagePage> {
                 for (final member in _members)
                   ListTile(
                     title: Text(member.fullName),
-                    subtitle: Text('${member.email} · ${member.role.wireValue}'),
+                    subtitle: Text(
+                      '${member.email} · ${member.role.wireValue}',
+                    ),
                     trailing: isStaff && member.role != FarmRole.owner
                         ? Row(
                             mainAxisSize: MainAxisSize.min,
@@ -200,11 +259,20 @@ class _FarmManagePageState extends State<FarmManagePage> {
                                 tooltip: 'Change role',
                                 icon: const Icon(Icons.swap_horiz),
                                 itemBuilder: (context) => const [
-                                  PopupMenuItem(value: FarmRole.manager, child: Text('Manager')),
-                                  PopupMenuItem(value: FarmRole.worker, child: Text('Worker')),
+                                  PopupMenuItem(
+                                    value: FarmRole.manager,
+                                    child: Text('Manager'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: FarmRole.worker,
+                                    child: Text('Worker'),
+                                  ),
                                 ],
                                 onSelected: (newRole) => _runAction(
-                                  () => _remote.updateMemberRole(member.userId, newRole),
+                                  () => _remote.updateMemberRole(
+                                    member.userId,
+                                    newRole,
+                                  ),
                                 ),
                               ),
                               IconButton(
@@ -220,7 +288,10 @@ class _FarmManagePageState extends State<FarmManagePage> {
                   ),
                 if (isStaff) ...[
                   const SizedBox(height: 24),
-                  Text('Pending Invitations', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Pending Invitations',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   for (final invitation in _invitations)
                     ListTile(
                       title: Text(invitation.email),
@@ -236,10 +307,19 @@ class _FarmManagePageState extends State<FarmManagePage> {
                 ],
                 if (isOwner) ...[
                   const SizedBox(height: 24),
-                  Text('Ownership', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Ownership',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   ListTile(
-                    title: Text(_transfer == null ? 'No pending transfer' : 'Transfer pending'),
-                    subtitle: const Text('Nominate a manager to become the new owner'),
+                    title: Text(
+                      _transfer == null
+                          ? 'No pending transfer'
+                          : 'Transfer pending',
+                    ),
+                    subtitle: const Text(
+                      'Nominate a manager to become the new owner',
+                    ),
                     trailing: _transfer == null
                         ? IconButton(
                             key: const Key('nominate_transfer_button'),
@@ -251,7 +331,8 @@ class _FarmManagePageState extends State<FarmManagePage> {
                             key: const Key('cancel_transfer_button'),
                             icon: const Icon(Icons.cancel_outlined),
                             tooltip: 'Cancel Transfer',
-                            onPressed: () => _runAction(() => _remote.cancelTransfer()),
+                            onPressed: () =>
+                                _runAction(() => _remote.cancelTransfer()),
                           ),
                   ),
                 ],
