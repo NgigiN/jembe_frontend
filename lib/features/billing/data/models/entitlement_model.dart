@@ -22,9 +22,9 @@ class EntitlementModel extends Entitlement {
   /// page people reach to invite someone.
   factory EntitlementModel.fromJson(Map<String, dynamic> json) {
     return EntitlementModel(
-      state: BillingState.fromWire((json['state'] ?? 'free').toString()),
-      canWrite: json['can_write'] as bool? ?? true,
-      isOwner: json['is_owner'] as bool? ?? false,
+      state: BillingState.fromWire(json['state']?.toString() ?? ''),
+      canWrite: _bool(json['can_write'], true),
+      isOwner: _bool(json['is_owner'], false),
       collaborators: _int(json['collaborators'], 0),
       seatsPaid: _int(json['seats_paid'], 0),
       seatCap: _int(json['seat_cap'], 20),
@@ -37,16 +37,44 @@ class EntitlementModel extends Entitlement {
     );
   }
 
+  /// `as bool?` THROWS on a non-bool, non-null value — it does not return
+  /// null. A server sending `"yes"` or `1` for a flag would otherwise take
+  /// down the page people reach to invite someone, with an uncaught TypeError.
+  static bool _bool(Object? raw, bool fallback) {
+    if (raw is bool) return raw;
+    return fallback;
+  }
+
   static int _int(Object? raw, int fallback) {
-    if (raw is num) return raw.toInt();
+    if (raw is int) return raw;
+    // isFinite guards Infinity and NaN, where toInt() throws
+    // UnsupportedError. jsonDecode turns `1e999` into Infinity.
+    if (raw is num) return raw.isFinite ? raw.toInt() : fallback;
     return int.tryParse(raw?.toString() ?? '') ?? fallback;
   }
 
-  /// `YYYY-MM-DD` or null. A malformed value reads as absent: a date we
-  /// cannot parse is not worth crashing over, and every consumer already
-  /// handles null.
+  /// `YYYY-MM-DD`, a full ISO timestamp, or null.
+  ///
+  /// Three things here are deliberate. A bare date is forced to UTC midnight,
+  /// because `DateTime.tryParse('2026-11-11')` yields LOCAL midnight and in
+  /// Kenya (UTC+3) that is the previous day in UTC — a paid window would
+  /// expire a day early. A value that already carries a time is parsed as-is
+  /// rather than having one appended, which would make it unparseable and
+  /// read as "never paid". And a date Dart normalises into nonsense — it
+  /// turns `0000-00-00` into the year -1 rather than rejecting it — is
+  /// treated as absent, which falls open instead of showing a paid-up farm
+  /// as overdue.
   static DateTime? _day(Object? raw) {
     if (raw == null) return null;
-    return DateTime.tryParse('${raw}T00:00:00Z');
+    final text = raw.toString().trim();
+    if (text.isEmpty) return null;
+    final parsed = DateTime.tryParse(
+      text.length == 10 ? '${text}T00:00:00Z' : text,
+    );
+    if (parsed == null) return null;
+    final utc = parsed.toUtc();
+    // This product did not exist before 2020. Anything earlier is a server
+    // bug, and reading it as absent is the safe direction.
+    return utc.year < 2020 ? null : utc;
   }
 }

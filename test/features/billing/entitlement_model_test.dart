@@ -78,6 +78,72 @@ void main() {
 
       expect(e.paidThrough, isNull);
     });
+
+    test('a string bool value falls back rather than throwing', () {
+      final e = EntitlementModel.fromJson(const {
+        'state': 'free',
+        'can_write': 'yes',
+      });
+
+      expect(e.canWrite, isTrue);
+    });
+
+    test('an integer bool value falls back rather than throwing', () {
+      final e = EntitlementModel.fromJson(const {
+        'state': 'free',
+        'is_owner': 1,
+      });
+
+      expect(e.isOwner, isFalse);
+    });
+
+    test('an infinity int value falls back rather than throwing', () {
+      final e = EntitlementModel.fromJson(const {'collaborators': 1e999});
+
+      expect(e.collaborators, 0);
+    });
+
+    test('an array int value falls back rather than throwing', () {
+      final e = EntitlementModel.fromJson(const {'seats_paid': <int>[]});
+
+      expect(e.seatsPaid, 0);
+    });
+
+    test('a full ISO timestamp is parsed as-is without appending time', () {
+      final e = EntitlementModel.fromJson(const {
+        'state': 'active',
+        'paid_through': '2026-11-11T10:00:00Z',
+      });
+
+      expect(e.paidThrough, DateTime.utc(2026, 11, 11, 10));
+    });
+
+    test('an out-of-range date is treated as absent', () {
+      final e = EntitlementModel.fromJson(const {
+        'state': 'active',
+        'paid_through': '0000-00-00',
+      });
+
+      expect(e.paidThrough, isNull);
+    });
+
+    test('an empty string date is treated as absent', () {
+      final e = EntitlementModel.fromJson(const {
+        'state': 'active',
+        'paid_through': '',
+      });
+
+      expect(e.paidThrough, isNull);
+    });
+
+    test('a bare date (YYYY-MM-DD) is forced to UTC midnight', () {
+      final e = EntitlementModel.fromJson(const {
+        'state': 'active',
+        'paid_through': '2026-11-11',
+      });
+
+      expect(e.paidThrough, DateTime.utc(2026, 11, 11));
+    });
   });
 
   group('Entitlement', () {
