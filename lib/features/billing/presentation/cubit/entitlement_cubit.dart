@@ -40,25 +40,39 @@ class EntitlementCubit extends Cubit<EntitlementStatus> {
   final BillingRemoteDataSource remote;
 
   bool _inFlight = false;
+  bool _refreshWanted = false;
 
-  /// Fetches entitlement, replacing whatever is held.
-  Future<void> load() => _fetch(keepOnFailure: false);
-
-  /// Re-fetches, keeping the known value if the request fails. Called after
-  /// a payment and on a farm switch.
-  Future<void> refresh() => _fetch(keepOnFailure: true);
-
-  Future<void> _fetch({required bool keepOnFailure}) async {
-    // Not re-entrant: the gate is read by several widgets at once, and
-    // without this a page with three consumers would fire three requests.
+  /// Fetches entitlement, replacing whatever is held. Dropped if a fetch is
+  /// already running — the in-flight result is just as good, and three
+  /// consumers mounting at once must not make three requests.
+  Future<void> load() async {
     if (_inFlight) return;
+    await _run(keepOnFailure: false);
+  }
+
+  /// Re-fetches, keeping the known value if the request fails. Called after a
+  /// payment and on a farm switch.
+  ///
+  /// Unlike [load] this COALESCES rather than drops. A refresh means something
+  /// has changed, so the currently in-flight response is already stale; the
+  /// post-payment refresh in particular must not be thrown away, or a farmer
+  /// who has just paid keeps seeing a lapsed farm.
+  Future<void> refresh() async {
+    if (_inFlight) {
+      _refreshWanted = true;
+      return;
+    }
+    await _run(keepOnFailure: true);
+  }
+
+  Future<void> _run({required bool keepOnFailure}) async {
     _inFlight = true;
-    emit(state.copyWith(loading: true));
     try {
+      emit(state.copyWith(loading: true));
       final next = await remote.getEntitlement();
       emit(EntitlementStatus(entitlement: next, loading: false));
     } catch (e, st) {
-      appLogger.logError('EntitlementCubit: load', e, st);
+      appLogger.logError('EntitlementCubit: fetch', e, st);
       emit(
         EntitlementStatus(
           entitlement: keepOnFailure
@@ -69,6 +83,12 @@ class EntitlementCubit extends Cubit<EntitlementStatus> {
       );
     } finally {
       _inFlight = false;
+    }
+    if (_refreshWanted) {
+      _refreshWanted = false;
+      // Always keepOnFailure: a coalesced call must not discard what the
+      // previous one just learned.
+      await _run(keepOnFailure: true);
     }
   }
 }

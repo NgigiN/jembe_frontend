@@ -102,4 +102,76 @@ void main() {
       expect(calls, 1);
     },
   );
+
+  EntitlementModel active() => EntitlementModel.fromJson(const {
+    'state': 'active',
+    'can_write': true,
+    'is_owner': true,
+    'collaborators': 2,
+    'seats_paid': 2,
+    'seat_cap': 20,
+    'price_kes': 900,
+    'base_kes': 500,
+    'per_collaborator_kes': 200,
+    'ai_questions_per_day': 50,
+  });
+
+  test('refresh() during an in-flight fetch runs a second request', () async {
+    var calls = 0;
+    when(() => remote.getEntitlement()).thenAnswer((_) async {
+      calls++;
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      return calls == 1 ? _lapsed() : active();
+    });
+    final cubit = EntitlementCubit(remote: remote);
+
+    final first = cubit.load();
+    await cubit.refresh();
+    await first;
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+
+    expect(calls, 2);
+    expect(cubit.state.entitlement.state, BillingState.active);
+  });
+
+  test(
+    'a refresh right after payment unlocks the farm even mid-fetch',
+    () async {
+      var calls = 0;
+      when(() => remote.getEntitlement()).thenAnswer((_) async {
+        calls++;
+        final n = calls;
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        return n == 1 ? _lapsed() : active();
+      });
+      final cubit = EntitlementCubit(remote: remote);
+
+      final a = cubit.load();
+      final b = cubit.refresh();
+      await Future.wait([a, b]);
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+
+      expect(cubit.state.entitlement.state, BillingState.active);
+      expect(cubit.state.entitlement.canWrite, isTrue);
+    },
+  );
+
+  test('a coalesced refresh that fails keeps the first fetch result', () async {
+    var calls = 0;
+    when(() => remote.getEntitlement()).thenAnswer((_) async {
+      calls++;
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      if (calls == 1) return _lapsed();
+      throw NetworkException();
+    });
+    final cubit = EntitlementCubit(remote: remote);
+
+    final a = cubit.load();
+    final b = cubit.refresh();
+    await Future.wait([a, b]);
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+
+    expect(calls, 2);
+    expect(cubit.state.entitlement.state, BillingState.lapsed);
+  });
 }
