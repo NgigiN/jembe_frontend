@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:farm_tracker/core/error/exceptions.dart';
 import 'package:farm_tracker/features/billing/data/datasources/billing_remote_data_source.dart';
 import 'package:farm_tracker/features/billing/domain/entities/entitlement.dart';
+import 'package:farm_tracker/features/web_console/presentation/widgets/console_page.dart';
 import 'package:flutter/material.dart';
 
 /// Where the farm owner renews the team plan from a browser.
@@ -194,14 +195,17 @@ class _WebBillingPageState extends State<WebBillingPage> {
 
   @override
   Widget build(BuildContext context) {
+    // ConsolePage supplies the header, padding and scrolling but no Material,
+    // which the text field and buttons below need.
     return Material(
       type: MaterialType.transparency,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+      child: ConsolePage(
+        title: 'Billing',
+        subtitle: 'Your team plan and renewals',
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
             child: _body(context),
           ),
         ),
@@ -231,16 +235,9 @@ class _WebBillingPageState extends State<WebBillingPage> {
     }
 
     if (!ent.isOwner) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Billing', style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 8),
-          const Text(
-            'Billing is managed by the farm owner, so only the farm owner can '
-            'renew this plan.',
-          ),
-        ],
+      return const Text(
+        'Billing is managed by the farm owner, so only the farm owner can '
+        'renew this plan.',
       );
     }
 
@@ -249,8 +246,6 @@ class _WebBillingPageState extends State<WebBillingPage> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Billing', style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 8),
           const Text('Payment received. Your team can record work again.'),
           if (through != null) ...[
             const SizedBox(height: 8),
