@@ -27,6 +27,7 @@ import 'package:farm_tracker/features/auth/data/services/user_storage_service.da
 import 'package:farm_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:farm_tracker/features/billing/data/datasources/billing_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/activity_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/analysis_remote_data_source.dart';
 import 'package:farm_tracker/features/farm/data/datasources/animal_type_remote_data_source.dart';
@@ -114,6 +115,9 @@ Future<void> initWebDependencies() async {
     )
     ..registerLazySingleton<InputRemoteDataSource>(
       () => InputRemoteDataSourceImpl(dio: webSl()),
+    )
+    ..registerLazySingleton<BillingRemoteDataSource>(
+      () => BillingRemoteDataSourceImpl(dio: webSl()),
     )
     ..registerLazySingleton<RevenueRemoteDataSource>(
       () => RevenueRemoteDataSourceImpl(dio: webSl()),

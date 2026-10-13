@@ -39,6 +39,7 @@ class AppRouteName {
   static const farmsList = 'farms-list';
   static const createFarm = 'create-farm';
   static const farmManage = 'farm-manage';
+  static const paywall = 'paywall';
 }
 
 class AppRoutePath {
@@ -73,6 +74,7 @@ class AppRoutePath {
   static const farmsList = '/farms';
   static const createFarm = '/farms/create';
   static const farmManage = '/farms/manage';
+  static const paywall = '/paywall';
 
   static String inputsFor(String sourceType) => '/inputs/$sourceType';
   static String activitiesFor(String sourceType) => '/activities/$sourceType';

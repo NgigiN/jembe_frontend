@@ -16,6 +16,7 @@ import 'package:farm_tracker/core/theme/bloc/theme_bloc.dart';
 import 'package:farm_tracker/core/theme/bloc/theme_state.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_event.dart';
+import 'package:farm_tracker/features/billing/presentation/cubit/entitlement_cubit.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_event.dart';
 import 'package:farm_tracker/features/content/presentation/bloc/content_bloc.dart';
@@ -170,6 +171,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       // OfflineConfig.enabled — farms/roles are live today, independent of
       // the (still dark) offline pipeline.
       di.sl<FarmBloc>().add(RefreshFarms());
+      // Entitlement is renewed on the web console, not in here, so a resume is
+      // the moment this app learns it was paid for. Without this the owner
+      // pays on a laptop and their phone stays read-only until it is killed
+      // and reopened. refresh() rather than load(): a dropped request must
+      // keep what we already know instead of falling open on a farm we know
+      // is lapsed. Not awaited and not behind the offline flag: it is
+      // unrelated to the sync path, and the cubit swallows its own failures.
+      di.sl<EntitlementCubit>().refresh();
     }
   }
 
@@ -182,6 +191,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         BlocProvider<AuthBloc>(create: (_) => di.sl<AuthBloc>()),
         BlocProvider<FarmBloc>(
           create: (_) => di.sl<FarmBloc>()..add(LoadFarms()),
+        ),
+        BlocProvider<EntitlementCubit>(
+          create: (_) => di.sl<EntitlementCubit>()..load(),
         ),
         BlocProvider<ProfileBloc>(create: (_) => di.sl<ProfileBloc>()),
         BlocProvider<ContentBloc>(create: (_) => di.sl<ContentBloc>()),

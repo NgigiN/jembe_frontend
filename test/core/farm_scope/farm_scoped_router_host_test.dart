@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:farm_tracker/core/di/service_locator.dart';
 import 'package:farm_tracker/core/farm_scope/farm_scoped_blocs.dart';
 import 'package:farm_tracker/core/farm_scope/farm_scoped_router_host.dart';
+import 'package:farm_tracker/features/billing/presentation/cubit/entitlement_cubit.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_role.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_event.dart';
@@ -11,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mocktail/mocktail.dart';
 
 /// What a farm switch has to do, exercised through a REAL go_router.
 ///
@@ -28,6 +31,8 @@ import 'package:go_router/go_router.dart';
 /// changes again.
 class _MockFarmBloc extends MockBloc<FarmEvent, FarmState>
     implements FarmBloc {}
+
+class _MockEntitlementCubit extends Mock implements EntitlementCubit {}
 
 class _Dummy extends Cubit<int> {
   _Dummy() : super(0);
@@ -282,4 +287,42 @@ void main() {
       expect(plantsMounts, 1);
     },
   );
+
+  group('entitlement refresh', () {
+    late _MockEntitlementCubit entitlement;
+
+    setUp(() {
+      entitlement = _MockEntitlementCubit();
+      when(entitlement.refresh).thenAnswer((_) async {});
+      sl.registerSingleton<EntitlementCubit>(entitlement);
+    });
+
+    tearDown(() async => sl.unregister<EntitlementCubit>());
+
+    testWidgets(
+      'a genuine switch refreshes entitlement, because the new farm may have '
+      'a different owner on a different plan',
+      (tester) async {
+        await tester.pumpWidget(harness());
+        await tester.pumpAndSettle();
+        await emit(tester, _loaded(7));
+
+        verifyNever(entitlement.refresh);
+
+        await emit(tester, _loaded(9));
+
+        verify(entitlement.refresh).called(1);
+      },
+    );
+
+    testWidgets('re-emitting the same farm does not refresh', (tester) async {
+      await tester.pumpWidget(harness());
+      await tester.pumpAndSettle();
+      await emit(tester, _loaded(7));
+      await emit(tester, _loaded(7));
+      await emit(tester, _loaded(null));
+
+      verifyNever(entitlement.refresh);
+    });
+  });
 }

@@ -20,6 +20,7 @@ import 'package:farm_tracker/core/widgets/crud/paginated_list_view.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
+import 'package:farm_tracker/features/billing/presentation/widgets/write_gate.dart';
 import 'package:farm_tracker/features/farm/data/models/input_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/herd.dart';
 import 'package:farm_tracker/features/farm/domain/entities/input.dart';
@@ -482,9 +483,12 @@ class _InputPageState extends State<InputPage> {
         ),
       ),
       floatingActionButton: SafeFloatingActionButton(
-        child: FloatingActionButton(
-          onPressed: () => showAddInputDialog(context, sourceType: widget.sourceType),
-          child: const Icon(Icons.add),
+        child: WriteGate(
+          builder: (context, allowed) => FloatingActionButton(
+            onPressed: allowed ? () => showAddInputDialog(context, sourceType: widget.sourceType) : null,
+            tooltip: allowed ? 'Add' : 'Read-only until the plan is renewed',
+            child: const Icon(Icons.add),
+          ),
         ),
       ),
     );

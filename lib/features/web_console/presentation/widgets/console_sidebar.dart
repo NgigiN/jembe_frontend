@@ -15,6 +15,7 @@ class ConsoleNavItem {
     required this.icon,
     required this.activeIcon,
     this.staffOnly = false,
+    this.ownerOnly = false,
   });
 
   final String route;
@@ -27,6 +28,10 @@ class ConsoleNavItem {
   /// Hidden entirely from workers — §5 is explicit that restricted items
   /// are absent, not greyed.
   final bool staffOnly;
+
+  /// Billing is the owner's business alone. A manager is staff but does not
+  /// pay, and showing them a page they cannot use is worse than hiding it.
+  final bool ownerOnly;
 }
 
 /// The console's navigation (DESIGN_SPEC §2).
@@ -86,17 +91,31 @@ abstract final class ConsoleNav {
       icon: Icons.settings_outlined,
       activeIcon: Icons.settings,
     ),
+    ConsoleNavItem(
+      route: WebRoutePath.billing,
+      label: 'Billing',
+      icon: Icons.credit_card_outlined,
+      activeIcon: Icons.credit_card,
+      ownerOnly: true,
+    ),
   ];
 
   /// Filters a group for [role]. A null role (farms still loading) is
   /// treated as staff so the nav doesn't visibly shrink once the role
   /// arrives; the router's own staff-only redirect is the real gate.
+  ///
+  /// Owner-only items do not share that leniency: a null role is NOT an
+  /// owner, because flashing a billing link at a manager is worse than it
+  /// appearing a moment late.
   static List<ConsoleNavItem> visible(
     List<ConsoleNavItem> items,
     FarmRole? role,
   ) {
-    if (role == null || role.isStaff) return items;
-    return items.where((item) => !item.staffOnly).toList();
+    final staff = role == null || role.isStaff;
+    return items
+        .where((item) => !item.ownerOnly || role == FarmRole.owner)
+        .where((item) => staff || !item.staffOnly)
+        .toList();
   }
 
   /// The route whose item should read as active for [location]. Longest

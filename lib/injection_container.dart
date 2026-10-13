@@ -19,6 +19,8 @@ import 'package:farm_tracker/features/auth/data/services/user_storage_service.da
 import 'package:farm_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:farm_tracker/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:farm_tracker/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:farm_tracker/features/billing/data/datasources/billing_remote_data_source.dart';
+import 'package:farm_tracker/features/billing/presentation/cubit/entitlement_cubit.dart';
 import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_source.dart';
 import 'package:farm_tracker/features/farms/data/services/farm_storage_service.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
@@ -165,6 +167,7 @@ Future<void> init({AppDatabase? database}) async {
     // the UI never sees.
     ..registerLazySingleton(() => AuthBloc(googleSignInUseCase: sl(), wipeLocalData: () => sl<AppDatabase>().wipeAll(), cleanCache: () => sl<CacheStore>().clean()))
     ..registerLazySingleton(() => FarmBloc(remote: sl(), triggerSync: () => sl<SyncEngine>().syncNow()))
+    ..registerLazySingleton(() => EntitlementCubit(remote: sl()))
     // Feature-specific blocs (preferred)
     ..registerFactory(() => LandBloc(repository: sl()))
     ..registerFactory(() => PlantBloc(repository: sl()))
@@ -332,6 +335,9 @@ Future<void> init({AppDatabase? database}) async {
     )
     ..registerLazySingleton<FarmRemoteDataSource>(
       () => FarmRemoteDataSourceImpl(dio: sl()),
+    )
+    ..registerLazySingleton<BillingRemoteDataSource>(
+      () => BillingRemoteDataSourceImpl(dio: sl()),
     )
     ..registerLazySingleton<LandRemoteDataSource>(
       () => LandRemoteDataSourceImpl(dio: sl()),

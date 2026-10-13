@@ -143,6 +143,14 @@ class FarmRemoteDataSourceImpl implements FarmRemoteDataSource {
       data: {'email': email, 'role': role.wireValue},
       options: _permissive,
     );
+    // 402 is the seat gate: the owner's plan does not cover another
+    // collaborator. Raised as its own type so the caller can open the paywall
+    // instead of showing the message in a snackbar. Only this endpoint does
+    // this — a 402 anywhere else stays a plain ServerException.
+    if (response.statusCode == 402) {
+      final msg = extractServerErrorMessage(response.data);
+      throw PaymentRequiredException(msg.isNotEmpty ? msg : null);
+    }
     _throwIfNotOk(response, {201});
     return FarmInvitationModel.fromJson(response.data as Map<String, dynamic>);
   });

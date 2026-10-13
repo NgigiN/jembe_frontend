@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:farm_tracker/core/di/service_locator.dart';
+import 'package:farm_tracker/features/billing/presentation/cubit/entitlement_cubit.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_state.dart';
 import 'package:flutter/material.dart';
@@ -130,6 +134,14 @@ class _FarmScopedRouterHostState extends State<FarmScopedRouterHost> {
       _router = widget.createRouter(_currentLocation());
       _generation++;
     });
+    // Entitlement is per farm: the new farm may have a different owner and a
+    // different plan. Refresh rather than load, so a failed request keeps the
+    // value we already had instead of falling open on a farm we know is
+    // lapsed. Guarded because the host is also used where billing is not
+    // registered.
+    if (sl.isRegistered<EntitlementCubit>()) {
+      unawaited(sl<EntitlementCubit>().refresh());
+    }
     // Disposing now would tear down a delegate the old tree is still mounted
     // against this frame. Let the frame finish first.
     WidgetsBinding.instance.addPostFrameCallback((_) => previous.dispose());
