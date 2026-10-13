@@ -25,6 +25,11 @@ EntitlementModel _free() => EntitlementModel.fromJson(const {
 
 Future<void> _pump(WidgetTester tester, _MockRemote remote) async {
   when(() => remote.getEntitlement()).thenAnswer((_) async => _free());
+  // Tall enough that the whole list is built; a lazy ListView would drop the
+  // pay button once the waiting text pushes it off screen.
+  tester.view.physicalSize = const Size(800, 2400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
   final cubit = EntitlementCubit(remote: remote);
   await cubit.load();
   await tester.pumpWidget(
@@ -178,5 +183,111 @@ void main() {
 
     expect(find.textContaining('KES 7000 for a year'), findsOneWidget);
     expect(find.textContaining('8400'), findsNothing);
+  });
+
+  void stubCheckoutOk(_MockRemote r) {
+    when(
+      () => r.checkout(
+        seats: any(named: 'seats'),
+        months: any(named: 'months'),
+        phone: any(named: 'phone'),
+      ),
+    ).thenAnswer(
+      (_) async => const CheckoutResult(reference: 'r1', amountKes: 700),
+    );
+  }
+
+  Future<void> payOnce(WidgetTester tester) async {
+    await tester.enterText(find.byType(TextField).first, '0722000000');
+    await tester.pump();
+    await tester.tap(find.text('Pay with M-Pesa'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+  }
+
+  testWidgets('pay stays disabled while the push is pending', (tester) async {
+    await _pump(tester, remote);
+    stubCheckoutOk(remote);
+
+    await payOnce(tester);
+
+    expect(
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+      isNull,
+    );
+    expect(find.textContaining('You can try again in'), findsOneWidget);
+  });
+
+  testWidgets('tapping again during the countdown starts no second charge', (
+    tester,
+  ) async {
+    await _pump(tester, remote);
+    stubCheckoutOk(remote);
+
+    await payOnce(tester);
+    await tester.tap(find.byType(FilledButton), warnIfMissed: false);
+    await tester.pump(const Duration(seconds: 30));
+    await tester.tap(find.byType(FilledButton), warnIfMissed: false);
+    await tester.pump();
+
+    verify(
+      () => remote.checkout(
+        seats: any(named: 'seats'),
+        months: any(named: 'months'),
+        phone: any(named: 'phone'),
+      ),
+    ).called(1);
+  });
+
+  testWidgets('after 180 seconds the button offers Try again', (tester) async {
+    await _pump(tester, remote);
+    stubCheckoutOk(remote);
+
+    await payOnce(tester);
+    await tester.pump(const Duration(seconds: 180));
+
+    expect(
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+      isNotNull,
+    );
+    expect(find.text('Try again'), findsOneWidget);
+    expect(find.textContaining('Check your phone'), findsOneWidget);
+  });
+
+  testWidgets('a failed checkout can be retried immediately', (tester) async {
+    await _pump(tester, remote);
+    when(
+      () => remote.checkout(
+        seats: any(named: 'seats'),
+        months: any(named: 'months'),
+        phone: any(named: 'phone'),
+      ),
+    ).thenThrow(const ServerException('we could not reach M-Pesa'));
+
+    await payOnce(tester);
+    expect(find.textContaining('You can try again in'), findsNothing);
+    await tester.tap(find.text('Pay with M-Pesa'));
+    await tester.pump();
+
+    verify(
+      () => remote.checkout(
+        seats: any(named: 'seats'),
+        months: any(named: 'months'),
+        phone: any(named: 'phone'),
+      ),
+    ).called(2);
+  });
+
+  testWidgets('disposes cleanly while the countdown is running', (
+    tester,
+  ) async {
+    await _pump(tester, remote);
+    stubCheckoutOk(remote);
+
+    await payOnce(tester);
+    await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+    await tester.pump(const Duration(seconds: 200));
+
+    expect(tester.takeException(), isNull);
   });
 }

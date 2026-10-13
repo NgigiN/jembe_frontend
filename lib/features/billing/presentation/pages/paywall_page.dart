@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:farm_tracker/features/billing/data/datasources/billing_remote_data_source.dart';
 import 'package:farm_tracker/features/billing/presentation/cubit/entitlement_cubit.dart';
 import 'package:flutter/material.dart';
@@ -27,8 +29,34 @@ class _PaywallPageState extends State<PaywallPage> {
   String? _error;
   String? _sentTo;
 
+  /// How long Paystack gives the customer to enter their PIN. Until it has
+  /// passed the first push may still be approved, so a second charge could
+  /// bill the same month twice.
+  static const _pinWindowSeconds = 180;
+  int? _secondsLeft;
+  Timer? _countdown;
+
+  bool get _pending => (_secondsLeft ?? 0) > 0;
+
+  void _startCountdown() {
+    _countdown?.cancel();
+    _secondsLeft = _pinWindowSeconds;
+    _countdown = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() => _secondsLeft = (_secondsLeft ?? 1) - 1);
+      if ((_secondsLeft ?? 0) <= 0) timer.cancel();
+    });
+  }
+
+  String _clock(int seconds) =>
+      '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
+
   @override
   void dispose() {
+    _countdown?.cancel();
     _phone.dispose();
     super.dispose();
   }
@@ -45,7 +73,9 @@ class _PaywallPageState extends State<PaywallPage> {
     }
     // Guards the double tap. Without it an impatient second press on a slow
     // connection starts a second charge, and the farmer pays twice.
-    if (_paying) return;
+    // The payment itself stays pending after the request returns, so a
+    // running countdown blocks a second charge too.
+    if (_paying || _pending) return;
     setState(() {
       _paying = true;
       _error = null;
@@ -55,6 +85,7 @@ class _PaywallPageState extends State<PaywallPage> {
       await widget.remote.checkout(seats: seats, months: _months, phone: phone);
       if (!mounted) return;
       setState(() => _sentTo = phone);
+      _startCountdown();
       // Entitlement changes only once the webhook lands, which is seconds
       // away at best. Refresh so the farm unlocks without a restart.
       await context.read<EntitlementCubit>().refresh();
@@ -184,21 +215,27 @@ class _PaywallPageState extends State<PaywallPage> {
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: Text(
-                    'Check your phone — enter your M-Pesa PIN to finish. '
-                    'Your team unlocks as soon as the payment goes through.',
+                    _pending
+                        ? 'Check your phone and enter your M-Pesa PIN. This '
+                              'usually takes a few seconds. Your team unlocks '
+                              'as soon as the payment goes through.\n'
+                              'You can try again in ${_clock(_secondsLeft!)} if '
+                              'the prompt does not arrive.'
+                        : 'Check your phone — enter your M-Pesa PIN to '
+                              'finish. If no prompt arrived, you can try again.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
               const SizedBox(height: 16),
               FilledButton(
-                onPressed: _paying ? null : () => _pay(seats),
+                onPressed: (_paying || _pending) ? null : () => _pay(seats),
                 child: _paying
                     ? const SizedBox(
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Pay with M-Pesa'),
+                    : Text(_sentTo != null ? 'Try again' : 'Pay with M-Pesa'),
               ),
               const SizedBox(height: 24),
               Text(
