@@ -5,6 +5,7 @@ import 'package:farm_tracker/features/auth/data/services/user_storage_service.da
 import 'package:farm_tracker/features/auth/presentation/pages/google_login_page.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/onboarding_page.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/splash_page.dart';
+import 'package:farm_tracker/features/billing/presentation/pages/paywall_page.dart';
 import 'package:farm_tracker/features/content/presentation/pages/ask_question_page.dart';
 import 'package:farm_tracker/features/content/presentation/pages/content_detail_page.dart';
 import 'package:farm_tracker/features/content/presentation/pages/content_list_page.dart';
@@ -212,6 +213,12 @@ class AppRouter {
         caseSensitive: false,
         pageBuilder: (context, state) =>
             _slidePage(const FarmManagePage(), state),
+      ),
+      GoRoute(
+        name: AppRouteName.paywall,
+        path: AppRoutePath.paywall,
+        caseSensitive: false,
+        pageBuilder: (context, state) => _slidePage(const PaywallPage(), state),
       ),
       GoRoute(
         name: AppRouteName.lands,

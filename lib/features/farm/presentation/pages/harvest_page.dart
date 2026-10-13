@@ -21,6 +21,7 @@ import 'package:farm_tracker/core/widgets/crud/paginated_list_view.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
 import 'package:farm_tracker/core/widgets/loading/skeleton_entity_list.dart';
 import 'package:farm_tracker/core/widgets/safe_floating_action_button.dart';
+import 'package:farm_tracker/features/billing/presentation/widgets/write_gate.dart';
 import 'package:farm_tracker/features/farm/data/models/harvest_model.dart';
 import 'package:farm_tracker/features/farm/domain/entities/harvest.dart';
 import 'package:farm_tracker/features/farm/domain/entities/season.dart';
@@ -167,9 +168,12 @@ class _HarvestPageState extends State<HarvestPage> {
         ),
       ),
       floatingActionButton: SafeFloatingActionButton(
-        child: FloatingActionButton(
-          onPressed: () => _showHarvestForm(context),
-          child: const Icon(Icons.add),
+        child: WriteGate(
+          builder: (context, allowed) => FloatingActionButton(
+            onPressed: allowed ? () => _showHarvestForm(context) : null,
+            tooltip: allowed ? 'Add' : 'Read-only until the plan is renewed',
+            child: const Icon(Icons.add),
+          ),
         ),
       ),
     );

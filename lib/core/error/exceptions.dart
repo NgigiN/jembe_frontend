@@ -44,3 +44,16 @@ class SyncDependencyException extends Exceptions {}
 class ConflictException extends ServerException {
   const ConflictException([super.message]);
 }
+
+/// Thrown for a 402 on the invitation endpoint: the farm owner's plan does
+/// not cover another collaborator.
+///
+/// Split out of [ServerException] for the same reason [ConflictException]
+/// was — the caller needs to do something specific (open the paywall) rather
+/// than show the message in a snackbar. It is raised ONLY by
+/// `createInvitation`; a 402 from anywhere else stays a plain
+/// [ServerException], because nothing else in this app means "pay to
+/// continue".
+class PaymentRequiredException extends ServerException {
+  const PaymentRequiredException([super.message]);
+}
