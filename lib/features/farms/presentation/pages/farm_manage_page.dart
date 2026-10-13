@@ -1,8 +1,11 @@
 import 'dart:async';
 
 import 'package:farm_tracker/core/di/service_locator.dart';
+import 'package:farm_tracker/core/error/exceptions.dart';
+import 'package:farm_tracker/core/navigation/app_route_path.dart';
 import 'package:farm_tracker/core/widgets/crud/entity_error_view.dart';
 import 'package:farm_tracker/core/widgets/feedback/app_snackbar.dart';
+import 'package:farm_tracker/features/billing/presentation/widgets/read_only_banner.dart';
 import 'package:farm_tracker/features/farms/data/datasources/farm_remote_data_source.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_invitation.dart';
 import 'package:farm_tracker/features/farms/domain/entities/farm_member.dart';
@@ -12,6 +15,20 @@ import 'package:farm_tracker/features/farms/presentation/bloc/farm_bloc.dart';
 import 'package:farm_tracker/features/farms/presentation/bloc/farm_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+
+/// What to do when an invitation fails.
+enum InviteFailure { paywall, message }
+
+/// A 402 means the owner's plan does not cover another person, and the only
+/// useful response is to show them what it costs. Everything else - already a
+/// member, a pending invitation, a bad address, no network - is a message on
+/// the page they are already on.
+InviteFailure inviteFailureAction(Object error) {
+  return error is PaymentRequiredException
+      ? InviteFailure.paywall
+      : InviteFailure.message;
+}
 
 class FarmManagePage extends StatefulWidget {
   const FarmManagePage({super.key, this.remote});
@@ -171,8 +188,15 @@ class _FarmManagePageState extends State<FarmManagePage> {
                   'with that address.',
                 ),
         );
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
+      if (inviteFailureAction(e) == InviteFailure.paywall) {
+        await context.push(AppRoutePath.paywall);
+        // They may have paid while they were away. Reload so the member and
+        // invitation lists reflect whatever changed.
+        if (mounted) await _load();
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         AppSnackBar.error(
           context,
@@ -244,6 +268,7 @@ class _FarmManagePageState extends State<FarmManagePage> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                const ReadOnlyBanner(),
                 Text('Members', style: Theme.of(context).textTheme.titleMedium),
                 for (final member in _members)
                   ListTile(
