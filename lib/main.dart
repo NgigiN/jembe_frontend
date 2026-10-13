@@ -171,6 +171,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       // OfflineConfig.enabled — farms/roles are live today, independent of
       // the (still dark) offline pipeline.
       di.sl<FarmBloc>().add(RefreshFarms());
+      // Entitlement is renewed on the web console, not in here, so a resume is
+      // the moment this app learns it was paid for. Without this the owner
+      // pays on a laptop and their phone stays read-only until it is killed
+      // and reopened. refresh() rather than load(): a dropped request must
+      // keep what we already know instead of falling open on a farm we know
+      // is lapsed. Not awaited and not behind the offline flag: it is
+      // unrelated to the sync path, and the cubit swallows its own failures.
+      di.sl<EntitlementCubit>().refresh();
     }
   }
 
