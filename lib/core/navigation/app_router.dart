@@ -1,12 +1,10 @@
 import 'package:animations/animations.dart';
-import 'package:farm_tracker/core/di/service_locator.dart';
 import 'package:farm_tracker/core/logging/logging_navigator.dart';
 import 'package:farm_tracker/core/navigation/app_route_path.dart';
 import 'package:farm_tracker/features/auth/data/services/user_storage_service.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/google_login_page.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/onboarding_page.dart';
 import 'package:farm_tracker/features/auth/presentation/pages/splash_page.dart';
-import 'package:farm_tracker/features/billing/data/datasources/billing_remote_data_source.dart';
 import 'package:farm_tracker/features/billing/presentation/pages/paywall_page.dart';
 import 'package:farm_tracker/features/content/presentation/pages/ask_question_page.dart';
 import 'package:farm_tracker/features/content/presentation/pages/content_detail_page.dart';
@@ -220,10 +218,7 @@ class AppRouter {
         name: AppRouteName.paywall,
         path: AppRoutePath.paywall,
         caseSensitive: false,
-        pageBuilder: (context, state) => _slidePage(
-          PaywallPage(remote: sl<BillingRemoteDataSource>()),
-          state,
-        ),
+        pageBuilder: (context, state) => _slidePage(const PaywallPage(), state),
       ),
       GoRoute(
         name: AppRouteName.lands,
