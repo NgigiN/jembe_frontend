@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:farm_tracker/features/billing/data/datasources/billing_remote_data_source.dart';
+import 'package:farm_tracker/features/billing/domain/entities/entitlement.dart';
 import 'package:farm_tracker/features/billing/presentation/cubit/entitlement_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -36,6 +37,18 @@ class _PaywallPageState extends State<PaywallPage> {
   int? _secondsLeft;
   Timer? _countdown;
 
+  /// How often entitlement is re-read while the payment is pending. The
+  /// webhook that grants the seat lands seconds after the PIN is entered.
+  static const _pollInterval = Duration(seconds: 3);
+  Timer? _poller;
+
+  /// What was true before the charge, to tell whether the payment landed.
+  int _seatsBefore = 0;
+  DateTime? _paidThroughBefore;
+
+  /// Set once the payment has been seen to land. The transaction is done.
+  Entitlement? _paid;
+
   bool get _pending => (_secondsLeft ?? 0) > 0;
 
   void _startCountdown() {
@@ -47,8 +60,55 @@ class _PaywallPageState extends State<PaywallPage> {
         return;
       }
       setState(() => _secondsLeft = (_secondsLeft ?? 1) - 1);
-      if ((_secondsLeft ?? 0) <= 0) timer.cancel();
+      if ((_secondsLeft ?? 0) <= 0) {
+        timer.cancel();
+        _poller?.cancel();
+      }
     });
+    _poller?.cancel();
+    _poller = Timer.periodic(_pollInterval, (_) => _poll());
+  }
+
+  Future<void> _poll() async {
+    if (!mounted || _paid != null) return;
+    final cubit = context.read<EntitlementCubit>();
+    await cubit.refresh();
+    if (!mounted || _paid != null) return;
+    _checkLanded(cubit.state.entitlement);
+  }
+
+  /// Compares against the pre-charge values rather than the billing state:
+  /// an account renewing early is already active, so its state never moves.
+  void _checkLanded(Entitlement now) {
+    final through = now.paidThrough;
+    final prior = _paidThroughBefore;
+    final moved = through != null && (prior == null || through.isAfter(prior));
+    if (now.seatsPaid > _seatsBefore || moved) {
+      _countdown?.cancel();
+      _poller?.cancel();
+      setState(() {
+        _paid = now;
+        _secondsLeft = 0;
+      });
+    }
+  }
+
+  String _day(DateTime d) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
 
   String _clock(int seconds) =>
@@ -57,6 +117,7 @@ class _PaywallPageState extends State<PaywallPage> {
   @override
   void dispose() {
     _countdown?.cancel();
+    _poller?.cancel();
     _phone.dispose();
     super.dispose();
   }
@@ -76,6 +137,9 @@ class _PaywallPageState extends State<PaywallPage> {
     // The payment itself stays pending after the request returns, so a
     // running countdown blocks a second charge too.
     if (_paying || _pending) return;
+    final before = context.read<EntitlementCubit>().state.entitlement;
+    _seatsBefore = before.seatsPaid;
+    _paidThroughBefore = before.paidThrough;
     setState(() {
       _paying = true;
       _error = null;
@@ -85,10 +149,9 @@ class _PaywallPageState extends State<PaywallPage> {
       await widget.remote.checkout(seats: seats, months: _months, phone: phone);
       if (!mounted) return;
       setState(() => _sentTo = phone);
+      // Entitlement changes only once the webhook lands, seconds from now,
+      // so an immediate refresh would read the old value. Poll instead.
       _startCountdown();
-      // Entitlement changes only once the webhook lands, which is seconds
-      // away at best. Refresh so the farm unlocks without a restart.
-      await context.read<EntitlementCubit>().refresh();
     } catch (_) {
       if (!mounted) return;
       setState(
@@ -211,7 +274,19 @@ class _PaywallPageState extends State<PaywallPage> {
                     ),
                   ),
                 ),
-              if (_sentTo != null)
+              if (_paid != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    _paid!.paidThrough == null
+                        ? 'Payment received. Your team can record work again.'
+                        : 'Payment received. Your team can record work '
+                              'again.\nPaid through '
+                              '${_day(_paid!.paidThrough!)}.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                )
+              else if (_sentTo != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: Text(
@@ -221,22 +296,23 @@ class _PaywallPageState extends State<PaywallPage> {
                               'as soon as the payment goes through.\n'
                               'You can try again in ${_clock(_secondsLeft!)} if '
                               'the prompt does not arrive.'
-                        : 'Check your phone — enter your M-Pesa PIN to '
-                              'finish. If no prompt arrived, you can try again.',
+                        : 'The M-Pesa prompt may not have arrived. If your '
+                              'phone showed nothing, you can try again.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
               const SizedBox(height: 16),
-              FilledButton(
-                onPressed: (_paying || _pending) ? null : () => _pay(seats),
-                child: _paying
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(_sentTo != null ? 'Try again' : 'Pay with M-Pesa'),
-              ),
+              if (_paid == null)
+                FilledButton(
+                  onPressed: (_paying || _pending) ? null : () => _pay(seats),
+                  child: _paying
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(_sentTo != null ? 'Try again' : 'Pay with M-Pesa'),
+                ),
               const SizedBox(height: 24),
               Text(
                 'If a plan ever lapses nothing is deleted. Your team can '

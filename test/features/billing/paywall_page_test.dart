@@ -23,8 +23,29 @@ EntitlementModel _free() => EntitlementModel.fromJson(const {
   'ai_questions_per_day': 3,
 });
 
-Future<void> _pump(WidgetTester tester, _MockRemote remote) async {
-  when(() => remote.getEntitlement()).thenAnswer((_) async => _free());
+EntitlementModel _active({required int seats, required String through}) =>
+    EntitlementModel.fromJson({
+      'state': 'active',
+      'can_write': true,
+      'is_owner': true,
+      'collaborators': 1,
+      'seats_paid': seats,
+      'paid_through': through,
+      'seat_cap': 20,
+      'price_kes': 700,
+      'base_kes': 500,
+      'per_collaborator_kes': 200,
+      'ai_questions_per_day': 3,
+    });
+
+Future<void> _pump(
+  WidgetTester tester,
+  _MockRemote remote, {
+  EntitlementModel? initial,
+}) async {
+  when(
+    () => remote.getEntitlement(),
+  ).thenAnswer((_) async => initial ?? _free());
   // Tall enough that the whole list is built; a lazy ListView would drop the
   // pay button once the waiting text pushes it off screen.
   tester.view.physicalSize = const Size(800, 2400);
@@ -251,7 +272,7 @@ void main() {
       isNotNull,
     );
     expect(find.text('Try again'), findsOneWidget);
-    expect(find.textContaining('Check your phone'), findsOneWidget);
+    expect(find.textContaining('may not have arrived'), findsOneWidget);
   });
 
   testWidgets('a failed checkout can be retried immediately', (tester) async {
@@ -289,5 +310,91 @@ void main() {
     await tester.pump(const Duration(seconds: 200));
 
     expect(tester.takeException(), isNull);
+  });
+
+  group('after the charge is sent', () {
+    // The page has already loaded [before]; every fetch after the push is
+    // sent sees the webhook's result.
+    void serve(EntitlementModel after) {
+      when(() => remote.getEntitlement()).thenAnswer((_) async => after);
+    }
+
+    testWidgets('entitlement is polled while the payment is pending', (
+      tester,
+    ) async {
+      await _pump(tester, remote);
+      stubCheckoutOk(remote);
+      clearInteractions(remote);
+
+      await payOnce(tester);
+      await tester.pump(const Duration(seconds: 7));
+
+      verify(() => remote.getEntitlement()).called(greaterThan(1));
+    });
+
+    testWidgets('a higher seats_paid shows the confirmation and no button', (
+      tester,
+    ) async {
+      await _pump(tester, remote);
+      stubCheckoutOk(remote);
+      serve(_active(seats: 1, through: '2026-11-12'));
+
+      await payOnce(tester);
+      await tester.pump(const Duration(seconds: 4));
+
+      expect(find.textContaining('Payment received'), findsOneWidget);
+      expect(find.text('Pay with M-Pesa'), findsNothing);
+      expect(find.text('Try again'), findsNothing);
+      expect(find.byType(FilledButton), findsNothing);
+      expect(find.textContaining('Check your phone'), findsNothing);
+    });
+
+    testWidgets('an early renewal is detected from paid_through alone', (
+      tester,
+    ) async {
+      final before = _active(seats: 1, through: '2026-11-01');
+      await _pump(tester, remote, initial: before);
+      stubCheckoutOk(remote);
+      serve(_active(seats: 1, through: '2026-12-01'));
+
+      await payOnce(tester);
+      await tester.pump(const Duration(seconds: 4));
+
+      expect(find.textContaining('Payment received'), findsOneWidget);
+      expect(find.byType(FilledButton), findsNothing);
+    });
+
+    testWidgets('no change for the full window ends at an enabled Try again', (
+      tester,
+    ) async {
+      final same = _active(seats: 1, through: '2026-11-01');
+      await _pump(tester, remote, initial: same);
+      stubCheckoutOk(remote);
+
+      await payOnce(tester);
+      await tester.pump(const Duration(seconds: 180));
+
+      expect(find.textContaining('Payment received'), findsNothing);
+      expect(find.text('Try again'), findsOneWidget);
+      expect(
+        tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+        isNotNull,
+      );
+      expect(find.textContaining('may not have arrived'), findsOneWidget);
+    });
+
+    testWidgets('disposing mid-poll leaves no timer firing on a dead state', (
+      tester,
+    ) async {
+      await _pump(tester, remote);
+      stubCheckoutOk(remote);
+
+      await payOnce(tester);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+      await tester.pump(const Duration(seconds: 30));
+
+      expect(tester.takeException(), isNull);
+    });
   });
 }
