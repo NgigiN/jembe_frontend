@@ -10,6 +10,7 @@ class WebRoutePath {
   static const farmsList = '/farms';
   static const trash = '/trash';
   static const settings = '/settings';
+  static const billing = '/billing';
 }
 
 class WebAppRouter {
